@@ -1,5 +1,11 @@
 import { AuthJwtModule } from '@concepta/nestjs-auth-jwt';
 import { AuthJwtOptionsInterface } from '@concepta/nestjs-auth-jwt/dist/interfaces/auth-jwt-options.interface';
+import { AuthAppleModule } from '@concepta/nestjs-auth-apple';
+import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple/dist/interfaces/auth-apple-options.interface';
+import { AuthGithubModule } from '@concepta/nestjs-auth-github';
+import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github/dist/interfaces/auth-github-options.interface';
+import { AuthGoogleModule } from '@concepta/nestjs-auth-google';
+import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google/dist/interfaces/auth-google-options.interface';
 import { AuthLocalModule } from '@concepta/nestjs-auth-local';
 import { AuthLocalOptionsInterface } from '@concepta/nestjs-auth-local/dist/interfaces/auth-local-options.interface';
 import { AuthRecoveryModule } from '@concepta/nestjs-auth-recovery';
@@ -15,8 +21,14 @@ import {
   EmailService,
   EmailServiceInterface,
 } from '@concepta/nestjs-email';
+import { FederatedModule } from '@concepta/nestjs-federated';
+import { FederatedOptionsInterface } from '@concepta/nestjs-federated/dist/interfaces/federated-options.interface';
 import { JwtModule } from '@concepta/nestjs-jwt';
 import { JwtOptionsInterface } from '@concepta/nestjs-jwt/dist/interfaces/jwt-options.interface';
+import { OAuthModule, OAuthOptions } from '@concepta/nestjs-oauth';
+import { AuthAppleGuard } from '@concepta/nestjs-auth-apple';
+import { AuthGithubGuard } from '@concepta/nestjs-auth-github';
+import { AuthGoogleGuard } from '@concepta/nestjs-auth-google';
 import { OtpModule, OtpService } from '@concepta/nestjs-otp';
 import { PasswordModule } from '@concepta/nestjs-password';
 import {
@@ -35,6 +47,7 @@ import { AuthPasswordController } from './controllers/auth/auth-password.control
 import { RocketsServerRecoveryController } from './controllers/auth/auth-recovery.controller';
 import { AuthTokenRefreshController } from './controllers/auth/auth-refresh.controller';
 import { AuthSignupController } from './controllers/auth/auth-signup.controller';
+import { AuthOAuthController } from './controllers/oauth/auth-oauth.controller';
 import { RocketsServerOtpController } from './controllers/otp/rockets-server-otp.controller';
 import { RocketsServerUserController } from './controllers/user/rockets-server-user.controller';
 import { RocketsServerOptionsExtrasInterface } from './interfaces/rockets-server-options-extras.interface';
@@ -81,11 +94,13 @@ function definitionTransform(
   extras: RocketsServerOptionsExtrasInterface,
 ): DynamicModule {
   const { imports = [], providers = [], exports = [] } = definition;
-  const { controllers, user, otp } = extras;
+  const { controllers } = extras;
 
   // TODO: need to define this, if set it as required we need to have defaults on extras
-  if (!user?.imports) throw new Error('Make sure imports entities for user');
-  if (!otp?.imports) throw new Error('Make sure imports entities for otp');
+  // if (!user?.imports) throw new Error('Make sure imports entities for user');
+  // if (!otp?.imports) throw new Error('Make sure imports entities for otp');
+  // Federated is optional since OAuth modules are optional
+  // if (!federated?.imports) throw new Error('Make sure imports entities for federated');
 
   return {
     ...definition,
@@ -109,6 +124,7 @@ export function createRocketsServerControllers(options: {
         AuthTokenRefreshController,
         RocketsServerRecoveryController,
         RocketsServerOtpController,
+        AuthOAuthController,
       ];
 }
 
@@ -133,6 +149,13 @@ export function createRocketsServerImports(options: {
   imports: DynamicModule['imports'];
   extras: RocketsServerOptionsExtrasInterface;
 }): DynamicModule['imports'] {
+  // Default OAuth guards configuration if not provided
+  const defaultOAuthGuards = [
+    { name: 'google', guard: AuthGoogleGuard },
+    { name: 'github', guard: AuthGithubGuard },
+    { name: 'apple', guard: AuthAppleGuard },
+  ];
+
   return [
     ...(options.imports || []),
     ConfigModule.forFeature(authenticationOptionsDefaultConfig),
@@ -189,6 +212,65 @@ export function createRocketsServerImports(options: {
             options.services?.userModelService ||
             userModelService,
           settings: options.authJwt?.settings,
+        };
+      },
+    }),
+    FederatedModule.forRootAsync({
+      inject: [RAW_OPTIONS_TOKEN, UserModelService],
+      imports: [...(options.extras?.federated?.imports || [])],
+      useFactory: (
+        options: RocketsServerOptionsInterface,
+        userModelService: UserModelService,
+      ): FederatedOptionsInterface => {
+        return {
+          userModelService:
+            options.federated?.userModelService ||
+            options.services?.userModelService ||
+            userModelService,
+          settings: options.federated?.settings,
+        };
+      },
+    }),
+    // TODO: should we have a flag to only load if defined?
+    AuthAppleModule.forRootAsync({
+      inject: [RAW_OPTIONS_TOKEN],
+      useFactory: (
+        options: RocketsServerOptionsInterface,
+      ): AuthAppleOptionsInterface => {
+        return {
+          jwtService: options.authApple?.jwtService || options.jwt?.jwtService,
+          authAppleService: options.authApple?.authAppleService,
+          settings: options.authApple?.settings,
+        };
+      },
+    }),
+    AuthGithubModule.forRootAsync({
+      inject: [RAW_OPTIONS_TOKEN],
+      useFactory: (
+        options: RocketsServerOptionsInterface,
+      ): AuthGithubOptionsInterface => {
+        return {
+          settings: options.authGithub?.settings,
+        };
+      },
+    }),
+    AuthGoogleModule.forRootAsync({
+      inject: [RAW_OPTIONS_TOKEN],
+      useFactory: (
+        options: RocketsServerOptionsInterface,
+      ): AuthGoogleOptionsInterface => {
+        return {
+          settings: options.authGoogle?.settings,
+        };
+      },
+    }),
+    OAuthModule.forRootAsync({
+      inject: [RAW_OPTIONS_TOKEN],
+      imports: [...(options.extras?.oauth?.imports || [])],
+      oAuthGuards: options.extras?.oauth?.oAuthGuards || defaultOAuthGuards,
+      useFactory: (options: RocketsServerOptionsInterface): OAuthOptions => {
+        return {
+          settings: options.oauth?.settings,
         };
       },
     }),
@@ -357,7 +439,12 @@ export function createRocketsServerExports(options: {
     RAW_OPTIONS_TOKEN,
     JwtModule,
     AuthJwtModule,
+    AuthAppleModule,
+    AuthGithubModule,
+    AuthGoogleModule,
+    OAuthModule,
     AuthRefreshModule,
+    FederatedModule,
   ];
 }
 

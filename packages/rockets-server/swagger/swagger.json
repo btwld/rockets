@@ -465,6 +465,94 @@
           "otp"
         ]
       }
+    },
+    "/oauth/authorize": {
+      "get": {
+        "operationId": "AuthOAuthController_authorize",
+        "parameters": [
+          {
+            "name": "scopes",
+            "required": true,
+            "in": "query",
+            "description": "Space separated list of OAuth scopes to pass on to the provider. Common scopes: email, profile, openid",
+            "schema": {
+              "type": "string",
+              "pattern": "[^ ]+( +[^ ]+)*"
+            }
+          },
+          {
+            "name": "provider",
+            "required": true,
+            "in": "query",
+            "description": "Name of the OAuth provider. Supported providers: google, github, apple",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "google",
+                "github",
+                "apple"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "HTTP Redirect to the OAuth identity provider's authorization URL.",
+            "headers": {
+              "Location": {
+                "description": "URL to which the user agent should redirect (or open in a browser for mobile apps).",
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "oauth"
+        ]
+      }
+    },
+    "/oauth/callback": {
+      "get": {
+        "operationId": "AuthOAuthController_callback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "DTO containing an access token and a refresh token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticationJwtResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "oauth"
+        ]
+      },
+      "post": {
+        "operationId": "AuthOAuthController_callbackPost",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "DTO containing an access token and a refresh token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticationJwtResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "oauth"
+        ]
+      }
     }
   },
   "info": {
@@ -506,11 +594,16 @@
           "passwordSalt": {
             "type": "string",
             "description": "Password salt"
+          },
+          "password": {
+            "type": "string",
+            "description": "Plain text password to set"
           }
         },
         "required": [
           "email",
-          "username"
+          "username",
+          "password"
         ]
       },
       "RocketsServerUserDto": {
@@ -713,6 +806,23 @@
         "required": [
           "email",
           "passcode"
+        ]
+      },
+      "AuthenticationJwtResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT access token to use for request authorization."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "JWT refresh token to use for obtaining a new access token."
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
         ]
       }
     }

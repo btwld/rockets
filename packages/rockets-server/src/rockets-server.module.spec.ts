@@ -24,6 +24,7 @@ import { UserOtpEntityFixture } from './__fixtures__/user/user-otp-entity.fixtur
 import { UserPasswordHistoryEntityFixture } from './__fixtures__/user/user-password-history.entity.fixture';
 import { UserProfileEntityFixture } from './__fixtures__/user/user-profile.entity.fixture';
 import { UserFixture } from './__fixtures__/user/user.entity.fixture';
+import { FederatedEntityFixture } from './__fixtures__/federated/federated.entity.fixture';
 import { RocketsServerOptionsInterface } from './interfaces/rockets-server-options.interface';
 import { RocketsServerUserModelServiceInterface } from './interfaces/rockets-server-user-model-service.interface';
 import { RocketsServerModule } from './rockets-server.module';
@@ -84,7 +85,16 @@ function testModuleFactory(
       TypeOrmExtModule.forRootAsync({
         inject: [],
         useFactory: () => {
-          return ormConfig;
+          return {
+            ...ormConfig,
+            entities: [
+              UserFixture,
+              UserOtpEntityFixture,
+              UserPasswordHistoryEntityFixture,
+              UserProfileEntityFixture,
+              FederatedEntityFixture,
+            ],
+          };
         },
       }),
       ...extraImports,
@@ -173,6 +183,15 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 }),
               ],
             },
+            federated: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  federated: {
+                    entity: FederatedEntityFixture,
+                  },
+                }),
+              ],
+            },
             useFactory: (
               configService: ConfigService,
               issueTokenService: IssueTokenServiceFixture,
@@ -185,11 +204,68 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   refresh: { secret: configService.get('jwt.secret') },
                 },
               },
+              federated: {
+                userModelService: mockUserModelService,
+              },
               services: {
                 userModelService: mockUserModelService,
                 mailerService: mockEmailService,
                 issueTokenService,
                 validateTokenService,
+              },
+            }),
+          }),
+        ]),
+      ).compile();
+
+      // Get services and run common tests
+      const services = commonVars(testModule);
+      commonTests(services);
+
+      // Additional tests specific to async registration
+      expect(testModule.get(ConfigService)).toBeDefined();
+
+      // Verify that the verifyTokenService is an instance of VerifyTokenService
+      const vts = testModule.get(VerifyTokenService);
+      expect(vts).toBeInstanceOf(VerifyTokenService);
+    });
+
+    it('should define all required services and modules using main imports', async () => {
+      // Create test module with forRootAsync registration
+      testModule = await Test.createTestingModule(
+        testModuleFactory([
+          RocketsServerModule.forRootAsync({
+            imports: [
+              TypeOrmModuleFixture,
+              TypeOrmExtModule.forFeature({
+                user: {
+                  entity: UserFixture,
+                },
+              }),
+              TypeOrmExtModule.forFeature({
+                userOtp: {
+                  entity: UserOtpEntityFixture,
+                },
+              }),
+              TypeOrmExtModule.forFeature({
+                federated: {
+                  entity: FederatedEntityFixture,
+                },
+              }),
+            ],
+            inject: [ConfigService],
+            useFactory: (
+              configService: ConfigService,
+            ): RocketsServerOptionsInterface => ({
+              jwt: {
+                settings: {
+                  access: { secret: configService.get('jwt.secret') },
+                  default: { secret: configService.get('jwt.secret') },
+                  refresh: { secret: configService.get('jwt.secret') },
+                },
+              },
+              services: {
+                mailerService: mockEmailService,
               },
             }),
           }),
@@ -232,6 +308,15 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 TypeOrmExtModule.forFeature({
                   userOtp: {
                     entity: UserOtpEntityFixture,
+                  },
+                }),
+              ],
+            },
+            federated: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  federated: {
+                    entity: FederatedEntityFixture,
                   },
                 }),
               ],
@@ -283,6 +368,15 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 TypeOrmExtModule.forFeature({
                   userOtp: {
                     entity: UserOtpEntityFixture,
+                  },
+                }),
+              ],
+            },
+            federated: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  federated: {
+                    entity: FederatedEntityFixture,
                   },
                 }),
               ],

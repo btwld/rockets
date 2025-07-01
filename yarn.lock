@@ -651,6 +651,74 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@concepta/nestjs-auth-apple@npm:^7.0.0-alpha.4":
+  version: 7.0.0-alpha.4
+  resolution: "@concepta/nestjs-auth-apple@npm:7.0.0-alpha.4"
+  dependencies:
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.4"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/core": "npm:^10.4.1"
+    "@nestjs/passport": "npm:^10.0.3"
+    "@nestjs/swagger": "npm:^7.4.0"
+    jwks-rsa: "npm:^3.1.0"
+    passport-apple: "npm:^2.0.2"
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+    rxjs: ^7.1.0
+    typeorm: ^0.3.0
+  checksum: 10c0/d42f9e1da5846a1343f202806db1f092f59a7077709aa1036d02239e366c9cbeb0b8a5f4e1a50bfa338d6e68775f97dc6dec2e68a2ac8fd169e36c85895eca12
+  languageName: node
+  linkType: hard
+
+"@concepta/nestjs-auth-github@npm:^7.0.0-alpha.4":
+  version: 7.0.0-alpha.4
+  resolution: "@concepta/nestjs-auth-github@npm:7.0.0-alpha.4"
+  dependencies:
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.4"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/core": "npm:^10.4.1"
+    "@nestjs/passport": "npm:^10.0.3"
+    "@nestjs/swagger": "npm:^7.4.0"
+    passport-github: "npm:^1.1.0"
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+    rxjs: ^7.1.0
+    typeorm: ^0.3.0
+  checksum: 10c0/c21e338356a21e9094432e69463cabdac32b17af07b560aa8ba341778fd24ccf998d1446fc380d90851ec0ca50a79717ffd835ec0d9ef4626882e5dab81fda96
+  languageName: node
+  linkType: hard
+
+"@concepta/nestjs-auth-google@npm:^7.0.0-alpha.4":
+  version: 7.0.0-alpha.4
+  resolution: "@concepta/nestjs-auth-google@npm:7.0.0-alpha.4"
+  dependencies:
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.4"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/core": "npm:^10.4.1"
+    "@nestjs/passport": "npm:^10.0.3"
+    "@nestjs/swagger": "npm:^7.4.0"
+    passport-google-oauth20: "npm:^2.0.0"
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+    rxjs: ^7.1.0
+    typeorm: ^0.3.0
+  checksum: 10c0/5b53d64677f95c38081eaab2ee0e77b0c6ade9162953e0ced99094e04ea9a585cb3ae27f35cf7eccbf2ce0165b99f7fac50684432da993922a364f0cac4608c8
+  languageName: node
+  linkType: hard
+
 "@concepta/nestjs-auth-jwt@npm:^7.0.0-alpha.4":
   version: 7.0.0-alpha.4
   resolution: "@concepta/nestjs-auth-jwt@npm:7.0.0-alpha.4"
@@ -823,6 +891,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@concepta/nestjs-federated@npm:^7.0.0-alpha.4":
+  version: 7.0.0-alpha.4
+  resolution: "@concepta/nestjs-federated@npm:7.0.0-alpha.4"
+  dependencies:
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.4"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/swagger": "npm:^7.4.0"
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+    rxjs: ^7.1.0
+    typeorm: ^0.3.0
+  checksum: 10c0/495894fcd4658fb089a7bcf01da4d568ea852a915fc4c8d4cb46aeeaaacbb2a870fdacb09cd4ed246191ad6bf35113de7629d1219853d5793554f975b51a3dfd
+  languageName: node
+  linkType: hard
+
 "@concepta/nestjs-jwt@npm:^7.0.0-alpha.4":
   version: 7.0.0-alpha.4
   resolution: "@concepta/nestjs-jwt@npm:7.0.0-alpha.4"
@@ -835,6 +920,26 @@ __metadata:
     passport-jwt: "npm:^4.0.1"
     passport-strategy: "npm:^1.0.0"
   checksum: 10c0/8347521f1368d2d50f9d743c567f3010e3beda708fc47a74e26b5f68d9dc4647742b1ae2452fe5639e6078cd9b853673c1d93bc4a3514d02be990c7fba24cfa3
+  languageName: node
+  linkType: hard
+
+"@concepta/nestjs-oauth@file:../../../rockets/packages/nestjs-oauth::locator=%40concepta%2Frockets-server%40workspace%3Apackages%2Frockets-server":
+  version: 7.0.0-alpha.4
+  resolution: "@concepta/nestjs-oauth@file:../../../rockets/packages/nestjs-oauth#../../../rockets/packages/nestjs-oauth::hash=f5ecdd&locator=%40concepta%2Frockets-server%40workspace%3Apackages%2Frockets-server"
+  dependencies:
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.4"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/core": "npm:^10.4.1"
+    "@nestjs/swagger": "npm:^7.4.0"
+    rxjs: "npm:^7.1.0"
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+    rxjs: ^7.1.0
+    typeorm: ^0.3.0
+  checksum: 10c0/69262cb467587701e75a31d4022b176efd8f0867a8ed5c8166f2b1648464de877cc42414aa05b7bfa4838cb58b590843cab9183612eb055de71aa3c9c108c1c7
   languageName: node
   linkType: hard
 
@@ -918,6 +1023,9 @@ __metadata:
   resolution: "@concepta/rockets-server@workspace:packages/rockets-server"
   dependencies:
     "@concepta/nestjs-access-control": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-auth-apple": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-auth-github": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-auth-google": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-auth-jwt": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-auth-local": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-auth-recovery": "npm:^7.0.0-alpha.4"
@@ -928,6 +1036,7 @@ __metadata:
     "@concepta/nestjs-crud": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-email": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-oauth": "file:../../../rockets/packages/nestjs-oauth"
     "@concepta/nestjs-otp": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-password": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-typeorm-ext": "npm:^7.0.0-alpha.4"
@@ -3099,7 +3208,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/express@npm:^4.17.21":
+"@types/express@npm:^4.17.20, @types/express@npm:^4.17.21":
   version: 4.17.23
   resolution: "@types/express@npm:4.17.23"
   dependencies:
@@ -3186,7 +3295,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/jsonwebtoken@npm:*":
+"@types/jsonwebtoken@npm:*, @types/jsonwebtoken@npm:^9.0.4":
   version: 9.0.9
   resolution: "@types/jsonwebtoken@npm:9.0.9"
   dependencies:
@@ -4721,6 +4830,13 @@ __metadata:
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
   checksum: 10c0/f23823513b63173a001030fae4f2dabe283b99a9d324ade3ad3d148e218134676f1ee8568c877cd79ec1c53158dcf2d2ba527a97c606618928ba99dd930102bf
+  languageName: node
+  linkType: hard
+
+"base64url@npm:3.x.x":
+  version: 3.0.1
+  resolution: "base64url@npm:3.0.1"
+  checksum: 10c0/5ca9d6064e9440a2a45749558dddd2549ca439a305793d4f14a900b7256b5f4438ef1b7a494e1addc66ced5d20f5c010716d353ed267e4b769e6c78074991241
   languageName: node
   linkType: hard
 
@@ -10386,6 +10502,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jose@npm:^4.15.4":
+  version: 4.15.9
+  resolution: "jose@npm:4.15.9"
+  checksum: 10c0/4ed4ddf4a029db04bd167f2215f65d7245e4dc5f36d7ac3c0126aab38d66309a9e692f52df88975d99429e357e5fd8bab340ff20baab544d17684dd1d940a0f4
+  languageName: node
+  linkType: hard
+
 "js-tokens@npm:^4.0.0":
   version: 4.0.0
   resolution: "js-tokens@npm:4.0.0"
@@ -10668,6 +10791,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jwks-rsa@npm:^3.1.0":
+  version: 3.2.0
+  resolution: "jwks-rsa@npm:3.2.0"
+  dependencies:
+    "@types/express": "npm:^4.17.20"
+    "@types/jsonwebtoken": "npm:^9.0.4"
+    debug: "npm:^4.3.4"
+    jose: "npm:^4.15.4"
+    limiter: "npm:^1.1.5"
+    lru-memoizer: "npm:^2.2.0"
+  checksum: 10c0/94896264473c8ec0ec21b8f29fd69b760ccb58ff63e6d5328d99694dc49a9be1d6f739fa536c71ca279966874e6c77b405181ed2c567318e0f545d3e941c318e
+  languageName: node
+  linkType: hard
+
 "jws@npm:^3.2.2":
   version: 3.2.2
   resolution: "jws@npm:3.2.2"
@@ -10768,6 +10905,13 @@ __metadata:
   version: 1.12.9
   resolution: "libphonenumber-js@npm:1.12.9"
   checksum: 10c0/77fb86802cdf339f472e6a65394603fec0dabe76faca8b5efb4ebcfada2c11a7b39b6773de400e8ec6528354d4b49317797673b14e921117cadbe6b76f01613d
+  languageName: node
+  linkType: hard
+
+"limiter@npm:^1.1.5":
+  version: 1.1.5
+  resolution: "limiter@npm:1.1.5"
+  checksum: 10c0/ebe2b20a820d1f67b8e1724051246434c419b2da041a7e9cd943f6daf113b8d17a52a1bd88fb79be5b624c10283ecb737f50edb5c1c88c71f4cd367108c97300
   languageName: node
   linkType: hard
 
@@ -11079,6 +11223,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lru-cache@npm:6.0.0, lru-cache@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "lru-cache@npm:6.0.0"
+  dependencies:
+    yallist: "npm:^4.0.0"
+  checksum: 10c0/cb53e582785c48187d7a188d3379c181b5ca2a9c78d2bce3e7dee36f32761d1c42983da3fe12b55cb74e1779fa94cdc2e5367c028a9b35317184ede0c07a30a9
+  languageName: node
+  linkType: hard
+
 "lru-cache@npm:^10.0.1, lru-cache@npm:^10.2.0":
   version: 10.4.3
   resolution: "lru-cache@npm:10.4.3"
@@ -11095,12 +11248,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lru-cache@npm:^6.0.0":
-  version: 6.0.0
-  resolution: "lru-cache@npm:6.0.0"
+"lru-memoizer@npm:^2.2.0":
+  version: 2.3.0
+  resolution: "lru-memoizer@npm:2.3.0"
   dependencies:
-    yallist: "npm:^4.0.0"
-  checksum: 10c0/cb53e582785c48187d7a188d3379c181b5ca2a9c78d2bce3e7dee36f32761d1c42983da3fe12b55cb74e1779fa94cdc2e5367c028a9b35317184ede0c07a30a9
+    lodash.clonedeep: "npm:^4.5.0"
+    lru-cache: "npm:6.0.0"
+  checksum: 10c0/13cf6bc9ff74cdb167078dbb66d4cf43adc802495da8f56097e6f388b4d7ccb91668beb809bdbc55b62d016c138d7c19a18c5883a2fdbcc7f508ad8a23ec7c65
   languageName: node
   linkType: hard
 
@@ -12341,6 +12495,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"oauth@npm:0.10.x":
+  version: 0.10.2
+  resolution: "oauth@npm:0.10.2"
+  checksum: 10c0/5660d652b31eb2a90509989955a75b02311591d2e3cfb04a3fb91deae0d22c259aa5c31a9e8845f760d749af901032e3cfd06d151bbda9a5ebb9b76268d3aef9
+  languageName: node
+  linkType: hard
+
 "object-assign@npm:^4, object-assign@npm:^4.0.1, object-assign@npm:^4.1.0, object-assign@npm:^4.1.1":
   version: 4.1.1
   resolution: "object-assign@npm:4.1.1"
@@ -12860,6 +13021,34 @@ __metadata:
   languageName: node
   linkType: hard
 
+"passport-apple@npm:^2.0.2":
+  version: 2.0.2
+  resolution: "passport-apple@npm:2.0.2"
+  dependencies:
+    jsonwebtoken: "npm:^9.0.0"
+    passport-oauth2: "npm:^1.6.1"
+  checksum: 10c0/823ebfa190f9b6fb0cbcc7bbf3f8055c4f32ae333bb7e82c0414badf53692bc0b7f7950b496545829f2b7cbe18b4b185c1e90a85d3b3e9c0c421359c4d340bfe
+  languageName: node
+  linkType: hard
+
+"passport-github@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "passport-github@npm:1.1.0"
+  dependencies:
+    passport-oauth2: "npm:1.x.x"
+  checksum: 10c0/2d63e28151f6d00a3ca3a2207ef013e407a111326369b1ca89389f6b5ca22db6483bde15d4989734dd9808b1f603e0dd47f3c9bfff854ded308cfb764e89ab01
+  languageName: node
+  linkType: hard
+
+"passport-google-oauth20@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "passport-google-oauth20@npm:2.0.0"
+  dependencies:
+    passport-oauth2: "npm:1.x.x"
+  checksum: 10c0/158930bb97a48431aa0dcff453c3b698742ed51e2d590c362cb5d4ae7715cfb4fb1feae31b007aef0bc8435edc8ff678853c044b139da827756f3b5f3b597c7f
+  languageName: node
+  linkType: hard
+
 "passport-jwt@npm:^4.0.1":
   version: 4.0.1
   resolution: "passport-jwt@npm:4.0.1"
@@ -12876,6 +13065,19 @@ __metadata:
   dependencies:
     passport-strategy: "npm:1.x.x"
   checksum: 10c0/59becb988014921a5d6056470d9373c41db452fcf113323064f39d53baa6f184e72151bf269ca6770511f7f0260e13632dacc7b6afdbf60ebf63e90327e186d4
+  languageName: node
+  linkType: hard
+
+"passport-oauth2@npm:1.x.x, passport-oauth2@npm:^1.6.1":
+  version: 1.8.0
+  resolution: "passport-oauth2@npm:1.8.0"
+  dependencies:
+    base64url: "npm:3.x.x"
+    oauth: "npm:0.10.x"
+    passport-strategy: "npm:1.x.x"
+    uid2: "npm:0.0.x"
+    utils-merge: "npm:1.x.x"
+  checksum: 10c0/16b431bd856b84dfe0c9c913dcbea6ff54875befac1035171b0dce1c77f79072dc5e26d785b13c2e62c034c8174a1a47571751d1066bdbcdb9108de217c0b19b
   languageName: node
   linkType: hard
 
@@ -14060,7 +14262,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rxjs@npm:^7.5.5, rxjs@npm:^7.8.1":
+"rxjs@npm:^7.1.0, rxjs@npm:^7.5.5, rxjs@npm:^7.8.1":
   version: 7.8.2
   resolution: "rxjs@npm:7.8.2"
   dependencies:
@@ -16177,6 +16379,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"uid2@npm:0.0.x":
+  version: 0.0.4
+  resolution: "uid2@npm:0.0.4"
+  checksum: 10c0/c3ed69da75d117214891f4743a1d8521db823d7a2f57644c1a9ae8b3bf25f0ba666d893264bf7e22be3dbbaa292d35a23d71d06ce7283458a65e8dd137c5c362
+  languageName: node
+  linkType: hard
+
 "uid@npm:2.0.2":
   version: 2.0.2
   resolution: "uid@npm:2.0.2"
@@ -16405,7 +16614,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"utils-merge@npm:1.0.1, utils-merge@npm:^1.0.1":
+"utils-merge@npm:1.0.1, utils-merge@npm:1.x.x, utils-merge@npm:^1.0.1":
   version: 1.0.1
   resolution: "utils-merge@npm:1.0.1"
   checksum: 10c0/02ba649de1b7ca8854bfe20a82f1dfbdda3fb57a22ab4a8972a63a34553cf7aa51bc9081cf7e001b035b88186d23689d69e71b510e610a09a4c66f68aa95b672

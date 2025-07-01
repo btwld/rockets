@@ -1,13 +1,19 @@
-import { AuthJwtOptionsInterface } from '@concepta/nestjs-auth-jwt/dist/interfaces/auth-jwt-options.interface';
-import { AuthRefreshOptions } from '@concepta/nestjs-auth-refresh/dist/auth-refresh.module-definition';
+import { AuthJwtOptionsInterface } from '@concepta/nestjs-auth-jwt';
+import { AuthRefreshOptionsInterface } from '@concepta/nestjs-auth-refresh';
 
-import { ValidateTokenServiceInterface } from '@concepta/nestjs-authentication/dist/interfaces/validate-token-service.interface';
+import { ValidateTokenServiceInterface } from '@concepta/nestjs-authentication';
 
 import { CanAccess } from '@concepta/nestjs-access-control';
-import { AuthLocalValidateUserServiceInterface } from '@concepta/nestjs-auth-local';
-import { AuthLocalOptionsInterface } from '@concepta/nestjs-auth-local/dist/interfaces/auth-local-options.interface';
-import { AuthRecoveryOptionsInterface } from '@concepta/nestjs-auth-recovery/dist/interfaces/auth-recovery-options.interface';
-import { AuthVerifyOptionsInterface } from '@concepta/nestjs-auth-verify/dist/interfaces/auth-verify-options.interface';
+// TODO: update on core modules
+import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple/dist/interfaces/auth-apple-options.interface';
+import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github/dist/interfaces/auth-github-options.interface';
+import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google/dist/interfaces/auth-google-options.interface';
+import {
+  AuthLocalOptionsInterface,
+  AuthLocalValidateUserServiceInterface,
+} from '@concepta/nestjs-auth-local';
+import { AuthRecoveryOptionsInterface } from '@concepta/nestjs-auth-recovery';
+import { AuthVerifyOptionsInterface } from '@concepta/nestjs-auth-verify';
 import {
   AuthenticationOptionsInterface,
   IssueTokenServiceInterface,
@@ -17,7 +23,12 @@ import {
   EmailOptionsInterface,
   EmailServiceInterface,
 } from '@concepta/nestjs-email';
-import { JwtOptions } from '@concepta/nestjs-jwt/dist/jwt.module-definition';
+import { FederatedOptionsInterface } from '@concepta/nestjs-federated/dist/interfaces/federated-options.interface';
+import { JwtOptionsInterface } from '@concepta/nestjs-jwt';
+import {
+  OAuthOptionsExtrasInterface,
+  OAuthOptionsInterface,
+} from '@concepta/nestjs-oauth';
 import { OtpOptionsInterface } from '@concepta/nestjs-otp';
 import { PasswordOptionsInterface } from '@concepta/nestjs-password';
 import { UserPasswordServiceInterface } from '@concepta/nestjs-user';
@@ -39,16 +50,47 @@ export interface RocketsServerOptionsInterface {
   authentication?: AuthenticationOptionsInterface;
 
   /**
+   * Federated authentication module options
+   * Used in: FederatedModule.forRootAsync
+   */
+  federated?: Partial<FederatedOptionsInterface>;
+
+  /**
    * JWT module options
    * Used in: JwtModule.forRootAsync
    */
-  jwt?: JwtOptions;
+  jwt?: JwtOptionsInterface;
 
   /**
    * Auth JWT module options
    * Used in: AuthJwtModule.forRootAsync
    */
   authJwt?: AuthJwtOptionsInterface;
+
+  /**
+   * OAuth module options
+   * Used in: OAuthModule.forRootAsync
+   * Configures the OAuth guard router with provider-specific guards
+   */
+  oauth?: OAuthOptionsInterface & OAuthOptionsExtrasInterface;
+
+  /**
+   * Auth Apple module options
+   * Used in: AuthAppleModule.forRootAsync
+   */
+  authApple?: AuthAppleOptionsInterface;
+
+  /**
+   * Auth GitHub module options
+   * Used in: AuthGithubModule.forRootAsync
+   */
+  authGithub?: AuthGithubOptionsInterface;
+
+  /**
+   * Auth Google module options
+   * Used in: AuthGoogleModule.forRootAsync
+   */
+  authGoogle?: AuthGoogleOptionsInterface;
 
   /**
    * Auth Local module options
@@ -66,7 +108,7 @@ export interface RocketsServerOptionsInterface {
    * Auth Refresh module options
    * Used in: AuthRefreshModule.forRootAsync
    */
-  refresh?: AuthRefreshOptions;
+  refresh?: AuthRefreshOptionsInterface;
 
   /**
    * Auth Verify module options
@@ -108,6 +150,7 @@ export interface RocketsServerOptionsInterface {
      * Core authentication services used in AuthenticationModule
      * Required: true
      */
+    // TODO: need to update AuthRefreshOptionsInterface to use verifyTokenServiceInterface
     verifyTokenService?: VerifyTokenService;
     issueTokenService?: IssueTokenServiceInterface;
     validateTokenService?: ValidateTokenServiceInterface;

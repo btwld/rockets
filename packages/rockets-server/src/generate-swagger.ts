@@ -8,8 +8,10 @@ import { Entity } from 'typeorm';
 import {
   UserSqliteEntity,
   OtpSqliteEntity,
+  FederatedSqliteEntity,
   TypeOrmExtModule,
 } from '@concepta/nestjs-typeorm-ext';
+import { UserModelService } from '@concepta/nestjs-user';
 
 // Create concrete entity implementations for TypeORM
 @Entity()
@@ -21,11 +23,105 @@ class UserOtpEntity extends OtpSqliteEntity {
   assignee: UserEntity;
 }
 
+@Entity()
+class FederatedEntity extends FederatedSqliteEntity {
+  // TypeORM needs this properly defined, but it's not used for swagger gen
+  user: UserEntity;
+}
+
+// Mock services for swagger generation
+class MockUserModelService implements Partial<UserModelService> {
+  async byId(id: string) {
+    return Promise.resolve({
+      id,
+      username: 'test',
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['byId']>);
+  }
+  async byEmail(email: string) {
+    return Promise.resolve({
+      id: '1',
+      email,
+      username: 'test',
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['byEmail']>);
+  }
+  async bySubject(_subject: string) {
+    return Promise.resolve({
+      id: '1',
+      username: 'test',
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['bySubject']>);
+  }
+  async byUsername(username: string) {
+    return Promise.resolve({
+      id: '1',
+      username,
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['byUsername']>);
+  }
+  async create(data: Parameters<UserModelService['create']>[0]) {
+    return Promise.resolve({
+      ...data,
+      id: '1',
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['create']>);
+  }
+  async update(data: Parameters<UserModelService['update']>[0]) {
+    return Promise.resolve({
+      ...data,
+      id: '1',
+      username: 'test',
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['update']>);
+  }
+  async replace(data: Parameters<UserModelService['replace']>[0]) {
+    return Promise.resolve({
+      ...data,
+      id: '1',
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['replace']>);
+  }
+  async remove(object: { id: string }) {
+    return Promise.resolve({
+      id: object.id,
+      username: 'test',
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+      dateDeleted: null,
+      version: 1,
+    } as unknown as ReturnType<UserModelService['remove']>);
+  }
+}
+
 /**
  * Generate Swagger documentation JSON file based on RocketsServer controllers
  */
 async function generateSwaggerJson() {
   try {
+    const mockUserModelService = new MockUserModelService();
+
     @Module({
       imports: [
         TypeOrmExtModule.forRootAsync({
@@ -37,7 +133,7 @@ async function generateSwaggerJson() {
               synchronize: false,
               autoLoadEntities: true,
               // Register our entities
-              entities: [UserEntity, UserOtpEntity],
+              entities: [UserEntity, UserOtpEntity, FederatedEntity],
             };
           },
         }),
@@ -60,6 +156,16 @@ async function generateSwaggerJson() {
               }),
             ],
           },
+          federated: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                federated: {
+                  entity: FederatedEntity,
+                },
+              }),
+            ],
+            userModelService: mockUserModelService,
+          },
           jwt: {
             settings: {
               access: { secret: 'test-secret' },
@@ -71,6 +177,7 @@ async function generateSwaggerJson() {
             mailerService: {
               sendMail: () => Promise.resolve(),
             },
+            userModelService: mockUserModelService,
           },
         }),
       ],
