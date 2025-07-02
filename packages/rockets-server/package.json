@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-server",
-  "version": "0.1.0-dev.1",
+  "version": "0.1.0-dev.3",
   "description": "Rockets Server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -35,7 +35,7 @@
     "@concepta/nestjs-jwt": "^7.0.0-alpha.4",
     "@concepta/nestjs-otp": "^7.0.0-alpha.4",
     "@concepta/nestjs-password": "^7.0.0-alpha.4",
-    "@concepta/nestjs-typeorm-ext": "^7.0.0-alpha.4",
+    "@concepta/nestjs-swagger-ui": "^7.0.0-alpha.4",
     "@concepta/nestjs-user": "^7.0.0-alpha.4",
     "@nestjs/common": "^10.4.1",
     "@nestjs/config": "^3.2.3",
@@ -43,12 +43,16 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/swagger": "^7.4.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
-    "passport-strategy": "^1.0.0"
+    "passport-strategy": "^1.0.0",
+    "rxjs": "^7.1.0"
   },
   "devDependencies": {
+    "@concepta/nestjs-typeorm-ext": "^7.0.0-alpha.4",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/platform-express": "^10.4.1",
     "@nestjs/testing": "^10.4.1",
@@ -61,12 +65,11 @@
     "jest-mock-extended": "^2.0.9",
     "sqlite3": "^5.1.4",
     "supertest": "^6.3.4",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typeorm": "^0.3.0"
   },
   "peerDependencies": {
-    "class-transformer": "*",
-    "class-validator": "*",
-    "rxjs": "^7.1.0",
+    "@concepta/nestjs-typeorm-ext": "^7.0.0-alpha.4",
     "typeorm": "^0.3.0"
   }
 }

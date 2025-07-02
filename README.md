@@ -34,6 +34,9 @@ npm install @concepta/rockets-server @concepta/nestjs-typeorm-ext typeorm
 
 ### Basic Setup
 
+This is the minimum required setup to get started with Rockets Server. You'll need to create your entities and configure the module as follows:
+
+
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
@@ -51,29 +54,32 @@ import { FederatedEntity } from './entities/federated.entity';
       synchronize: true,
       autoLoadEntities: true,
     }),
-    TypeOrmExtModule.forFeature({
-      user: { entity: UserEntity },
-    }),
-    TypeOrmExtModule.forFeature({
-      userOtp: { entity: UserOtpEntity },
-    }),
-    TypeOrmExtModule.forFeature({
-      federated: { entity: FederatedEntity },
-    }),
     RocketsServerModule.forRoot({
+      user: {
+        imports: [
+          TypeOrmExtModule.forFeature({
+            user: {
+              entity: UserFixture,
+            },
+          }),
+        ],
+      },
+      otp: {
+        imports: [
+          TypeOrmExtModule.forFeature({
+            userOtp: {
+              entity: UserOtpEntityFixture,
+            },
+          }),
+        ],
+      },
       jwt: {
         settings: {
-          access: { secret: 'your-secret-key' },
-          refresh: { secret: 'your-refresh-secret' },
+          default: { secret: 'test-secret-forroot' },
         },
       },
       services: {
-        mailerService: {
-          sendMail: (options) => {
-            console.log('Email sent:', options.to);
-            return Promise.resolve();
-          },
-        },
+        mailerService: mockEmailService,
       },
     }),
   ],

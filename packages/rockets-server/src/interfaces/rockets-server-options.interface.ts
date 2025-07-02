@@ -26,12 +26,15 @@ import { UserPasswordHistoryServiceInterface } from '@concepta/nestjs-user/dist/
 import { RocketsServerNotificationServiceInterface } from './rockets-server-notification.service.interface';
 import { RocketsServerSettingsInterface } from './rockets-server-settings.interface';
 import { RocketsServerUserModelServiceInterface } from './rockets-server-user-model-service.interface';
+import { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui/dist/interfaces/swagger-ui-options.interface';
 
 /**
  * Combined options interface for the AuthenticationCombinedModule
  */
 export interface RocketsServerOptionsInterface {
   settings?: RocketsServerSettingsInterface;
+  
+  swagger?: SwaggerUiOptionsInterface;
   /**
    * Core Authentication module options
    * Used in: AuthenticationModule.forRootAsync

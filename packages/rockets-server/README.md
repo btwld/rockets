@@ -156,14 +156,6 @@ import { UserOtpEntity } from './entities/user-otp.entity';
       // JWT configuration
       jwt: {
         settings: {
-          access: { 
-            secret: 'your-access-secret-key-here', 
-            signOptions: { expiresIn: '15m' }
-          },
-          refresh: { 
-            secret: 'your-refresh-secret-key-here', 
-            signOptions: { expiresIn: '7d' }
-          },
           default: { 
             secret: 'your-default-secret-key-here',
             signOptions: { expiresIn: '1h' }
@@ -309,7 +301,7 @@ Expected response:
 
 ```json
 {
-  "id": "1",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "email": "user@example.com",
   "username": "testuser",
   "active": true,
@@ -354,7 +346,7 @@ Expected response:
 
 ```json
 {
-  "id": "1",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "email": "user@example.com",
   "username": "testuser",
   "active": true,

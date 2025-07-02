@@ -438,6 +438,7 @@ __metadata:
     "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-otp": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-password": "npm:^7.0.0-alpha.4"
+    "@concepta/nestjs-swagger-ui": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-typeorm-ext": "npm:^7.0.0-alpha.4"
     "@concepta/nestjs-user": "npm:^7.0.0-alpha.4"
     "@nestjs/common": "npm:^10.4.1"
@@ -453,19 +454,21 @@ __metadata:
     "@types/passport-jwt": "npm:^3.0.13"
     "@types/passport-strategy": "npm:^0.2.38"
     "@types/supertest": "npm:^6.0.2"
+    class-transformer: "npm:^0.5.1"
+    class-validator: "npm:^0.14.2"
     express-serve-static-core: "npm:^0.1.1"
     jest-mock-extended: "npm:^2.0.9"
     jsonwebtoken: "npm:^9.0.2"
     passport: "npm:^0.7.0"
     passport-jwt: "npm:^4.0.1"
     passport-strategy: "npm:^1.0.0"
+    rxjs: "npm:^7.1.0"
     sqlite3: "npm:^5.1.4"
     supertest: "npm:^6.3.4"
     ts-node: "npm:^10.9.2"
+    typeorm: "npm:^0.3.0"
   peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
+    "@concepta/nestjs-typeorm-ext": ^7.0.0-alpha.4
     typeorm: ^0.3.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
@@ -917,6 +920,18 @@ __metadata:
     bcrypt: "npm:^5.1.1"
     zxcvbn: "npm:^4.4.2"
   checksum: 10c0/a2e63bf8a0705c11436a7152c78420921f2c7cf02155e73e92f7909cf2a77511eb8d9c6f4921b200aeb7c8ec803a2843c40fa536b952efbcb1e8e07579c70df6
+  languageName: node
+  linkType: hard
+
+"@concepta/nestjs-swagger-ui@npm:^7.0.0-alpha.4":
+  version: 7.0.0-alpha.4
+  resolution: "@concepta/nestjs-swagger-ui@npm:7.0.0-alpha.4"
+  dependencies:
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.4"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/swagger": "npm:^7.4.0"
+  checksum: 10c0/394eae80690a8f0a3409d9e9812a8dc99220b4d5a125dc8e325a059d5a191c1ee26d7fd30c466385298b90b3db6e63cc8af6e37360e3f9a523a4e429c53feed4
   languageName: node
   linkType: hard
 
@@ -5342,7 +5357,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"class-validator@npm:^0.14.1":
+"class-validator@npm:^0.14.1, class-validator@npm:^0.14.2":
   version: 0.14.2
   resolution: "class-validator@npm:0.14.2"
   dependencies:
@@ -14060,7 +14075,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rxjs@npm:^7.5.5, rxjs@npm:^7.8.1":
+"rxjs@npm:^7.1.0, rxjs@npm:^7.5.5, rxjs@npm:^7.8.1":
   version: 7.8.2
   resolution: "rxjs@npm:7.8.2"
   dependencies:
@@ -16031,6 +16046,86 @@ __metadata:
   bin:
     typedoc: bin/typedoc
   checksum: 10c0/13878e6a9fc2b65d65e3b514efa11b43bdfd57149861cefc4a969ec213f4bc4b36ee9239d0b654ae18bcbbd5174206d409383f9000b7bdea22da1945f7ac91de
+  languageName: node
+  linkType: hard
+
+"typeorm@npm:^0.3.0":
+  version: 0.3.25
+  resolution: "typeorm@npm:0.3.25"
+  dependencies:
+    "@sqltools/formatter": "npm:^1.2.5"
+    ansis: "npm:^3.17.0"
+    app-root-path: "npm:^3.1.0"
+    buffer: "npm:^6.0.3"
+    dayjs: "npm:^1.11.13"
+    debug: "npm:^4.4.0"
+    dedent: "npm:^1.6.0"
+    dotenv: "npm:^16.4.7"
+    glob: "npm:^10.4.5"
+    sha.js: "npm:^2.4.11"
+    sql-highlight: "npm:^6.0.0"
+    tslib: "npm:^2.8.1"
+    uuid: "npm:^11.1.0"
+    yargs: "npm:^17.7.2"
+  peerDependencies:
+    "@google-cloud/spanner": ^5.18.0 || ^6.0.0 || ^7.0.0
+    "@sap/hana-client": ^2.12.25
+    better-sqlite3: ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
+    hdb-pool: ^0.1.6
+    ioredis: ^5.0.4
+    mongodb: ^5.8.0 || ^6.0.0
+    mssql: ^9.1.1 || ^10.0.1 || ^11.0.1
+    mysql2: ^2.2.5 || ^3.0.1
+    oracledb: ^6.3.0
+    pg: ^8.5.1
+    pg-native: ^3.0.0
+    pg-query-stream: ^4.0.0
+    redis: ^3.1.1 || ^4.0.0
+    reflect-metadata: ^0.1.14 || ^0.2.0
+    sql.js: ^1.4.0
+    sqlite3: ^5.0.3
+    ts-node: ^10.7.0
+    typeorm-aurora-data-api-driver: ^2.0.0 || ^3.0.0
+  peerDependenciesMeta:
+    "@google-cloud/spanner":
+      optional: true
+    "@sap/hana-client":
+      optional: true
+    better-sqlite3:
+      optional: true
+    hdb-pool:
+      optional: true
+    ioredis:
+      optional: true
+    mongodb:
+      optional: true
+    mssql:
+      optional: true
+    mysql2:
+      optional: true
+    oracledb:
+      optional: true
+    pg:
+      optional: true
+    pg-native:
+      optional: true
+    pg-query-stream:
+      optional: true
+    redis:
+      optional: true
+    sql.js:
+      optional: true
+    sqlite3:
+      optional: true
+    ts-node:
+      optional: true
+    typeorm-aurora-data-api-driver:
+      optional: true
+  bin:
+    typeorm: cli.js
+    typeorm-ts-node-commonjs: cli-ts-node-commonjs.js
+    typeorm-ts-node-esm: cli-ts-node-esm.js
+  checksum: 10c0/f0b52e451003713aba83a96bce5ee942c7f3ae236ee2e241b7872a19a3e3ac7ac24c91f3c279606678838c360de3c25a8156239b047f7980b0ba2b7ba6f73152
   languageName: node
   linkType: hard
 
