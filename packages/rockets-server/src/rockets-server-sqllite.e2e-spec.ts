@@ -24,6 +24,8 @@ import { AuthPasswordController } from './controllers/auth/auth-password.control
 import { AuthSignupController } from './controllers/auth/auth-signup.controller';
 import { RocketsServerModule } from './rockets-server.module';
 import { SqliteAdapterModule } from './__fixtures__/sqlite-adapter/sqlite-adapter.module';
+import { RoleEntityFixture } from './__fixtures__/role/role.entity.fixture';
+import { UserRoleEntityFixture } from './__fixtures__/role/user-role.entity.fixture';
 
 // Test controller with protected route
 @Controller('test')
@@ -86,6 +88,18 @@ describe('RocketsServer (e2e)', () => {
               SqliteAdapterModule.forFeature({
                 user: {
                   entity: UserFixture,
+                },
+              }),
+            ],
+          },
+          role: {
+            imports: [
+              SqliteAdapterModule.forFeature({
+                role: {
+                  entity: RoleEntityFixture,
+                },
+                userRole: {
+                  entity: UserRoleEntityFixture,
                 },
               }),
             ],

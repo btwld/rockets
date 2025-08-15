@@ -25,6 +25,8 @@ import { FederatedEntityFixture } from './__fixtures__/federated/federated.entit
 import { AuthPasswordController } from './controllers/auth/auth-password.controller';
 import { AuthSignupController } from './controllers/auth/auth-signup.controller';
 import { RocketsServerModule } from './rockets-server.module';
+import { RoleEntityFixture } from './__fixtures__/role/role.entity.fixture';
+import { UserRoleEntityFixture } from './__fixtures__/role/user-role.entity.fixture';
 
 // Test controller with protected route
 @Controller('test')
@@ -99,6 +101,18 @@ describe('RocketsServer (e2e)', () => {
               TypeOrmExtModule.forFeature({
                 userOtp: {
                   entity: UserOtpEntityFixture,
+                },
+              }),
+            ],
+          },
+          role: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                role: {
+                  entity: RoleEntityFixture,
+                },
+                userRole: {
+                  entity: UserRoleEntityFixture,
                 },
               }),
             ],

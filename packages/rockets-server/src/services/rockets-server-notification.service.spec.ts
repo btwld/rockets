@@ -16,6 +16,9 @@ describe(RocketsServerNotificationService.name, () => {
     };
 
     mockSettings = {
+      role: {
+        adminRoleName: 'admin',
+      },
       email: {
         from: 'noreply@example.com',
         baseUrl: 'https://example.com',
@@ -100,6 +103,9 @@ describe(RocketsServerNotificationService.name, () => {
 
     it('should use settings from configuration', async () => {
       const customSettings: RocketsServerSettingsInterface = {
+        role: {
+          adminRoleName: 'admin',
+        },
         email: {
           from: 'custom@example.com',
           baseUrl: 'https://custom.example.com',

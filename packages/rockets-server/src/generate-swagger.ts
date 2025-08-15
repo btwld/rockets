@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Module } from '@nestjs/common';
 import { RocketsServerModule } from './rockets-server.module';
-import { Entity } from 'typeorm';
+import { Entity, Repository } from 'typeorm';
 import {
   UserSqliteEntity,
   OtpSqliteEntity,
@@ -12,6 +12,11 @@ import {
   TypeOrmExtModule,
 } from '@concepta/nestjs-typeorm-ext';
 import { UserModelService } from '@concepta/nestjs-user';
+import { RocketsServerUserCreateDto } from './dto/user/rockets-server-user-create.dto';
+import { RocketsServerUserUpdateDto } from './dto/user/rockets-server-user-update.dto';
+import { RocketsServerUserDto } from './dto/user/rockets-server-user.dto';
+import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
 
 // Create concrete entity implementations for TypeORM
 @Entity()
@@ -29,6 +34,14 @@ class FederatedEntity extends FederatedSqliteEntity {
   user: UserEntity;
 }
 
+class AdminUserTypeOrmCrudAdapter extends TypeOrmCrudAdapter<UserEntity> {
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly repository: Repository<UserEntity>,
+  ) {
+    super(repository);
+  }
+}
 // Mock services for swagger generation
 class MockUserModelService implements Partial<UserModelService> {
   async byId(id: string) {
@@ -124,6 +137,14 @@ async function generateSwaggerJson() {
 
     @Module({
       imports: [
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          synchronize: false,
+          autoLoadEntities: true,
+          entities: [UserEntity, UserOtpEntity, FederatedEntity],
+        }),
+        TypeOrmModule.forFeature([UserEntity]),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => {
@@ -137,48 +158,44 @@ async function generateSwaggerJson() {
             };
           },
         }),
-        RocketsServerModule.forRoot({
-          user: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                user: {
-                  entity: UserEntity,
-                },
-              }),
-            ],
-          },
-          otp: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                userOtp: {
-                  entity: UserOtpEntity,
-                },
-              }),
-            ],
-          },
-          federated: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                federated: {
-                  entity: FederatedEntity,
-                },
-              }),
-            ],
-            userModelService: mockUserModelService,
-          },
-          jwt: {
-            settings: {
-              access: { secret: 'test-secret' },
-              refresh: { secret: 'test-secret' },
-              default: { secret: 'test-secret' },
+        RocketsServerModule.forRootAsync({
+          imports: [
+            TypeOrmModule.forFeature([UserEntity]),
+            TypeOrmExtModule.forFeature({
+              user: { entity: UserEntity },
+              userOtp: { entity: UserOtpEntity },
+              federated: { entity: FederatedEntity },
+            }),
+          ],
+          admin: {
+            imports: [TypeOrmModule.forFeature([UserEntity])],
+            adapter: AdminUserTypeOrmCrudAdapter,
+            model: RocketsServerUserDto,
+            dto: {
+              createOne: RocketsServerUserCreateDto,
+              createMany: RocketsServerUserCreateDto,
+              replaceOne: RocketsServerUserCreateDto,
+              updateOne: RocketsServerUserUpdateDto,
             },
           },
-          services: {
-            mailerService: {
-              sendMail: () => Promise.resolve(),
+          useFactory: () => ({
+            jwt: {
+              settings: {
+                access: { secret: 'test-secret' },
+                refresh: { secret: 'test-secret' },
+                default: { secret: 'test-secret' },
+              },
             },
-            userModelService: mockUserModelService,
-          },
+            federated: {
+              userModelService: mockUserModelService,
+            },
+            services: {
+              mailerService: {
+                sendMail: () => Promise.resolve(),
+              },
+              userModelService: mockUserModelService,
+            },
+          }),
         }),
       ],
     })

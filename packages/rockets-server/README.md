@@ -35,6 +35,7 @@
   - [email](#email)
   - [services](#services)
   - [crud](#crud)
+  - [admin](#admin)
 - [Explanation](#explanation)
   - [Architecture Overview](#architecture-overview)
   - [Design Decisions](#design-decisions)
@@ -273,6 +274,11 @@ import { FederatedEntity } from './entities/federated.entity';
             expiresIn: '10m',
           },
         },
+        // Optional: Enable Admin endpoints
+        // Provide a CRUD adapter + DTOs and import the repository via
+        // TypeOrmModule.forFeature([...]). Enable by passing `admin` at the
+        // top-level of RocketsServerModule.forRoot/forRootAsync options.
+        // See the admin how-to section for a complete example.
       }),
     }),
   ],
@@ -336,6 +342,18 @@ With the basic setup complete, your application now provides these endpoints:
 
 - `GET /user` - Get current user profile
 - `PATCH /user` - Update current user profile
+
+#### Admin Endpoints (optional)
+
+If you enable the admin module (see How-to Guides > admin), these routes become
+available and are protected by `AdminGuard`:
+
+- `GET /admin/users` - List users
+- `GET /admin/users/:id` - Get a user
+- `POST /admin/users` - Create a user
+- `PATCH /admin/users/:id` - Update a user
+- `PUT /admin/users/:id` - Replace a user
+- `DELETE /admin/users/:id` - Delete a user
 
 #### OTP Endpoints
 
@@ -2163,7 +2181,92 @@ provider integration
 
 ---
 
-This comprehensive documentation provides developers with everything they need
-to understand, implement, and extend the Rockets SDK in their applications.
-The modular design and extensive configuration options make it suitable for
-projects ranging from simple prototypes to complex enterprise systems.
+### admin
+
+Admin user management is now provided via a dynamic submodule that you enable
+through the module extras. It exposes CRUD endpoints under `/admin/users`,
+guarded by `AdminGuard` and documented in Swagger.
+
+#### Prerequisites
+
+- A TypeORM repository for your user entity available via
+  `TypeOrmModule.forFeature([UserEntity])`
+- A CRUD adapter implementing `CrudAdapter` (e.g., a `TypeOrmCrudAdapter`)
+- DTOs for model, create, update (optional replace/many)
+
+#### Minimal adapter example
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
+import { UserEntity } from './entities/user.entity';
+
+@Injectable()
+export class AdminUserTypeOrmCrudAdapter extends TypeOrmCrudAdapter<UserEntity> {
+  constructor(
+    @InjectRepository(UserEntity) repo: Repository<UserEntity>,
+  ) {
+    super(repo);
+  }
+}
+```
+
+#### Enable admin in RocketsServerModule
+
+```typescript
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([UserEntity]),
+    RocketsServerModule.forRootAsync({
+      // ... other options
+      imports: [TypeOrmModule.forFeature([UserEntity])],
+      useFactory: () => ({
+        services: {
+          mailerService: yourMailerService,
+        },
+      }),
+      admin: {
+        // Ensure your repository is imported
+        imports: [TypeOrmModule.forFeature([UserEntity])],
+        // Route base path (default: 'admin/users')
+        path: 'admin/users',
+        // Swagger model type for responses
+        model: YourUserDto,
+        // The entity managed by this admin CRUD
+        entity: UserEntity,
+        // The CRUD adapter
+        adapter: AdminUserTypeOrmCrudAdapter,
+        // Optional DTOs for mutations
+        dto: {
+          createOne: YourUserCreateDto,
+          updateOne: YourUserUpdateDto,
+          replaceOne: YourUserUpdateDto,
+          createMany: YourUserCreateDto,
+        },
+      },
+      
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+#### Role guard behavior
+
+- `AdminGuard` checks for the role defined in `settings.role.adminRoleName`.
+- No roles are created by default. You must manually create the admin role in
+  your roles store (e.g., database).
+- The role name must match the environment variable `ADMIN_ROLE_NAME`
+  (default is `admin`). Ensure the stored role name and env variable are
+  identical.
+
+#### Generated routes
+
+- `GET /admin/users`
+- `GET /admin/users/:id`
+- `POST /admin/users`
+- `PATCH /admin/users/:id`
+- `PUT /admin/users/:id`
+- `DELETE /admin/users/:id`

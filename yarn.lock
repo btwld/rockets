@@ -432,27 +432,28 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-server@workspace:packages/rockets-server"
   dependencies:
-    "@concepta/nestjs-access-control": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-apple": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-github": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-google": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-jwt": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-local": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-recovery": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-refresh": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-router": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-auth-verify": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-crud": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-email": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-otp": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-password": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-swagger-ui": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-typeorm-ext": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-user": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-access-control": "npm:7.0.0-alpha.7"
+    "@concepta/nestjs-auth-apple": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-github": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-google": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-jwt": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-local": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-recovery": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-refresh": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-router": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-auth-verify": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-crud": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-email": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-otp": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-password": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-role": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-swagger-ui": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-typeorm-ext": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-user": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -701,28 +702,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-access-control@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-access-control@npm:7.0.0-alpha.6"
+"@concepta/nestjs-access-control@npm:7.0.0-alpha.7, @concepta/nestjs-access-control@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-access-control@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
     accesscontrol: "npm:^2.2.1"
     rxjs: "npm:^7.8.1"
-  checksum: 10c0/b13bd3f743823f969c2cd6d3e86aa23bec01703ffd71b2501f2cca003b320ea0404cdddb70e9a29af869b058a2713c02a805e681a18d3d7a957f2324de2ef159
+  checksum: 10c0/613b1deaed11a56339c23bbfd0c81614ea01d0de2e718e118ab97c924c21411217aeb953d6e3bad0cea281bf41ad06d3cd18788a877bfdeb775b8490aeb4dbe2
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-apple@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-apple@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-apple@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-apple@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -735,17 +736,17 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/044d45d9b56efe20dbb757238d715559465be406372eebafa0f2b6070a24419df390f8b268dd5e08483b4c4717e67ec30dc1fde9e7ddf9de71d0c28218f47399
+  checksum: 10c0/bc974b404f489315141d5d747f1608cca7b83361cee8a34d9309ab4c1c015d6a19e6323e41e56e3975604020211de0839c96891503058e212613fcf18c3661e1
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-github@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-github@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-github@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-github@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -757,17 +758,17 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/27700e5828d38f15beb8713a9944820d4814084e8f9827944e7c21cb8a853874a8661e3ae5351aa7b417e02e9d1169506dd0816e391bac58c8d93fe0f78d39c6
+  checksum: 10c0/241ad177701f14e8d44b312b8b21955226c5ef941a668169bb9789e7a78439f62974c3ec0e5c0fb99b7351697ae8fe832c66120b6f5287b930c90cf717037403
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-google@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-google@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-google@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-google@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -779,17 +780,17 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/e348750e04286ae4ae54ac5b35d79dd1a806de7c2000c64027dd4237617457ae7d833918a9bd5d94b44da666d1f47b32d82fde76173547470997e62b7276e4d4
+  checksum: 10c0/86cae1102a5d57ba33e446cabc4bbaea86ef5edcba86cadae13f6ea3272614771ea8be7612a66da4cfc961042500b89d466c5c1992e2aa190efd4b542a297494
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-jwt@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-jwt@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-jwt@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-jwt@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -797,17 +798,17 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/209457641f21e5971ea69fe335e3bc14ad52e7009993df640e3787a534f297238b9cce97e897434810277ef65a2b678f563fe47cbd0918227346311a4664b7e2
+  checksum: 10c0/c8fd9411c0cb34ea5f9a476166bca5aeac149034aaf5aa6fe4422a178f48b92a7057da315dc3c40b724e590e376eb37837e73c3f8eca590bf021a2d4fd54b4bd
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-local@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-local@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-local@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-local@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-password": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-password": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -817,15 +818,15 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.1.0
-  checksum: 10c0/a0b6754cce44478a4fd4e4d84b1527a7dff96e46059ea604c7b7dda4e4f065cb2166d8e103cf87792aa778011a7fd7f31b5a8067d47139e9019a18769a3fe135
+  checksum: 10c0/dbb98306431f49015b5628f29984c26dccfb5b1633cecfa4386d3a1999747de1145ed49b16a0a0daa677eda54159d4b24d67219514f00665b0866f622133e4eb
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-recovery@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-recovery@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-recovery@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-recovery@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -835,17 +836,17 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/854022ddca1c70e92b4a56e659bc753f2aae7cf26d55e9f06bf7a2b222cbdef7d574334d26c7b04a9641778bc698d9ff3634f96ba61a557991d6a617987dd73b
+  checksum: 10c0/b586b2f8e49fc7c3654834e5fde353be1db5d7da4a06ad0a9e01147e566f4e07485d0089b856e3fd8b69e4374783a272d9857ffd566296114be8ea509d342a92
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-refresh@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-refresh@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-refresh@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-refresh@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -854,15 +855,15 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.1.0
-  checksum: 10c0/4800f736b8f3ef0170afcadb75051c1df06c2e013065f8a567906a2fc25846c5979a010ac14aeec5353d89ab0df2e6bbe38fa3a7c3e50594b109980733720dc5
+  checksum: 10c0/9b89f41e30f1f3468b17ff3ef4b5bef87c0f83f3a8b26fe6848a53f9cc82982c6c47ff78cafac6982f61cfc514479528278af5ae7e42655f4fe260c0e3a59143
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-router@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-router@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-router@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-router@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -872,15 +873,15 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.8.1
     typeorm: ^0.3.0
-  checksum: 10c0/eaf146dafd8a72e87c0cf5e9826336c60fcc233282718a648e47f4eb4b176c25fbf2e51fbdfdd91089aa0322251b383b19b9a2a9a90fbfd08c40892c3125f43e
+  checksum: 10c0/f9aab125cc667c62266ae2de8f905bcbf5403332289696e539cd9c1311cf32ce089ee0b8ebd8ac15fde0308af47b8bff833f70b146964109510c811abcdf4008
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-verify@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-auth-verify@npm:7.0.0-alpha.6"
+"@concepta/nestjs-auth-verify@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-auth-verify@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -890,16 +891,16 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/26e72b843620c15796665dff4648c7246c40afd555aee968cf800fae8c277333d3b818298e3b05069f0d3fc8d098d7eed2d51fe998dd5126b5b976d6b5c4ee8c
+  checksum: 10c0/f8f2b15a49bf730801226fe1b2740e9dac76a68455369fc82836e88eaeb41fdb0365292c960b58e09f47894c0277fcc0d5cf326ebdf5fc0d0009d9c5712e14bf
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-authentication@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-authentication@npm:7.0.0-alpha.6"
+"@concepta/nestjs-authentication@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-authentication@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -911,28 +912,28 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.1.0
-  checksum: 10c0/e73b1c9b94747d176559f49de1d20513e214f6d7443f50388152a31cfc1fceba2ce594ab6b2d93bdaebeaafe9ce1e4315de935aad0bf4a34aceb05a4c90afa24
+  checksum: 10c0/1986085a42dec99461081dda9b6644f2eb4bc6ecc09ce32598e3de801f4827c24df73b0cb792c4854a1c44b4d8024fdf594e4c86b7fbffad6cf451863eeb1209
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-common@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-common@npm:7.0.0-alpha.6"
+"@concepta/nestjs-common@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-common@npm:7.0.0-alpha.7"
   dependencies:
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/swagger": "npm:^7.4.0"
   peerDependencies:
     class-transformer: "*"
     class-validator: "*"
-  checksum: 10c0/c8e28b3ed68b620169ec1f05fe04ab04614e0bf9ce9130a2df75a90fc438833a73bec66a37b767063a223934d1bba7bfbf12e8d9ee5a5764edf352d3cbd44e03
+  checksum: 10c0/fadd4b29dec426c0c266067cbcb80abbf0025739d6c5b85c7ef2498a9171e9e89c5c113417eec661c2017a634e90820d40ed5f384aaf931798c5f9973efda442
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-crud@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-crud@npm:7.0.0-alpha.6"
+"@concepta/nestjs-crud@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-crud@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -945,40 +946,40 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/ac871c8861609dc598046a5e10c2d9f4c86e8119f0349dbcbbeb6aa6ffe51351c7623be35e212947ee089109d4dd3e17a55f2b48106abdfeb2894abeff90a674
+  checksum: 10c0/80bdacffa25f06fdb229cffaf4f50ba66905399737d18c8583385737d5ac50aa5f826028b658b60cb69876bb5911823fe0f97f5f26c1fa803eb409fd54f0a426
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-email@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-email@npm:7.0.0-alpha.6"
+"@concepta/nestjs-email@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-email@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
-  checksum: 10c0/7245053a3e3133f412b6e20094fd197a82f9d3acc0ac212bb46a34e41690f8039fcc310d2e204fd365cd362039151a01c55349781b6c3ecd6714fbcc8f8dce8a
+  checksum: 10c0/36b86e513e12f99c8705fbcaf15a27e68b241d4012ff036a31d8c487d62cb9b9f9887815ef65a2216ec3802b51070e8ad67be191d19e83d0b3e4c732a14aff49
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-event@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-event@npm:7.0.0-alpha.6"
+"@concepta/nestjs-event@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-event@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
     eventemitter2: "npm:^6.4.9"
-  checksum: 10c0/60d666401d54890f6d83c5aca9b62ca8b673cb813f45b5cf42dc17a5a70f099cbe83cc893d9bccc1702e76a1c14bc50ae1dd4e34882f404c4bcae6c3dc4345cd
+  checksum: 10c0/ceaef747a54ae6473da7884ab517e997e70f8956acc61b4171ff0027bf80d256be60638d0a56e9ae857fbc9be6ac143d4a618e66bf792e01fdc7f7a1188dc07e
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-federated@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-federated@npm:7.0.0-alpha.6"
+"@concepta/nestjs-federated@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-federated@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/swagger": "npm:^7.4.0"
@@ -987,30 +988,30 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
     typeorm: ^0.3.0
-  checksum: 10c0/4dad8ed89982b89f1b2b3b3a4718dfb8c5cb1ca66d77cf0a47219bf6fc849dbca786c452192a62f4d289a4a5586cf6a1943b7044c2a54557d92633a1a9e87a92
+  checksum: 10c0/334a892b0dbcf2ca4a36c9f6cd7deb6fce5e27ccac1558083bdf1d1166d64845bbe77eac3d4456edb8fc1c89e9f7ec7169d0ae03e2437a7fd22dc8876397ad8d
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-jwt@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-jwt@npm:7.0.0-alpha.6"
+"@concepta/nestjs-jwt@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-jwt@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/jwt": "npm:^10.2.0"
     jsonwebtoken: "npm:^9.0.2"
     passport-jwt: "npm:^4.0.1"
     passport-strategy: "npm:^1.0.0"
-  checksum: 10c0/78530cfbc5945f6308342070586e01c1aca67552a91c179da9ddbf39508fa955b79362dd03a4dcfc12c88047c63e04fdc71f786379e7fb6e6af0aa50baf17b70
+  checksum: 10c0/380e2a172cdba1eacb56877c9bce5964253d32ca136ecbdb574cd0af57eb6ba1a719662ac4d044650279a1f26b0f06c96e69b0aa743b3245c477fff66cec97d5
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-otp@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-otp@npm:7.0.0-alpha.6"
+"@concepta/nestjs-otp@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-otp@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     ms: "npm:^2.1.3"
@@ -1018,60 +1019,77 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     typeorm: ^0.3.0
-  checksum: 10c0/e0ff677ce3d532741822c55d5661abf256323ac2150bce9527a24d00d94b8283848f22c29be36e43067ad44a114e03797c82132a3d533658b29e49d20abbdaa8
+  checksum: 10c0/95cfb970124ac5af4edf5ab173d72246d273e2d6573ae4b0c93a895e01d1e0105278a38af2be71ff1a8f4e2de53eff494f1ecda25e3dc1a6ff35d9479d394072
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-password@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-password@npm:7.0.0-alpha.6"
+"@concepta/nestjs-password@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-password@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
     "@types/zxcvbn": "npm:^4.4.4"
     bcrypt: "npm:^5.1.1"
     zxcvbn: "npm:^4.4.2"
-  checksum: 10c0/64ef999834854bbe22a7ba709c4c9205857cb96341d6a8d7d90b1d75d426f4931932333fddfeec51ed9fab0b4fb52beaa36b17a0f42c330bd7d4b30e378ac843
+  checksum: 10c0/3be4d530820f43db6be0298d75f2ee0352c87d519e6ad93e92b853422e753d8e126d945c7938424a8c22ff9dca57aa09f3fc0dabb79b29d496215bb77efb214a
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-swagger-ui@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-swagger-ui@npm:7.0.0-alpha.6"
+"@concepta/nestjs-role@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-role@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-access-control": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/swagger": "npm:^7.4.0"
-  checksum: 10c0/edeb698e3568035f464e939ea40adfb087e65aaa90f3a9c26d0a4092613a72cbfa841872723d219809d635573bf740d274cbf86374690c4ccf8815508f677732
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+    typeorm: ^0.3.0
+  checksum: 10c0/2ee1cb5ea2a1409af0996a75f8637294b6cefda7eeba988645992afd081668bc3db92c64596e7a6175f56084f2d9cebe3a1a23d222ae63a1c2717db774563342
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-typeorm-ext@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-typeorm-ext@npm:7.0.0-alpha.6"
+"@concepta/nestjs-swagger-ui@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-swagger-ui@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/swagger": "npm:^7.4.0"
+  checksum: 10c0/9526da877f945b8e011acb30ce2407234f972361dcdc891327869b352a6590a4ae7570de95aa3599cb11a9971cd7ae7bb255fb27c3985de8268f836dee85d0a8
+  languageName: node
+  linkType: hard
+
+"@concepta/nestjs-typeorm-ext@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-typeorm-ext@npm:7.0.0-alpha.7"
+  dependencies:
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/typeorm": "npm:^10.0.2"
   peerDependencies:
     class-transformer: "*"
     class-validator: "*"
     typeorm: ^0.3.0
-  checksum: 10c0/84daa1d4d19472d8ee0e0a1892d8bb2dbd6ca70bc154f08da9cb2ca61aa29ee38fedb69120d2fc8689f65dc27c4bf7850c140e57c153b4810fb00836b00b5fac
+  checksum: 10c0/435d58f566c52cacdfe27d180668def2e2ac35bfb314b3a87488c52f13b2d8c67f976cf77e935333dd19873a042649406372b6f952036e676f48ffb74e4967ff
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-user@npm:^7.0.0-alpha.6":
-  version: 7.0.0-alpha.6
-  resolution: "@concepta/nestjs-user@npm:7.0.0-alpha.6"
+"@concepta/nestjs-user@npm:^7.0.0-alpha.7":
+  version: 7.0.0-alpha.7
+  resolution: "@concepta/nestjs-user@npm:7.0.0-alpha.7"
   dependencies:
-    "@concepta/nestjs-access-control": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-event": "npm:^7.0.0-alpha.6"
-    "@concepta/nestjs-password": "npm:^7.0.0-alpha.6"
+    "@concepta/nestjs-access-control": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-event": "npm:^7.0.0-alpha.7"
+    "@concepta/nestjs-password": "npm:^7.0.0-alpha.7"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -1080,7 +1098,7 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     typeorm: ^0.3.0
-  checksum: 10c0/827a37163ba0b97a02f6fe9d26fd7b93690acf014a2e0980774e5102d8b35c3b337767b602cfff024d4aa79ffbf04dbaee57c57e83240a9cb68dd2ab8581f18d
+  checksum: 10c0/b971d915455d3cd10b3c5f8de592fdd8226502baecc3f92fb2e6a664f9cf3735fd6d6d061ff19102ee02870937b0d75bfcd4b4cf8a14ff63bbe4099b99f3a6cd
   languageName: node
   linkType: hard
 
