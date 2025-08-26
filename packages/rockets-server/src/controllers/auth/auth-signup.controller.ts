@@ -21,7 +21,7 @@ import { RocketsServerUserDto } from '../../dto/user/rockets-server-user.dto';
  * Controller for user registration/signup
  * Allows creating new user accounts
  */
-@Controller('signup')
+@Controller('signup-old')
 @AuthPublic()
 @ApiTags('auth')
 export class AuthSignupController {

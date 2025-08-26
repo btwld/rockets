@@ -7,7 +7,7 @@ import { RocketsServerSettingsInterface } from '../interfaces/rockets-server-set
 import { RocketsServerNotificationService } from './rockets-server-notification.service';
 import {
   ROCKETS_SERVER_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-  RocketsServerUserLookupService,
+  RocketsServerUserModelService,
 } from '../rockets-server.constants';
 
 describe(RocketsServerOtpService.name, () => {
@@ -68,6 +68,7 @@ describe(RocketsServerOtpService.name, () => {
     };
 
     mockSettings = {
+      role: { adminRoleName: 'admin' },
       email: {
         from: 'noreply@example.com',
         baseUrl: 'https://example.com',
@@ -94,7 +95,7 @@ describe(RocketsServerOtpService.name, () => {
           useValue: mockSettings,
         },
         {
-          provide: RocketsServerUserLookupService,
+          provide: RocketsServerUserModelService,
           useValue: mockUserModelService,
         },
         {

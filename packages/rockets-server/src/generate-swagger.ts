@@ -1,21 +1,51 @@
+import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
+import {
+  FederatedSqliteEntity,
+  OtpSqliteEntity,
+  RoleAssignmentSqliteEntity,
+  RoleSqliteEntity,
+  TypeOrmExtModule,
+  UserSqliteEntity,
+} from '@concepta/nestjs-typeorm-ext';
+import { UserModelService, UserPasswordDto } from '@concepta/nestjs-user';
+import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  DocumentBuilder,
+  IntersectionType,
+  PickType,
+  SwaggerModule,
+} from '@nestjs/swagger';
+import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
+import { Expose } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Module } from '@nestjs/common';
+import { Column, Entity, Repository } from 'typeorm';
+import { RocketsServerUserDto } from './dto/user/rockets-server-user.dto';
+import { RocketsServerUserEntityInterface } from './interfaces/user/rockets-server-user-entity.interface';
 import { RocketsServerModule } from './rockets-server.module';
-import { Entity } from 'typeorm';
-import {
-  UserSqliteEntity,
-  OtpSqliteEntity,
-  FederatedSqliteEntity,
-  TypeOrmExtModule,
-} from '@concepta/nestjs-typeorm-ext';
-import { UserModelService } from '@concepta/nestjs-user';
 
 // Create concrete entity implementations for TypeORM
 @Entity()
-class UserEntity extends UserSqliteEntity {}
+class UserEntity
+  extends UserSqliteEntity
+  implements RocketsServerUserEntityInterface
+{
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  firstName: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  lastName: string;
+}
+
+@Entity()
+class RoleEntity extends RoleSqliteEntity {}
+
+@Entity()
+class UserRoleEntity extends RoleAssignmentSqliteEntity {}
 
 @Entity()
 class UserOtpEntity extends OtpSqliteEntity {
@@ -29,12 +59,23 @@ class FederatedEntity extends FederatedSqliteEntity {
   user: UserEntity;
 }
 
+class AdminUserTypeOrmCrudAdapter extends TypeOrmCrudAdapter<RocketsServerUserEntityInterface> {
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly repository: Repository<RocketsServerUserEntityInterface>,
+  ) {
+    super(repository);
+  }
+}
+
 // Mock services for swagger generation
 class MockUserModelService implements Partial<UserModelService> {
   async byId(id: string) {
     return Promise.resolve({
       id,
       username: 'test',
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -46,6 +87,8 @@ class MockUserModelService implements Partial<UserModelService> {
       id: '1',
       email,
       username: 'test',
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -56,6 +99,8 @@ class MockUserModelService implements Partial<UserModelService> {
     return Promise.resolve({
       id: '1',
       username: 'test',
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -66,6 +111,8 @@ class MockUserModelService implements Partial<UserModelService> {
     return Promise.resolve({
       id: '1',
       username,
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -76,6 +123,8 @@ class MockUserModelService implements Partial<UserModelService> {
     return Promise.resolve({
       ...data,
       id: '1',
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -87,6 +136,8 @@ class MockUserModelService implements Partial<UserModelService> {
       ...data,
       id: '1',
       username: 'test',
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -97,6 +148,8 @@ class MockUserModelService implements Partial<UserModelService> {
     return Promise.resolve({
       ...data,
       id: '1',
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -107,6 +160,8 @@ class MockUserModelService implements Partial<UserModelService> {
     return Promise.resolve({
       id: object.id,
       username: 'test',
+      firstName: 'John',
+      lastName: 'Doe',
       dateCreated: new Date(),
       dateUpdated: new Date(),
       dateDeleted: null,
@@ -114,6 +169,45 @@ class MockUserModelService implements Partial<UserModelService> {
     } as unknown as ReturnType<UserModelService['remove']>);
   }
 }
+
+// New DTOs with firstName and lastName fields
+@Expose()
+class ExtendedUserDto extends RocketsServerUserDto {
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  firstName?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  lastName?: string;
+
+  @ApiProperty()
+  @Expose()
+  @IsString()
+  test: string;
+}
+
+class ExtendedUserCreateDto extends IntersectionType(
+  PickType(ExtendedUserDto, [
+    'email',
+    'username',
+    'active',
+    'firstName',
+    'lastName',
+  ] as const),
+  UserPasswordDto,
+) {}
+
+class ExtendedUserUpdateDto extends PickType(ExtendedUserDto, [
+  'id',
+  'username',
+  'email',
+  'active',
+  'firstName',
+  'lastName',
+] as const) {}
 
 /**
  * Generate Swagger documentation JSON file based on RocketsServer controllers
@@ -124,6 +218,20 @@ async function generateSwaggerJson() {
 
     @Module({
       imports: [
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          synchronize: false,
+          autoLoadEntities: true,
+          entities: [
+            UserEntity,
+            RoleEntity,
+            UserRoleEntity,
+            UserOtpEntity,
+            FederatedEntity,
+          ],
+        }),
+        TypeOrmModule.forFeature([UserEntity]),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => {
@@ -133,52 +241,54 @@ async function generateSwaggerJson() {
               synchronize: false,
               autoLoadEntities: true,
               // Register our entities
-              entities: [UserEntity, UserOtpEntity, FederatedEntity],
+              entities: [
+                UserEntity,
+                RoleEntity,
+                UserRoleEntity,
+                UserOtpEntity,
+                FederatedEntity,
+              ],
             };
           },
         }),
-        RocketsServerModule.forRoot({
-          user: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                user: {
-                  entity: UserEntity,
-                },
-              }),
-            ],
-          },
-          otp: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                userOtp: {
-                  entity: UserOtpEntity,
-                },
-              }),
-            ],
-          },
-          federated: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                federated: {
-                  entity: FederatedEntity,
-                },
-              }),
-            ],
-            userModelService: mockUserModelService,
-          },
-          jwt: {
-            settings: {
-              access: { secret: 'test-secret' },
-              refresh: { secret: 'test-secret' },
-              default: { secret: 'test-secret' },
+        RocketsServerModule.forRootAsync({
+          imports: [
+            TypeOrmModule.forFeature([UserEntity]),
+            TypeOrmExtModule.forFeature({
+              user: { entity: UserEntity },
+              role: { entity: RoleEntity },
+              userRole: { entity: UserRoleEntity },
+              userOtp: { entity: UserOtpEntity },
+              federated: { entity: FederatedEntity },
+            }),
+          ],
+          userCrud: {
+            imports: [TypeOrmModule.forFeature([UserEntity])],
+            adapter: AdminUserTypeOrmCrudAdapter,
+            model: ExtendedUserDto,
+            dto: {
+              createOne: ExtendedUserCreateDto,
+              updateOne: ExtendedUserUpdateDto,
             },
           },
-          services: {
-            mailerService: {
-              sendMail: () => Promise.resolve(),
+          useFactory: () => ({
+            jwt: {
+              settings: {
+                access: { secret: 'test-secret' },
+                refresh: { secret: 'test-secret' },
+                default: { secret: 'test-secret' },
+              },
             },
-            userModelService: mockUserModelService,
-          },
+            federated: {
+              userModelService: mockUserModelService,
+            },
+            services: {
+              mailerService: {
+                sendMail: () => Promise.resolve(),
+              },
+              userModelService: mockUserModelService,
+            },
+          }),
         }),
       ],
     })

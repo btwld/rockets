@@ -4,7 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { RocketsServerUserModelServiceInterface } from '../interfaces/rockets-server-user-model-service.interface';
 import {
   ROCKETS_SERVER_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-  RocketsServerUserLookupService,
+  RocketsServerUserModelService,
 } from '../rockets-server.constants';
 
 import { RocketsServerOtpNotificationServiceInterface } from '../interfaces/rockets-server-otp-notification-service.interface';
@@ -19,7 +19,7 @@ export class RocketsServerOtpService
   constructor(
     @Inject(ROCKETS_SERVER_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN)
     private readonly settings: RocketsServerSettingsInterface,
-    @Inject(RocketsServerUserLookupService)
+    @Inject(RocketsServerUserModelService)
     private readonly userModelService: RocketsServerUserModelServiceInterface,
     private readonly otpService: OtpService,
     @Inject(RocketsServerNotificationService)

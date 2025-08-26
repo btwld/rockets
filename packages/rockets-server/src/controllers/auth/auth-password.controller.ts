@@ -18,7 +18,7 @@ import {
 import { RocketsServerJwtResponseDto } from '../../dto/auth/rockets-server-jwt-response.dto';
 import { RocketsServerLoginDto } from '../../dto/auth/rockets-server-login.dto';
 import { RocketsServerAuthenticationResponseInterface } from '../../interfaces/common/rockets-server-authentication-response.interface';
-import { RocketsServerUserInterface } from '../../interfaces/common/rockets-server-user.interface';
+import { RocketsServerUserInterface } from '../../interfaces/user/rockets-server-user.interface';
 
 /**
  * Controller for password-based authentication

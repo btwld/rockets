@@ -19,7 +19,7 @@ import {
 import { RocketsServerJwtResponseDto } from '../../dto/auth/rockets-server-jwt-response.dto';
 import { RocketsServerRefreshDto } from '../../dto/auth/rockets-server-refresh.dto';
 import { RocketsServerAuthenticationResponseInterface } from '../../interfaces/common/rockets-server-authentication-response.interface';
-import { RocketsServerUserInterface } from '../../interfaces/common/rockets-server-user.interface';
+import { RocketsServerUserInterface } from '../../interfaces/user/rockets-server-user.interface';
 
 /**
  * Controller for JWT refresh token operations

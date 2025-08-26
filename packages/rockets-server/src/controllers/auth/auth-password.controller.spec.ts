@@ -2,12 +2,20 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthPasswordController } from './auth-password.controller';
 import { AuthLocalIssueTokenService } from '@concepta/nestjs-auth-local';
 import { IssueTokenServiceInterface } from '@concepta/nestjs-authentication';
-import { RocketsServerUserInterface } from '../../interfaces/common/rockets-server-user.interface';
+import { RocketsServerUserInterface } from '../../interfaces/user/rockets-server-user.interface';
 
 describe(AuthPasswordController.name, () => {
   let controller: AuthPasswordController;
   let mockIssueTokenService: jest.Mocked<IssueTokenServiceInterface>;
-
+  const defaultMockUser = {
+    username: 'testuser',
+    email: 'test@example.com',
+    active: true,
+    dateCreated: new Date(),
+    dateUpdated: new Date(),
+    dateDeleted: null,
+    version: 2,
+  };
   beforeEach(async () => {
     mockIssueTokenService = {
       responsePayload: jest.fn(),
@@ -36,6 +44,7 @@ describe(AuthPasswordController.name, () => {
     it('should return authentication response when user is provided', async () => {
       const mockUser: RocketsServerUserInterface = {
         id: 'user-123',
+        ...defaultMockUser,
       };
 
       const mockResponse = {
@@ -56,6 +65,7 @@ describe(AuthPasswordController.name, () => {
     it('should handle service errors', async () => {
       const mockUser: RocketsServerUserInterface = {
         id: 'user-123',
+        ...defaultMockUser,
       };
 
       const error = new Error('Token service error');

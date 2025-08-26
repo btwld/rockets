@@ -1,147 +1,6 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/signup": {
-      "post": {
-        "operationId": "AuthSignupController_create",
-        "summary": "Create a new user account",
-        "description": "Registers a new user in the system with email, username and password",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "description": "User registration information",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RocketsServerUserCreateDto"
-              },
-              "examples": {
-                "standard": {
-                  "value": {
-                    "email": "user@example.com",
-                    "username": "user@example.com",
-                    "password": "StrongP@ssw0rd",
-                    "active": true
-                  },
-                  "summary": "Standard user registration"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "User created successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RocketsServerUserDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - Invalid input data or missing required fields"
-          },
-          "409": {
-            "description": "Email or username already exists"
-          }
-        },
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/user": {
-      "get": {
-        "operationId": "RocketsServerUserController_findById",
-        "summary": "Get a user by ID",
-        "description": "Retrieves the currently authenticated user's profile information",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "User profile retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RocketsServerUserDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - User not authenticated"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        },
-        "tags": [
-          "user"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      },
-      "patch": {
-        "operationId": "RocketsServerUserController_update",
-        "summary": "Update a user",
-        "description": "Updates the currently authenticated user's profile information",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "description": "User profile information to update",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RocketsServerUserUpdateDto"
-              },
-              "examples": {
-                "user": {
-                  "value": {
-                    "firstName": "John",
-                    "lastName": "Doe",
-                    "email": "john.doe@example.com"
-                  },
-                  "summary": "Standard user update"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "User updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RocketsServerUserDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - Invalid input data"
-          },
-          "401": {
-            "description": "Unauthorized - User not authenticated"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        },
-        "tags": [
-          "user"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/token/password": {
       "post": {
         "operationId": "AuthPasswordController_login",
@@ -553,6 +412,387 @@
           "oauth"
         ]
       }
+    },
+    "/admin/users/{id}": {
+      "patch": {
+        "operationId": "admin_users_updateOne",
+        "summary": "",
+        "description": "Updates the currently authenticated user profile information",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "User profile information to update",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendedUserUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtendedUserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "admin_users_getOne",
+        "summary": "",
+        "parameters": [
+          {
+            "name": "fields",
+            "required": false,
+            "in": "query",
+            "description": "Selects resource fields. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#select\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": false
+          },
+          {
+            "name": "",
+            "required": false,
+            "in": "query",
+            "description": "Adds relational resources. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#join\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "cache",
+            "required": false,
+            "in": "query",
+            "description": "Reset cache (if was enabled). <a href=\"https://github.com/nestjsx/crud/wiki/Requests#cache\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-One ExtendedUserDto",
+            "schema": {},
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtendedUserDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "admin_users_getMany",
+        "summary": "",
+        "parameters": [
+          {
+            "name": "fields",
+            "required": false,
+            "in": "query",
+            "description": "Selects resource fields. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#select\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": false
+          },
+          {
+            "name": "s",
+            "required": false,
+            "in": "query",
+            "description": "Adds search condition. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#search\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "description": "Adds filter condition. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#filter\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "or",
+            "required": false,
+            "in": "query",
+            "description": "Adds OR condition. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#or\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Adds sort by field. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#sort\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "",
+            "required": false,
+            "in": "query",
+            "description": "Adds relational resources. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#join\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Limit amount of resources. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#limit\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "description": "Offset amount of resources. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#offset\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page portion of resources. <a href=\"https://github.com/nestjsx/crud/wiki/Requests#page\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cache",
+            "required": false,
+            "in": "query",
+            "description": "Reset cache (if was enabled). <a href=\"https://github.com/nestjsx/crud/wiki/Requests#cache\" target=\"_blank\">Docs</a>",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-All ExtendedUserDto as array or paginated response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ExtendedUserDto"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/signup": {
+      "post": {
+        "operationId": "signup_createOne",
+        "summary": "Create a new user account",
+        "description": "Registers a new user in the system with email, username and password",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendedUserCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtendedUserDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/user": {
+      "get": {
+        "operationId": "UserCrudController_getOne",
+        "summary": "",
+        "description": "Retrieves the currently authenticated user profile information",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtendedUserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated"
+          }
+        },
+        "tags": [
+          "user"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "UserCrudController_updateOne",
+        "summary": "",
+        "description": "Updates the currently authenticated user profile information",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "User profile information to update",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendedUserUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtendedUserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated"
+          }
+        },
+        "tags": [
+          "user"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -572,119 +812,6 @@
       }
     },
     "schemas": {
-      "RocketsServerUserCreateDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "Email"
-          },
-          "username": {
-            "type": "string",
-            "description": "Username"
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Active"
-          },
-          "passwordHash": {
-            "type": "string",
-            "description": "Password hash"
-          },
-          "passwordSalt": {
-            "type": "string",
-            "description": "Password salt"
-          },
-          "password": {
-            "type": "string",
-            "description": "Plain text password to set"
-          }
-        },
-        "required": [
-          "email",
-          "username",
-          "password"
-        ]
-      },
-      "RocketsServerUserDto": {
-        "type": "object",
-        "properties": {
-          "dateCreated": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Date created"
-          },
-          "dateUpdated": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Date updated"
-          },
-          "dateDeleted": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Date deleted",
-            "nullable": true
-          },
-          "version": {
-            "type": "number",
-            "description": "Version of the data"
-          },
-          "id": {
-            "type": "string",
-            "description": "Unique identifier"
-          },
-          "email": {
-            "type": "string",
-            "description": "Email"
-          },
-          "username": {
-            "type": "string",
-            "description": "Username"
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Active"
-          }
-        },
-        "required": [
-          "dateCreated",
-          "dateUpdated",
-          "dateDeleted",
-          "version",
-          "id",
-          "email",
-          "username",
-          "active"
-        ]
-      },
-      "RocketsServerUserUpdateDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique identifier"
-          },
-          "email": {
-            "type": "string",
-            "description": "Email"
-          },
-          "active": {
-            "type": "boolean",
-            "description": "Active"
-          },
-          "passwordHash": {
-            "type": "string",
-            "description": "Password hash"
-          },
-          "passwordSalt": {
-            "type": "string",
-            "description": "Password salt"
-          }
-        },
-        "required": [
-          "id"
-        ]
-      },
       "RocketsServerLoginDto": {
         "type": "object",
         "properties": {
@@ -823,6 +950,168 @@
         "required": [
           "accessToken",
           "refreshToken"
+        ]
+      },
+      "ExtendedUserUpdateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Active"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "username",
+          "active"
+        ]
+      },
+      "ExtendedUserDto": {
+        "type": "object",
+        "properties": {
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date created"
+          },
+          "dateUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date updated"
+          },
+          "dateDeleted": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date deleted",
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "description": "Version of the data"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Active"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "test": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dateCreated",
+          "dateUpdated",
+          "dateDeleted",
+          "version",
+          "id",
+          "email",
+          "username",
+          "active",
+          "test"
+        ]
+      },
+      "PaginatedDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Array of Orgs",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtendedUserDto"
+            }
+          },
+          "count": {
+            "type": "number",
+            "description": "Count of all records"
+          },
+          "total": {
+            "type": "number",
+            "description": "Count of records on current page"
+          },
+          "page": {
+            "type": "number",
+            "description": "Current page number"
+          },
+          "pageCount": {
+            "type": "number",
+            "description": "Total number of pages"
+          }
+        },
+        "required": [
+          "data",
+          "count",
+          "total",
+          "page",
+          "pageCount"
+        ]
+      },
+      "ExtendedUserCreateDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Active"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "description": "Plain text password to set"
+          }
+        },
+        "required": [
+          "email",
+          "username",
+          "active",
+          "password"
         ]
       }
     }

@@ -4,6 +4,9 @@ import { RocketsServerOtpSettingsInterface } from './rockets-server-otp-settings
  * Rockets Server settings interface
  */
 export interface RocketsServerSettingsInterface {
+  role: {
+    adminRoleName: string;
+  };
   email: {
     from: string;
     baseUrl: string;

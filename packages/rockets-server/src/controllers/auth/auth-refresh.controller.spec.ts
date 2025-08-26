@@ -2,12 +2,20 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthTokenRefreshController } from './auth-refresh.controller';
 import { AuthRefreshIssueTokenService } from '@concepta/nestjs-auth-refresh';
 import { IssueTokenServiceInterface } from '@concepta/nestjs-authentication';
-import { RocketsServerUserInterface } from '../../interfaces/common/rockets-server-user.interface';
+import { RocketsServerUserInterface } from '../../interfaces/user/rockets-server-user.interface';
 
 describe(AuthTokenRefreshController.name, () => {
   let controller: AuthTokenRefreshController;
   let mockIssueTokenService: jest.Mocked<IssueTokenServiceInterface>;
-
+  const defaultMockUser = {
+    username: 'testuser',
+    email: 'test@example.com',
+    active: true,
+    dateCreated: new Date(),
+    dateUpdated: new Date(),
+    dateDeleted: null,
+    version: 2,
+  };
   beforeEach(async () => {
     mockIssueTokenService = {
       responsePayload: jest.fn(),
@@ -38,6 +46,7 @@ describe(AuthTokenRefreshController.name, () => {
     it('should return authentication response when user is provided', async () => {
       const mockUser: RocketsServerUserInterface = {
         id: 'user-123',
+        ...defaultMockUser,
       };
 
       const mockResponse = {
@@ -58,6 +67,7 @@ describe(AuthTokenRefreshController.name, () => {
     it('should handle service errors', async () => {
       const mockUser: RocketsServerUserInterface = {
         id: 'user-123',
+        ...defaultMockUser,
       };
 
       const error = new Error('Token service error');
@@ -75,6 +85,7 @@ describe(AuthTokenRefreshController.name, () => {
     it('should handle different user IDs', async () => {
       const mockUser: RocketsServerUserInterface = {
         id: 'different-user-id',
+        ...defaultMockUser,
       };
 
       const mockResponse = {

@@ -35,6 +35,13 @@
   - [email](#email)
   - [services](#services)
   - [crud](#crud)
+  - [userCrud](#usercrud)
+  - [User Management](#user-management)
+  - [DTO Validation Patterns](#dto-validation-patterns)
+  - [Entity Customization](#entity-customization)
+- [Best Practices](#best-practices)
+  - [Development Workflow](#development-workflow)
+  - [DTO Design Patterns](#dto-design-patterns)
 - [Explanation](#explanation)
   - [Architecture Overview](#architecture-overview)
   - [Design Decisions](#design-decisions)
@@ -273,6 +280,11 @@ import { FederatedEntity } from './entities/federated.entity';
             expiresIn: '10m',
           },
         },
+        // Optional: Enable Admin endpoints
+        // Provide a CRUD adapter + DTOs and import the repository via
+        // TypeOrmModule.forFeature([...]). Enable by passing `admin` at the
+        // top-level of RocketsServerModule.forRoot/forRootAsync options.
+        // See the admin how-to section for a complete example.
       }),
     }),
   ],
@@ -336,6 +348,18 @@ With the basic setup complete, your application now provides these endpoints:
 
 - `GET /user` - Get current user profile
 - `PATCH /user` - Update current user profile
+
+#### Admin Endpoints (optional)
+
+If you enable the admin module (see How-to Guides > admin), these routes become
+available and are protected by `AdminGuard`:
+
+- `GET /admin/users` - List users
+- `GET /admin/users/:id` - Get a user
+- `POST /admin/users` - Create a user
+- `PATCH /admin/users/:id` - Update a user
+- `PUT /admin/users/:id` - Replace a user
+- `DELETE /admin/users/:id` - Delete a user
 
 #### OTP Endpoints
 
@@ -1450,7 +1474,7 @@ import { ProjectDto } from '../dto/project/project.dto';
 import { ProjectCreateDto } from '../dto/project/project-create.dto';
 import { ProjectUpdateDto } from '../dto/project/project-update.dto';
 import { ProjectPaginatedDto } from '../dto/project/project-paginated.dto';
-import { ProjectTypeOrmCrudAdapter } from '../dto/project/project-type-orm-crud.adapter';
+import { ProjectTypeOrmCrudAdapter } from '../adapters/project-typeorm-crud.adapter';
 
 export const PROJECT_CRUD_SERVICE_TOKEN = Symbol('PROJECT_CRUD_SERVICE_TOKEN');
 
@@ -1595,15 +1619,6 @@ All endpoints are automatically documented in Swagger with:
 - API tags specified in `extraDecorators`
 - Validation rules from class-validator decorators
 - Pagination parameters for list endpoints
-
-#### Error Handling
-
-The CRUD system automatically handles:
-
-- Validation errors (400 Bad Request)
-- Not found errors (404 Not Found)
-- Database constraint errors (409 Conflict)
-- Server errors (500 Internal Server Error)
 
 This pattern provides a complete, production-ready CRUD API with minimal
 boilerplate code while maintaining full type safety and comprehensive
@@ -2131,7 +2146,8 @@ sequenceDiagram
 
 #### 5. OAuth Flow
 
-The Rockets SDK implements a comprehensive OAuth flow for third-party authentication:
+The Rockets SDK implements a comprehensive OAuth flow for third-party
+authentication:
 
 #### 5a. OAuth Authorization Flow
 
@@ -2163,7 +2179,602 @@ provider integration
 
 ---
 
-This comprehensive documentation provides developers with everything they need
-to understand, implement, and extend the Rockets SDK in their applications.
-The modular design and extensive configuration options make it suitable for
-projects ranging from simple prototypes to complex enterprise systems.
+### userCrud
+
+User CRUD management is now provided via a dynamic submodule that you enable
+through the module extras. It provides comprehensive user management including:
+
+- User signup endpoints (`POST /signup`)
+- User profile management (`GET /user`, `PATCH /user`)
+- Admin user CRUD operations (`/admin/users/*`)
+
+All endpoints are properly guarded and documented in Swagger.
+
+#### Prerequisites
+
+- A TypeORM repository for your user entity available via
+  `TypeOrmModule.forFeature([UserEntity])`
+- A CRUD adapter implementing `CrudAdapter` (e.g., a `TypeOrmCrudAdapter`)
+- DTOs for model, create, update (optional replace/many)
+
+#### Minimal adapter example
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
+import { UserEntity } from './entities/user.entity';
+
+@Injectable()
+export class AdminUserTypeOrmCrudAdapter extends TypeOrmCrudAdapter<UserEntity> {
+  constructor(
+    @InjectRepository(UserEntity) repo: Repository<UserEntity>,
+  ) {
+    super(repo);
+  }
+}
+```
+
+#### Enable userCrud in RocketsServerModule
+
+```typescript
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([UserEntity]),
+    RocketsServerModule.forRootAsync({
+      // ... other options
+      imports: [TypeOrmModule.forFeature([UserEntity])],
+      useFactory: () => ({
+        services: {
+          mailerService: yourMailerService,
+        },
+      }),
+      userCrud: {
+        // Ensure your repository is imported
+        imports: [TypeOrmModule.forFeature([UserEntity])],
+        // Route base path (default: 'admin/users')
+        path: 'admin/users',
+        // Swagger model type for responses
+        model: YourUserDto,
+        // The CRUD adapter
+        adapter: AdminUserTypeOrmCrudAdapter,
+        // Optional DTOs for mutations
+        dto: {
+          createOne: YourUserCreateDto,
+          updateOne: YourUserUpdateDto,
+          replaceOne: YourUserUpdateDto,
+          createMany: YourUserCreateDto,
+        },
+      },
+      
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+#### Role guard behavior
+
+- `AdminGuard` checks for the role defined in `settings.role.adminRoleName`.
+- No roles are created by default. You must manually create the admin role in
+  your roles store (e.g., database).
+- The role name must match the environment variable `ADMIN_ROLE_NAME`
+  (default is `admin`). Ensure the stored role name and env variable are
+  identical.
+
+#### Generated routes
+
+**User Management Endpoints:**
+
+- `POST /signup` - User registration with validation
+- `GET /user` - Get current user profile (authenticated)
+- `PATCH /user` - Update current user profile (authenticated)
+
+**Admin User CRUD Endpoints:**
+
+- `GET /admin/users` - List all users (admin only)
+- `GET /admin/users/:id` - Get specific user (admin only)
+- `PATCH /admin/users/:id` - Update specific user (admin only)
+
+---
+
+## User Management
+
+The Rockets SDK provides comprehensive user management functionality through
+automatically generated endpoints. These endpoints handle user registration,
+authentication, and profile management with built-in validation and security.
+
+### User Registration (POST /signup)
+
+Users can register through the `/signup` endpoint with automatic validation:
+
+```typescript
+// POST /signup
+{
+  "username": "john_doe",
+  "email": "john@example.com", 
+  "password": "SecurePassword123!",
+  "active": true,
+  "customField": "value" // Any additional fields you've added
+}
+```
+
+**Response:**
+
+```typescript
+{
+  "id": "123",
+  "username": "john_doe",
+  "email": "john@example.com",
+  "active": true,
+  "dateCreated": "2024-01-01T00:00:00.000Z",
+  "dateUpdated": "2024-01-01T00:00:00.000Z",
+  "version": 1
+  // Password fields are automatically excluded
+}
+```
+
+### User Profile Management
+
+#### Get Current User Profile (GET /user)
+
+Authenticated users can retrieve their profile information:
+
+```bash
+GET /user
+Authorization: Bearer <jwt-token>
+```
+
+**Response:**
+
+```typescript
+{
+  "id": "123",
+  "username": "john_doe", 
+  "email": "john@example.com",
+  "active": true,
+  "customField": "value",
+  "dateCreated": "2024-01-01T00:00:00.000Z",
+  "dateUpdated": "2024-01-01T00:00:00.000Z",
+  "version": 1
+}
+```
+
+#### Update User Profile (PATCH /user)
+
+Users can update their own profile information:
+
+```typescript
+// PATCH /user
+// Authorization: Bearer <jwt-token>
+{
+  "username": "new_username",
+  "email": "newemail@example.com",
+  "customField": "new_value"
+}
+```
+
+**Response:** Updated user object with new values
+
+### Authentication Requirements
+
+- **Public Endpoints:** `/signup` - No authentication required
+- **Authenticated Endpoints:** `/user` (GET, PATCH) - Requires valid JWT token
+- **Admin Endpoints:** `/admin/users/*` - Requires admin role
+
+---
+
+## DTO Validation Patterns
+
+The Rockets SDK allows you to customize user data validation by providing your
+own DTOs. This section shows common patterns for extending user functionality
+with custom fields and validation rules.
+
+### Creating Custom User DTOs
+
+#### Custom User Response DTO
+
+Extend the base user DTO to include additional fields in API responses:
+
+```typescript
+import { UserDto } from '@concepta/nestjs-user';
+import { RocketsServerUserInterface } from '@concepta/rockets-server';
+import { Expose } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
+
+export class CustomUserDto extends UserDto implements RocketsServerUserInterface {
+  @ApiProperty({
+    description: 'User age',
+    example: 25,
+    required: false,
+    type: Number,
+  })
+  @Expose()
+  age?: number;
+
+  @ApiProperty({
+    description: 'User first name',
+    example: 'John',
+    required: false,
+  })
+  @Expose()
+  firstName?: string;
+
+  @ApiProperty({
+    description: 'User last name', 
+    example: 'Doe',
+    required: false,
+  })
+  @Expose()
+  lastName?: string;
+}
+```
+
+#### Custom User Create DTO
+
+Add validation for user registration:
+
+```typescript
+import { PickType, IntersectionType, ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsOptional, Min, IsString, MinLength, MaxLength } from 'class-validator';
+import { UserPasswordDto } from '@concepta/nestjs-user';
+import { RocketsServerUserCreatableInterface } from '@concepta/rockets-server';
+import { CustomUserDto } from './custom-user.dto';
+
+export class CustomUserCreateDto extends IntersectionType(
+  PickType(CustomUserDto, ['email', 'username', 'active'] as const),
+  UserPasswordDto,
+) implements RocketsServerUserCreatableInterface {
+  
+  @ApiProperty({
+    description: 'User age (must be 18 or older)',
+    example: 25,
+    required: false,
+    minimum: 18,
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'Age must be a number' })
+  @Min(18, { message: 'Must be at least 18 years old' })
+  age?: number;
+
+  @ApiProperty({
+    description: 'User first name',
+    example: 'John',
+    required: false,
+    minLength: 2,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2, { message: 'First name must be at least 2 characters' })
+  @MaxLength(50, { message: 'First name cannot exceed 50 characters' })
+  firstName?: string;
+
+  @ApiProperty({
+    description: 'User last name',
+    example: 'Doe',
+    required: false,
+    minLength: 2,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2, { message: 'Last name must be at least 2 characters' })
+  @MaxLength(50, { message: 'Last name cannot exceed 50 characters' })
+  lastName?: string;
+}
+```
+
+#### Custom User Update DTO
+
+Define which fields can be updated:
+
+```typescript
+import { PickType, ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsOptional, Min, IsString, MinLength, MaxLength } from 'class-validator';
+import { RocketsServerUserUpdatableInterface } from '@concepta/rockets-server';
+import { CustomUserDto } from './custom-user.dto';
+
+export class CustomUserUpdateDto
+  extends PickType(CustomUserDto, ['id', 'username', 'email', 'active'] as const)
+  implements RocketsServerUserUpdatableInterface {
+
+  @ApiProperty({
+    description: 'User age (must be 18 or older)',
+    example: 25,
+    required: false,
+    minimum: 18,
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'Age must be a number' })
+  @Min(18, { message: 'Must be at least 18 years old' })
+  age?: number;
+
+  @ApiProperty({
+    description: 'User first name',
+    example: 'John', 
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(50)
+  firstName?: string;
+
+  @ApiProperty({
+    description: 'User last name',
+    example: 'Doe',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(50)
+  lastName?: string;
+}
+```
+
+### Using Custom DTOs
+
+Configure your custom DTOs in the RocketsServerModule:
+
+```typescript
+@Module({
+  imports: [
+    RocketsServerModule.forRoot({
+      userCrud: {
+        imports: [TypeOrmModule.forFeature([UserEntity])],
+        adapter: CustomUserTypeOrmCrudAdapter,
+        model: CustomUserDto, // Your custom response DTO
+        dto: {
+          createOne: CustomUserCreateDto, // Custom creation validation
+          updateOne: CustomUserUpdateDto, // Custom update validation
+        },
+      },
+      // ... other configuration
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Common Validation Patterns
+
+#### Age Validation
+
+```typescript
+@IsOptional()
+@IsNumber({}, { message: 'Age must be a number' })
+@Min(18, { message: 'Must be at least 18 years old' })
+@Max(120, { message: 'Must be a reasonable age' })
+age?: number;
+```
+
+#### Phone Number Validation
+
+```typescript
+@IsOptional()
+@IsString()
+@Matches(/^\+?[1-9]\d{1,14}$/, { message: 'Invalid phone number format' })
+phoneNumber?: string;
+```
+
+#### Custom Username Rules
+
+```typescript
+@IsString()
+@MinLength(3, { message: 'Username must be at least 3 characters' })
+@MaxLength(20, { message: 'Username cannot exceed 20 characters' })
+@Matches(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain letters, numbers, and underscores' })
+username: string;
+```
+
+#### Array Field Validation
+
+```typescript
+@IsOptional()
+@IsArray()
+@IsString({ each: true })
+@ArrayMaxSize(5, { message: 'Cannot have more than 5 tags' })
+tags?: string[];
+```
+
+---
+
+## Entity Customization
+
+To support custom fields in your DTOs, you need to extend the user entity to
+include the corresponding database columns. This section shows how to properly
+extend the base user entity.
+
+### Creating a Custom User Entity
+
+Create a custom user entity that implements UserEntityInterface. If using
+SQLite with TypeORM, extend UserSqliteEntity, otherwise implement the
+interface directly:
+
+```typescript
+import { UserSqliteEntity } from '@concepta/nestjs-typeorm-ext';
+import { Entity, Column } from 'typeorm';
+
+@Entity('user') // Make sure to use the same table name
+export class CustomUserEntity extends UserSqliteEntity {
+  @Column({ type: 'integer', nullable: true })
+  age?: number;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  firstName?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  lastName?: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phoneNumber?: string;
+
+  @Column({ type: 'simple-array', nullable: true })
+  tags?: string[];
+
+  @Column({ type: 'boolean', default: false })
+  isVerified?: boolean;
+
+  @Column({ type: 'datetime', nullable: true })
+  lastLoginAt?: Date;
+}
+```
+
+### Creating a Custom CRUD Adapter
+
+Create an adapter that uses your custom entity:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
+import { CustomUserEntity } from './entities/custom-user.entity';
+
+@Injectable()
+export class CustomUserTypeOrmCrudAdapter extends TypeOrmCrudAdapter<CustomUserEntity> {
+  constructor(
+    @InjectRepository(CustomUserEntity) repo: Repository<CustomUserEntity>,
+  ) {
+    super(repo);
+  }
+}
+```
+
+### Registering Your Custom Entity
+
+Update your module to use the custom entity:
+
+```typescript
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([CustomUserEntity]), // Use your custom entity
+    RocketsServerModule.forRoot({
+      userCrud: {
+        imports: [TypeOrmModule.forFeature([CustomUserEntity])],
+        adapter: CustomUserTypeOrmCrudAdapter,
+        model: CustomUserDto,
+        dto: {
+          createOne: CustomUserCreateDto,
+          updateOne: CustomUserUpdateDto,
+        },
+      },
+      user: {
+        imports: [
+          TypeOrmExtModule.forFeature({
+            user: {
+              entity: CustomUserEntity, // Use custom entity here too
+            },
+          }),
+        ],
+      },
+      // ... other configuration
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+---
+
+## Best Practices
+
+This section outlines recommended patterns and practices for working
+effectively with the Rockets SDK.
+
+### Development Workflow
+
+#### 1. Project Structure Organization
+
+Organize your Rockets SDK implementation with a clear structure:
+
+```typescript
+src/
+├── modules/
+│   ├── auth/
+│   │   ├── entities/
+│   │   │   └── custom-user.entity.ts
+│   │   ├── dto/
+│   │   │   ├── custom-user.dto.ts
+│   │   │   ├── custom-user-create.dto.ts
+│   │   │   └── custom-user-update.dto.ts
+│   │   ├── adapters/
+│   │   │   └── custom-user-crud.adapter.ts
+│   │   └── auth.module.ts
+│   └── app.module.ts
+└── config/
+      ├── database.config.ts
+      └── rockets.config.ts
+
+```
+
+### DTO Design Patterns
+
+#### 1. Interface Consistency
+
+Always implement the appropriate interfaces:
+
+```typescript
+// ✅ Good - Implements interface
+export class CustomUserDto extends UserDto implements RocketsServerUserInterface {
+  @Expose()
+  customField: string;
+}
+
+// ❌ Bad - Missing interface
+export class CustomUserDto extends UserDto {
+  @Expose()
+  customField: string;
+}
+```
+
+#### 2. Validation Layering
+
+Use progressive validation patterns and ensure properties are exposed in
+responses using @Expose():
+
+```typescript
+export class CustomUserCreateDto {
+  // Base validation
+  @IsEmail()
+  @IsNotEmpty()
+  @Expose()
+  email: string;
+
+  // Business rules
+  @IsOptional()
+  @IsNumber()
+  @Min(18, { message: 'Must be 18 or older' })
+  @Max(120, { message: 'Must be a reasonable age' })
+  @Expose()
+  age?: number;
+
+  // Complex validation
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9_]+$/, { 
+    message: 'Username can only contain letters, numbers, and underscores' 
+  })
+  @MinLength(3)
+  @MaxLength(20)
+  @Expose()
+  username?: string;
+}
+```
+
+#### 3. DTO Inheritance Patterns
+
+Use composition over deep inheritance:
+
+```typescript
+// ✅ Good - Composition with PickType
+export class UserCreateDto extends IntersectionType(
+  PickType(UserDto, ['email', 'username'] as const),
+  UserPasswordDto,
+) {
+  // Additional fields
+}
+```

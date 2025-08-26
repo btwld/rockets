@@ -13,6 +13,8 @@ import { ormConfig } from '../../__fixtures__/ormconfig.fixture';
 import { UserFixture } from '../../__fixtures__/user/user.entity.fixture';
 import { UserOtpEntityFixture } from '../../__fixtures__/user/user-otp-entity.fixture';
 import { FederatedEntityFixture } from '../../__fixtures__/federated/federated.entity.fixture';
+import { RoleEntityFixture } from '../../__fixtures__/role/role.entity.fixture';
+import { UserRoleEntityFixture } from '../../__fixtures__/role/user-role.entity.fixture';
 
 // Mock guard for testing
 class MockOAuthGuard implements CanActivate {
@@ -73,6 +75,14 @@ describe('AuthOAuthController (e2e)', () => {
             imports: [
               TypeOrmExtModule.forFeature({
                 userOtp: { entity: UserOtpEntityFixture },
+              }),
+            ],
+          },
+          role: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                role: { entity: RoleEntityFixture },
+                userRole: { entity: UserRoleEntityFixture },
               }),
             ],
           },
