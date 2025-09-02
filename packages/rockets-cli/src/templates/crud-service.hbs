@@ -1,0 +1,36 @@
+import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { CrudService, CrudRequestInterface } from '@concepta/nestjs-crud';
+import { {{entityName}}EntityInterface, {{entityName}}Status } from './{{entity}}.interface';
+import { {{entityName}}TypeOrmCrudAdapter } from './{{entity}}-typeorm-crud.adapter';
+import { {{entityName}}ModelService } from './{{entity}}-model.service';
+import { {{entityName}}Dto, {{entityName}}CreateDto, {{entityName}}UpdateDto } from './{{entity}}.dto';
+import { {{entityName}}Exception, {{entityName}}NotFoundException, {{entityName}}NameAlreadyExistsException } from './{{entity}}.exception';
+
+@Injectable()
+export class {{entityName}}CrudService extends CrudService<{{entityName}}EntityInterface> {
+  constructor(
+    @Inject({{entityName}}TypeOrmCrudAdapter)
+    protected readonly crudAdapter: {{entityName}}TypeOrmCrudAdapter,
+    private readonly modelService: {{entityName}}ModelService,
+  ) {
+    super(crudAdapter);
+  }
+
+  async createOne(
+    req: CrudRequestInterface<{{entityName}}EntityInterface>,
+    dto: {{entityName}}CreateDto,
+    queryOptions?: Record<string, unknown>,
+  ): Promise<{{entityName}}EntityInterface> {
+    try {
+      const isUnique = await this.modelService.isNameUnique(dto.name);
+      if (!isUnique) throw new {{entityName}}NameAlreadyExistsException();
+      const data = { ...dto, status: dto.status || {{entityName}}Status.ACTIVE };
+      return await super.createOne(req, data, queryOptions);
+    } catch (error) {
+      if (error instanceof {{entityName}}Exception) throw error;
+      throw new InternalServerErrorException('Failed to create', { cause: error });
+    }
+  }
+}
+
+

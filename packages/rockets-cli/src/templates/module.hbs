@@ -1,0 +1,25 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { {{entityName}}Entity } from './{{entity}}.entity';
+import { {{entityName}}ModelService, {{ENTITY}}_MODULE_{{ENTITY}}_ENTITY_KEY } from './{{entity}}-model.service';
+import { {{entityName}}TypeOrmCrudAdapter } from './{{entity}}-typeorm-crud.adapter';
+import { {{entityName}}CrudService } from './{{entity}}.crud.service';
+import { {{entityName}}CrudController } from './{{entity}}.crud.controller';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([{{entityName}}Entity]),
+    TypeOrmExtModule.forFeature({ {{entity}}: { entity: {{entityName}}Entity } }),
+  ],
+  providers: [
+    {{entityName}}ModelService,
+    {{entityName}}TypeOrmCrudAdapter,
+    {{entityName}}CrudService,
+  ],
+  controllers: [{{entityName}}CrudController],
+  exports: [{{entityName}}ModelService, {{entityName}}TypeOrmCrudAdapter, {{entityName}}CrudService],
+})
+export class {{entityName}}Module {}
+
+

@@ -1,0 +1,59 @@
+import { ApiTags } from '@nestjs/swagger';
+import { AccessControlCreateMany, AccessControlCreateOne, AccessControlDeleteOne, AccessControlQuery, AccessControlReadMany, AccessControlReadOne, AccessControlRecoverOne, AccessControlUpdateOne } from '@concepta/nestjs-access-control';
+import { CrudBody, CrudCreateMany, CrudCreateOne, CrudController, CrudControllerInterface, CrudDeleteOne, CrudReadMany, CrudReadOne, CrudRecoverOne, CrudRequest, CrudRequestInterface, CrudUpdateOne } from '@concepta/nestjs-crud';
+import { {{entityName}}CreateDto, {{entityName}}CreateManyDto, {{entityName}}Dto, {{entityName}}PaginatedDto, {{entityName}}UpdateDto } from './{{entity}}.dto';
+import { {{entityName}}AccessQueryService } from './{{entity}}-access-query.service';
+import { {{entityName}}Resource } from './{{entity}}.types';
+import { {{entityName}}CrudService } from './{{entity}}.crud.service';
+import { {{entityName}}CreatableInterface, {{entityName}}EntityInterface, {{entityName}}UpdatableInterface } from './{{entity}}.interface';
+
+@CrudController({ path: '{{entity}}s', model: { type: {{entityName}}Dto, paginatedType: {{entityName}}PaginatedDto } })
+@AccessControlQuery({ service: {{entityName}}AccessQueryService })
+@ApiTags('{{entity}}s')
+export class {{entityName}}CrudController implements CrudControllerInterface<{{entityName}}EntityInterface, {{entityName}}CreatableInterface, {{entityName}}UpdatableInterface> {
+  constructor(private service: {{entityName}}CrudService) {}
+
+  @CrudReadMany()
+  @AccessControlReadMany({{entityName}}Resource.Many)
+  async getMany(@CrudRequest() req: CrudRequestInterface<{{entityName}}EntityInterface>) {
+    return this.service.getMany(req);
+  }
+
+  @CrudReadOne()
+  @AccessControlReadOne({{entityName}}Resource.One)
+  async getOne(@CrudRequest() req: CrudRequestInterface<{{entityName}}EntityInterface>) {
+    return this.service.getOne(req);
+  }
+
+  @CrudCreateMany()
+  @AccessControlCreateMany({{entityName}}Resource.Many)
+  async createMany(@CrudRequest() req: CrudRequestInterface<{{entityName}}EntityInterface>, @CrudBody() dto: {{entityName}}CreateManyDto) {
+    return this.service.createMany(req, dto);
+  }
+
+  @CrudCreateOne({ dto: {{entityName}}CreateDto })
+  @AccessControlCreateOne({{entityName}}Resource.One)
+  async createOne(@CrudRequest() req: CrudRequestInterface<{{entityName}}EntityInterface>, @CrudBody() dto: {{entityName}}CreateDto) {
+    return this.service.createOne(req, dto);
+  }
+
+  @CrudUpdateOne()
+  @AccessControlUpdateOne({{entityName}}Resource.One)
+  async updateOne(@CrudRequest() req: CrudRequestInterface<{{entityName}}EntityInterface>, @CrudBody() dto: {{entityName}}UpdateDto) {
+    return this.service.updateOne(req, dto);
+  }
+
+  @CrudDeleteOne()
+  @AccessControlDeleteOne({{entityName}}Resource.One)
+  async deleteOne(@CrudRequest() req: CrudRequestInterface<{{entityName}}EntityInterface>) {
+    return this.service.deleteOne(req);
+  }
+
+  @CrudRecoverOne()
+  @AccessControlRecoverOne({{entityName}}Resource.One)
+  async recoverOne(@CrudRequest() req: CrudRequestInterface<{{entityName}}EntityInterface>) {
+    return this.service.recoverOne(req);
+  }
+}
+
+

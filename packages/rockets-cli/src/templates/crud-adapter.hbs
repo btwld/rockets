@@ -1,0 +1,17 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
+import { {{entityName}}Entity } from './{{entity}}.entity';
+
+@Injectable()
+export class {{entityName}}TypeOrmCrudAdapter extends TypeOrmCrudAdapter<{{entityName}}Entity> {
+  constructor(
+    @InjectRepository({{entityName}}Entity)
+    private readonly repo: Repository<{{entityName}}Entity>,
+  ) {
+    super(repo);
+  }
+}
+
+

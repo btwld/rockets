@@ -1,0 +1,25 @@
+import { HttpStatus } from '@nestjs/common';
+import { RuntimeException, RuntimeExceptionOptions } from '@concepta/nestjs-common';
+
+export class {{entityName}}Exception extends RuntimeException {
+  constructor(options?: RuntimeExceptionOptions) {
+    super(options);
+    this.errorCode = '{{ENTITY}}_ERROR';
+  }
+}
+
+export class {{entityName}}NotFoundException extends {{entityName}}Exception {
+  constructor(options?: RuntimeExceptionOptions) {
+    super({ message: '{{entityName}} not found', httpStatus: HttpStatus.NOT_FOUND, ...options });
+    this.errorCode = '{{ENTITY}}_NOT_FOUND_ERROR';
+  }
+}
+
+export class {{entityName}}NameAlreadyExistsException extends {{entityName}}Exception {
+  constructor(options?: RuntimeExceptionOptions) {
+    super({ message: '{{entityName}} name already exists', httpStatus: HttpStatus.CONFLICT, ...options });
+    this.errorCode = '{{ENTITY}}_NAME_ALREADY_EXISTS_ERROR';
+  }
+}
+
+

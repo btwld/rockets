@@ -19,7 +19,7 @@
     "@nestjs/testing": "^10.4.1",
     "@types/express": "^4.17.21",
     "@types/jest": "^27.5.2",
-    "@types/node": "^18.19.44",
+    "@types/node": "^24.3.0",
     "@types/nodemailer": "^6.4.15",
     "@types/supertest": "^2.0.16",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
@@ -50,10 +50,12 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^3.15.0",
+    "tsx": "^4.20.5",
     "typedoc": "^0.25.13",
     "typedoc-plugin-coverage": "^3.3.0",
     "typeorm": "^0.3.20",
-    "typescript": "^4.9.5"
+    "typescript": "^4.9.5",
+    "zod": "^4.1.5"
   },
   "scripts": {
     "postinstall": "husky install",
@@ -79,7 +81,12 @@
     "changelog:minor": "standard-version --release-as minor",
     "changelog:patch": "standard-version --release-as patch",
     "changelog:major": "standard-version --release-as major",
-    "generate-swagger": "cd packages/rockets-server && yarn generate-swagger"
+    "generate-swagger": "cd packages/rockets-server && yarn generate-swagger",
+    "cli:build": "yarn workspace @bitwild/rockets-cli build",
+    "cli:dev": "yarn workspace @bitwild/rockets-cli dev",
+    "cli:start": "yarn workspace @bitwild/rockets-cli start",
+    "cli:sample": "yarn workspace @bitwild/rockets-cli sample:book",
+    "cli:samples:clean": "yarn workspace @bitwild/rockets-cli samples:clean"
   },
   "packageManager": "yarn@4.4.0"
 }

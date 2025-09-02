@@ -1,0 +1,49 @@
+import { Exclude, Expose, Type } from 'class-transformer';
+import { IsEnum, IsOptional, IsString, MaxLength, MinLength, IsNotEmpty } from 'class-validator';
+import { ApiProperty, PickType } from '@nestjs/swagger';
+import { CommonEntityDto } from '@concepta/nestjs-common';
+import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
+import { {{entityName}}Interface, {{entityName}}CreatableInterface, {{entityName}}UpdatableInterface, {{entityName}}Status } from './{{entity}}.interface';
+
+@Exclude()
+export class {{entityName}}Dto extends CommonEntityDto implements {{entityName}}Interface {
+  @Expose()
+  @ApiProperty({ description: '{{entityName}} name', example: 'Sample {{entityName}}', maxLength: 255, minLength: 1 })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(1)
+  @MaxLength(255)
+  name!: string;
+
+  @Expose()
+  @ApiProperty({ description: '{{entityName}} status', example: {{entityName}}Status.ACTIVE, enum: {{entityName}}Status })
+  @IsEnum({{entityName}}Status)
+  status!: {{entityName}}Status;
+
+  {{#each fields}}
+  @Expose()
+  @ApiProperty({ description: '{{name}}', required: {{#if optional}}false{{else}}true{{/if}} })
+  {{#if optional}}@IsOptional(){{/if}}
+  {{#if (eq tsType 'number')}}@IsNotEmpty(){{/if}}
+  {{#if (eq tsType 'string')}}{{#unless optional}}@IsNotEmpty(){{/unless}}{{/if}}
+  {{#if (eq tsType 'string')}}@IsString(){{/if}}
+  {{#if (eq tsType 'number')}}@IsNumber(){{/if}}
+  {{#if (eq tsType 'boolean')}}@IsNotEmpty(){{/if}}
+  {{#if optional}}
+  {{name}}?: {{tsType}};
+  {{else}}
+  {{name}}!: {{tsType}};
+  {{/if}}
+  {{/each}}
+}
+
+export class {{entityName}}CreateDto extends PickType({{entityName}}Dto, ['name', 'status'{{#each fields}}{{#unless optional}}, '{{name}}'{{/unless}}{{/each}}] as const) implements {{entityName}}CreatableInterface {}
+
+export class {{entityName}}UpdateDto extends PickType({{entityName}}Dto, ['id', 'name', 'status'{{#each fields}}, '{{name}}'{{/each}}] as const) implements {{entityName}}UpdatableInterface {}
+
+export class {{entityName}}PaginatedDto extends CrudResponsePaginatedDto<{{entityName}}Dto> {
+  @ApiProperty({ type: [{{entityName}}Dto], description: 'Array of {{entity}}s' })
+  data!: {{entityName}}Dto[];
+}
+
+

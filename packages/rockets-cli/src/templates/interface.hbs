@@ -1,0 +1,47 @@
+import {
+  AuditInterface,
+  ByIdInterface,
+  CreateOneInterface,
+  FindInterface,
+  ReferenceId,
+  ReferenceIdInterface,
+  RemoveOneInterface,
+  UpdateOneInterface
+} from '@concepta/nestjs-common';
+
+export enum {{entityName}}Status {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}
+
+export interface {{entityName}}Interface extends ReferenceIdInterface, AuditInterface {
+  name: string;
+  status: {{entityName}}Status;
+  {{#each fields}}
+  {{#if optional}}
+  {{name}}?: {{tsType}};
+  {{else}}
+  {{name}}: {{tsType}};
+  {{/if}}
+  {{/each}}
+}
+
+export interface {{entityName}}EntityInterface extends {{entityName}}Interface {}
+
+export interface {{entityName}}CreatableInterface extends Pick<{{entityName}}Interface, 'name'{{#if requiredFieldNamesJoined}} | '{{requiredFieldNamesJoined}}'{{/if}}>, Partial<Pick<{{entityName}}Interface, 'status'{{#if optionalFieldNamesJoined}} | '{{optionalFieldNamesJoined}}'{{/if}}>> {}
+
+export interface {{entityName}}UpdatableInterface extends Pick<{{entityName}}Interface, 'id'>, Partial<Pick<{{entityName}}Interface, 'name' | 'status'{{#if allFieldNamesJoined}} | '{{allFieldNamesJoined}}'{{/if}}>> {}
+
+export interface {{entityName}}ModelServiceInterface
+  extends FindInterface<{{entityName}}EntityInterface, {{entityName}}EntityInterface>,
+    ByIdInterface<ReferenceId, {{entityName}}EntityInterface>,
+    CreateOneInterface<{{entityName}}CreatableInterface, {{entityName}}EntityInterface>,
+    UpdateOneInterface<{{entityName}}UpdatableInterface, {{entityName}}EntityInterface>,
+    RemoveOneInterface<Pick<{{entityName}}EntityInterface, 'id'>, {{entityName}}EntityInterface>
+{
+  findByName(name: string): Promise<{{entityName}}EntityInterface | null>;
+  isNameUnique(name: string, excludeId?: string): Promise<boolean>;
+  getActive{{entityName}}s(): Promise<{{entityName}}EntityInterface[]>;
+}
+
+

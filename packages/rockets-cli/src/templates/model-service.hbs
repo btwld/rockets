@@ -1,0 +1,38 @@
+import { Injectable } from '@nestjs/common';
+import { RepositoryInterface, ModelService, InjectDynamicRepository } from '@concepta/nestjs-common';
+import { Not } from 'typeorm';
+import { {{entityName}}EntityInterface, {{entityName}}CreatableInterface, {{entityName}}UpdatableInterface, {{entityName}}ModelServiceInterface, {{entityName}}Status } from './{{entity}}.interface';
+import { {{entityName}}CreateDto, {{entityName}}UpdateDto } from './{{entity}}.dto';
+import { {{entityName}}NotFoundException, {{entityName}}NameAlreadyExistsException } from './{{entity}}.exception';
+
+export const {{ENTITY}}_MODULE_{{ENTITY}}_ENTITY_KEY = '{{entity}}';
+
+@Injectable()
+export class {{entityName}}ModelService
+  extends ModelService<
+    {{entityName}}EntityInterface,
+    {{entityName}}CreatableInterface,
+    {{entityName}}UpdatableInterface
+  >
+  implements {{entityName}}ModelServiceInterface
+{
+  protected createDto = {{entityName}}CreateDto;
+  protected updateDto = {{entityName}}UpdateDto;
+
+  constructor(
+    @InjectDynamicRepository({{ENTITY}}_MODULE_{{ENTITY}}_ENTITY_KEY)
+    repo: RepositoryInterface<{{entityName}}EntityInterface>,
+  ) {
+    super(repo);
+  }
+
+  async create(data: {{entityName}}CreatableInterface): Promise<{{entityName}}EntityInterface> {
+    return super.create(data);
+  }
+
+  async update(data: {{entityName}}UpdatableInterface): Promise<{{entityName}}EntityInterface> {
+    return super.update(data);
+  }
+}
+
+

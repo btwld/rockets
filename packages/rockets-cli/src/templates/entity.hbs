@@ -1,0 +1,37 @@
+{{#if typeorm}}
+import { Entity, Column } from 'typeorm';
+import { CommonPostgresEntity } from '@concepta/nestjs-typeorm-ext';
+import { {{entityName}}EntityInterface, {{entityName}}Status } from './{{entity}}.interface';
+
+@Entity('{{entity}}')
+export class {{entityName}}Entity
+  extends CommonPostgresEntity
+  implements {{entityName}}EntityInterface
+{
+  {{#each fields}}
+  {{#if (eq tsType 'string')}}@Column({ type: 'varchar', length: 255, nullable: {{#if optional}}true{{else}}false{{/if}} }){{/if}}
+  {{#if (eq tsType 'number')}}@Column({ type: 'integer', nullable: {{#if optional}}true{{else}}false{{/if}} }){{/if}}
+  {{#if (eq tsType 'boolean')}}@Column({ type: 'boolean', nullable: {{#if optional}}true{{else}}false{{/if}} }){{/if}}
+  {{#if (eq tsType 'Date')}}@Column({ type: 'timestamp', nullable: {{#if optional}}true{{else}}false{{/if}} }){{/if}}
+  {{#if optional}}
+  {{name}}?: {{tsType}};
+  {{else}}
+  {{name}}!: {{tsType}};
+  {{/if}}
+  {{/each}}
+}
+{{else}}
+import { {{entityName}}EntityInterface, {{entityName}}Status } from './{{entity}}.interface';
+
+export class {{entityName}}Entity implements {{entityName}}EntityInterface {
+  {{#each fields}}
+  {{#if optional}}
+  {{name}}?: {{tsType}};
+  {{else}}
+  {{name}}!: {{tsType}};
+  {{/if}}
+  {{/each}}
+}
+{{/if}}
+
+

@@ -1,0 +1,8 @@
+export const {{entityName}}Resource = {
+  One: '{{entity}}-one',
+  Many: '{{entity}}-many',
+} as const;
+
+export type {{entityName}}ResourceType = typeof {{entityName}}Resource[keyof typeof {{entityName}}Resource];
+
+

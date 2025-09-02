@@ -2,7 +2,7 @@
   "compilerOptions": {
     "strict": true,
     "module": "commonjs",
-    "target": "es2017",
+    "target": "es2020",
     "sourceMap": true,
     "incremental": true,
     "skipLibCheck": true,
@@ -19,6 +19,9 @@
   "references": [
     {
       "path": "packages/rockets-server"
+    },
+    {
+      "path": "packages/rockets-cli"
     }
   ]
 }
