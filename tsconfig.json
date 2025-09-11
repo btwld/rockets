@@ -18,7 +18,7 @@
   "files": [],
   "references": [
     {
-      "path": "packages/rockets-server"
+      "path": "packages/rockets-server-auth"
     }
   ]
 }

@@ -29,7 +29,7 @@ out of the box.
 ### Installation
 
 ```bash
-npm install @concepta/rockets-server @concepta/nestjs-typeorm-ext typeorm
+npm install @concepta/rockets-server-auth @concepta/nestjs-typeorm-ext typeorm
 ```
 
 ### Basic Setup
@@ -40,7 +40,7 @@ You'll need to create your entities and configure the module as follows:
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
-import { RocketsServerModule } from '@concepta/rockets-server';
+import { RocketsServerAuthModule } from '@concepta/rockets-server-auth';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { UserEntity } from './entities/user.entity';
 import { UserOtpEntity } from './entities/user-otp.entity';
@@ -54,7 +54,7 @@ import { FederatedEntity } from './entities/federated.entity';
       synchronize: true,
       autoLoadEntities: true,
     }),
-    RocketsServerModule.forRoot({
+    RocketsServerAuthModule.forRoot({
       user: {
         imports: [
           TypeOrmExtModule.forFeature({
@@ -93,7 +93,7 @@ That's it! You now have:
 
 For detailed setup, configuration, and API reference, see:
 
-**[📚 Complete Documentation](./packages/rockets-server/README.md)**
+**[📚 Complete Documentation](./packages/rockets-server-auth/README.md)**
 
 ## 🔧 Dependencies
 

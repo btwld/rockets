@@ -428,9 +428,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@bitwild/rockets-server@workspace:packages/rockets-server":
+"@bitwild/rockets-server-auth@workspace:packages/rockets-server-auth":
   version: 0.0.0-use.local
-  resolution: "@bitwild/rockets-server@workspace:packages/rockets-server"
+  resolution: "@bitwild/rockets-server-auth@workspace:packages/rockets-server-auth"
   dependencies:
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.7"
     "@concepta/nestjs-auth-apple": "npm:^7.0.0-alpha.7"

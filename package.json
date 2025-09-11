@@ -1,6 +1,6 @@
 {
   "name": "root",
-  "version": "0.1.0-dev.6",
+  "version": "0.1.0-dev.8",
   "license": "BSD-3-Clause",
   "private": true,
   "workspaces": {
@@ -79,7 +79,7 @@
     "changelog:minor": "standard-version --release-as minor",
     "changelog:patch": "standard-version --release-as patch",
     "changelog:major": "standard-version --release-as major",
-    "generate-swagger": "cd packages/rockets-server && yarn generate-swagger"
+    "generate-swagger": "cd packages/rockets-server-auth && yarn generate-swagger"
   },
   "packageManager": "yarn@4.4.0"
 }

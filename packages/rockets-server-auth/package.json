@@ -1,0 +1,79 @@
+{
+  "name": "@bitwild/rockets-server-auth",
+  "version": "0.1.0-dev.8",
+  "description": "Rockets Server Auth",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "BSD-3-Clause",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "rockets-swagger": "./bin/generate-swagger.js"
+  },
+  "files": [
+    "dist/**/!(*.spec|*.e2e-spec|*.fixture).{js,d.ts}",
+    "bin/generate-swagger.js",
+    "SWAGGER.md"
+  ],
+  "scripts": {
+    "test": "jest",
+    "test:e2e": "jest --config ./jest.config-e2e.json",
+    "generate-swagger": "ts-node src/generate-swagger.ts"
+  },
+  "dependencies": {
+    "@concepta/nestjs-access-control": "7.0.0-alpha.7",
+    "@concepta/nestjs-auth-apple": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-github": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-google": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-jwt": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-local": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-recovery": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-refresh": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-router": "^7.0.0-alpha.7",
+    "@concepta/nestjs-auth-verify": "^7.0.0-alpha.7",
+    "@concepta/nestjs-authentication": "^7.0.0-alpha.7",
+    "@concepta/nestjs-common": "^7.0.0-alpha.7",
+    "@concepta/nestjs-crud": "^7.0.0-alpha.7",
+    "@concepta/nestjs-email": "^7.0.0-alpha.7",
+    "@concepta/nestjs-federated": "^7.0.0-alpha.7",
+    "@concepta/nestjs-jwt": "^7.0.0-alpha.7",
+    "@concepta/nestjs-otp": "^7.0.0-alpha.7",
+    "@concepta/nestjs-password": "^7.0.0-alpha.7",
+    "@concepta/nestjs-role": "^7.0.0-alpha.7",
+    "@concepta/nestjs-swagger-ui": "^7.0.0-alpha.7",
+    "@concepta/nestjs-user": "^7.0.0-alpha.7",
+    "@nestjs/common": "^10.4.1",
+    "@nestjs/config": "^3.2.3",
+    "@nestjs/core": "^10.4.1",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/passport": "^10.0.3",
+    "@nestjs/swagger": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "passport-strategy": "^1.0.0"
+  },
+  "devDependencies": {
+    "@concepta/nestjs-typeorm-ext": "^7.0.0-alpha.7",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/platform-express": "^10.4.1",
+    "@nestjs/testing": "^10.4.1",
+    "@nestjs/typeorm": "^10.0.2",
+    "@types/jsonwebtoken": "9.0.6",
+    "@types/passport-jwt": "^3.0.13",
+    "@types/passport-strategy": "^0.2.38",
+    "@types/supertest": "^6.0.2",
+    "express-serve-static-core": "^0.1.1",
+    "jest-mock-extended": "^2.0.9",
+    "sqlite3": "^5.1.4",
+    "supertest": "^6.3.4",
+    "ts-node": "^10.9.2",
+    "typeorm": "^0.3.0"
+  },
+  "peerDependencies": {
+    "class-transformer": "*",
+    "class-validator": "*",
+    "rxjs": "^7.1.0"
+  }
+}
