@@ -3,10 +3,11 @@
 
 ## Project
 
-[![NPM Latest](https://img.shields.io/npm/v/@bitwild/rockets-server-auth)](https://www.npmjs.com/package/@bitwild/rockets-server-auth)
-[![NPM Downloads](https://img.shields.io/npm/dw/@bitwild/rockets-server-auth)](https://www.npmjs.com/package/@bitwild/rockets-server-auth)
-[![GH Last Commit](https://img.shields.io/github/last-commit/tnramalho/rockets-sdk?logo=github)](https://github.com/tnramalho/rockets-sdk)
-[![GH Contrib](https://img.shields.io/github/contributors/tnramalho/rockets-sdk?logo=github)](https://github.com/tnramalho/rockets-sdk/graphs/contributors)
+[![NPM Latest](https://img.shields.io/npm/v/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
+[![NPM Downloads](https://img.shields.io/npm/dw/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
+[![GH Last Commit](https://img.shields.io/github/last-commit/btwld/rockets?logo=github)](https://github.com/btwld/rockets)
+[![GH Contrib](https://img.shields.io/github/contributors/btwld/rockets?logo=github)](https://github.com/btwld/rockets/graphs/contributors)
+[![License](https://img.shields.io/npm/l/@bitwild/rockets-auth)](https://github.com/btwld/rockets/blob/main/LICENSE.txt)
 
 ## Table of Contents
 

@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { ExceptionsFilter } from '@bitwild/rockets-server';
+import { ExceptionsFilter } from '@bitwild/rockets';
 import { SwaggerUiService } from '@concepta/nestjs-swagger-ui';
 import { UserModelService } from '@concepta/nestjs-user';
 import { RoleModelService, RoleService } from '@concepta/nestjs-role';

@@ -3,7 +3,7 @@ import { CrudAdapter, TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserMetadataEntity } from '../entities/user-metadata.entity';
-import { RocketsAuthUserMetadataEntityInterface } from '@bitwild/rockets-server-auth';
+import { RocketsAuthUserMetadataEntityInterface } from '@bitwild/rockets-auth';
 
 @Injectable()
 export class UserMetadataTypeOrmCrudAdapter

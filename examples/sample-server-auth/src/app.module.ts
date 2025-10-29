@@ -4,10 +4,10 @@ import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import {
   RocketsAuthModule,
   RocketsJwtAuthProvider,
-} from '@bitwild/rockets-server-auth';
+} from '@bitwild/rockets-auth';
 import {
   RocketsModule,
-} from '@bitwild/rockets-server';
+} from '@bitwild/rockets';
 
 // Import ACL configuration
 import { ACService } from './access-control.service';

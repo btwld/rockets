@@ -18,5 +18,5 @@ export * from './adapters/user-typeorm-crud.adapter';
 export * from './adapters/user-metadata-typeorm-crud.adapter';
 
 // Providers
-export { RocketsJwtAuthProvider } from '@bitwild/rockets-server-auth';
+export { RocketsJwtAuthProvider } from '@bitwild/rockets-auth';
 export * from '../../mock-auth.provider';

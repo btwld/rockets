@@ -1,12 +1,47 @@
 {
-  "name": "@bitwild/rockets-server",
-  "version": "0.1.0-dev.1",
-  "description": "Rockets Server - Core server functionality",
+  "name": "@bitwild/rockets",
+  "version": "1.0.0-alpha.1",
+  "description": "Rockets - Core server functionality for NestJS applications with built-in authentication, user management, and API scaffolding",
+  "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
+  "license": "BSD-3-Clause",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "license": "BSD-3-Clause",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/btwld/rockets.git",
+    "directory": "packages/rockets-server"
+  },
+  "bugs": {
+    "url": "https://github.com/btwld/rockets/issues"
+  },
+  "homepage": "https://github.com/btwld/rockets/tree/main/packages/rockets-server#readme",
+  "keywords": [
+    "nestjs",
+    "rockets",
+    "server",
+    "api",
+    "backend",
+    "typescript",
+    "authentication",
+    "user-management",
+    "swagger",
+    "rest-api"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "bin": {
     "rockets-swagger": "./bin/generate-swagger.js"
@@ -14,12 +49,18 @@
   "files": [
     "dist/**/!(*.spec|*.e2e-spec|*.fixture).{js,d.ts}",
     "bin/generate-swagger.js",
-    "SWAGGER.md"
+    "SWAGGER.md",
+    "README.md",
+    "LICENSE.txt",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
     "test": "jest",
+    "test:watch": "jest --watch",
     "test:e2e": "jest --config ./jest.config-e2e.json",
+    "test:cov": "jest --coverage",
     "generate-swagger": "ts-node src/generate-swagger.ts"
   },
   "dependencies": {
@@ -32,7 +73,6 @@
     "@nestjs/swagger": "^7.4.0"
   },
   "devDependencies": {
-    "@bitwild/rockets-server-auth": "^0.1.0-dev.8",
     "@concepta/nestjs-crud": "^7.0.0-alpha.8",
     "@nestjs/platform-express": "^10.4.1",
     "@nestjs/testing": "^10.4.1",

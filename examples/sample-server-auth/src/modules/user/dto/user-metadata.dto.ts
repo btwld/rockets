@@ -1,4 +1,4 @@
-import { RocketsAuthUserMetadataDto } from '@bitwild/rockets-server-auth';
+import { RocketsAuthUserMetadataDto } from '@bitwild/rockets-auth';
 import { ApiProperty, PartialType, PickType } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 import {

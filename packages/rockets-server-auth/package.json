@@ -1,28 +1,75 @@
 {
-  "name": "@bitwild/rockets-server-auth",
-  "version": "0.1.0-dev.8",
-  "description": "Rockets Server Auth",
+  "name": "@bitwild/rockets-auth",
+  "version": "1.0.0-alpha.1",
+  "description": "Rockets Auth - Complete authentication and authorization solution for NestJS with JWT, OAuth, OTP, role-based access control, and more",
+  "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
+  "license": "BSD-3-Clause",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "license": "BSD-3-Clause",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/btwld/rockets.git",
+    "directory": "packages/rockets-server-auth"
+  },
+  "bugs": {
+    "url": "https://github.com/btwld/rockets/issues"
+  },
+  "homepage": "https://github.com/btwld/rockets/tree/main/packages/rockets-server-auth#readme",
+  "keywords": [
+    "nestjs",
+    "rockets",
+    "authentication",
+    "authorization",
+    "jwt",
+    "oauth",
+    "oauth2",
+    "passport",
+    "rbac",
+    "role-based-access-control",
+    "otp",
+    "2fa",
+    "security",
+    "api",
+    "backend",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "bin": {
-    "rockets-swagger": "./bin/generate-swagger.js"
+    "rockets-auth-swagger": "./bin/generate-swagger.js"
   },
   "files": [
     "dist/**/!(*.spec|*.e2e-spec|*.fixture).{js,d.ts}",
     "bin/generate-swagger.js",
-    "SWAGGER.md"
+    "SWAGGER.md",
+    "README.md",
+    "LICENSE.txt",
+    "CHANGELOG.md"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
     "test": "jest",
+    "test:watch": "jest --watch",
     "test:e2e": "jest --config ./jest.config-e2e.json",
+    "test:cov": "jest --coverage",
     "generate-swagger": "ts-node src/generate-swagger.ts"
   },
   "dependencies": {
-    "@bitwild/rockets-server": "^0.1.0-dev.1",
     "@concepta/nestjs-access-control": "7.0.0-alpha.8",
     "@concepta/nestjs-auth-apple": "^7.0.0-alpha.8",
     "@concepta/nestjs-auth-github": "^7.0.0-alpha.8",
