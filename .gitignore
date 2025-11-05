@@ -117,3 +117,7 @@ dist
 
 #Ignore cursor AI rules
 .cursor/rules/codacy.mdc
+
+# Claude Code (personal overrides only - team settings are committed)
+CLAUDE.local.md
+.claude/settings.local.json
