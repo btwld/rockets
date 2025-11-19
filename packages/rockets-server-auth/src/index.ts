@@ -7,6 +7,7 @@ export * from './domains/user';
 export * from './domains/oauth';
 export * from './domains/otp';
 export * from './domains/role';
+export * from './domains/invitation';
 
 // Export shared resources
 export * from './shared';

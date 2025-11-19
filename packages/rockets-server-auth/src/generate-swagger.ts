@@ -245,6 +245,32 @@ async function generateSwaggerJson() {
             ],
           },
           useFactory: () => ({
+            settings: {
+              role: { adminRoleName: 'admin' },
+              email: {
+                from: 'test@test.com',
+                baseUrl: 'http://localhost',
+                templates: {
+                  sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                  invitation: {
+                    logo: '',
+                    fileName: 'inv.hbs',
+                    subject: 'Invitation',
+                  },
+                  invitationAccepted: {
+                    logo: '',
+                    fileName: 'inv-acc.hbs',
+                    subject: 'Accepted',
+                  },
+                },
+              },
+              otp: {
+                assignment: 'userOtp' as const,
+                category: 'test',
+                type: 'uuid',
+                expiresIn: '1h',
+              },
+            },
             services: {
               mailerService: {
                 sendMail: () => Promise.resolve(),

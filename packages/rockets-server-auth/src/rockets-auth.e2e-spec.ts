@@ -1,5 +1,6 @@
 import { AuthJwtGuard } from '@concepta/nestjs-auth-jwt';
 import { EmailSendInterface, ExceptionsFilter } from '@concepta/nestjs-common';
+import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import {
   CanActivate,
@@ -22,6 +23,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { ormConfig } from './__fixtures__/ormconfig.fixture';
+import { InvitationEntityFixture } from './__fixtures__/invitation/invitation.entity.fixture';
 import { UserOtpEntityFixture } from './__fixtures__/user/user-otp-entity.fixture';
 import { UserFixture } from './__fixtures__/user/user.entity.fixture';
 import { FederatedEntityFixture } from './__fixtures__/federated/federated.entity.fixture';
@@ -92,6 +94,7 @@ describe('RocketsAuth (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         MockConfigModule,
+        EventModule.forRoot({}),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => {
@@ -108,6 +111,7 @@ describe('RocketsAuth (e2e)', () => {
             FederatedEntityFixture,
             UserRoleEntityFixture,
             RoleEntityFixture,
+            InvitationEntityFixture,
           ],
         }),
         TypeOrmModule.forFeature([
@@ -131,6 +135,9 @@ describe('RocketsAuth (e2e)', () => {
               updateOne: RocketsAuthUserUpdateDto,
             },
             userMetadataConfig: {
+              imports: [
+                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+              ],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
@@ -170,6 +177,40 @@ describe('RocketsAuth (e2e)', () => {
                 federated: { entity: FederatedEntityFixture },
               }),
             ],
+          },
+          invitation: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                invitation: { entity: InvitationEntityFixture },
+              }),
+            ],
+            userModelService: undefined as never,
+          },
+          settings: {
+            role: { adminRoleName: 'admin' },
+            email: {
+              from: 'test@test.com',
+              baseUrl: 'http://localhost',
+              templates: {
+                sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                invitation: {
+                  logo: '',
+                  fileName: 'inv.hbs',
+                  subject: 'Invitation',
+                },
+                invitationAccepted: {
+                  logo: '',
+                  fileName: 'inv-acc.hbs',
+                  subject: 'Accepted',
+                },
+              },
+            },
+            otp: {
+              assignment: 'userOtp' as const,
+              category: 'test',
+              type: 'uuid',
+              expiresIn: '1h',
+            },
           },
           services: { mailerService: mockEmailService },
         }),

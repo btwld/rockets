@@ -1,4 +1,5 @@
 import { EmailSendInterface, ExceptionsFilter } from '@concepta/nestjs-common';
+import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { INestApplication, Module, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -8,6 +9,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import request from 'supertest';
 import { AdminUserTypeOrmCrudAdapter } from '../../../__fixtures__/admin/admin-user-crud.adapter';
 import { FederatedEntityFixture } from '../../../__fixtures__/federated/federated.entity.fixture';
+import { InvitationEntityFixture } from '../../../__fixtures__/invitation/invitation.entity.fixture';
 import { ormConfig } from '../../../__fixtures__/ormconfig.fixture';
 import { RoleEntityFixture } from '../../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../../__fixtures__/role/user-role.entity.fixture';
@@ -52,6 +54,7 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         MockConfigModule,
+        EventModule.forRoot({}),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => ({ ...ormConfig }),
@@ -66,6 +69,7 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
             FederatedEntityFixture,
             UserRoleEntityFixture,
             RoleEntityFixture,
+            InvitationEntityFixture,
           ],
         }),
         TypeOrmModule.forFeature([
@@ -89,6 +93,9 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
               updateOne: RocketsAuthUserUpdateDtoFixture,
             },
             userMetadataConfig: {
+              imports: [
+                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+              ],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
@@ -128,6 +135,40 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
                 federated: { entity: FederatedEntityFixture },
               }),
             ],
+          },
+          invitation: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                invitation: { entity: InvitationEntityFixture },
+              }),
+            ],
+            userModelService: undefined as never,
+          },
+          settings: {
+            role: { adminRoleName: 'admin' },
+            email: {
+              from: 'test@test.com',
+              baseUrl: 'http://localhost',
+              templates: {
+                sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                invitation: {
+                  logo: '',
+                  fileName: 'inv.hbs',
+                  subject: 'Invitation',
+                },
+                invitationAccepted: {
+                  logo: '',
+                  fileName: 'inv-acc.hbs',
+                  subject: 'Accepted',
+                },
+              },
+            },
+            otp: {
+              assignment: 'userOtp' as const,
+              category: 'test',
+              type: 'uuid',
+              expiresIn: '1h',
+            },
           },
           services: { mailerService: mockEmailService },
         }),

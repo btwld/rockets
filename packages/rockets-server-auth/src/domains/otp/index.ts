@@ -15,3 +15,4 @@ export { RocketsAuthNotificationService } from './services/rockets-auth-notifica
 export { RocketsAuthOtpServiceInterface } from './interfaces/rockets-auth-otp-service.interface';
 export { RocketsAuthOtpNotificationServiceInterface } from './interfaces/rockets-auth-otp-notification-service.interface';
 export { RocketsAuthOtpSettingsInterface } from './interfaces/rockets-auth-otp-settings.interface';
+export { RocketsAuthUserOtpSettingsInterface } from './interfaces/rockets-auth-user-otp-settings.interface';

@@ -35,6 +35,7 @@
   - [password](#password)
   - [otp](#otp)
   - [email](#email)
+  - [invitation](#invitation)
   - [services](#services)
   - [crud](#crud)
   - [userCrud](#usercrud)
@@ -71,6 +72,7 @@ maintaining flexibility for customization and extension.
 - **🔐 Multiple Authentication Methods**: Password, JWT tokens, refresh tokens, and OAuth
 - **🔗 OAuth Integration**: Support for Google, GitHub, and Apple OAuth providers
 - **👥 User Registration & Management**: Complete signup flow with validation
+- **📨 User Invitations**: Admin-controlled invitation system with OTP validation and email notifications
 - **🔑 Password Recovery**: Email-based password reset with secure passcodes
 - **📱 OTP Support**: One-time password generation and validation for secure authentication
 - **👑 Role-Based Access Control**: Admin role system with user role management
@@ -350,6 +352,16 @@ available and are protected by `AdminGuard`:
 - `GET /admin/users/:userId/roles` - List roles assigned to a specific user
 - `POST /admin/users/:userId/roles` - Assign role to a specific user
 
+**Invitation Administration:**
+
+- `POST /admin/invitations` - Create and send invitation (Admin only)
+- `POST /admin/invitations/:code/reattempt` - Re-send invitation email with new OTP (Admin only)
+- `POST /admin/invitations/revoke` - Revoke all invitations for email and category (Admin only)
+
+**Invitation Acceptance (Public):**
+
+- `PATCH /invitation-acceptance/:code` - Accept invitation with OTP passcode and user data (Public)
+
 #### OTP Endpoints
 
 - `POST /otp` - Send OTP to user email (returns 200 OK)
@@ -627,6 +639,7 @@ interface RocketsAuthOptionsInterface {
   password?: PasswordOptionsInterface;
   otp?: OtpOptionsInterface;
   email?: Partial<EmailOptionsInterface>;
+  invitation?: InvitationOptionsInterface;
   services: {
     userModelService?: RocketsAuthUserModelServiceInterface;
     notificationService?: RocketsAuthNotificationServiceInterface;
@@ -1161,6 +1174,165 @@ email: {
   settings: {}, // Settings object is empty
 }
 ```
+
+---
+
+### invitation
+
+**What it does**: User invitation system that allows admins to invite users via email with OTP validation. The system automatically creates basic user accounts, sends invitation emails with secure OTP passcodes, and processes user acceptance through an event-driven architecture.
+
+**Core modules it connects to**: InvitationModule from `@concepta/nestjs-invitation`, EmailModule, OtpModule, UserModule, RoleModule
+
+**When to update**: When you need to customize invitation email templates, OTP settings for invitations, or provide custom user model service for invitation processing. The system uses default settings from the main `settings.email` and `settings.otp` if not specifically overridden.
+
+**Key Features**:
+
+- **Automatic User Creation**: Creates basic user accounts (email/username) when invitation is created
+- **OTP Security**: Generates secure OTP passcodes for invitation acceptance
+- **Email Templates**: Customizable invitation and acceptance confirmation emails
+- **Event-Driven Processing**: Uses `InvitationAcceptedEventAsync` for extensible user data processing
+- **Role Assignment**: Automatically assigns default role or custom roleId on acceptance
+- **User Metadata Support**: Processes firstName, lastName, and custom metadata during acceptance
+
+**Configuration Structure**:
+
+```typescript
+interface InvitationOptionsInterface {
+  settings: {
+    email: {
+      baseUrl: string; // Base URL for invitation links
+      from: string; // Email sender address
+      templates: {
+        invitation: {
+          fileName: string; // Handlebars template file
+          subject: string; // Email subject
+          logo?: string; // Optional logo URL
+        };
+        invitationAccepted: {
+          fileName: string; // Handlebars template file
+          subject: string; // Email subject
+          logo?: string; // Optional logo URL
+        };
+      };
+    };
+    otp: {
+      assignment: string; // OTP assignment key (default: 'userOtp')
+      category: string; // OTP category (default: 'auth-login')
+      type: 'uuid' | 'numeric'; // OTP type
+      expiresIn: string; // OTP expiration (e.g., '1h', '24h')
+      clearOtpOnCreate?: boolean; // Clear old OTPs when creating new ones
+    };
+  };
+  userModelService?: UserModelServiceInterface; // Optional custom user service
+  otpService?: OtpService; // Optional custom OTP service
+  emailService?: EmailServiceInterface; // Optional custom email service
+}
+```
+
+**Default Behavior**:
+
+- Uses `settings.email` from main configuration if `invitation.settings.email` is not provided
+- Uses `settings.otp` from main configuration with `assignment: 'userOtp'` for invitations
+- Automatically processes user data (password, firstName, lastName, metadata) on acceptance
+- Assigns default role from `settings.role.defaultUserRoleName` if no roleId provided in payload
+
+**Real-world example**: Complete invitation configuration with custom templates:
+
+```typescript
+RocketsAuthModule.forRootAsync({
+  imports: [
+    TypeOrmExtModule.forFeature({
+      invitation: { entity: InvitationEntity },
+    }),
+  ],
+  useFactory: () => ({
+    settings: {
+      email: {
+        from: 'noreply@mycompany.com',
+        baseUrl: 'https://app.mycompany.com',
+        templates: {
+          sendOtp: {
+            fileName: 'otp.template.hbs',
+            subject: 'Your verification code',
+          },
+          invitation: {
+            fileName: 'invitation.template.hbs',
+            subject: 'You have been invited to MyCompany',
+            logo: 'https://app.mycompany.com/assets/logo.png',
+          },
+          invitationAccepted: {
+            fileName: 'invitation-accepted.template.hbs',
+            subject: 'Welcome to MyCompany!',
+            logo: 'https://app.mycompany.com/assets/logo.png',
+          },
+        },
+      },
+      otp: {
+        assignment: 'userOtp',
+        category: 'auth-login',
+        type: 'uuid',
+        expiresIn: '24h',
+        clearOtpOnCreate: true,
+      },
+      role: {
+        defaultUserRoleName: 'user',
+        adminRoleName: 'admin',
+      },
+    },
+    // Optional: Custom invitation settings override
+    invitation: {
+      settings: {
+        email: {
+          baseUrl: 'https://app.mycompany.com',
+          from: 'invitations@mycompany.com', // Different sender for invitations
+          templates: {
+            invitation: {
+              fileName: 'custom-invitation.template.hbs',
+              subject: 'Join MyCompany today!',
+            },
+            invitationAccepted: {
+              fileName: 'custom-accepted.template.hbs',
+              subject: 'Your account is ready!',
+            },
+          },
+        },
+        otp: {
+          assignment: 'userOtp',
+          category: 'invitation',
+          type: 'numeric', // Use numeric codes instead of UUIDs
+          expiresIn: '48h', // Longer expiration for invitations
+        },
+      },
+    },
+  }),
+})
+```
+
+**Invitation Flow**:
+
+1. **Admin creates invitation**: `POST /admin/invitations` with email, category, and optional constraints
+2. **System creates user**: Basic user account is created automatically
+3. **Email sent**: Invitation email with OTP passcode is sent to user
+4. **User accepts**: `PATCH /invitation-acceptance/:code` with passcode and user data (password, firstName, lastName, metadata, roleId)
+5. **Event processing**: `InvitationUserAcceptanceListener` processes the acceptance event
+6. **User updated**: Password is hashed, metadata is saved, role is assigned
+7. **Confirmation email**: Optional acceptance confirmation email is sent
+
+**Available Endpoints**:
+
+**API Endpoints**:
+- `POST /admin/invitations` - Create and send invitation (Admin only)
+- `PATCH /invitation-acceptance/:code` - Accept invitation with OTP (Public)
+- `POST /admin/invitations/:code/reattempt` - Re-send invitation email (Admin only)
+- `POST /admin/invitations/revoke` - Revoke all invitations for email/category (Admin only)
+
+**When to use each endpoint**:
+- **POST /admin/invitations**: When admin needs to invite a new user. Creates user account, generates invitation, sends email with OTP
+- **PATCH /invitation-acceptance/:code**: When user clicks invitation link and fills signup form. Accepts passcode + user data payload (firstName, lastName, password, etc.)
+- **POST /admin/invitations/:code/reattempt**: When invitation email was not received or OTP expired. Generates new OTP and re-sends email
+- **POST /admin/invitations/revoke**: When admin needs to cancel pending invitations. Revokes all active invitations for specific email/category
+
+**Note**: The invitation system requires `userCrud` to be configured for user metadata support. The `InvitationUserAcceptanceListener` automatically handles user data processing, password hashing, metadata creation, and role assignment.
 
 ---
 
@@ -2227,6 +2399,124 @@ provider integration
 - `FederatedModule` - Custom user creation/lookup from OAuth data
 - `UserModelService` - Custom user creation and lookup logic
 - `IssueTokenService` - Custom token generation for OAuth users
+
+#### CRUD Relations
+CRUD Relations allow you to include related entities in your CRUD operations with automatic JOIN queries. This feature works with both the `ConfigurableCrudBuilder` pattern and the direct `@CrudController` decorator pattern.
+
+**What it does**: Automatically fetches related entities when querying CRUD endpoints. For example, when fetching a User, you can automatically include their UserMetadata, Roles, Posts, etc.
+
+**When to use**: When you need to fetch parent entity with its related entities in a single query. Common use cases include:
+- User with UserMetadata (profile information)
+- Pet with Vaccinations and Appointments  
+- Order with OrderItems and Customer details
+- Post with Comments and Author information
+
+**Two Implementation Patterns**:
+
+**Pattern 1: With ConfigurableCrudBuilder (recommended for complex scenarios)**
+```typescript
+// In your module.ts
+import { 
+  ConfigurableCrudBuilder, 
+  CrudRelations, 
+  CrudRelationRegistry 
+} from '@concepta/nestjs-crud';
+
+const builder = new ConfigurableCrudBuilder({
+  controller: {
+    extraDecorators: [
+      CrudRelations<UserEntity, [UserMetadataEntity]>({
+        rootKey: 'id',
+        relations: [
+          {
+            join: 'LEFT',
+            cardinality: 'one',
+            service: UserMetadataCrudService,
+            property: 'userMetadata',
+            primaryKey: 'id',
+            foreignKey: 'userId',
+          },
+        ],
+      }),
+    ],
+  },
+  // ... other builder config
+});
+
+// CRITICAL: Must register all relation services in providers
+providers: [
+  {
+    provide: 'USER_RELATION_REGISTRY',
+    inject: [UserMetadataCrudService],
+    useFactory: (userMetadataService: UserMetadataCrudService) => {
+      const registry = new CrudRelationRegistry<
+        UserEntity,
+        [UserMetadataEntity]
+      >();
+      registry.register(userMetadataService);
+      return registry;
+    },
+  },
+],
+```
+
+**Pattern 2: Direct @CrudController decorator (recommended for simple scenarios)**
+```typescript
+// In your controller.ts
+import { CrudController, CrudRelations } from '@concepta/nestjs-crud';
+
+@CrudController({
+  path: 'pets',
+  model: {
+    type: PetResponseDto,
+    paginatedType: PetPaginatedDto,
+  },
+})
+@CrudRelations<PetEntity, [PetVaccinationEntity, PetAppointmentEntity]>({
+  rootKey: 'id',
+  relations: [
+    {
+      join: 'LEFT',
+      cardinality: 'many',
+      service: PetVaccinationCrudService,
+      property: 'vaccinations',
+      primaryKey: 'id',
+      foreignKey: 'petId',
+    },
+    {
+      join: 'LEFT', 
+      cardinality: 'many',
+      service: PetAppointmentCrudService,
+      property: 'appointments',
+      primaryKey: 'id',
+      foreignKey: 'petId',
+    },
+  ],
+})
+export class PetCrudController implements CrudControllerInterface {
+  constructor(private petCrudService: PetCrudService) {}
+  // ... controller methods
+}
+```
+
+**Key Configuration Options**:
+- `rootKey`: Primary key field of the root entity (usually 'id')
+- `join`: 'LEFT' | 'INNER' - Type of SQL JOIN to use
+- `cardinality`: 'one' | 'many' - One-to-one or one-to-many relationship
+- `service`: The CRUD service for the related entity (must be registered)
+- `property`: The property name in the response object
+- `primaryKey`: Primary key field of the root entity for the join
+- `foreignKey`: Foreign key field in the related entity
+
+**Important Notes**:
+- All services used in relations MUST be registered in the CrudRelationRegistry (Pattern 1) or available through DI (Pattern 2)
+- Relations are automatically fetched when using GET endpoints
+- Use `cardinality: 'one'` for single related objects, `cardinality: 'many'` for arrays
+- LEFT JOIN is recommended to include records even if no related data exists
+
+**When to use each pattern**:
+- **Pattern 1 (ConfigurableCrudBuilder)**: When you need complex CRUD configurations, custom service logic, or advanced decorators
+- **Pattern 2 (Direct @CrudController)**: When you need simple CRUD with relations and minimal configuration
 
 ---
 

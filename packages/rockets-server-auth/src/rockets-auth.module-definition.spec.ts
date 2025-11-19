@@ -3,11 +3,16 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { UserFixture } from './__fixtures__/user/user.entity.fixture';
 import { UserOtpEntityFixture } from './__fixtures__/user/user-otp-entity.fixture';
+import { InvitationEntityFixture } from './__fixtures__/invitation/invitation.entity.fixture';
 import { AuthPasswordController } from './domains/auth/controllers/auth-password.controller';
 import { RocketsAuthRecoveryController } from './domains/auth/controllers/auth-recovery.controller';
 import { AuthTokenRefreshController } from './domains/auth/controllers/auth-refresh.controller';
 import { AuthOAuthController } from './domains/oauth/controllers/auth-oauth.controller';
 import { RocketsAuthOtpController } from './domains/otp/controllers/rockets-auth-otp.controller';
+import { InvitationController } from './domains/invitation/controllers/invitation.controller';
+import { InvitationAcceptanceController } from './domains/invitation/controllers/invitation-acceptance.controller';
+import { InvitationReattemptController } from './domains/invitation/controllers/invitation-reattempt.controller';
+import { InvitationRevocationController } from './domains/invitation/controllers/invitation-revocation.controller';
 import { RocketsAuthNotificationServiceInterface } from './shared/interfaces/rockets-auth-notification.service.interface';
 import { RocketsAuthOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthOptionsInterface } from './shared/interfaces/rockets-auth-options.interface';
@@ -60,6 +65,28 @@ describe('RocketsAuthModuleDefinition', () => {
   };
 
   const mockOptions: RocketsAuthOptionsInterface = {
+    settings: {
+      role: { adminRoleName: 'admin' },
+      email: {
+        from: 'test@test.com',
+        baseUrl: 'http://localhost',
+        templates: {
+          sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+          invitation: { logo: '', fileName: 'inv.hbs', subject: 'Invitation' },
+          invitationAccepted: {
+            logo: '',
+            fileName: 'inv-acc.hbs',
+            subject: 'Accepted',
+          },
+        },
+      },
+      otp: {
+        assignment: 'userOtp' as const,
+        category: 'test',
+        type: 'uuid',
+        expiresIn: '1h',
+      },
+    },
     jwt: {
       settings: {
         access: { secret: 'test-secret' },
@@ -86,6 +113,10 @@ describe('RocketsAuthModuleDefinition', () => {
     federated: {
       imports: [],
     },
+    invitation: {
+      imports: [],
+    },
+    userCrud: undefined as never,
     authRouter: {
       guards: [],
     },
@@ -112,7 +143,7 @@ describe('RocketsAuthModuleDefinition', () => {
   describe('createRocketsAuthControllers', () => {
     it('should return default controllers when no controllers provided', () => {
       const result = createRocketsAuthControllers({
-        extras: { global: false },
+        extras: { global: false, userCrud: undefined as never },
       });
 
       expect(result).toEqual([
@@ -121,6 +152,10 @@ describe('RocketsAuthModuleDefinition', () => {
         RocketsAuthRecoveryController,
         RocketsAuthOtpController,
         AuthOAuthController,
+        InvitationController,
+        InvitationAcceptanceController,
+        InvitationRevocationController,
+        InvitationReattemptController,
       ]);
     });
 
@@ -128,7 +163,7 @@ describe('RocketsAuthModuleDefinition', () => {
       const customControllers = [AuthPasswordController];
       const result = createRocketsAuthControllers({
         controllers: customControllers,
-        extras: { global: false },
+        extras: { global: false, userCrud: undefined as never },
       });
 
       expect(result).toEqual([AuthPasswordController]);
@@ -145,6 +180,10 @@ describe('RocketsAuthModuleDefinition', () => {
         RocketsAuthRecoveryController,
         RocketsAuthOtpController,
         AuthOAuthController,
+        InvitationController,
+        InvitationAcceptanceController,
+        InvitationRevocationController,
+        InvitationReattemptController,
       ]);
     });
 
@@ -262,6 +301,15 @@ describe('RocketsAuthModuleDefinition', () => {
             }),
           ],
         },
+        invitation: {
+          imports: [
+            TypeOrmExtModule.forFeature({
+              invitation: {
+                entity: InvitationEntityFixture,
+              },
+            }),
+          ],
+        },
       };
 
       const result = createRocketsAuthImports({
@@ -359,6 +407,8 @@ describe('RocketsAuthModuleDefinition', () => {
         user: { imports: [] },
         otp: { imports: [] },
         federated: { imports: [] },
+        invitation: { imports: [] },
+        userCrud: undefined as never,
         authRouter: { guards: [] },
       };
 
@@ -385,6 +435,8 @@ describe('RocketsAuthModuleDefinition', () => {
         user: { imports: [] },
         otp: { imports: [] },
         federated: { imports: [] },
+        invitation: { imports: [] },
+        userCrud: undefined as never,
         authRouter: { guards: [] },
       };
 

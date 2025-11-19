@@ -36,6 +36,8 @@ import {
 } from '@concepta/nestjs-email';
 import { FederatedModule } from '@concepta/nestjs-federated';
 import { FederatedOptionsInterface } from '@concepta/nestjs-federated/dist/interfaces/federated-options.interface';
+import { InvitationModule } from '@concepta/nestjs-invitation';
+import { InvitationOptionsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-options.interface';
 import { JwtModule } from '@concepta/nestjs-jwt';
 import { JwtOptionsInterface } from '@concepta/nestjs-jwt/dist/interfaces/jwt-options.interface';
 import { OtpModule, OtpService } from '@concepta/nestjs-otp';
@@ -66,13 +68,37 @@ import { RocketsAuthSettingsInterface } from './shared/interfaces/rockets-auth-s
 import { RocketsAuthAdminModule } from './domains/user/modules/rockets-auth-admin.module';
 import { RocketsAuthSignUpModule } from './domains/user/modules/rockets-auth-signup.module';
 import { RocketsAuthRoleAdminModule } from './domains/role/modules/rockets-auth-role-admin.module';
+import { RocketsAuthRoleService } from './domains/role/services/rockets-auth-role.service';
 import {
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+  ROCKETS_AUTH_OTP_ASSIGNMENT,
   RocketsAuthUserModelService,
 } from './shared/constants/rockets-auth.constants';
 import { RocketsAuthNotificationService } from './domains/otp/services/rockets-auth-notification.service';
 import { RocketsAuthOtpService } from './domains/otp/services/rockets-auth-otp.service';
 import { RocketsJwtAuthProvider } from './provider/rockets-jwt-auth.provider';
+import {
+  InvitationUserAcceptanceListener,
+  InvitationController,
+  InvitationAcceptanceController,
+  InvitationRevocationController,
+  InvitationReattemptController,
+} from './domains/invitation';
+import { GenericUserMetadataModelService } from './domains/user/services/rockets-auth-user-metadata.model.service';
+import { RocketsAuthUserMetadataDto } from './domains/user/dto/rockets-auth-user-metadata.dto';
+import { RocketsAuthUserMetadataModule } from './domains/user/modules/rockets-auth-user-metadata.module';
+import {
+  AuthUserMetadataModelService,
+  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
+} from './domains/user/constants/user-metadata.constants';
+import {
+  getDynamicRepositoryToken,
+  RepositoryInterface,
+} from '@concepta/nestjs-common';
+import { RocketsAuthUserMetadataEntityInterface } from './domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
+import { UserCrudOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
+import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { InvitationSettingsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-settings.interface';
 
 export const RAW_OPTIONS_TOKEN = Symbol(
   '__ROCKETS_SERVER_MODULE_RAW_OPTIONS_TOKEN__',
@@ -125,15 +151,21 @@ function definitionTransform(
     global: extras.global,
     imports: createRocketsAuthImports({ imports, extras }),
     controllers: createRocketsAuthControllers({ controllers, extras }) || [],
-    providers: [...createRocketsAuthProviders({ providers, extras })],
+    providers: [...createRocketsAuthProviders({ providers, extras, userCrud })],
     exports: createRocketsAuthExports({ exports, extras }),
   };
 
-  // If admin is configured, add the admin submodule
+  // If userCrud is configured, add the admin submodule
   if (userCrud) {
     const disableController = extras.disableController || {};
+
+    // Import centralized UserMetadata module - single configuration point
+    // userMetadataConfig is required for full functionality but optional for basic tests
     baseModule.imports = [
       ...(baseModule.imports || []),
+      ...(userCrud.userMetadataConfig 
+        ? [RocketsAuthUserMetadataModule.register(userCrud.userMetadataConfig)]
+        : []),
       ...(!disableController.admin
         ? [RocketsAuthAdminModule.register(userCrud)]
         : []),
@@ -173,6 +205,13 @@ export function createRocketsAuthControllers(options: {
           list.push(RocketsAuthRecoveryController);
         if (!disableController.otp) list.push(RocketsAuthOtpController);
         if (!disableController.oAuth) list.push(AuthOAuthController);
+        if (!disableController.invitation) list.push(InvitationController);
+        if (!disableController.invitationAcceptance)
+          list.push(InvitationAcceptanceController);
+        if (!disableController.invitationRevocation)
+          list.push(InvitationRevocationController);
+        if (!disableController.invitationReattempt)
+          list.push(InvitationReattemptController);
 
         return list;
       })();
@@ -522,6 +561,49 @@ export function createRocketsAuthImports(importOptions: {
       }),
       entities: ['userRole', ...(importOptions.extras?.role?.entities || [])],
     }),
+    InvitationModule.forRootAsync({
+      imports: [...(importOptions.extras?.invitation?.imports || [])],
+      inject: [RAW_OPTIONS_TOKEN, UserModelService, OtpService, EmailService],
+      useFactory: (
+        options: RocketsAuthOptionsInterface,
+        userModelService: UserModelService,
+        defaultOtpService: OtpService,
+        defaultEmailService: EmailService,
+      ): InvitationOptionsInterface => {
+        const invitationSettings: InvitationSettingsInterface = {
+          email: {
+            baseUrl:
+              options.invitation?.settings?.email?.baseUrl ||
+              options.settings.email.baseUrl,
+            from:
+              options.invitation?.settings?.email?.from ||
+              options.settings.email.from,
+            templates: {
+              invitation:
+                options.invitation?.settings?.email?.templates?.invitation ||
+                options.settings.email.templates.invitation,
+              invitationAccepted:
+                options.invitation?.settings?.email?.templates
+                  ?.invitationAccepted ||
+                options.settings.email.templates.invitationAccepted,
+            },
+          },
+          otp: {
+            ...options.settings.otp,
+            assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
+          },
+        };
+        return {
+          settings: invitationSettings,
+          userModelService:
+            options.invitation?.userModelService ||
+            options.services?.userModelService ||
+            userModelService,
+          otpService: defaultOtpService,
+          emailService: defaultEmailService,
+        };
+      },
+    }),
   ];
 
   // Conditionally register AccessControlModule if configuration provided
@@ -563,6 +645,7 @@ export function createRocketsAuthExports(options: {
     RoleModule,
     AdminGuard,
     RocketsJwtAuthProvider,
+    RocketsAuthRoleService,
   ];
 }
 
@@ -572,6 +655,7 @@ export function createRocketsAuthExports(options: {
 export function createRocketsAuthProviders(options: {
   providers?: Provider[];
   extras?: RocketsAuthOptionsExtrasInterface;
+  userCrud?: UserCrudOptionsExtrasInterface;
 }): Provider[] {
   const providers: Provider[] = [
     ...(options.providers ?? []),
@@ -590,8 +674,12 @@ export function createRocketsAuthProviders(options: {
     RocketsAuthNotificationService,
     RocketsJwtAuthProvider,
     AdminGuard,
+    RocketsAuthRoleService,
+    InvitationUserAcceptanceListener,
   ];
 
+  // Note: AuthUserMetadataModelService provider is now handled by the centralized
+  // RocketsAuthUserMetadataModule when userCrud is configured
   // Note: The rockets-auth module doesn't have its own AuthGuard
   // It uses decorators like @AuthUser() and @AuthPublic() for authentication control
   // The enableGlobalGuard option is available for future use if needed

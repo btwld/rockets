@@ -7,6 +7,7 @@ import { RocketsAuthSettingsInterface } from '../shared/interfaces/rockets-auth-
 import { RocketsAuthNotificationService } from '../domains/otp/services/rockets-auth-notification.service';
 import {
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+  ROCKETS_AUTH_OTP_ASSIGNMENT,
   RocketsAuthUserModelService,
 } from '../shared/constants/rockets-auth.constants';
 
@@ -77,10 +78,20 @@ describe(RocketsAuthOtpService.name, () => {
             fileName: 'otp.template.hbs',
             subject: 'Your OTP Code',
           },
+          invitation: {
+            logo: 'logo.png',
+            fileName: 'invitation.template.hbs',
+            subject: 'You have been invited',
+          },
+          invitationAccepted: {
+            logo: 'logo.png',
+            fileName: 'invitation-accepted.template.hbs',
+            subject: 'Invitation Accepted',
+          },
         },
       },
       otp: {
-        assignment: 'user',
+        assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
         category: 'login',
         type: 'uuid',
         expiresIn: '3600', // 1 hour as string

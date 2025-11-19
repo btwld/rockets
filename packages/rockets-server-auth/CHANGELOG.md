@@ -18,6 +18,14 @@ and this project adheres to
 - OAuth 2.0 integration (Apple, GitHub, Google)
 - OTP (One-Time Password) support for 2FA
 - Email-based account recovery system
+- **User Invitation System**: Admin-controlled invitation flow with OTP validation
+  - Create and send invitations via email
+  - Secure OTP-based invitation acceptance
+  - Automatic user account creation
+  - Event-driven user data processing
+  - Role assignment on acceptance
+  - User metadata support (firstName, lastName, custom fields)
+  - Invitation revocation and reattempt functionality
 - Role-Based Access Control (RBAC) with AccessControl integration
 - User management with admin endpoints
 - Federated authentication support
@@ -52,6 +60,12 @@ and this project adheres to
 - **User Roles**: Assign and manage user roles
 - **Admin Panel**: Administrative endpoints for user management
 - **Signup System**: Configurable user registration flow
+- **Invitation System**: Complete invitation workflow with email notifications
+  - Admin invitation creation and management
+  - OTP-secured invitation acceptance
+  - Automatic user account provisioning
+  - Customizable email templates
+  - Event-driven acceptance processing
 
 ### Security Features
 

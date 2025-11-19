@@ -918,7 +918,9 @@ __metadata:
     "@concepta/nestjs-common": "npm:^7.0.0-alpha.8"
     "@concepta/nestjs-crud": "npm:^7.0.0-alpha.8"
     "@concepta/nestjs-email": "npm:^7.0.0-alpha.8"
+    "@concepta/nestjs-event": "npm:^7.0.0-alpha.8"
     "@concepta/nestjs-federated": "npm:^7.0.0-alpha.8"
+    "@concepta/nestjs-invitation": "npm:^7.0.0-alpha.8"
     "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.8"
     "@concepta/nestjs-otp": "npm:^7.0.0-alpha.8"
     "@concepta/nestjs-password": "npm:^7.0.0-alpha.8"
@@ -956,7 +958,7 @@ __metadata:
     class-validator: "*"
     rxjs: ^7.1.0
   bin:
-    rockets-swagger: ./bin/generate-swagger.js
+    rockets-auth-swagger: ./bin/generate-swagger.js
   languageName: unknown
   linkType: soft
 
@@ -1500,6 +1502,26 @@ __metadata:
     rxjs: ^7.1.0
     typeorm: ^0.3.0
   checksum: 10c0/5c145936bd68b1169924d728d11dff608680bf463f4a473a09386967155491f7e04b56f452e9122f51600b237af0bc38f4bd7cebc0bdd6892bb7b2bc44e3dae3
+  languageName: node
+  linkType: hard
+
+"@concepta/nestjs-invitation@npm:^7.0.0-alpha.8":
+  version: 7.0.0-alpha.8
+  resolution: "@concepta/nestjs-invitation@npm:7.0.0-alpha.8"
+  dependencies:
+    "@concepta/nestjs-access-control": "npm:^7.0.0-alpha.8"
+    "@concepta/nestjs-common": "npm:^7.0.0-alpha.8"
+    "@concepta/nestjs-event": "npm:^7.0.0-alpha.8"
+    "@nestjs/common": "npm:^10.4.1"
+    "@nestjs/config": "npm:^3.2.3"
+    "@nestjs/core": "npm:^10.4.1"
+    "@nestjs/swagger": "npm:^7.4.0"
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+    rxjs: ^7.1.0
+    typeorm: ^0.3.0
+  checksum: 10c0/c4c7d60892b6f32dc1239e7b72d19692730f08d73cfc6ed41e76a82a47ec8b7a1ee40d0d6be2ae9dc60c606f91b82a3cd05dea1c0684d7efa9a7661a747aa26f
   languageName: node
   linkType: hard
 

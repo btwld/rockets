@@ -5,13 +5,18 @@ import {
   ExecutionContext,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import request from 'supertest';
+import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { AuthOAuthController } from './auth-oauth.controller';
 import { RocketsAuthModule } from '../../../rockets-auth.module';
 import { ormConfig } from '../../../__fixtures__/ormconfig.fixture';
+import { InvitationEntityFixture } from '../../../__fixtures__/invitation/invitation.entity.fixture';
 import { UserFixture } from '../../../__fixtures__/user/user.entity.fixture';
 import { UserOtpEntityFixture } from '../../../__fixtures__/user/user-otp-entity.fixture';
+import { UserPasswordHistoryEntityFixture } from '../../../__fixtures__/user/user-password-history.entity.fixture';
+import { UserMetadataEntityFixture } from '../../../__fixtures__/user/user-metadata.entity.fixture';
 import { FederatedEntityFixture } from '../../../__fixtures__/federated/federated.entity.fixture';
 import { RoleEntityFixture } from '../../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../../__fixtures__/role/user-role.entity.fixture';
@@ -60,8 +65,22 @@ describe('AuthOAuthController (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        EventModule.forRoot({}),
         TypeOrmExtModule.forRootAsync({
           useFactory: () => ormConfig,
+        }),
+        TypeOrmModule.forRoot({
+          ...ormConfig,
+          entities: [
+            UserFixture,
+            UserMetadataEntityFixture,
+            UserOtpEntityFixture,
+            UserPasswordHistoryEntityFixture,
+            FederatedEntityFixture,
+            UserRoleEntityFixture,
+            RoleEntityFixture,
+            InvitationEntityFixture,
+          ],
         }),
         RocketsAuthModule.forRoot({
           user: {
@@ -93,6 +112,51 @@ describe('AuthOAuthController (e2e)', () => {
               }),
             ],
           },
+          invitation: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                invitation: { entity: InvitationEntityFixture },
+              }),
+            ],
+            userModelService: undefined as never,
+          },
+          userCrud: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                authUserMetadata: { entity: UserMetadataEntityFixture },
+              }),
+            ],
+            adapter: undefined as never,
+            model: undefined as never,
+            // Disable userMetadataConfig to avoid circular dependencies in test
+            userMetadataConfig: undefined as never,
+          },
+          settings: {
+            role: { adminRoleName: 'admin' },
+            email: {
+              from: 'test@test.com',
+              baseUrl: 'http://localhost',
+              templates: {
+                sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                invitation: {
+                  logo: '',
+                  fileName: 'inv.hbs',
+                  subject: 'Invitation',
+                },
+                invitationAccepted: {
+                  logo: '',
+                  fileName: 'inv-acc.hbs',
+                  subject: 'Accepted',
+                },
+              },
+            },
+            otp: {
+              assignment: 'userOtp' as const,
+              category: 'test',
+              type: 'uuid',
+              expiresIn: '1h',
+            },
+          },
           authRouter: {
             guards: [
               { name: 'google', guard: MockOAuthGuard },
@@ -103,6 +167,10 @@ describe('AuthOAuthController (e2e)', () => {
           services: {
             mailerService: mockEmailService,
             issueTokenService: mockIssueTokenService,
+          },
+          disableController: {
+            admin: true,
+            signup: true,
           },
         }),
       ],

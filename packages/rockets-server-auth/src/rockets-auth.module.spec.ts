@@ -17,9 +17,11 @@ import {
   VerifyTokenService,
 } from '@concepta/nestjs-authentication';
 import { EmailSendInterface } from '@concepta/nestjs-common';
+import { EventModule } from '@concepta/nestjs-event';
 import { ormConfig } from './__fixtures__/ormconfig.fixture';
 import { IssueTokenServiceFixture } from './__fixtures__/services/issue-token.service.fixture';
 import { ValidateTokenServiceFixture } from './__fixtures__/services/validate-token.service.fixture';
+import { InvitationEntityFixture } from './__fixtures__/invitation/invitation.entity.fixture';
 import { UserOtpEntityFixture } from './__fixtures__/user/user-otp-entity.fixture';
 import { UserPasswordHistoryEntityFixture } from './__fixtures__/user/user-password-history.entity.fixture';
 import { UserMetadataEntityFixture } from './__fixtures__/user/user-metadata.entity.fixture';
@@ -95,6 +97,7 @@ function testModuleFactory(
     imports: [
       GlobalModuleFixture,
       MockConfigModule,
+      EventModule.forRoot({}),
       JwtModule.forRoot({}),
       TypeOrmModule.forRoot({
         ...ormConfig,
@@ -106,6 +109,7 @@ function testModuleFactory(
           FederatedEntityFixture,
           UserRoleEntityFixture,
           RoleEntityFixture,
+          InvitationEntityFixture,
         ],
       }),
       TypeOrmModule.forFeature([
@@ -126,6 +130,7 @@ function testModuleFactory(
               FederatedEntityFixture,
               UserRoleEntityFixture,
               RoleEntityFixture,
+              InvitationEntityFixture,
             ],
           };
         },
@@ -242,6 +247,15 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 }),
               ],
             },
+            invitation: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  invitation: {
+                    entity: InvitationEntityFixture,
+                  },
+                }),
+              ],
+            },
             userCrud: {
               imports: [
                 TypeOrmModule.forFeature([
@@ -256,6 +270,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 updateOne: RocketsAuthUserUpdateDto,
               },
               userMetadataConfig: {
+                imports: [
+                  TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
@@ -267,6 +284,32 @@ describe('AuthenticationCombinedImportModule Integration', () => {
               issueTokenService: IssueTokenServiceFixture,
               validateTokenService: ValidateTokenServiceFixture,
             ): RocketsAuthOptionsInterface => ({
+              settings: {
+                role: { adminRoleName: 'admin' },
+                email: {
+                  from: 'test@test.com',
+                  baseUrl: 'http://localhost',
+                  templates: {
+                    sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                    invitation: {
+                      logo: '',
+                      fileName: 'inv.hbs',
+                      subject: 'Invitation',
+                    },
+                    invitationAccepted: {
+                      logo: '',
+                      fileName: 'inv-acc.hbs',
+                      subject: 'Accepted',
+                    },
+                  },
+                },
+                otp: {
+                  assignment: 'userOtp' as const,
+                  category: 'test',
+                  type: 'uuid',
+                  expiresIn: '1h',
+                },
+              },
               jwt: {
                 settings: {
                   access: { secret: configService.get('jwt.secret') },
@@ -324,6 +367,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 federated: {
                   entity: FederatedEntityFixture,
                 },
+                invitation: {
+                  entity: InvitationEntityFixture,
+                },
               }),
             ],
             inject: [ConfigService],
@@ -341,6 +387,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 updateOne: RocketsAuthUserUpdateDto,
               },
               userMetadataConfig: {
+                imports: [
+                  TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
@@ -350,6 +399,32 @@ describe('AuthenticationCombinedImportModule Integration', () => {
             useFactory: (
               configService: ConfigService,
             ): RocketsAuthOptionsInterface => ({
+              settings: {
+                role: { adminRoleName: 'admin' },
+                email: {
+                  from: 'test@test.com',
+                  baseUrl: 'http://localhost',
+                  templates: {
+                    sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                    invitation: {
+                      logo: '',
+                      fileName: 'inv.hbs',
+                      subject: 'Invitation',
+                    },
+                    invitationAccepted: {
+                      logo: '',
+                      fileName: 'inv-acc.hbs',
+                      subject: 'Accepted',
+                    },
+                  },
+                },
+                otp: {
+                  assignment: 'userOtp' as const,
+                  category: 'test',
+                  type: 'uuid',
+                  expiresIn: '1h',
+                },
+              },
               jwt: {
                 settings: {
                   access: { secret: configService.get('jwt.secret') },
@@ -401,6 +476,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 updateOne: RocketsAuthUserUpdateDto,
               },
               userMetadataConfig: {
+                imports: [
+                  TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
@@ -446,6 +524,42 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 }),
               ],
             },
+            invitation: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  invitation: {
+                    entity: InvitationEntityFixture,
+                  },
+                }),
+              ],
+              userModelService: undefined as never,
+            },
+            settings: {
+              role: { adminRoleName: 'admin' },
+              email: {
+                from: 'test@test.com',
+                baseUrl: 'http://localhost',
+                templates: {
+                  sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                  invitation: {
+                    logo: '',
+                    fileName: 'inv.hbs',
+                    subject: 'Invitation',
+                  },
+                  invitationAccepted: {
+                    logo: '',
+                    fileName: 'inv-acc.hbs',
+                    subject: 'Accepted',
+                  },
+                },
+              },
+              otp: {
+                assignment: 'userOtp' as const,
+                category: 'test',
+                type: 'uuid',
+                expiresIn: '1h',
+              },
+            },
             jwt: {
               settings: {
                 default: { secret: 'test-secret-forroot' },
@@ -487,6 +601,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 updateOne: RocketsAuthUserUpdateDto,
               },
               userMetadataConfig: {
+                imports: [
+                  TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
@@ -538,6 +655,42 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 }),
               ],
             },
+            invitation: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  invitation: {
+                    entity: InvitationEntityFixture,
+                  },
+                }),
+              ],
+              userModelService: undefined as never,
+            },
+            settings: {
+              role: { adminRoleName: 'admin' },
+              email: {
+                from: 'test@test.com',
+                baseUrl: 'http://localhost',
+                templates: {
+                  sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                  invitation: {
+                    logo: '',
+                    fileName: 'inv.hbs',
+                    subject: 'Invitation',
+                  },
+                  invitationAccepted: {
+                    logo: '',
+                    fileName: 'inv-acc.hbs',
+                    subject: 'Accepted',
+                  },
+                },
+              },
+              otp: {
+                assignment: 'userOtp' as const,
+                category: 'test',
+                type: 'uuid',
+                expiresIn: '1h',
+              },
+            },
             jwt: {
               settings: {
                 access: { secret: 'test-secret' },
@@ -581,6 +734,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 updateOne: RocketsAuthUserUpdateDto,
               },
               userMetadataConfig: {
+                imports: [
+                  TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
@@ -615,6 +771,40 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   federated: { entity: FederatedEntityFixture },
                 }),
               ],
+            },
+            invitation: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  invitation: { entity: InvitationEntityFixture },
+                }),
+              ],
+              userModelService: undefined as never,
+            },
+            settings: {
+              role: { adminRoleName: 'admin' },
+              email: {
+                from: 'test@test.com',
+                baseUrl: 'http://localhost',
+                templates: {
+                  sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                  invitation: {
+                    logo: '',
+                    fileName: 'inv.hbs',
+                    subject: 'Invitation',
+                  },
+                  invitationAccepted: {
+                    logo: '',
+                    fileName: 'inv-acc.hbs',
+                    subject: 'Accepted',
+                  },
+                },
+              },
+              otp: {
+                assignment: 'userOtp' as const,
+                category: 'test',
+                type: 'uuid',
+                expiresIn: '1h',
+              },
             },
             jwt: {
               settings: { default: { secret: 'test-secret-disable-all' } },

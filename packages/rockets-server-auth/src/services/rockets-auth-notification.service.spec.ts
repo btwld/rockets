@@ -27,10 +27,20 @@ describe(RocketsAuthNotificationService.name, () => {
             fileName: 'otp.template.hbs',
             subject: 'Your OTP Code',
           },
+          invitation: {
+            logo: '',
+            fileName: 'invitation.template.hbs',
+            subject: 'You have been invited',
+          },
+          invitationAccepted: {
+            logo: '',
+            fileName: 'invitation-accepted.template.hbs',
+            subject: 'Invitation Accepted',
+          },
         },
       },
       otp: {
-        assignment: 'user',
+        assignment: 'userOtp',
         category: 'login',
         type: 'uuid',
         expiresIn: '3600',
@@ -114,10 +124,20 @@ describe(RocketsAuthNotificationService.name, () => {
               fileName: 'custom-otp.template.hbs',
               subject: 'Custom OTP Subject',
             },
+            invitation: {
+              logo: '',
+              fileName: 'invitation.template.hbs',
+              subject: 'You have been invited',
+            },
+            invitationAccepted: {
+              logo: '',
+              fileName: 'invitation-accepted.template.hbs',
+              subject: 'Invitation Accepted',
+            },
           },
         },
         otp: {
-          assignment: 'user',
+          assignment: 'userOtp' as const,
           category: 'login',
           type: 'uuid',
           expiresIn: '3600',

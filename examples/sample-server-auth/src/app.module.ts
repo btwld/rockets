@@ -8,6 +8,9 @@ import {
 import {
   RocketsModule,
 } from '@bitwild/rockets';
+import {
+  EmailSendOptionsInterface,
+} from '@concepta/nestjs-common';
 
 // Import ACL configuration
 import { ACService } from './access-control.service';
@@ -26,6 +29,7 @@ import {
   UserOtpEntity,
   UserRoleEntity,
   FederatedEntity,
+  InvitationEntity,
   UserDto,
   UserCreateDto,
   UserUpdateDto,
@@ -62,7 +66,8 @@ import { RoleCreateDto } from './modules/role/role.dto';
         UserOtpEntity,
         RoleEntity,
         UserRoleEntity,
-        FederatedEntity
+        FederatedEntity,
+        InvitationEntity
       ],
       synchronize: true,
       dropSchema: true,
@@ -77,6 +82,7 @@ import { RoleCreateDto } from './modules/role/role.dto';
       userRole: { entity: UserRoleEntity },
       userOtp: { entity: UserOtpEntity },
       federated: { entity: FederatedEntity },
+      invitation: { entity: InvitationEntity },
     }), 
     // RocketsAuthModule MUST be imported BEFORE RocketsModule
     // because RocketsModule depends on RocketsJwtAuthProvider from RocketsAuthModule
@@ -84,6 +90,7 @@ import { RoleCreateDto } from './modules/role/role.dto';
       imports: [
         TypeOrmExtModule.forFeature({
           user: { entity: UserEntity },
+          invitation: { entity: InvitationEntity },
         }),
       ],
       // this should be false if we are using the global guard from rockets server
@@ -93,8 +100,9 @@ import { RoleCreateDto } from './modules/role/role.dto';
         // Required services configuration
         services: {
           mailerService: {
-            sendMail: async (options: { to: string; subject?: string; text?: string; html?: string }) => {
+            sendMail: async (options: EmailSendOptionsInterface) => {
               console.log('📧 Email would be sent:', options.to);
+              console.log('📧 Email would be html:', options);
               return Promise.resolve();
             },
           },
@@ -110,8 +118,18 @@ import { RoleCreateDto } from './modules/role/role.dto';
             baseUrl: 'http://localhost:3000',
             templates: {
               sendOtp: {
-                fileName: __dirname + '/../../assets/send-otp.template.hbs',
+                fileName: __dirname + '/../assets/send-otp.template.hbs',
                 subject: 'Your One Time Password',
+              },
+              invitation: {
+                logo: '',
+                fileName: __dirname + '/../assets/invitation.template.hbs',
+                subject: 'You have been invited',
+              },
+              invitationAccepted: {
+                logo: '',
+                fileName: __dirname + '/../assets/invitation-accepted.template.hbs',
+                subject: 'Invitation Accepted',
               },
             },
           },
