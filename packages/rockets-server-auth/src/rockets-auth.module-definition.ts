@@ -84,20 +84,8 @@ import {
   InvitationRevocationController,
   InvitationReattemptController,
 } from './domains/invitation';
-import { GenericUserMetadataModelService } from './domains/user/services/rockets-auth-user-metadata.model.service';
-import { RocketsAuthUserMetadataDto } from './domains/user/dto/rockets-auth-user-metadata.dto';
 import { RocketsAuthUserMetadataModule } from './domains/user/modules/rockets-auth-user-metadata.module';
-import {
-  AuthUserMetadataModelService,
-  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-} from './domains/user/constants/user-metadata.constants';
-import {
-  getDynamicRepositoryToken,
-  RepositoryInterface,
-} from '@concepta/nestjs-common';
-import { RocketsAuthUserMetadataEntityInterface } from './domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
 import { UserCrudOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { InvitationSettingsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-settings.interface';
 
 export const RAW_OPTIONS_TOKEN = Symbol(
@@ -163,7 +151,7 @@ function definitionTransform(
     // userMetadataConfig is required for full functionality but optional for basic tests
     baseModule.imports = [
       ...(baseModule.imports || []),
-      ...(userCrud.userMetadataConfig 
+      ...(userCrud.userMetadataConfig
         ? [RocketsAuthUserMetadataModule.register(userCrud.userMetadataConfig)]
         : []),
       ...(!disableController.admin

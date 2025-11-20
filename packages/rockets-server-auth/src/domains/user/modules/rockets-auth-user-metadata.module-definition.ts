@@ -16,8 +16,10 @@ export const {
   .setExtras<{ global?: boolean }>({ global: false }, definitionTransform)
   .build();
 
-export type RocketsAuthUserMetadataOptions = typeof ROCKETS_AUTH_USER_METADATA_MODULE_OPTIONS_TYPE;
-export type RocketsAuthUserMetadataAsyncOptions = typeof ROCKETS_AUTH_USER_METADATA_MODULE_ASYNC_OPTIONS_TYPE;
+export type RocketsAuthUserMetadataOptions =
+  typeof ROCKETS_AUTH_USER_METADATA_MODULE_OPTIONS_TYPE;
+export type RocketsAuthUserMetadataAsyncOptions =
+  typeof ROCKETS_AUTH_USER_METADATA_MODULE_ASYNC_OPTIONS_TYPE;
 
 function definitionTransform(
   definition: DynamicModule,

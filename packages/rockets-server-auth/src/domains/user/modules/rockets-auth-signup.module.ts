@@ -16,9 +16,6 @@ import {
   Inject,
   Module,
   ValidationPipe,
-  Injectable,
-  forwardRef,
-  Optional,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -28,7 +25,6 @@ import {
 } from '@nestjs/swagger';
 import {
   SIGNUP_USER_CRUD_SERVICE_TOKEN,
-  ROCKETS_SIGNUP_USER_METADATA_ADAPTER,
   ROCKETS_SIGNUP_USER_RELATION_REGISTRY,
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
 } from '../../../shared/constants/rockets-auth.constants';
@@ -38,22 +34,12 @@ import { RocketsAuthUserDto } from '../dto/rockets-auth-user.dto';
 import { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
 
 import { AuthPublic } from '@concepta/nestjs-authentication';
-import {
-  RepositoryInterface,
-  getDynamicRepositoryToken,
-} from '@concepta/nestjs-common';
 import { UserModelService } from '@concepta/nestjs-user';
-import {
-  AuthUserMetadataModelService,
-  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-} from '../constants/user-metadata.constants';
-import { RocketsAuthUserMetadataDto } from '../dto/rockets-auth-user-metadata.dto';
 import { RocketsAuthUserCreatableInterface } from '../interfaces/rockets-auth-user-creatable.interface';
 import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
 import { UserMetadataCrudService } from './rockets-auth-user-metadata.module';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { RocketsAuthSettingsInterface } from '../../../shared/interfaces/rockets-auth-settings.interface';
 import { RocketsAuthRoleService } from '../../role/services/rockets-auth-role.service';
 
@@ -174,10 +160,7 @@ export class RocketsAuthSignUpModule {
         // Manually create metadata if provided using userMetadataService
         if (nested) {
           try {
-            await this.metadataModelService.createOrUpdate(
-              created.id,
-              nested,
-            );
+            await this.metadataModelService.createOrUpdate(created.id, nested);
           } catch (metadataError) {
             // Log error but don't fail signup if metadata creation fails
             console.warn(

@@ -193,9 +193,7 @@ describe('Invitation Flow (E2E)', () => {
               updateOne: RocketsAuthUserUpdateDtoFixture,
             },
             userMetadataConfig: {
-              imports: [
-                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
-              ],
+              imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
@@ -385,9 +383,11 @@ describe('Invitation Flow (E2E)', () => {
         tokenUrl: string;
       };
       expect(emailContext.tokenUrl).toBeDefined();
-      
+
       // Extract passcode from tokenUrl: http://.../?code=xxx&passcode=yyy
-      const urlParams = new URLSearchParams(emailContext.tokenUrl.split('?')[1]);
+      const urlParams = new URLSearchParams(
+        emailContext.tokenUrl.split('?')[1],
+      );
       const passcode = urlParams.get('passcode');
       expect(passcode).toBeDefined();
       expect(passcode).not.toBeNull();
@@ -461,7 +461,9 @@ describe('Invitation Flow (E2E)', () => {
       const emailContext = sentEmails[sentEmails.length - 1].context as {
         tokenUrl: string;
       };
-      const urlParams = new URLSearchParams(emailContext.tokenUrl.split('?')[1]);
+      const urlParams = new URLSearchParams(
+        emailContext.tokenUrl.split('?')[1],
+      );
       const passcode = urlParams.get('passcode');
       expect(passcode).not.toBeNull();
 
@@ -522,9 +524,11 @@ describe('Invitation Flow (E2E)', () => {
           payload: {},
         })
         .expect(400);
-      
+
       // Should fail with INVITATION_NOT_ACCEPTED error
-      expect(acceptResponse.body.errorCode).toBe('ROCKETS_AUTH_INVITATION_NOT_ACCEPTED_ERROR');
+      expect(acceptResponse.body.errorCode).toBe(
+        'ROCKETS_AUTH_INVITATION_NOT_ACCEPTED_ERROR',
+      );
     });
 
     it('should reject invitation acceptance without passcode', async () => {
@@ -641,7 +645,9 @@ describe('Invitation Flow (E2E)', () => {
       // Get passcode from one of the emails sent before revocation
       expect(sentEmails.length).toBeGreaterThan(0);
       const emailContext = sentEmails[0].context as { tokenUrl: string };
-      const urlParams = new URLSearchParams(emailContext.tokenUrl.split('?')[1]);
+      const urlParams = new URLSearchParams(
+        emailContext.tokenUrl.split('?')[1],
+      );
       const passcode = urlParams.get('passcode');
 
       if (passcode) {
@@ -720,7 +726,9 @@ describe('Invitation Flow (E2E)', () => {
       const emailContext = sentEmails[sentEmails.length - 1].context as {
         tokenUrl: string;
       };
-      const urlParams = new URLSearchParams(emailContext.tokenUrl.split('?')[1]);
+      const urlParams = new URLSearchParams(
+        emailContext.tokenUrl.split('?')[1],
+      );
       const passcode = urlParams.get('passcode');
       expect(passcode).not.toBeNull();
 

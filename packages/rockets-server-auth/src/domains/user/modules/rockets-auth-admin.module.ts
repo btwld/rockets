@@ -13,11 +13,7 @@ import {
   ValidationPipe,
   applyDecorators,
   Inject,
-  forwardRef,
-  Injectable,
   BadRequestException,
-  OnApplicationBootstrap,
-  Optional,
 } from '@nestjs/common';
 import { UserMetadataCrudService } from './rockets-auth-user-metadata.module';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
@@ -27,7 +23,6 @@ import { AdminGuard } from '../../../guards/admin.guard';
 import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import {
   ADMIN_USER_CRUD_SERVICE_TOKEN,
-  ROCKETS_ADMIN_USER_METADATA_ADAPTER,
   ROCKETS_ADMIN_USER_RELATION_REGISTRY,
 } from '../../../shared/constants/rockets-auth.constants';
 
@@ -38,18 +33,8 @@ import { RocketsAuthUserUpdatableInterface } from '../interfaces/rockets-auth-us
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserInterface } from '../interfaces/rockets-auth-user.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
-import { RocketsAuthUserMetadataDto } from '../dto/rockets-auth-user-metadata.dto';
-import {
-  RepositoryInterface,
-  getDynamicRepositoryToken,
-} from '@concepta/nestjs-common';
-import {
-  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-  AuthUserMetadataModelService,
-} from '../constants/user-metadata.constants';
 import { CrudApiParam } from '@concepta/nestjs-crud/dist/crud/decorators/openapi/crud-api-param.decorator';
 import { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 
 @Module({})
 export class RocketsAuthAdminModule {
@@ -156,7 +141,11 @@ export class RocketsAuthAdminModule {
         const { userMetadata, ...userDto } = dto;
 
         // Validate metadata if provided
-        if (userMetadata && Object.keys(userMetadata).length > 0 && admin.userMetadataConfig) {
+        if (
+          userMetadata &&
+          Object.keys(userMetadata).length > 0 &&
+          admin.userMetadataConfig
+        ) {
           const MetadataDto = admin.userMetadataConfig.updateDto;
           const metadataInstance = plainToInstance(MetadataDto, userMetadata);
 
@@ -205,9 +194,7 @@ export class RocketsAuthAdminModule {
 
     return {
       module: RocketsAuthAdminModule,
-      imports: [
-        ...(admin.imports || []),
-      ],
+      imports: [...(admin.imports || [])],
       controllers: [AdminUserCrudController],
       providers: [
         admin.adapter,
@@ -215,7 +202,7 @@ export class RocketsAuthAdminModule {
         {
           provide: ROCKETS_ADMIN_USER_RELATION_REGISTRY,
           inject: [UserMetadataCrudService],
-          useFactory: (userMetadataCrudService:UserMetadataCrudService) => {
+          useFactory: (userMetadataCrudService: UserMetadataCrudService) => {
             const registry = new CrudRelationRegistry<
               RocketsAuthUserEntityInterface,
               [RocketsAuthUserMetadataEntityInterface]
@@ -230,10 +217,7 @@ export class RocketsAuthAdminModule {
           useClass: AdminUserCrudService,
         },
       ],
-      exports: [
-        AdminUserCrudService,
-        admin.adapter,
-      ],
+      exports: [AdminUserCrudService, admin.adapter],
     };
   }
 }

@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, Param, Patch, Logger } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Param,
+  Patch,
+  Logger,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -54,16 +61,20 @@ export class InvitationAcceptanceController {
     @Body() dto: RocketsAuthInvitationAcceptDto,
   ): Promise<void> {
     const { passcode, payload } = dto;
-    
+
     let success: boolean | null | undefined;
-    
+
     try {
-      success = await this.invitationService.accept({ code, passcode, payload });
+      success = await this.invitationService.accept({
+        code,
+        passcode,
+        payload,
+      });
     } catch (e) {
       Logger.error(e);
       throw e;
     }
-    
+
     if (!success) {
       throw new RocketsAuthInvitationNotAcceptedException();
     }

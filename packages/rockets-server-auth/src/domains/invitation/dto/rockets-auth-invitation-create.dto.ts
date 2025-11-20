@@ -6,4 +6,3 @@ import { InvitationCreateInviteDto } from '@concepta/nestjs-invitation/dist/dto/
  * Extends the base invitation create DTO from the invitation module
  */
 export class RocketsAuthInvitationCreateDto extends InvitationCreateInviteDto {}
-

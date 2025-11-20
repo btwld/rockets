@@ -1,4 +1,10 @@
-import { Injectable, Inject, OnModuleInit, Logger, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  OnModuleInit,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { EventListenerOn, EventAsyncInterface } from '@concepta/nestjs-event';
 import { InvitationAcceptedEventAsync } from '@concepta/nestjs-invitation';
 import { UserModelService } from '@concepta/nestjs-user';
@@ -85,13 +91,20 @@ export class InvitationUserAcceptanceListener
     try {
       // Extract password, userMetadata (including firstName/lastName), and roleId from payload
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, userMetadata = {}, roleId, firstName, lastName, ...userData } = data || {};
+      const {
+        password,
+        userMetadata = {},
+        roleId,
+        firstName,
+        lastName,
+        ...userData
+      } = data || {};
 
       // firstName and lastName belong to userMetadata, not user
       const completeUserMetadata: Record<string, unknown> = {
         ...userMetadata,
       };
-      
+
       if (firstName) completeUserMetadata.firstName = firstName;
       if (lastName) completeUserMetadata.lastName = lastName;
 
@@ -126,7 +139,10 @@ export class InvitationUserAcceptanceListener
       });
 
       // 3. Create or update user metadata (includes firstName, lastName, bio, etc.)
-      if (completeUserMetadata && Object.keys(completeUserMetadata).length > 0) {
+      if (
+        completeUserMetadata &&
+        Object.keys(completeUserMetadata).length > 0
+      ) {
         if (this.userMetadataService) {
           await this.userMetadataService.createOrUpdate(
             invitation.userId,
@@ -136,9 +152,12 @@ export class InvitationUserAcceptanceListener
             userId: invitation.userId,
           });
         } else {
-          this.logger.warn('UserMetadata service not available, skipping metadata update', {
-            userId: invitation.userId,
-          });
+          this.logger.warn(
+            'UserMetadata service not available, skipping metadata update',
+            {
+              userId: invitation.userId,
+            },
+          );
         }
       }
 

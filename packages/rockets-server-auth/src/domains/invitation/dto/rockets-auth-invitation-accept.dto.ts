@@ -11,4 +11,3 @@ export class RocketsAuthInvitationAcceptDto extends InvitationAcceptInviteDto {
   // - passcode: string
   // - payload?: LiteralObject
 }
-

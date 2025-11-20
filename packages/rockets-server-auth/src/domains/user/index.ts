@@ -24,7 +24,7 @@ export {
 // Modules
 export { RocketsAuthAdminModule } from './modules/rockets-auth-admin.module';
 export { RocketsAuthSignUpModule } from './modules/rockets-auth-signup.module';
-export { 
+export {
   RocketsAuthUserMetadataModule,
   UserMetadataCrudService,
   ROCKETS_AUTH_USER_METADATA_ADAPTER,

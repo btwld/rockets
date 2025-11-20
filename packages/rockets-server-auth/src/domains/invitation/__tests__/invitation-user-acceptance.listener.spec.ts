@@ -128,7 +128,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
           invitation: { ...mockInvitation, category: 'org' },
           data: {},
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       // Act
       const result = await listener.listen(event);
@@ -151,7 +154,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
             lastName: 'Doe',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -159,7 +165,9 @@ describe(InvitationUserAcceptanceListener.name, () => {
         passwordSalt: 'salt',
       } as never);
       mockUserModelService.update.mockResolvedValue(undefined as never);
-      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(undefined as never);
+      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(
+        undefined as never,
+      );
 
       // Act
       const result = await listener.listen(event);
@@ -191,11 +199,16 @@ describe(InvitationUserAcceptanceListener.name, () => {
             lastName: 'Doe',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockUserModelService.update.mockResolvedValue(undefined as never);
-      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(undefined as never);
+      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(
+        undefined as never,
+      );
 
       // Act
       const result = await listener.listen(event);
@@ -223,7 +236,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
             },
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -231,8 +247,12 @@ describe(InvitationUserAcceptanceListener.name, () => {
         passwordSalt: 'salt',
       } as never);
       mockUserModelService.update.mockResolvedValue(undefined as never);
-      mockUserMetadataService.createOrUpdate.mockResolvedValue(undefined as never);
-      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(undefined as never);
+      mockUserMetadataService.createOrUpdate.mockResolvedValue(
+        undefined as never,
+      );
+      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(
+        undefined as never,
+      );
 
       // Act
       const result = await listener.listen(event);
@@ -260,7 +280,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
             roleId: 'role-123',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -280,7 +303,9 @@ describe(InvitationUserAcceptanceListener.name, () => {
         assignee: { id: 'user-123' },
         role: { id: 'role-123' },
       });
-      expect(mockAuthRoleService.assignDefaultRoleToUser).not.toHaveBeenCalled();
+      expect(
+        mockAuthRoleService.assignDefaultRoleToUser,
+      ).not.toHaveBeenCalled();
     });
 
     it('should assign default role when roleId not provided', async () => {
@@ -294,7 +319,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
             password: 'Test123!',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -302,7 +330,9 @@ describe(InvitationUserAcceptanceListener.name, () => {
         passwordSalt: 'salt',
       } as never);
       mockUserModelService.update.mockResolvedValue(undefined as never);
-      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(undefined as never);
+      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(
+        undefined as never,
+      );
 
       // Act
       const result = await listener.listen(event);
@@ -327,7 +357,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
             password: 'Test123!',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(null as never);
 
@@ -352,10 +385,15 @@ describe(InvitationUserAcceptanceListener.name, () => {
             password: 'Test123!',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockRejectedValue(new Error('Password hash failed'));
+      mockPasswordService.create.mockRejectedValue(
+        new Error('Password hash failed'),
+      );
 
       // Act
       const result = await listener.listen(event);
@@ -376,7 +414,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
             password: 'Test123!',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -390,7 +431,9 @@ describe(InvitationUserAcceptanceListener.name, () => {
 
       // Assert
       expect(result).toBe(false);
-      expect(mockAuthRoleService.assignDefaultRoleToUser).not.toHaveBeenCalled();
+      expect(
+        mockAuthRoleService.assignDefaultRoleToUser,
+      ).not.toHaveBeenCalled();
     });
 
     it('should return false when role assignment fails', async () => {
@@ -404,7 +447,10 @@ describe(InvitationUserAcceptanceListener.name, () => {
             password: 'Test123!',
           },
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -432,11 +478,16 @@ describe(InvitationUserAcceptanceListener.name, () => {
           invitation: mockInvitation,
           data: {},
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockUserModelService.update.mockResolvedValue(undefined as never);
-      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(undefined as never);
+      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(
+        undefined as never,
+      );
 
       // Act
       const result = await listener.listen(event);
@@ -456,11 +507,16 @@ describe(InvitationUserAcceptanceListener.name, () => {
           invitation: mockInvitation,
           data: undefined,
         },
-      } as unknown as EventAsyncInterface<TypedInvitationAcceptedEventPayloadInterface, boolean>;
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
 
       mockUserModelService.byId.mockResolvedValue(mockUser as never);
       mockUserModelService.update.mockResolvedValue(undefined as never);
-      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(undefined as never);
+      mockAuthRoleService.assignDefaultRoleToUser.mockResolvedValue(
+        undefined as never,
+      );
 
       // Act
       const result = await listener.listen(event);
@@ -470,4 +526,3 @@ describe(InvitationUserAcceptanceListener.name, () => {
     });
   });
 });
-

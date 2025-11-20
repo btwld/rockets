@@ -88,9 +88,7 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
           updateOne: RocketsAuthUserUpdateDto,
         },
         userMetadataConfig: {
-          imports: [
-            TypeOrmModule.forFeature([UserMetadataEntityFixture]),
-          ],
+          imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
           adapter: UserMetadataAdapter,
           entity: UserMetadataEntityFixture,
           createDto: RocketsAuthUserMetadataDto,

@@ -16,9 +16,3 @@ export interface RocketsAuthUserOtpSettingsInterface
    */
   assignment: 'userOtp';
 }
-
-
-
-
-
-

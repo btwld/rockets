@@ -1,13 +1,23 @@
-import { Module, Provider, Injectable, Inject, DynamicModule, Global } from '@nestjs/common';
+import {
+  Module,
+  Provider,
+  Injectable,
+  Inject,
+  DynamicModule,
+  Global,
+} from '@nestjs/common';
 import { CrudService, CrudAdapter } from '@concepta/nestjs-crud';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { getDynamicRepositoryToken, RepositoryInterface } from '@concepta/nestjs-common';
+import {
+  getDynamicRepositoryToken,
+  RepositoryInterface,
+} from '@concepta/nestjs-common';
 
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
-import { 
+import {
   AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-  AuthUserMetadataModelService 
+  AuthUserMetadataModelService,
 } from '../constants/user-metadata.constants';
 import {
   RocketsAuthUserMetadataModuleClass,
@@ -16,7 +26,8 @@ import {
 import { UserMetadataConfigInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 
 // Adapter token
-export const ROCKETS_AUTH_USER_METADATA_ADAPTER = 'ROCKETS_AUTH_USER_METADATA_ADAPTER';
+export const ROCKETS_AUTH_USER_METADATA_ADAPTER =
+  'ROCKETS_AUTH_USER_METADATA_ADAPTER';
 
 /**
  * Centralized CRUD Service for UserMetadata
@@ -40,21 +51,23 @@ export class UserMetadataCrudService extends CrudService<RocketsAuthUserMetadata
   exports: [],
 })
 export class RocketsAuthUserMetadataModule extends RocketsAuthUserMetadataModuleClass {
-  static override register(options: UserMetadataConfigInterface): DynamicModule {
+  static override register(
+    options: UserMetadataConfigInterface,
+  ): DynamicModule {
     const dynamicModule = super.register(options);
-    
+
     const providers: Provider[] = [
       ...(dynamicModule.providers || []),
-      
+
       // Adapter provider
       {
         provide: ROCKETS_AUTH_USER_METADATA_ADAPTER,
         useClass: options.adapter,
       },
-      
+
       // Exported CRUD class - used by CrudRelations
       UserMetadataCrudService,
-      
+
       // Global AuthUserMetadataModelService - can be overridden
       {
         provide: AuthUserMetadataModelService,
@@ -64,11 +77,19 @@ export class RocketsAuthUserMetadataModule extends RocketsAuthUserMetadataModule
         ) => {
           // Use custom service if provided in config
           if (config.userMetadataModelService) {
-            return new config.userMetadataModelService(repo, config.createDto, config.updateDto);
+            return new config.userMetadataModelService(
+              repo,
+              config.createDto,
+              config.updateDto,
+            );
           }
-          
+
           // Otherwise, use the default service
-          return new GenericUserMetadataModelService(repo, config.createDto, config.updateDto);
+          return new GenericUserMetadataModelService(
+            repo,
+            config.createDto,
+            config.updateDto,
+          );
         },
         inject: [
           getDynamicRepositoryToken(AUTH_USER_METADATA_MODULE_ENTITY_KEY),
@@ -93,30 +114,32 @@ export class RocketsAuthUserMetadataModule extends RocketsAuthUserMetadataModule
       providers,
       exports: [
         ...(dynamicModule.exports || []),
-        UserMetadataCrudService,           // Exports class for CrudRelations
-        AuthUserMetadataModelService,      // Exports for injection listener
+        UserMetadataCrudService, // Exports class for CrudRelations
+        AuthUserMetadataModelService, // Exports for injection listener
         ROCKETS_AUTH_USER_METADATA_ADAPTER,
       ],
     };
   }
 
-  static override registerAsync(options: any): DynamicModule {
+  static override registerAsync(
+    options: UserMetadataAsyncOptionsInterface,
+  ): DynamicModule {
     const dynamicModule = super.registerAsync(options);
-    
+
     // Similar logic for async registration
     const providers: Provider[] = [
       ...(dynamicModule.providers || []),
-      
+
       // Adapter provider - async
       {
         provide: ROCKETS_AUTH_USER_METADATA_ADAPTER,
         useFactory: options.useFactory,
         inject: options.inject || [],
       },
-      
+
       // CRUD class
       UserMetadataCrudService,
-      
+
       // AuthUserMetadataModelService - async
       {
         provide: AuthUserMetadataModelService,
@@ -125,9 +148,17 @@ export class RocketsAuthUserMetadataModule extends RocketsAuthUserMetadataModule
           config: UserMetadataConfigInterface,
         ) => {
           if (config.userMetadataModelService) {
-            return new config.userMetadataModelService(repo, config.createDto, config.updateDto);
+            return new config.userMetadataModelService(
+              repo,
+              config.createDto,
+              config.updateDto,
+            );
           }
-          return new GenericUserMetadataModelService(repo, config.createDto, config.updateDto);
+          return new GenericUserMetadataModelService(
+            repo,
+            config.createDto,
+            config.updateDto,
+          );
         },
         inject: [
           getDynamicRepositoryToken(AUTH_USER_METADATA_MODULE_ENTITY_KEY),

@@ -93,9 +93,7 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
               updateOne: RocketsAuthUserUpdateDtoFixture,
             },
             userMetadataConfig: {
-              imports: [
-                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
-              ],
+              imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,

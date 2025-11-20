@@ -154,10 +154,13 @@ export interface RocketsAuthOptionsInterface {
    * Invitation module options
    * Used in: InvitationModule.forRootAsync
    */
-  invitation?: Pick<
-    InvitationOptionsInterface,
-    'settings'
-  > & Partial<Pick<InvitationOptionsInterface, 'userModelService' | 'invitationSendService'>>;
+  invitation?: Pick<InvitationOptionsInterface, 'settings'> &
+    Partial<
+      Pick<
+        InvitationOptionsInterface,
+        'userModelService' | 'invitationSendService'
+      >
+    >;
 
   /**
    * Core services used across different modules

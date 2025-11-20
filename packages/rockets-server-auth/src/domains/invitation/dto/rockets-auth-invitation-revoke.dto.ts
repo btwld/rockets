@@ -23,4 +23,3 @@ export class RocketsAuthInvitationRevokeDto {
   @IsNotEmpty()
   category!: string;
 }
-

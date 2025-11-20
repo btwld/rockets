@@ -28,11 +28,11 @@ export interface UserMetadataConfigInterface<
    * Optional module imports for UserMetadata configuration
    * Use this for TypeORM entity registration when using test fixtures
    */
-  imports?: any[];
+  imports?: DynamicModule[];
   /**
    * Required adapter for user metadata entity. Relations are wired opinionately
    * as one-to-one on property 'userMetadata', foreignKey 'userId', primaryKey 'id'.
-   * 
+   *
    * This is the ONLY place where userMetadataAdapter needs to be configured.
    */
   adapter: Type<CrudAdapter<RocketsAuthUserMetadataEntityInterface>>;
@@ -67,10 +67,10 @@ export interface UserMetadataConfigInterface<
 export interface UserCrudOptionsExtrasInterface {
   /**
    * Module imports for user CRUD
-   * 
+   *
    * IMPORTANT: Must include TypeOrmExtModule.forFeature with 'authUserMetadata' key:
-   * TypeOrmExtModule.forFeature({ authUserMetadata: { entity: YourUserMetadataEntity } })
-   * 
+   * TypeOrmExtModule.forFeature(\{ authUserMetadata: \{ entity: YourUserMetadataEntity \} \})
+   *
    * This is required for the AuthUserMetadataModelService to work correctly.
    */
   imports?: DynamicModule['imports'];
