@@ -1321,12 +1321,14 @@ RocketsAuthModule.forRootAsync({
 **Available Endpoints**:
 
 **API Endpoints**:
+
 - `POST /admin/invitations` - Create and send invitation (Admin only)
 - `PATCH /invitation-acceptance/:code` - Accept invitation with OTP (Public)
 - `POST /admin/invitations/:code/reattempt` - Re-send invitation email (Admin only)
 - `POST /admin/invitations/revoke` - Revoke all invitations for email/category (Admin only)
 
 **When to use each endpoint**:
+
 - **POST /admin/invitations**: When admin needs to invite a new user. Creates user account, generates invitation, sends email with OTP
 - **PATCH /invitation-acceptance/:code**: When user clicks invitation link and fills signup form. Accepts passcode + user data payload (firstName, lastName, password, etc.)
 - **POST /admin/invitations/:code/reattempt**: When invitation email was not received or OTP expired. Generates new OTP and re-sends email
@@ -2401,11 +2403,13 @@ provider integration
 - `IssueTokenService` - Custom token generation for OAuth users
 
 #### CRUD Relations
+
 CRUD Relations allow you to include related entities in your CRUD operations with automatic JOIN queries. This feature works with both the `ConfigurableCrudBuilder` pattern and the direct `@CrudController` decorator pattern.
 
 **What it does**: Automatically fetches related entities when querying CRUD endpoints. For example, when fetching a User, you can automatically include their UserMetadata, Roles, Posts, etc.
 
 **When to use**: When you need to fetch parent entity with its related entities in a single query. Common use cases include:
+
 - User with UserMetadata (profile information)
 - Pet with Vaccinations and Appointments  
 - Order with OrderItems and Customer details
@@ -2413,7 +2417,8 @@ CRUD Relations allow you to include related entities in your CRUD operations wit
 
 **Two Implementation Patterns**:
 
-**Pattern 1: With ConfigurableCrudBuilder (recommended for complex scenarios)**
+### Pattern 1: With ConfigurableCrudBuilder (recommended for complex scenarios)
+
 ```typescript
 // In your module.ts
 import { 
@@ -2460,7 +2465,8 @@ providers: [
 ],
 ```
 
-**Pattern 2: Direct @CrudController decorator (recommended for simple scenarios)**
+### Pattern 2: Direct @CrudController decorator (recommended for simple scenarios)
+
 ```typescript
 // In your controller.ts
 import { CrudController, CrudRelations } from '@concepta/nestjs-crud';
@@ -2500,6 +2506,7 @@ export class PetCrudController implements CrudControllerInterface {
 ```
 
 **Key Configuration Options**:
+
 - `rootKey`: Primary key field of the root entity (usually 'id')
 - `join`: 'LEFT' | 'INNER' - Type of SQL JOIN to use
 - `cardinality`: 'one' | 'many' - One-to-one or one-to-many relationship
@@ -2509,12 +2516,14 @@ export class PetCrudController implements CrudControllerInterface {
 - `foreignKey`: Foreign key field in the related entity
 
 **Important Notes**:
+
 - All services used in relations MUST be registered in the CrudRelationRegistry (Pattern 1) or available through DI (Pattern 2)
 - Relations are automatically fetched when using GET endpoints
 - Use `cardinality: 'one'` for single related objects, `cardinality: 'many'` for arrays
 - LEFT JOIN is recommended to include records even if no related data exists
 
 **When to use each pattern**:
+
 - **Pattern 1 (ConfigurableCrudBuilder)**: When you need complex CRUD configurations, custom service logic, or advanced decorators
 - **Pattern 2 (Direct @CrudController)**: When you need simple CRUD with relations and minimal configuration
 

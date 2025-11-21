@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RepositoryInterface } from '@concepta/nestjs-common';
 import { GenericUserMetadataModelService } from './rockets-auth-user-metadata.model.service';
-import { AUTH_USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
+import { USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
 import {
   UserMetadataException,
   UserMetadataNotFoundException,
@@ -70,7 +70,7 @@ describe('GenericUserMetadataModelService', () => {
             ),
         },
         {
-          provide: AUTH_USER_METADATA_MODULE_ENTITY_KEY,
+          provide: USER_METADATA_MODULE_ENTITY_KEY,
           useValue: mockRepository,
         },
       ],

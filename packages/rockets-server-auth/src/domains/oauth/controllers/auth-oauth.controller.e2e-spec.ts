@@ -20,6 +20,10 @@ import { UserMetadataEntityFixture } from '../../../__fixtures__/user/user-metad
 import { FederatedEntityFixture } from '../../../__fixtures__/federated/federated.entity.fixture';
 import { RoleEntityFixture } from '../../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../../__fixtures__/role/user-role.entity.fixture';
+import { UserMetadataTypeOrmCrudAdapterFixture } from '../../../__fixtures__/services/user-metadata-typeorm-crud.adapter.fixture';
+import { RocketsAuthUserMetadataDto } from '../../user/dto/rockets-auth-user-metadata.dto';
+import { AdminUserTypeOrmCrudAdapter } from '../../../__fixtures__/admin/admin-user-crud.adapter';
+import { RocketsAuthUserFixtureDto } from '../../../__fixtures__/user/dto/rockets-auth-user.dto.fixture';
 
 // Mock guard for testing
 class MockOAuthGuard implements CanActivate {
@@ -126,10 +130,15 @@ describe('AuthOAuthController (e2e)', () => {
                 authUserMetadata: { entity: UserMetadataEntityFixture },
               }),
             ],
-            adapter: undefined as never,
-            model: undefined as never,
-            // Disable userMetadataConfig to avoid circular dependencies in test
-            userMetadataConfig: undefined as never,
+            adapter: AdminUserTypeOrmCrudAdapter,
+            model: RocketsAuthUserFixtureDto,
+            userMetadataConfig: {
+              imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
+              adapter: UserMetadataTypeOrmCrudAdapterFixture,
+              entity: UserMetadataEntityFixture,
+              createDto: RocketsAuthUserMetadataDto,
+              updateDto: RocketsAuthUserMetadataDto,
+            },
           },
           settings: {
             role: { adminRoleName: 'admin' },

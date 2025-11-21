@@ -13,6 +13,7 @@ import { PasswordCreationService } from '@concepta/nestjs-password';
 import {
   BadRequestException,
   DynamicModule,
+  forwardRef,
   Inject,
   Module,
   ValidationPipe,
@@ -37,6 +38,7 @@ import { AuthPublic } from '@concepta/nestjs-authentication';
 import { UserModelService } from '@concepta/nestjs-user';
 import { RocketsAuthUserCreatableInterface } from '../interfaces/rockets-auth-user-creatable.interface';
 import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
+import { UserMetadataModelService } from '../constants/user-metadata.constants';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
 import { UserMetadataCrudService } from './rockets-auth-user-metadata.module';
@@ -108,7 +110,7 @@ export class RocketsAuthSignUpModule {
         private readonly userModelService: UserModelService,
         @Inject(PasswordCreationService)
         private readonly passwordCreationService: PasswordCreationService,
-        @Inject(AuthUserMetadataModelService)
+        @Inject(UserMetadataModelService)
         private readonly metadataModelService: GenericUserMetadataModelService,
         @Inject(RocketsAuthRoleService)
         private readonly authRoleService: RocketsAuthRoleService,

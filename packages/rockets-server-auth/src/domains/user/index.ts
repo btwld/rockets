@@ -17,8 +17,8 @@ export { GenericUserMetadataModelService } from './services/rockets-auth-user-me
 
 // Constants
 export {
-  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-  AuthUserMetadataModelService,
+  USER_METADATA_MODULE_ENTITY_KEY,
+  UserMetadataModelService,
 } from './constants/user-metadata.constants';
 
 // Modules
@@ -27,7 +27,7 @@ export { RocketsAuthSignUpModule } from './modules/rockets-auth-signup.module';
 export {
   RocketsAuthUserMetadataModule,
   UserMetadataCrudService,
-  ROCKETS_AUTH_USER_METADATA_ADAPTER,
+  ROCKETS_USER_METADATA_ADAPTER,
 } from './modules/rockets-auth-user-metadata.module';
 export {
   RocketsAuthUserMetadataModuleClass,

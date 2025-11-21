@@ -13,7 +13,7 @@ import { RoleService } from '@concepta/nestjs-role';
 import { GenericUserMetadataModelService } from '../../user/services/rockets-auth-user-metadata.model.service';
 import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../../../shared/constants/rockets-auth.constants';
 import { RocketsAuthSettingsInterface } from '../../../shared/interfaces/rockets-auth-settings.interface';
-import { AuthUserMetadataModelService } from '../../user/constants/user-metadata.constants';
+import { UserMetadataModelService } from '../../user/constants/user-metadata.constants';
 import {
   InvitationAcceptanceDataInterface,
   TypedInvitationAcceptedEventPayloadInterface,
@@ -48,9 +48,8 @@ export class InvitationUserAcceptanceListener
     private readonly userModelService: UserModelService,
     @Inject(PasswordCreationService)
     private readonly passwordService: PasswordCreationService,
-    @Optional()
-    @Inject(AuthUserMetadataModelService)
-    private readonly userMetadataService: GenericUserMetadataModelService | null,
+    @Inject(UserMetadataModelService)
+    private readonly userMetadataService: GenericUserMetadataModelService,
     @Inject(RoleService)
     private readonly roleService: RoleService,
     @Inject(RocketsAuthRoleService)
@@ -143,22 +142,13 @@ export class InvitationUserAcceptanceListener
         completeUserMetadata &&
         Object.keys(completeUserMetadata).length > 0
       ) {
-        if (this.userMetadataService) {
-          await this.userMetadataService.createOrUpdate(
-            invitation.userId,
-            completeUserMetadata,
-          );
-          this.logger.log('User metadata created/updated successfully', {
-            userId: invitation.userId,
-          });
-        } else {
-          this.logger.warn(
-            'UserMetadata service not available, skipping metadata update',
-            {
-              userId: invitation.userId,
-            },
-          );
-        }
+        await this.userMetadataService.createOrUpdate(
+          invitation.userId,
+          completeUserMetadata,
+        );
+        this.logger.log('User metadata created/updated successfully', {
+          userId: invitation.userId,
+        });
       }
 
       // 4. Assign role to user

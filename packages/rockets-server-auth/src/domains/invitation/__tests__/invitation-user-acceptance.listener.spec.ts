@@ -6,7 +6,7 @@ import { RoleService } from '@concepta/nestjs-role';
 import { GenericUserMetadataModelService } from '../../user/services/rockets-auth-user-metadata.model.service';
 import { RocketsAuthRoleService } from '../../role/services/rockets-auth-role.service';
 import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../../../shared/constants/rockets-auth.constants';
-import { AuthUserMetadataModelService } from '../../user/constants/user-metadata.constants';
+import { UserMetadataModelService } from '../../user/constants/user-metadata.constants';
 import { EventAsyncInterface } from '@concepta/nestjs-event';
 import { TypedInvitationAcceptedEventPayloadInterface } from '../interfaces/invitation-acceptance-data.interface';
 import { InvitationInterface } from '@concepta/nestjs-common';
@@ -91,7 +91,7 @@ describe(InvitationUserAcceptanceListener.name, () => {
           useValue: mockPasswordService,
         },
         {
-          provide: AuthUserMetadataModelService,
+          provide: UserMetadataModelService,
           useValue: mockUserMetadataService,
         },
         {

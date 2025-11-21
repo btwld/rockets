@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { RepositoryInterface, ModelService } from '@concepta/nestjs-common';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataCreateDtoInterface } from '../interfaces/rockets-auth-user-metadata-dto.interface';
-import { AUTH_USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
+import { USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
 import {
   UserMetadataException,
   UserMetadataNotFoundException,
@@ -27,7 +27,7 @@ export class GenericUserMetadataModelService extends ModelService<
   public readonly updateDto: new () => RocketsAuthUserMetadataEntityInterface;
 
   constructor(
-    @Inject(AUTH_USER_METADATA_MODULE_ENTITY_KEY)
+    @Inject(USER_METADATA_MODULE_ENTITY_KEY)
     public readonly repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
     createDto: new () => RocketsAuthUserMetadataCreateDtoInterface,
     updateDto: new () => RocketsAuthUserMetadataEntityInterface,

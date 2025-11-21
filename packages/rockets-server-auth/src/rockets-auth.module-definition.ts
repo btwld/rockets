@@ -152,7 +152,7 @@ function definitionTransform(
     baseModule.imports = [
       ...(baseModule.imports || []),
       ...(userCrud.userMetadataConfig
-        ? [RocketsAuthUserMetadataModule.register(userCrud.userMetadataConfig)]
+        ? [RocketsAuthUserMetadataModule.forRoot(userCrud.userMetadataConfig)]
         : []),
       ...(!disableController.admin
         ? [RocketsAuthAdminModule.register(userCrud)]

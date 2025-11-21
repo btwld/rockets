@@ -33,6 +33,7 @@ import { RocketsAuthUserUpdatableInterface } from '../interfaces/rockets-auth-us
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserInterface } from '../interfaces/rockets-auth-user.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
+import { UserMetadataModelService } from '../constants/user-metadata.constants';
 import { CrudApiParam } from '@concepta/nestjs-crud/dist/crud/decorators/openapi/crud-api-param.decorator';
 import { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
 
@@ -125,7 +126,7 @@ export class RocketsAuthAdminModule {
           RocketsAuthUserEntityInterface,
           [RocketsAuthUserMetadataEntityInterface]
         >,
-        @Inject(AuthUserMetadataModelService)
+        @Inject(UserMetadataModelService)
         private readonly userMetadataModelService: GenericUserMetadataModelService,
       ) {
         super(crudAdapter, relationRegistry);
