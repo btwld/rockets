@@ -5,6 +5,8 @@
       "tsconfig": "tsconfig.jest.json"
     }
   },
+  "preset": "ts-jest",
+  "coverageProvider": "v8",
   "coverageThreshold": {
     "global": {
       "branches": 60,
