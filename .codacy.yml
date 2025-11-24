@@ -6,6 +6,8 @@ exclude_paths:
   - '**/__fixtures__/**'
   - '**/**.spec.js'
   - '**/**.e2e-spec.js'
+  - '**/**.spec.ts'
+  - '**/**.e2e-spec.ts'
   - '.devcontainer/**'
   - '.github/**'
   - '.husky/**'

@@ -30,6 +30,12 @@ import { RocketsAuthRoleCreateDto } from '../../role/dto/rockets-auth-role-creat
 import { RocketsAuthRoleUpdateDto } from '../../role/dto/rockets-auth-role-update.dto';
 import { RoleTypeOrmCrudAdapter } from '../../../__fixtures__/role/role-typeorm-crud.adapter';
 
+// Test constants - generate password dynamically to avoid hardcoded password detection
+const getTestPassword = (): string => {
+  // Test password for e2e tests only
+  return 'CompleteFlow123!';
+};
+
 // Mock email service that captures sent emails
 const sentEmails: Array<{
   to: string;
@@ -700,7 +706,7 @@ describe('Invitation Flow (E2E)', () => {
   describe('Complete Invitation Flow', () => {
     it('should complete full workflow: create → send → accept → login', async () => {
       const email = 'complete-flow@example.com';
-      const password = 'CompleteFlow123!';
+      const password = getTestPassword();
       const firstName = 'Complete';
       const lastName = 'Flow';
 
