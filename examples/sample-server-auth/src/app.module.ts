@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { EventModule } from '@concepta/nestjs-event';
 import {
   RocketsAuthModule,
   RocketsJwtAuthProvider,
@@ -53,6 +54,7 @@ import { RoleCreateDto } from './modules/role/role.dto';
 @Global()
 @Module({
   imports: [
+    EventModule.forRoot({}),
     // TypeORM configuration with SQLite in-memory
     TypeOrmExtModule.forRoot({
       type: 'sqlite',
@@ -153,6 +155,9 @@ import { RoleCreateDto } from './modules/role/role.dto';
           updateOne: UserUpdateDto,
         },
         userMetadataConfig: {
+          imports: [
+            TypeOrmModule.forFeature([UserMetadataEntity])
+          ],
           adapter: UserMetadataTypeOrmCrudAdapter,
           entity: UserMetadataEntity,
           createDto: UserMetadataCreateDto,
