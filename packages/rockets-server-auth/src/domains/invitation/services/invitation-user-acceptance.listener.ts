@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  OnModuleInit,
-  Logger,
-  Optional,
-} from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit, Logger } from '@nestjs/common';
 import { EventListenerOn, EventAsyncInterface } from '@concepta/nestjs-event';
 import { InvitationAcceptedEventAsync } from '@concepta/nestjs-invitation';
 import { UserModelService } from '@concepta/nestjs-user';
