@@ -7,6 +7,8 @@ import {
 import { DynamicModule, Global, Module, ModuleMetadata } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Reflector } from '@nestjs/core';
+import { AUTHENTICATION_MODULE_SETTINGS_TOKEN } from '@concepta/nestjs-authentication';
 import { GlobalModuleFixture } from './__fixtures__/global.module.fixture';
 
 import { AuthJwtGuard, AuthJwtStrategy } from '@concepta/nestjs-auth-jwt';
@@ -137,6 +139,13 @@ function testModuleFactory(
       }),
       ...extraImports,
     ],
+    providers: [
+      Reflector,
+      {
+        provide: AUTHENTICATION_MODULE_SETTINGS_TOKEN,
+        useValue: {},
+      },
+    ],
   };
 }
 
@@ -202,60 +211,32 @@ describe('AuthenticationCombinedImportModule Integration', () => {
               MockConfigModule,
               // this should be the entity for the adapter
               TypeOrmModule.forFeature([UserFixture]),
+              TypeOrmExtModule.forFeature({
+                user: {
+                  entity: UserFixture,
+                },
+                userOtp: {
+                  entity: UserOtpEntityFixture,
+                },
+                role: {
+                  entity: RoleEntityFixture,
+                },
+                userRole: {
+                  entity: UserRoleEntityFixture,
+                },
+                federated: {
+                  entity: FederatedEntityFixture,
+                },
+                invitation: {
+                  entity: InvitationEntityFixture,
+                },
+              }),
             ],
             inject: [
               ConfigService,
               IssueTokenServiceFixture,
               ValidateTokenServiceFixture,
             ],
-            user: {
-              imports: [
-                TypeOrmExtModule.forFeature({
-                  user: {
-                    entity: UserFixture,
-                  },
-                }),
-              ],
-            },
-            otp: {
-              imports: [
-                TypeOrmExtModule.forFeature({
-                  userOtp: {
-                    entity: UserOtpEntityFixture,
-                  },
-                }),
-              ],
-            },
-            role: {
-              imports: [
-                TypeOrmExtModule.forFeature({
-                  role: {
-                    entity: RoleEntityFixture,
-                  },
-                  userRole: {
-                    entity: UserRoleEntityFixture,
-                  },
-                }),
-              ],
-            },
-            federated: {
-              imports: [
-                TypeOrmExtModule.forFeature({
-                  federated: {
-                    entity: FederatedEntityFixture,
-                  },
-                }),
-              ],
-            },
-            invitation: {
-              imports: [
-                TypeOrmExtModule.forFeature({
-                  invitation: {
-                    entity: InvitationEntityFixture,
-                  },
-                }),
-              ],
-            },
             userCrud: {
               imports: [
                 TypeOrmModule.forFeature([

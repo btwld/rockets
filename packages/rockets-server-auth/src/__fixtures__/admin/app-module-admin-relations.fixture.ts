@@ -1,5 +1,7 @@
 import { Global, Module } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AUTHENTICATION_MODULE_SETTINGS_TOKEN } from '@concepta/nestjs-authentication';
 
 import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
@@ -148,7 +150,14 @@ import { acRulesFixture } from './app.acl.fixture';
       }),
     }),
   ],
-  providers: [ACServiceFixture],
+  providers: [
+    Reflector,
+    {
+      provide: AUTHENTICATION_MODULE_SETTINGS_TOKEN,
+      useValue: {},
+    },
+    ACServiceFixture,
+  ],
   exports: [ACServiceFixture],
 })
 export class AppModuleAdminRelationsFixture {}
