@@ -153,7 +153,9 @@ export class InvitationUserAcceptanceListener
       // SECURITY: Role is read from invitation.constraints.roleId (admin-controlled, set at creation)
       // NOT from user-controlled acceptance payload to prevent privilege escalation attacks
       // Priority: invitation.constraints.roleId > default role from settings
-      const allowedRoleId = invitation.constraints?.roleId as string | undefined;
+      const allowedRoleId = invitation.constraints?.roleId as
+        | string
+        | undefined;
       if (allowedRoleId) {
         // Use the specific roleId set by admin in invitation constraints
         await this.roleService.assignRole({
