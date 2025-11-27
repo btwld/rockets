@@ -21,7 +21,10 @@ import { RocketsAuthRoleService } from '../../role/services/rockets-auth-role.se
  * - Updates user with provided data (firstName, lastName, etc.)
  * - Hashes password if provided
  * - Creates or updates user metadata
- * - Assigns role (specific roleId from payload or default role if configured)
+ * - Assigns role (from invitation.constraints.roleId set at creation, or default role if not configured)
+ *
+ * SECURITY: Role assignment is admin-controlled via invitation.constraints.roleId set at invitation creation.
+ * This prevents privilege escalation attacks where users could assign themselves arbitrary roles.
  *
  * This follows the same pattern as rockets-auth-signup.module.ts
  */
@@ -82,12 +85,13 @@ export class InvitationUserAcceptanceListener
     }
 
     try {
-      // Extract password, userMetadata (including firstName/lastName), and roleId from payload
+      // Extract password, userMetadata (including firstName/lastName) from payload
+      // Note: roleId is NOT extracted from payload for security reasons - it must be set
+      // in invitation.constraints.roleId at invitation creation time (admin-controlled)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const {
         password,
         userMetadata = {},
-        roleId,
         firstName,
         lastName,
         ...userData
@@ -146,16 +150,19 @@ export class InvitationUserAcceptanceListener
       }
 
       // 4. Assign role to user
-      // Priority: roleId from payload > default role from settings
-      if (roleId) {
-        // Use the specific roleId provided in the payload
+      // SECURITY: Role is read from invitation.constraints.roleId (admin-controlled, set at creation)
+      // NOT from user-controlled acceptance payload to prevent privilege escalation attacks
+      // Priority: invitation.constraints.roleId > default role from settings
+      const allowedRoleId = invitation.constraints?.roleId as string | undefined;
+      if (allowedRoleId) {
+        // Use the specific roleId set by admin in invitation constraints
         await this.roleService.assignRole({
           assignment: 'user',
           assignee: { id: invitation.userId },
-          role: { id: roleId },
+          role: { id: allowedRoleId },
         });
       } else {
-        // Fall back to default role if no roleId provided
+        // Fall back to default role if no roleId set in constraints
         // Throw error to rollback entire invitation acceptance on failure
         await this.authRoleService.assignDefaultRoleToUser(
           invitation.userId,
@@ -165,7 +172,7 @@ export class InvitationUserAcceptanceListener
 
       this.logger.debug('Role assigned successfully', {
         userId: invitation.userId,
-        roleId: roleId || 'default',
+        roleId: allowedRoleId || 'default',
       });
 
       this.logger.log('Invitation accepted successfully', {

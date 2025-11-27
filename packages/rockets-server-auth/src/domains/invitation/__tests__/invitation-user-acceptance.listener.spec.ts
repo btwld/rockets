@@ -268,16 +268,18 @@ describe(InvitationUserAcceptanceListener.name, () => {
       );
     });
 
-    it('should assign specific roleId when provided', async () => {
+    it('should assign specific roleId from invitation constraints', async () => {
       // Arrange
       const event = {
         key: 'InvitationAcceptedEventAsync',
         expectsReturnOf: Promise,
         payload: {
-          invitation: mockInvitation,
+          invitation: {
+            ...mockInvitation,
+            constraints: { roleId: 'role-123' },
+          },
           data: {
             password: 'Test123!',
-            roleId: 'role-123',
           },
         },
       } as unknown as EventAsyncInterface<
@@ -308,13 +310,56 @@ describe(InvitationUserAcceptanceListener.name, () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should assign default role when roleId not provided', async () => {
-      // Arrange
+    it('should ignore roleId from acceptance payload (security test)', async () => {
+      // Arrange - roleId in payload should be ignored, only constraints.roleId is used
       const event = {
         key: 'InvitationAcceptedEventAsync',
         expectsReturnOf: Promise,
         payload: {
-          invitation: mockInvitation,
+          invitation: {
+            ...mockInvitation,
+            constraints: { roleId: 'admin-role-123' },
+          },
+          data: {
+            password: 'Test123!',
+            roleId: 'user-role-456', // This should be ignored
+          },
+        },
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
+
+      mockUserModelService.byId.mockResolvedValue(mockUser as never);
+      mockPasswordService.create.mockResolvedValue({
+        passwordHash: 'hashed-password',
+        passwordSalt: 'salt',
+      } as never);
+      mockUserModelService.update.mockResolvedValue(undefined as never);
+      mockRoleService.assignRole.mockResolvedValue(undefined as never);
+
+      // Act
+      const result = await listener.listen(event);
+
+      // Assert - should use roleId from constraints, not from payload
+      expect(result).toBe(true);
+      expect(mockRoleService.assignRole).toHaveBeenCalledWith({
+        assignment: 'user',
+        assignee: { id: 'user-123' },
+        role: { id: 'admin-role-123' }, // From constraints, not payload
+      });
+      expect(
+        mockAuthRoleService.assignDefaultRoleToUser,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should assign default role when roleId not in constraints', async () => {
+      // Arrange - no roleId in constraints, should fall back to default
+      const event = {
+        key: 'InvitationAcceptedEventAsync',
+        expectsReturnOf: Promise,
+        payload: {
+          invitation: mockInvitation, // constraints: {}
           data: {
             password: 'Test123!',
           },

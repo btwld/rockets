@@ -9,6 +9,12 @@ import {
  *
  * This defines the structure of the data object that can be passed
  * when accepting an invitation.
+ *
+ * SECURITY NOTE: Role assignment is NOT controlled via this payload.
+ * The role must be set at invitation creation time via invitation.constraints.roleId
+ * (admin-controlled). This prevents privilege escalation attacks where users could
+ * assign themselves arbitrary roles through the public acceptance endpoint.
+ * Any roleId passed in this payload will be ignored.
  */
 export interface InvitationAcceptanceDataInterface extends LiteralObject {
   /**
@@ -20,12 +26,6 @@ export interface InvitationAcceptanceDataInterface extends LiteralObject {
    * User metadata to create or update
    */
   userMetadata?: Record<string, unknown>;
-
-  /**
-   * Role ID to assign to the user
-   * If provided, this role will be assigned instead of the default role
-   */
-  roleId?: string;
 
   /**
    * Additional user fields to update (firstName, lastName, email, etc.)

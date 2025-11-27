@@ -440,7 +440,7 @@ describe('Invitation Flow (E2E)', () => {
       expect(loginRes.body).toHaveProperty('refreshToken');
     });
 
-    it('should accept invitation with roleId in payload', async () => {
+    it('should accept invitation with roleId in constraints', async () => {
       const email = 'roleuser@example.com';
 
       // Create a specific role
@@ -449,13 +449,16 @@ describe('Invitation Flow (E2E)', () => {
         description: 'Test role for invitation',
       });
 
-      // 1. Create invitation
+      // 1. Create invitation with roleId in constraints (admin-controlled)
       const invitationRes = await request(app.getHttpServer())
         .post('/admin/invitations')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           email,
           category: 'user',
+          constraints: {
+            roleId: testRole.id,
+          },
         })
         .expect(201);
 
@@ -473,19 +476,18 @@ describe('Invitation Flow (E2E)', () => {
       const passcode = urlParams.get('passcode');
       expect(passcode).not.toBeNull();
 
-      // 3. Accept invitation with specific roleId
+      // 3. Accept invitation (roleId is read from constraints, not payload)
       await request(app.getHttpServer())
         .patch(`/invitation-acceptance/${invitationCode}`)
         .send({
           passcode,
           payload: {
             password: 'RoleUser123!',
-            roleId: testRole.id,
           },
         })
         .expect(200);
 
-      // 4. Verify role was assigned
+      // 4. Verify role was assigned from invitation constraints
       const userRoles = await roleService.getAssignedRoles({
         assignment: 'user',
         assignee: { id: userId },
@@ -495,6 +497,76 @@ describe('Invitation Flow (E2E)', () => {
       expect(userRoles.some((r: { id: string }) => r.id === testRole.id)).toBe(
         true,
       );
+    });
+
+    it('should ignore roleId in acceptance payload (security test)', async () => {
+      const email = 'securitytest@example.com';
+
+      // Create two roles: one for constraints, one that user tries to assign
+      const allowedRole = await roleModelService.create({
+        name: 'allowed-role',
+        description: 'Role set by admin in constraints',
+      });
+
+      const attemptedRole = await roleModelService.create({
+        name: 'attempted-role',
+        description: 'Role user tries to assign via payload',
+      });
+
+      // 1. Create invitation with allowedRole in constraints
+      const invitationRes = await request(app.getHttpServer())
+        .post('/admin/invitations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email,
+          category: 'user',
+          constraints: {
+            roleId: allowedRole.id,
+          },
+        })
+        .expect(201);
+
+      const invitationCode = invitationRes.body.code;
+      const userId = invitationRes.body.userId;
+
+      // 2. Extract OTP passcode from email
+      expect(sentEmails.length).toBeGreaterThan(0);
+      const emailContext = sentEmails[sentEmails.length - 1].context as {
+        tokenUrl: string;
+      };
+      const urlParams = new URLSearchParams(
+        emailContext.tokenUrl.split('?')[1],
+      );
+      const passcode = urlParams.get('passcode');
+      expect(passcode).not.toBeNull();
+
+      // 3. Accept invitation with attemptedRole in payload (should be ignored)
+      await request(app.getHttpServer())
+        .patch(`/invitation-acceptance/${invitationCode}`)
+        .send({
+          passcode,
+          payload: {
+            password: 'SecurityTest123!',
+            roleId: attemptedRole.id, // This should be ignored
+          },
+        })
+        .expect(200);
+
+      // 4. Verify allowedRole was assigned (from constraints), not attemptedRole
+      const userRoles = await roleService.getAssignedRoles({
+        assignment: 'user',
+        assignee: { id: userId },
+      });
+
+      expect(userRoles).toBeDefined();
+      // Should have allowedRole (from constraints)
+      expect(
+        userRoles.some((r: { id: string }) => r.id === allowedRole.id),
+      ).toBe(true);
+      // Should NOT have attemptedRole (from payload - should be ignored)
+      expect(
+        userRoles.some((r: { id: string }) => r.id === attemptedRole.id),
+      ).toBe(false);
     });
 
     it('should reject invitation acceptance with invalid code', async () => {
