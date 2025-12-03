@@ -3,7 +3,7 @@ import { AuthRouterOptionsExtrasInterface } from '@concepta/nestjs-auth-router';
 import { CrudAdapter } from '@concepta/nestjs-crud';
 import { RepositoryInterface } from '@concepta/nestjs-common';
 import { RocketsAuthUserMetadataEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
-import { RocketsAuthUserMetadataCreateDtoInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-dto.interface';
+import { RocketsAuthUserMetadataCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
 import { RoleOptionsExtrasInterface } from '@concepta/nestjs-role/dist/interfaces/role-options-extras.interface';
 import { DynamicModule, Type } from '@nestjs/common';
 import { RocketsAuthUserEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-entity.interface';
@@ -13,6 +13,7 @@ import { RocketsAuthRoleEntityInterface } from '../../domains/role/interfaces/ro
 import { RocketsAuthRoleCreatableInterface } from '../../domains/role/interfaces/rockets-auth-role-creatable.interface';
 import { RocketsAuthRoleUpdatableInterface } from '../../domains/role/interfaces/rockets-auth-role-updatable.interface';
 import { GenericUserMetadataModelService } from '../../domains/user/services/rockets-auth-user-metadata.model.service';
+import { RocketsAuthUserMetadataModelUpdatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
 
 /**
  * Generic userMetadata configuration interface
@@ -21,8 +22,8 @@ import { GenericUserMetadataModelService } from '../../domains/user/services/roc
  * Follows the same pattern as rockets-server's UserMetadataConfigInterface.
  */
 export interface UserMetadataConfigInterface<
-  TCreateDto extends RocketsAuthUserMetadataCreateDtoInterface = RocketsAuthUserMetadataCreateDtoInterface,
-  TUpdateDto extends RocketsAuthUserMetadataEntityInterface = RocketsAuthUserMetadataEntityInterface,
+  TCreateDto extends RocketsAuthUserMetadataCreatableInterface = RocketsAuthUserMetadataCreatableInterface,
+  TUpdateDto extends RocketsAuthUserMetadataModelUpdatableInterface = RocketsAuthUserMetadataModelUpdatableInterface,
 > {
   /**
    * Optional module imports for UserMetadata configuration

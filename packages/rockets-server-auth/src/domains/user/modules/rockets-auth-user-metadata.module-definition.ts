@@ -4,7 +4,10 @@ import {
   Provider,
 } from '@nestjs/common';
 import { CrudService, CrudAdapter } from '@concepta/nestjs-crud';
-import { RepositoryInterface } from '@concepta/nestjs-common';
+import {
+  getDynamicRepositoryToken,
+  RepositoryInterface,
+} from '@concepta/nestjs-common';
 import { UserMetadataConfigInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
@@ -142,6 +145,10 @@ function createRocketsAuthUserMetadataProviders(options: {
     // UserMetadataModelService - uses factory with repository and config
     {
       provide: UserMetadataModelService,
+      inject: [
+        getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
+        RAW_USER_METADATA_OPTIONS_TOKEN,
+      ],
       useFactory: (
         repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
         moduleConfig: UserMetadataConfigInterface,
@@ -162,10 +169,6 @@ function createRocketsAuthUserMetadataProviders(options: {
           moduleConfig.updateDto,
         );
       },
-      inject: [
-        USER_METADATA_MODULE_ENTITY_KEY,
-        RAW_USER_METADATA_OPTIONS_TOKEN,
-      ],
     },
   ];
 }

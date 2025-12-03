@@ -159,10 +159,14 @@ export class RocketsAuthSignUpModule {
           ...passwordHash,
         });
 
+        let userMetadata;
         // Manually create metadata if provided using userMetadataService
         if (nested) {
           try {
-            await this.metadataModelService.createOrUpdate(created.id, nested);
+            userMetadata = await this.metadataModelService.createOrUpdate(
+              created.id,
+              nested,
+            );
           } catch (metadataError) {
             // Log error but don't fail signup if metadata creation fails
             console.warn(
@@ -175,8 +179,10 @@ export class RocketsAuthSignUpModule {
         // Assign default role if configured
         // Don't throw error - we don't want to fail signup if role assignment fails
         await this.authRoleService.assignDefaultRoleToUser(created.id, false);
-
-        return created;
+        return {
+          ...created,
+          userMetadata,
+        };
       }
     }
     // TODO: add decorators and option to overwrite or disable controller

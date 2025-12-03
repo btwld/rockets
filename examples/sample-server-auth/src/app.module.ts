@@ -92,6 +92,7 @@ import { RoleCreateDto } from './modules/role/role.dto';
       imports: [
         TypeOrmExtModule.forFeature({
           user: { entity: UserEntity },
+          userMetadata: { entity: UserMetadataEntity },
           invitation: { entity: InvitationEntity },
         }),
       ],
@@ -144,9 +145,17 @@ import { RoleCreateDto } from './modules/role/role.dto';
         },
       }),
       // Admin user CRUD functionality
+      // This configuration is also used by:
+      // - InvitationAcceptanceModule: validates userMetadata during invitation acceptance
+      // - SignUpModule: validates userMetadata during user signup
+      // - UserMetadataModule: provides CRUD operations for user metadata
       userCrud: {
         imports: [
-          TypeOrmModule.forFeature([UserEntity, UserMetadataEntity])
+          TypeOrmModule.forFeature([UserEntity, UserMetadataEntity]),
+          TypeOrmExtModule.forFeature({
+            user: { entity: UserEntity },
+            userMetadata: { entity: UserMetadataEntity },
+          }),
         ],
         adapter: UserTypeOrmCrudAdapter,
         model: UserDto,
@@ -154,14 +163,21 @@ import { RoleCreateDto } from './modules/role/role.dto';
           createOne: UserCreateDto,
           updateOne: UserUpdateDto,
         },
+        // User Metadata Configuration
+        // The updateDto is used by InvitationAcceptanceListener to validate
+        // userMetadata when users accept invitations (e.g., firstName, lastName)
         userMetadataConfig: {
           imports: [
-            TypeOrmModule.forFeature([UserMetadataEntity])
+            TypeOrmModule.forFeature([UserEntity, UserMetadataEntity]),
+            TypeOrmExtModule.forFeature({
+              user: { entity: UserEntity },
+              userMetadata: { entity: UserMetadataEntity },
+            }),
           ],
           adapter: UserMetadataTypeOrmCrudAdapter,
           entity: UserMetadataEntity,
           createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto,
+          updateDto: UserMetadataUpdateDto, // Used for validation in invitation acceptance
         },
       },
       // Admin role CRUD functionality
@@ -192,7 +208,9 @@ import { RoleCreateDto } from './modules/role/role.dto';
       ],
       inject:[RocketsJwtAuthProvider],
       useFactory: (rocketsJwtAuthProvider: RocketsJwtAuthProvider) => ({
-        settings: {},
+        settings: {
+          
+        },
         // This enables the serverGuard that needs rocketsJwtAuthProvider
         enableGlobalGuard: true,
         authProvider: rocketsJwtAuthProvider,

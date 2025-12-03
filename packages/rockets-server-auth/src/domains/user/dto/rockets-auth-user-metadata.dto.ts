@@ -11,8 +11,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
  * Follows the same pattern as rockets-server's base UserMetadataDto
  */
 export class RocketsAuthUserMetadataDto {
-  [key: string]: unknown;
-
   @ApiProperty({ description: 'Metadata ID' })
   @Expose()
   id!: string;

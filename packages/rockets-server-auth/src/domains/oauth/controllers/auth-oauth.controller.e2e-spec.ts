@@ -133,7 +133,12 @@ describe('AuthOAuthController (e2e)', () => {
             adapter: AdminUserTypeOrmCrudAdapter,
             model: RocketsAuthUserFixtureDto,
             userMetadataConfig: {
-              imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
+              imports: [
+                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                TypeOrmExtModule.forFeature({
+                  userMetadata: { entity: UserMetadataEntityFixture },
+                }),
+              ],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,

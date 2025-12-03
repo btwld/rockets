@@ -78,12 +78,11 @@ import { RocketsAuthNotificationService } from './domains/otp/services/rockets-a
 import { RocketsAuthOtpService } from './domains/otp/services/rockets-auth-otp.service';
 import { RocketsJwtAuthProvider } from './provider/rockets-jwt-auth.provider';
 import {
-  InvitationUserAcceptanceListener,
   InvitationController,
-  InvitationAcceptanceController,
   InvitationRevocationController,
   InvitationReattemptController,
 } from './domains/invitation';
+import { RocketsAuthInvitationAcceptanceModule } from './domains/invitation/modules/rockets-auth-invitation-acceptance.module';
 import { RocketsAuthUserMetadataModule } from './domains/user/modules/rockets-auth-user-metadata.module';
 import { UserCrudOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
 import { InvitationSettingsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-settings.interface';
@@ -143,10 +142,10 @@ function definitionTransform(
     exports: createRocketsAuthExports({ exports, extras }),
   };
 
-  // If userCrud is configured, add the admin submodule
-  if (userCrud) {
-    const disableController = extras.disableController || {};
+  const disableController = extras.disableController || {};
 
+  // If userCrud is configured, add the admin submodule and invitation acceptance module together for consistency
+  if (userCrud) {
     // Import centralized UserMetadata module - single configuration point
     // userMetadataConfig is required for full functionality but optional for basic tests
     baseModule.imports = [
@@ -159,6 +158,9 @@ function definitionTransform(
         : []),
       ...(!disableController.signup
         ? [RocketsAuthSignUpModule.register(userCrud)]
+        : []),
+      ...(!disableController.invitationAcceptance
+        ? [RocketsAuthInvitationAcceptanceModule.forRoot({ userCrud })]
         : []),
     ];
   }
@@ -194,8 +196,8 @@ export function createRocketsAuthControllers(options: {
         if (!disableController.otp) list.push(RocketsAuthOtpController);
         if (!disableController.oAuth) list.push(AuthOAuthController);
         if (!disableController.invitation) list.push(InvitationController);
-        if (!disableController.invitationAcceptance)
-          list.push(InvitationAcceptanceController);
+        // InvitationAcceptanceController is now created dynamically by RocketsAuthInvitationAcceptanceModule
+        // and is registered conditionally above, so we don't add it here
         if (!disableController.invitationRevocation)
           list.push(InvitationRevocationController);
         if (!disableController.invitationReattempt)
@@ -663,7 +665,8 @@ export function createRocketsAuthProviders(options: {
     RocketsJwtAuthProvider,
     AdminGuard,
     RocketsAuthRoleService,
-    InvitationUserAcceptanceListener,
+    // InvitationUserAcceptanceListener is now created dynamically by RocketsAuthInvitationAcceptanceModule
+    // and is registered conditionally above, so we don't add it here
   ];
 
   // Note: AuthUserMetadataModelService provider is now handled by the centralized

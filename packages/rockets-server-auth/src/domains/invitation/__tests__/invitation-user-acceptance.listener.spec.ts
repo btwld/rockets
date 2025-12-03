@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { InvitationUserAcceptanceListener } from '../services/invitation-user-acceptance.listener';
+import { Injectable } from '@nestjs/common';
+
 import { UserModelService } from '@concepta/nestjs-user';
 import { PasswordCreationService } from '@concepta/nestjs-password';
 import { RoleService } from '@concepta/nestjs-role';
@@ -7,12 +8,25 @@ import { GenericUserMetadataModelService } from '../../user/services/rockets-aut
 import { RocketsAuthRoleService } from '../../role/services/rockets-auth-role.service';
 import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../../../shared/constants/rockets-auth.constants';
 import { UserMetadataModelService } from '../../user/constants/user-metadata.constants';
-import { EventAsyncInterface } from '@concepta/nestjs-event';
-import { TypedInvitationAcceptedEventPayloadInterface } from '../interfaces/invitation-acceptance-data.interface';
+import { EventAsyncInterface, EventListenerOn } from '@concepta/nestjs-event';
+import {
+  InvitationAcceptanceDataInterface,
+  TypedInvitationAcceptedEventPayloadInterface,
+} from '../interfaces/invitation-acceptance-data.interface';
 import { InvitationInterface } from '@concepta/nestjs-common';
+import {
+  INVITATION_ACCEPTANCE_LISTENER_TOKEN,
+  RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN,
+} from '../modules/rockets-auth-invitation-acceptance.module-definition';
+import { RocketsAuthInvitationAcceptanceModule } from '../modules/rockets-auth-invitation-acceptance.module';
 
-describe(InvitationUserAcceptanceListener.name, () => {
-  let listener: InvitationUserAcceptanceListener;
+describe('InvitationUserAcceptanceListener', () => {
+  let listener: EventListenerOn<
+    EventAsyncInterface<
+      TypedInvitationAcceptedEventPayloadInterface<InvitationAcceptanceDataInterface>,
+      boolean
+    >
+  >;
   let mockUserModelService: jest.Mocked<UserModelService>;
   let mockPasswordService: jest.Mocked<PasswordCreationService>;
   let mockUserMetadataService: jest.Mocked<GenericUserMetadataModelService>;
@@ -47,10 +61,25 @@ describe(InvitationUserAcceptanceListener.name, () => {
     email: {
       from: 'noreply@example.com',
       baseUrl: 'http://localhost:3000',
-      templates: {},
+      templates: {
+        sendOtp: {
+          fileName: 'send-otp.template.hbs',
+          subject: 'OTP',
+        },
+        invitation: {
+          logo: '',
+          fileName: 'invitation.template.hbs',
+          subject: 'Invitation',
+        },
+        invitationAccepted: {
+          logo: '',
+          fileName: 'invitation-accepted.template.hbs',
+          subject: 'Invitation Accepted',
+        },
+      },
     },
     otp: {
-      assignment: 'userOtp',
+      assignment: 'userOtp' as const,
       category: 'auth-login',
       type: 'uuid',
       expiresIn: '1h',
@@ -81,7 +110,6 @@ describe(InvitationUserAcceptanceListener.name, () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        InvitationUserAcceptanceListener,
         {
           provide: UserModelService,
           useValue: mockUserModelService,
@@ -106,12 +134,17 @@ describe(InvitationUserAcceptanceListener.name, () => {
           provide: ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
           useValue: mockSettings,
         },
+        // Provide the listener via the factory (simulating the module definition)
+        {
+          provide: RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN,
+          useValue: {}, // Empty options for testing
+        },
+        // Import the module to get the listener
+        ...(RocketsAuthInvitationAcceptanceModule.forRoot({}).providers || []),
       ],
     }).compile();
 
-    listener = module.get<InvitationUserAcceptanceListener>(
-      InvitationUserAcceptanceListener,
-    );
+    listener = module.get(INVITATION_ACCEPTANCE_LISTENER_TOKEN);
   });
 
   afterEach(() => {
@@ -180,6 +213,7 @@ describe(InvitationUserAcceptanceListener.name, () => {
         id: 'user-123',
         passwordHash: 'hashed-password',
         passwordSalt: 'salt',
+        active: true, // Set by code, not by user input
       });
       expect(mockAuthRoleService.assignDefaultRoleToUser).toHaveBeenCalledWith(
         'user-123',
@@ -218,6 +252,7 @@ describe(InvitationUserAcceptanceListener.name, () => {
       expect(mockPasswordService.create).not.toHaveBeenCalled();
       expect(mockUserModelService.update).toHaveBeenCalledWith({
         id: 'user-123',
+        active: true, // Set by code, not by user input
       });
     });
 
@@ -568,6 +603,87 @@ describe(InvitationUserAcceptanceListener.name, () => {
 
       // Assert
       expect(result).toBe(true);
+    });
+  });
+
+  describe('Custom listener override', () => {
+    it('should allow custom listener service to be used', async () => {
+      // Arrange - Create a custom listener class with overridden behavior
+      @Injectable()
+      class CustomInvitationUserAcceptanceListener {
+        async listen(
+          _event: EventAsyncInterface<
+            TypedInvitationAcceptedEventPayloadInterface,
+            boolean
+          >,
+        ): Promise<boolean> {
+          // Custom behavior - always return true for testing
+          return true;
+        }
+      }
+
+      const customModule = await Test.createTestingModule({
+        providers: [
+          {
+            provide: UserModelService,
+            useValue: mockUserModelService,
+          },
+          {
+            provide: PasswordCreationService,
+            useValue: mockPasswordService,
+          },
+          {
+            provide: UserMetadataModelService,
+            useValue: mockUserMetadataService,
+          },
+          {
+            provide: RoleService,
+            useValue: mockRoleService,
+          },
+          {
+            provide: RocketsAuthRoleService,
+            useValue: mockAuthRoleService,
+          },
+          {
+            provide: ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+            useValue: mockSettings,
+          },
+          // Provide custom listener via useClass
+          {
+            provide: INVITATION_ACCEPTANCE_LISTENER_TOKEN,
+            useClass: CustomInvitationUserAcceptanceListener,
+          },
+        ],
+      }).compile();
+
+      const customListener = customModule.get(
+        INVITATION_ACCEPTANCE_LISTENER_TOKEN,
+      );
+
+      const event = {
+        key: 'InvitationAcceptedEventAsync',
+        expectsReturnOf: Promise,
+        payload: {
+          invitation: mockInvitation,
+          data: {
+            password: 'Test123!',
+          },
+        },
+      } as unknown as EventAsyncInterface<
+        TypedInvitationAcceptedEventPayloadInterface,
+        boolean
+      >;
+
+      // Act
+      const result = await customListener.listen(event);
+
+      // Assert
+      expect(result).toBe(true);
+      expect(customListener).toBeInstanceOf(
+        CustomInvitationUserAcceptanceListener,
+      );
+      // Custom listener should not have called any services
+      expect(mockUserModelService.byId).not.toHaveBeenCalled();
     });
   });
 });

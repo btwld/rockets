@@ -199,7 +199,12 @@ describe('Invitation Flow (E2E)', () => {
               updateOne: RocketsAuthUserUpdateDtoFixture,
             },
             userMetadataConfig: {
-              imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
+              imports: [
+                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                TypeOrmExtModule.forFeature({
+                  userMetadata: { entity: UserMetadataEntityFixture },
+                }),
+              ],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
@@ -405,10 +410,10 @@ describe('Invitation Flow (E2E)', () => {
           passcode,
           payload: {
             password: 'NewUser123!',
-            firstName: 'Test',
-            lastName: 'User',
             userMetadata: {
               bio: 'Test user bio',
+              firstName: 'Test',
+              lastName: 'User',
             },
           },
         })
@@ -567,6 +572,100 @@ describe('Invitation Flow (E2E)', () => {
       expect(
         userRoles.some((r: { id: string }) => r.id === attemptedRole.id),
       ).toBe(false);
+    });
+
+    it('should prevent mass assignment vulnerability - ignore protected fields in payload', async () => {
+      const email = 'massassignment@example.com';
+      const hijackedEmail = 'hijacked@example.com';
+
+      // 1. Create invitation
+      const invitationRes = await request(app.getHttpServer())
+        .post('/admin/invitations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email,
+          category: 'user',
+        })
+        .expect(201);
+
+      const invitationCode = invitationRes.body.code;
+      const userId = invitationRes.body.userId;
+
+      // 2. Get user before acceptance to capture initial state
+      const userBefore = await userModelService.byId(userId);
+      expect(userBefore).toBeDefined();
+      const initialActive = userBefore?.active;
+      const initialEmail = userBefore?.email;
+      const initialUsername = userBefore?.username;
+
+      // Verify initial email matches invitation email
+      expect(initialEmail).toBe(email);
+
+      // 3. Extract OTP passcode from email
+      expect(sentEmails.length).toBeGreaterThan(0);
+      const emailContext = sentEmails[sentEmails.length - 1].context as {
+        tokenUrl: string;
+      };
+      const urlParams = new URLSearchParams(
+        emailContext.tokenUrl.split('?')[1],
+      );
+      const passcode = urlParams.get('passcode');
+      expect(passcode).not.toBeNull();
+
+      // 4. Attempt mass assignment attack: try to set protected fields
+      // Try to toggle active status, hijack email, and change username
+      await request(app.getHttpServer())
+        .patch(`/invitation-acceptance/${invitationCode}`)
+        .send({
+          passcode,
+          payload: {
+            password: 'MassAssignment123!',
+            userMetadata: {
+              bio: 'Test user bio',
+              firstName: 'Test',
+              lastName: 'User',
+            },
+            // Attempt to set protected fields - these should be IGNORED
+            active: !initialActive, // Try to toggle active status
+            email: hijackedEmail, // Try to hijack email
+            username: 'hijacked-username', // Try to change username
+          },
+        })
+        .expect(200);
+
+      // 5. Verify protected fields were NOT updated by user (vulnerability prevented)
+      const userAfter = await userModelService.byId(userId);
+      expect(userAfter).toBeDefined();
+
+      // Security check: active is set to true by code (not by user input)
+      // Even if user tried to set active: false, it should be true after acceptance
+      expect(userAfter?.active).toBe(true);
+      // Verify that user's attempt to toggle active was ignored
+      // (active is always set to true by code when invitation is accepted)
+
+      // Security check: email should remain original (not hijacked)
+      // User cannot change email via payload
+      expect(userAfter?.email).toBe(initialEmail);
+      expect(userAfter?.email).toBe(email);
+      expect(userAfter?.email).not.toBe(hijackedEmail);
+
+      // Security check: username should not be changed
+      // User cannot change username via payload
+      if (initialUsername) {
+        expect(userAfter?.username).toBe(initialUsername);
+      }
+      expect(userAfter?.username).not.toBe('hijacked-username');
+
+      // Verify that safe fields (firstName, lastName) were processed correctly
+      // These should be in userMetadata, not directly on user
+      const userWithMetadata = await request(app.getHttpServer())
+        .get(`/admin/users/${userId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(userWithMetadata.body.userMetadata).toBeDefined();
+      expect(userWithMetadata.body.userMetadata.firstName).toBe('Test');
+      expect(userWithMetadata.body.userMetadata.lastName).toBe('User');
     });
 
     it('should reject invitation acceptance with invalid code', async () => {
@@ -817,9 +916,9 @@ describe('Invitation Flow (E2E)', () => {
           passcode,
           payload: {
             password,
-            firstName,
-            lastName,
             userMetadata: {
+              firstName,
+              lastName,
               bio: 'Complete flow test user',
             },
           },

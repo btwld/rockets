@@ -64,8 +64,6 @@ class FederatedEntity extends FederatedSqliteEntity {}
 
 @Entity()
 class UserMetadataEntity implements RocketsAuthUserMetadataEntityInterface {
-  [key: string]: unknown;
-
   @Column({ type: 'varchar', primary: true })
   id!: string;
 

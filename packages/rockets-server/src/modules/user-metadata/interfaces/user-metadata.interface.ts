@@ -25,7 +25,6 @@ export interface UserMetadataEntityInterface
  */
 export interface UserMetadataCreatableInterface {
   userId: string;
-  [key: string]: unknown;
 }
 
 /**

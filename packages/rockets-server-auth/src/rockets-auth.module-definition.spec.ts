@@ -10,7 +10,6 @@ import { AuthTokenRefreshController } from './domains/auth/controllers/auth-refr
 import { AuthOAuthController } from './domains/oauth/controllers/auth-oauth.controller';
 import { RocketsAuthOtpController } from './domains/otp/controllers/rockets-auth-otp.controller';
 import { InvitationController } from './domains/invitation/controllers/invitation.controller';
-import { InvitationAcceptanceController } from './domains/invitation/controllers/invitation-acceptance.controller';
 import { InvitationReattemptController } from './domains/invitation/controllers/invitation-reattempt.controller';
 import { InvitationRevocationController } from './domains/invitation/controllers/invitation-revocation.controller';
 import { RocketsAuthNotificationServiceInterface } from './shared/interfaces/rockets-auth-notification.service.interface';
@@ -143,7 +142,7 @@ describe('RocketsAuthModuleDefinition', () => {
   describe('createRocketsAuthControllers', () => {
     it('should return default controllers when no controllers provided', () => {
       const result = createRocketsAuthControllers({
-        extras: { global: false, userCrud: undefined as never },
+        extras: { global: false },
       });
 
       expect(result).toEqual([
@@ -153,7 +152,6 @@ describe('RocketsAuthModuleDefinition', () => {
         RocketsAuthOtpController,
         AuthOAuthController,
         InvitationController,
-        InvitationAcceptanceController,
         InvitationRevocationController,
         InvitationReattemptController,
       ]);
@@ -163,7 +161,7 @@ describe('RocketsAuthModuleDefinition', () => {
       const customControllers = [AuthPasswordController];
       const result = createRocketsAuthControllers({
         controllers: customControllers,
-        extras: { global: false, userCrud: undefined as never },
+        extras: { global: false },
       });
 
       expect(result).toEqual([AuthPasswordController]);
@@ -181,7 +179,6 @@ describe('RocketsAuthModuleDefinition', () => {
         RocketsAuthOtpController,
         AuthOAuthController,
         InvitationController,
-        InvitationAcceptanceController,
         InvitationRevocationController,
         InvitationReattemptController,
       ]);

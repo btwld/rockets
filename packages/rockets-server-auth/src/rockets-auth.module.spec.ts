@@ -253,6 +253,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
               userMetadataConfig: {
                 imports: [
                   TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                  TypeOrmExtModule.forFeature({
+                    userMetadata: { entity: UserMetadataEntityFixture },
+                  }),
                 ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
@@ -370,6 +373,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
               userMetadataConfig: {
                 imports: [
                   TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                  TypeOrmExtModule.forFeature({
+                    userMetadata: { entity: UserMetadataEntityFixture },
+                  }),
                 ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
@@ -459,6 +465,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
               userMetadataConfig: {
                 imports: [
                   TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                  TypeOrmExtModule.forFeature({
+                    userMetadata: { entity: UserMetadataEntityFixture },
+                  }),
                 ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
@@ -584,6 +593,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
               userMetadataConfig: {
                 imports: [
                   TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                  TypeOrmExtModule.forFeature({
+                    userMetadata: { entity: UserMetadataEntityFixture },
+                  }),
                 ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
@@ -717,6 +729,9 @@ describe('AuthenticationCombinedImportModule Integration', () => {
               userMetadataConfig: {
                 imports: [
                   TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                  TypeOrmExtModule.forFeature({
+                    userMetadata: { entity: UserMetadataEntityFixture },
+                  }),
                 ],
                 adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,

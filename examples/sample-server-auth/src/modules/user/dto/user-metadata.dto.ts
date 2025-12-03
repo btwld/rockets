@@ -1,4 +1,6 @@
 import { RocketsAuthUserMetadataDto } from '@bitwild/rockets-auth';
+import { RocketsAuthUserMetadataCreatableInterface } from '@bitwild/rockets-auth/dist/domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
+import { RocketsAuthUserMetadataModelUpdatableInterface, RocketsAuthUserMetadataUpdatableInterface } from '@bitwild/rockets-auth/dist/domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
 import { ApiProperty, PartialType, PickType } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 import {
@@ -63,9 +65,9 @@ export class UserMetadataDto extends RocketsAuthUserMetadataDto {
 }
 
 export class UserMetadataCreateDto 
-  extends PickType(UserMetadataDto, ['userId', 'firstName', 'lastName', 'username', 'bio'] as const) {
-  // Add index signature to satisfy Record<string, unknown>
-  [key: string]: unknown;
+  extends PickType(UserMetadataDto, ['userId', 'firstName', 'lastName', 'username', 'bio'] as const) implements RocketsAuthUserMetadataCreatableInterface {
 }
 
-export class UserMetadataUpdateDto extends UserMetadataDto {}
+export class UserMetadataUpdateDto
+  extends PickType(UserMetadataDto, ['id', 'firstName', 'lastName', 'username', 'bio'] as const) implements RocketsAuthUserMetadataModelUpdatableInterface {
+}

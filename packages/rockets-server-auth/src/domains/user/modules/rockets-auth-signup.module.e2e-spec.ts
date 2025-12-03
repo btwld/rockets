@@ -93,7 +93,12 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
               updateOne: RocketsAuthUserUpdateDtoFixture,
             },
             userMetadataConfig: {
-              imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
+              imports: [
+                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                TypeOrmExtModule.forFeature({
+                  userMetadata: { entity: UserMetadataEntityFixture },
+                }),
+              ],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
@@ -140,7 +145,6 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
                 invitation: { entity: InvitationEntityFixture },
               }),
             ],
-            userModelService: undefined as never,
           },
           settings: {
             role: { adminRoleName: 'admin' },

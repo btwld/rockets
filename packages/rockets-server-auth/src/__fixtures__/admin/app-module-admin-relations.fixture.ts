@@ -88,7 +88,12 @@ import { acRulesFixture } from './app.acl.fixture';
           updateOne: RocketsAuthUserUpdateDto,
         },
         userMetadataConfig: {
-          imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
+          imports: [
+            TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+            TypeOrmExtModule.forFeature({
+              userMetadata: { entity: UserMetadataEntityFixture },
+            }),
+          ],
           adapter: UserMetadataAdapter,
           entity: UserMetadataEntityFixture,
           createDto: RocketsAuthUserMetadataFixtureDto,
