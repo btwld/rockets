@@ -7,11 +7,11 @@ __metadata:
 
 "@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server%40workspace%3A.":
   version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=472308&locator=sample-server%40workspace%3A."
+  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=dd8250&locator=sample-server%40workspace%3A."
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.8"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.8"
-    "@concepta/nestjs-swagger-ui": "npm:^7.0.0-alpha.8"
+    "@concepta/nestjs-authentication": "npm:7.0.0-alpha.8"
+    "@concepta/nestjs-common": "npm:7.0.0-alpha.8"
+    "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.8"
     "@nestjs/common": "npm:^10.4.1"
     "@nestjs/config": "npm:^3.2.3"
     "@nestjs/core": "npm:^10.4.1"
@@ -22,7 +22,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/a98e0de12b52bc7608e6ce229b3eb2bdc885f07c57d6470a09f3b0bfd14f30c32a61955dbe44398d553a6863b8b3f6082481d53f69ab95a8e55e6c8adedff11a
+  checksum: 10c0/f08acaade901ed1e1f748f64a2a235220480afbc702fdb1fc6c381114d4c32da3fc623efa6556a379af5a934fb3f4b3475d30f1cf1837836ee9384b9abcf6888
   languageName: node
   linkType: hard
 
@@ -33,7 +33,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-authentication@npm:^7.0.0-alpha.8":
+"@concepta/nestjs-authentication@npm:7.0.0-alpha.8":
   version: 7.0.0-alpha.8
   resolution: "@concepta/nestjs-authentication@npm:7.0.0-alpha.8"
   dependencies:
@@ -54,7 +54,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-common@npm:^7.0.0-alpha.8":
+"@concepta/nestjs-common@npm:7.0.0-alpha.8, @concepta/nestjs-common@npm:^7.0.0-alpha.8":
   version: 7.0.0-alpha.8
   resolution: "@concepta/nestjs-common@npm:7.0.0-alpha.8"
   dependencies:
@@ -82,7 +82,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-swagger-ui@npm:^7.0.0-alpha.8":
+"@concepta/nestjs-swagger-ui@npm:7.0.0-alpha.8":
   version: 7.0.0-alpha.8
   resolution: "@concepta/nestjs-swagger-ui@npm:7.0.0-alpha.8"
   dependencies:
@@ -3587,10 +3587,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"validator@npm:^13.9.0":
-  version: 13.15.20
-  resolution: "validator@npm:13.15.20"
-  checksum: 10c0/65453f0c91ef154ae2da4d5ff3c22acff239d2c15216335ba83895b6f79914708709c641119aa9fba0ec9dd69229c1cf8196aff0081584bdda8a7f50ea97b789
+"validator@npm:13.15.22":
+  version: 13.15.22
+  resolution: "validator@npm:13.15.22"
+  checksum: 10c0/69c0ad0abff0bc9f96faeb6790f5dd4e11b685031e4a115a056f3ed729aaac4d218e61f3582c051cb593305614a0a0d3b5da6ca7d5e0b426fa21be256a0ad852
   languageName: node
   linkType: hard
 
