@@ -163,9 +163,12 @@ export class RocketsAuthSignUpModule {
         // Manually create metadata if provided using userMetadataService
         if (nested) {
           try {
+            // on signup do not consider the id and userId, 
+            const { id, userId, ...safeMetadata } = nested;
+
             userMetadata = await this.metadataModelService.createOrUpdate(
               created.id,
-              nested,
+              safeMetadata,
             );
           } catch (metadataError) {
             // Log error but don't fail signup if metadata creation fails
