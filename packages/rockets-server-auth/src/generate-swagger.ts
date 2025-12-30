@@ -1,6 +1,7 @@
 import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
 import {
   FederatedSqliteEntity,
+  InvitationSqliteEntity,
   OtpSqliteEntity,
   RoleAssignmentSqliteEntity,
   RoleSqliteEntity,
@@ -32,6 +33,10 @@ import { RocketsAuthRoleDto } from './domains/role/dto/rockets-auth-role.dto';
 import { RocketsAuthRoleCreateDto } from './domains/role/dto/rockets-auth-role-create.dto';
 import { RocketsAuthRoleUpdateDto } from './domains/role/dto/rockets-auth-role-update.dto';
 import { RocketsAuthRoleEntityInterface } from './domains/role/interfaces/rockets-auth-role-entity.interface';
+import { RocketsAuthInvitationDto } from './domains/invitation/dto/rockets-auth-invitation.dto';
+import { RocketsAuthInvitationCreateDto } from './domains/invitation/dto/rockets-auth-invitation-create.dto';
+import { RocketsAuthInvitationAcceptDto } from './domains/invitation/dto/rockets-auth-invitation-accept.dto';
+import { RocketsAuthInvitationRevokeDto } from './domains/invitation/dto/rockets-auth-invitation-revoke.dto';
 import { RocketsAuthModule } from './rockets-auth.module';
 
 // Create concrete entity implementations for TypeORM
@@ -61,6 +66,9 @@ class UserOtpEntity extends OtpSqliteEntity {
 
 @Entity()
 class FederatedEntity extends FederatedSqliteEntity {}
+
+@Entity()
+class InvitationEntity extends InvitationSqliteEntity {}
 
 @Entity()
 class UserMetadataEntity implements RocketsAuthUserMetadataEntityInterface {
@@ -169,10 +177,11 @@ async function generateSwaggerJson() {
             UserRoleEntity,
             UserOtpEntity,
             FederatedEntity,
+            InvitationEntity,
             UserMetadataEntity,
           ],
         }),
-        TypeOrmModule.forFeature([UserEntity, RoleEntity, UserMetadataEntity]),
+        TypeOrmModule.forFeature([UserEntity, RoleEntity, UserMetadataEntity, InvitationEntity]),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => {
@@ -188,6 +197,7 @@ async function generateSwaggerJson() {
                 UserRoleEntity,
                 UserOtpEntity,
                 FederatedEntity,
+                InvitationEntity,
                 UserMetadataEntity,
               ],
             };
@@ -199,6 +209,7 @@ async function generateSwaggerJson() {
               UserEntity,
               RoleEntity,
               UserMetadataEntity,
+              InvitationEntity,
             ]),
             TypeOrmExtModule.forFeature({
               user: { entity: UserEntity },
@@ -206,6 +217,7 @@ async function generateSwaggerJson() {
               userRole: { entity: UserRoleEntity },
               userOtp: { entity: UserOtpEntity },
               federated: { entity: FederatedEntity },
+              invitation: { entity: InvitationEntity },
             }),
           ],
           userCrud: {
@@ -226,7 +238,7 @@ async function generateSwaggerJson() {
             },
           },
           roleCrud: {
-            imports: [TypeOrmModule.forFeature([RoleEntity])],
+            imports: [TypeOrmModule.forFeature([RoleEntity, InvitationEntity])],
             adapter: AdminRoleTypeOrmCrudAdapter,
             model: RocketsAuthRoleDto,
             dto: {
@@ -239,6 +251,13 @@ async function generateSwaggerJson() {
               TypeOrmExtModule.forFeature({
                 role: { entity: RoleEntity },
                 userRole: { entity: UserRoleEntity },
+              }),
+            ],
+          },
+          invitation: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                invitation: { entity: InvitationEntity },
               }),
             ],
           },
