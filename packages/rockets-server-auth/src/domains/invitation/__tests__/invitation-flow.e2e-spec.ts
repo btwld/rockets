@@ -36,6 +36,23 @@ const getTestPassword = (): string => {
   return 'CompleteFlow123!';
 };
 
+// Helper function to convert email address to string
+const emailToString = (
+  email:
+    | string
+    | { name: string; address: string }
+    | Array<string | { name: string; address: string }>
+    | undefined,
+): string => {
+  if (!email) return '';
+  if (typeof email === 'string') return email;
+  if (Array.isArray(email)) {
+    const first = email[0];
+    return typeof first === 'string' ? first : first.address;
+  }
+  return email.address;
+};
+
 // Mock email service that captures sent emails
 const sentEmails: Array<{
   to: string;
@@ -46,9 +63,9 @@ const sentEmails: Array<{
 const mockEmailService: EmailSendInterface = {
   sendMail: jest.fn().mockImplementation((mailOptions) => {
     sentEmails.push({
-      to: mailOptions.to,
-      subject: mailOptions.subject,
-      context: mailOptions.context,
+      to: emailToString(mailOptions.to),
+      subject: mailOptions.subject || '',
+      context: mailOptions.context || {},
     });
     return Promise.resolve(undefined);
   }),
@@ -285,6 +302,17 @@ describe('Invitation Flow (E2E)', () => {
   beforeEach(() => {
     sentEmails.length = 0;
     jest.clearAllMocks();
+    // Reset mock email service to default behavior
+    (mockEmailService.sendMail as jest.Mock).mockImplementation(
+      (mailOptions) => {
+        sentEmails.push({
+          to: emailToString(mailOptions.to),
+          subject: mailOptions.subject || '',
+          context: mailOptions.context || {},
+        });
+        return Promise.resolve(undefined);
+      },
+    );
   });
 
   describe('POST /admin/invitations (Create Invitation)', () => {
@@ -314,6 +342,11 @@ describe('Invitation Flow (E2E)', () => {
       expect(response.body).toHaveProperty('userId');
       expect(response.body.category).toBe('user');
       expect(response.body.active).toBe(true);
+
+      // Verify email status fields are present
+      expect(response.body).toHaveProperty('emailSent');
+      expect(response.body.emailSent).toBe(true);
+      expect(response.body.emailError).toBeUndefined();
 
       // Verify email was sent
       expect(mockEmailService.sendMail).toHaveBeenCalledTimes(1);
@@ -368,6 +401,104 @@ describe('Invitation Flow (E2E)', () => {
           // missing category
         })
         .expect(400);
+    });
+
+    it('should return invitation with emailSent=false when email sending fails', async () => {
+      const email = 'emailfail@example.com';
+      const errorMessage = 'SMTP connection timeout';
+
+      // Mock email service to fail using spy
+      const sendMailSpy = jest
+        .spyOn(mockEmailService, 'sendMail')
+        .mockRejectedValueOnce(new Error(errorMessage));
+
+      const response = await request(app.getHttpServer())
+        .post('/admin/invitations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email,
+          category: 'user',
+        })
+        .expect(201);
+
+      // Verify invitation was still created
+      expect(response.body).toHaveProperty('id');
+      expect(response.body).toHaveProperty('code');
+      expect(response.body).toHaveProperty('userId');
+      expect(response.body.category).toBe('user');
+      expect(response.body.active).toBe(true);
+
+      // Verify email status indicates failure
+      expect(response.body).toHaveProperty('emailSent');
+      expect(response.body.emailSent).toBe(false);
+      expect(response.body).toHaveProperty('emailError');
+      expect(response.body.emailError).toBe(
+        'Error while trying to send invitation related email',
+      );
+
+      // Verify email was attempted but failed
+      expect(sendMailSpy).toHaveBeenCalledTimes(1);
+      expect(sentEmails).toHaveLength(0); // No email was successfully sent
+
+      // Restore original mock
+      sendMailSpy.mockRestore();
+    });
+
+    it('should allow reattempt after email sending failure', async () => {
+      const email = 'reattemptafterfail@example.com';
+      const errorMessage = 'SMTP connection timeout';
+
+      // Mock email service to fail on first attempt, succeed on second
+      let callCount = 0;
+      const sendMailSpy = jest
+        .spyOn(mockEmailService, 'sendMail')
+        .mockImplementation((mailOptions) => {
+          callCount++;
+          if (callCount === 1) {
+            // First call fails
+            return Promise.reject(new Error(errorMessage));
+          }
+          // Second call succeeds (reattempt)
+          sentEmails.push({
+            to: emailToString(mailOptions.to),
+            subject: mailOptions.subject || '',
+            context: mailOptions.context || {},
+          });
+          return Promise.resolve(undefined);
+        });
+
+      // 1. Create invitation (email will fail)
+      const invitationRes = await request(app.getHttpServer())
+        .post('/admin/invitations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email,
+          category: 'user',
+        })
+        .expect(201);
+
+      const invitationCode = invitationRes.body.code;
+
+      // Verify invitation was created but email failed
+      expect(invitationRes.body.emailSent).toBe(false);
+      expect(invitationRes.body.emailError).toBe(
+        'Error while trying to send invitation related email',
+      );
+      expect(sentEmails).toHaveLength(0);
+
+      // 2. Use reattempt endpoint to retry sending
+      await request(app.getHttpServer())
+        .post(`/admin/invitations/${invitationCode}/reattempt`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(201);
+
+      // 3. Verify email was sent successfully on reattempt
+      expect(sentEmails).toHaveLength(1);
+      expect(sentEmails[0].to).toBe(email);
+      expect(sendMailSpy).toHaveBeenCalledTimes(2);
+
+      // Restore original mock
+      sendMailSpy.mockRestore();
     });
   });
 

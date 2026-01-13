@@ -7,10 +7,8 @@ import {
 } from '@nestjs/swagger';
 import { InvitationService } from '@concepta/nestjs-invitation';
 import { AdminGuard } from '../../../guards/admin.guard';
-import { RuntimeException } from '@concepta/nestjs-common';
-import { RocketsAuthInvitationException } from '../invitation.exception';
 import { RocketsAuthInvitationCreateDto } from '../dto/rockets-auth-invitation-create.dto';
-import { RocketsAuthInvitationDto } from '../dto/rockets-auth-invitation.dto';
+import { RocketsAuthInvitationResponseDto } from '../dto/rockets-auth-invitation-response.dto';
 
 /**
  * Invitation Controller
@@ -33,21 +31,32 @@ export class InvitationController {
    * Creates a new invitation for a user and immediately sends the email with OTP.
    * Only admins can create invitations.
    *
+   * If email sending fails, the invitation is still returned with emailSent=false
+   * and emailError containing the error message. Use POST /admin/invitations/:code/reattempt
+   * to retry sending the email.
+   *
    * @param dto - Invitation creation data (email, category, constraints)
-   * @returns The created invitation
+   * @returns The created invitation with email sending status
    */
   @Post()
   @ApiOperation({
     summary: 'Create and send invitation (Admin only)',
     description:
-      'Creates a new user invitation and sends an email with OTP for acceptance',
+      'Creates a new user invitation and sends an email with OTP for acceptance. ' +
+      'If email sending fails, the invitation is still returned. Check emailSent field ' +
+      'and use POST /admin/invitations/:code/reattempt to retry.',
   })
   @ApiCreatedResponse({
-    description: 'Invitation created and email sent successfully',
-    type: RocketsAuthInvitationDto,
+    description:
+      'Invitation created. Check emailSent field to verify if email was sent successfully.',
+    type: RocketsAuthInvitationResponseDto,
   })
-  async create(@Body() dto: RocketsAuthInvitationCreateDto) {
+  async create(
+    @Body() dto: RocketsAuthInvitationCreateDto,
+  ): Promise<RocketsAuthInvitationResponseDto> {
     const invitation = await this.invitationService.create(dto);
+    let emailError: string | undefined;
+
     try {
       await this.invitationService.send(invitation);
       this.logger.log('Invitation sent successfully', {
@@ -55,19 +64,19 @@ export class InvitationController {
         email: dto.email,
       });
     } catch (e) {
+      emailError = e instanceof Error ? e.message : String(e);
       this.logger.error('Failed to send invitation', {
         invitationId: invitation.id,
         email: dto.email,
-        error: e instanceof Error ? e.message : String(e),
+        error: emailError,
       });
-      if (e instanceof RuntimeException) {
-        throw e;
-      }
-      throw new RocketsAuthInvitationException(
-        'Error trying to send invitation.',
-        { originalError: e },
-      );
     }
-    return invitation;
+
+    // Return invitation with email status
+    return {
+      ...invitation,
+      emailSent: emailError === undefined,
+      emailError,
+    } as RocketsAuthInvitationResponseDto;
   }
 }

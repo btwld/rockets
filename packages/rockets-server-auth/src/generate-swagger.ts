@@ -33,10 +33,6 @@ import { RocketsAuthRoleDto } from './domains/role/dto/rockets-auth-role.dto';
 import { RocketsAuthRoleCreateDto } from './domains/role/dto/rockets-auth-role-create.dto';
 import { RocketsAuthRoleUpdateDto } from './domains/role/dto/rockets-auth-role-update.dto';
 import { RocketsAuthRoleEntityInterface } from './domains/role/interfaces/rockets-auth-role-entity.interface';
-import { RocketsAuthInvitationDto } from './domains/invitation/dto/rockets-auth-invitation.dto';
-import { RocketsAuthInvitationCreateDto } from './domains/invitation/dto/rockets-auth-invitation-create.dto';
-import { RocketsAuthInvitationAcceptDto } from './domains/invitation/dto/rockets-auth-invitation-accept.dto';
-import { RocketsAuthInvitationRevokeDto } from './domains/invitation/dto/rockets-auth-invitation-revoke.dto';
 import { RocketsAuthModule } from './rockets-auth.module';
 
 // Create concrete entity implementations for TypeORM
@@ -181,7 +177,12 @@ async function generateSwaggerJson() {
             UserMetadataEntity,
           ],
         }),
-        TypeOrmModule.forFeature([UserEntity, RoleEntity, UserMetadataEntity, InvitationEntity]),
+        TypeOrmModule.forFeature([
+          UserEntity,
+          RoleEntity,
+          UserMetadataEntity,
+          InvitationEntity,
+        ]),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => {

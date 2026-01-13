@@ -10,6 +10,7 @@ export { RocketsAuthInvitationDto } from './dto/rockets-auth-invitation.dto';
 export { RocketsAuthInvitationCreateDto } from './dto/rockets-auth-invitation-create.dto';
 export { RocketsAuthInvitationAcceptDto } from './dto/rockets-auth-invitation-accept.dto';
 export { RocketsAuthInvitationRevokeDto } from './dto/rockets-auth-invitation-revoke.dto';
+export { RocketsAuthInvitationResponseDto } from './dto/rockets-auth-invitation-response.dto';
 
 // Interfaces
 export {

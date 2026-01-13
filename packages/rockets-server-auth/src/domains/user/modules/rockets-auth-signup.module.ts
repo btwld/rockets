@@ -1,5 +1,6 @@
 import {
   PasswordPlainInterface,
+  RuntimeException,
   UserCreatableInterface,
 } from '@concepta/nestjs-common';
 import {
@@ -15,6 +16,8 @@ import {
   DynamicModule,
   forwardRef,
   Inject,
+  InternalServerErrorException,
+  Logger,
   Module,
   ValidationPipe,
 } from '@nestjs/common';
@@ -98,6 +101,8 @@ export class RocketsAuthSignUpModule {
       RocketsAuthUserEntityInterface,
       [RocketsAuthUserMetadataEntityInterface]
     > {
+      private readonly logger = new Logger(SignupCrudService.name);
+
       constructor(
         @Inject(admin.adapter)
         protected readonly crudAdapter: CrudAdapter<RocketsAuthUserEntityInterface>,
@@ -163,18 +168,51 @@ export class RocketsAuthSignUpModule {
         // Manually create metadata if provided using userMetadataService
         if (nested) {
           try {
-            // on signup do not consider the id and userId, 
+            // on signup do not consider the id and userId,
             const { id, userId, ...safeMetadata } = nested;
+
+            if (id || userId) {
+              // TODO: review so we dont need this, if we send it with id and userId it will save with wrong info
+              this.logger.log(
+                'Id and userId should not be used on this payload',
+              );
+            }
 
             userMetadata = await this.metadataModelService.createOrUpdate(
               created.id,
               safeMetadata,
             );
           } catch (metadataError) {
-            // Log error but don't fail signup if metadata creation fails
-            console.warn(
-              'Failed to create user metadata during signup:',
-              metadataError,
+            // Log the error with full context for debugging
+            this.logger.error('Failed to create user metadata during signup', {
+              userId: created.id,
+              error: metadataError,
+            });
+
+            // Rollback: delete the created user to maintain data consistency
+            try {
+              await this.userModelService.remove({ id: created.id });
+              this.logger.debug(
+                'Rolled back user creation after metadata failure',
+                {
+                  userId: created.id,
+                },
+              );
+            } catch (rollbackError) {
+              this.logger.error('Failed to rollback user creation', {
+                userId: created.id,
+                error: rollbackError,
+              });
+            }
+
+            // If it's a known HTTP exception (validation, bad request, etc.), rethrow it
+            if (metadataError instanceof RuntimeException) {
+              throw metadataError;
+            }
+
+            // Otherwise, throw a generic internal server error
+            throw new InternalServerErrorException(
+              'Failed to complete signup. Please try again.',
             );
           }
         }

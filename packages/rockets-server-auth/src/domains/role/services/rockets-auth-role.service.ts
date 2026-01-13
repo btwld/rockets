@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { RoleModelService, RoleService } from '@concepta/nestjs-role';
 import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../../../shared/constants/rockets-auth.constants';
 import { RocketsAuthSettingsInterface } from '../../../shared/interfaces/rockets-auth-settings.interface';
@@ -12,6 +12,8 @@ import { getErrorDetails } from '../../../shared/utils/error-logging.helper';
  */
 @Injectable()
 export class RocketsAuthRoleService {
+  private readonly logger = new Logger(RocketsAuthRoleService.name);
+
   constructor(
     @Inject(RoleModelService)
     private readonly roleModelService: RoleModelService,
@@ -37,6 +39,10 @@ export class RocketsAuthRoleService {
   ): Promise<boolean> {
     // Check if default role is configured
     if (!this.settings.role.defaultUserRoleName) {
+      this.logger.warn(
+        'No default role configured in settings.role.defaultUserRoleName',
+        { userId },
+      );
       return false;
     }
 
@@ -56,11 +62,19 @@ export class RocketsAuthRoleService {
         return true;
       }
 
+      // Role not found in database
+      this.logger.warn(
+        `Default role '${this.settings.role.defaultUserRoleName}' not found in database`,
+        { userId },
+      );
       return false;
     } catch (error) {
       // Always log the error for debugging
       const { errorMessage } = getErrorDetails(error);
-      console.warn(`Failed to assign default role: ${errorMessage}`);
+      this.logger.error(`Failed to assign default role: ${errorMessage}`, {
+        userId,
+        error: errorMessage,
+      });
 
       // Throw if requested (for strict error handling contexts)
       if (throwOnError) {
