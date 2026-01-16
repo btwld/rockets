@@ -103,20 +103,71 @@ export interface RoleCrudOptionsExtrasInterface {
   };
 }
 
+/**
+ * Configuration interface for disabling specific controllers.
+ *
+ * All controllers are **enabled by default**. Set a property to `true` to disable
+ * that specific controller. This allows SDK users to selectively disable features
+ * they don't need without requiring explicit enablement of every feature.
+ *
+ * @example
+ * ```typescript
+ * // Disable only the password and signup controllers
+ * disableController: {
+ *   password: true,
+ *   signup: true,
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // All controllers enabled (default behavior, no config needed)
+ * disableController: {}
+ * ```
+ */
 export interface DisableControllerOptionsInterface {
-  password?: boolean; // true = disabled
-  refresh?: boolean; // true = disabled
-  recovery?: boolean; // true = disabled
-  otp?: boolean; // true = disabled
-  oAuth?: boolean; // true = disabled
-  signup?: boolean; // true = disabled (admin submodule)
-  admin?: boolean; // true = disabled (admin submodule)
-  adminRoles?: boolean; // true = disabled (roles admin submodule)
-  user?: boolean; // legacy/tests compatibility
-  invitation?: boolean; // true = disabled (invitation creation)
-  invitationAcceptance?: boolean; // true = disabled (invitation acceptance)
-  invitationRevocation?: boolean; // true = disabled (invitation revocation)
-  invitationReattempt?: boolean; // true = disabled (invitation reattempt)
+  /** Set to `true` to disable the password change controller. Default: false (enabled) */
+  password?: boolean;
+
+  /** Set to `true` to disable the token refresh controller. Default: false (enabled) */
+  refresh?: boolean;
+
+  /** Set to `true` to disable the password recovery controller. Default: false (enabled) */
+  recovery?: boolean;
+
+  /** Set to `true` to disable the OTP (One-Time Password) controller. Default: false (enabled) */
+  otp?: boolean;
+
+  /** Set to `true` to disable the OAuth controllers (Google, Apple, GitHub, etc.). Default: false (enabled) */
+  oAuth?: boolean;
+
+  /** Set to `true` to disable the user signup controller. Default: false (enabled) */
+  signup?: boolean;
+
+  /** Set to `true` to disable the admin user management submodule. Default: false (enabled) */
+  admin?: boolean;
+
+  /** Set to `true` to disable the admin roles management submodule. Default: false (enabled) */
+  adminRoles?: boolean;
+
+  /**
+   * Set to `true` to disable the user controller. Default: false (enabled)
+   *
+   * @deprecated Legacy/tests compatibility - prefer using specific controller flags
+   */
+  user?: boolean;
+
+  /** Set to `true` to disable the invitation creation controller. Default: false (enabled) */
+  invitation?: boolean;
+
+  /** Set to `true` to disable the invitation acceptance controller. Default: false (enabled) */
+  invitationAcceptance?: boolean;
+
+  /** Set to `true` to disable the invitation revocation controller. Default: false (enabled) */
+  invitationRevocation?: boolean;
+
+  /** Set to `true` to disable the invitation reattempt controller. Default: false (enabled) */
+  invitationReattempt?: boolean;
 }
 
 export interface RocketsAuthOptionsExtrasInterface
