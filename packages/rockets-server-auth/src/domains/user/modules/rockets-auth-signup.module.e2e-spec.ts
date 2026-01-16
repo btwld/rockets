@@ -23,6 +23,9 @@ import { UserMetadataEntityFixture } from '../../../__fixtures__/user/user-metad
 import { UserMetadataTypeOrmCrudAdapterFixture } from '../../../__fixtures__/services/user-metadata-typeorm-crud.adapter.fixture';
 import { UserFixture } from '../../../__fixtures__/user/user.entity.fixture';
 import { RocketsAuthModule } from '../../../rockets-auth.module';
+import { UserModelService } from '@concepta/nestjs-user';
+import { UserMetadataModelService } from '../constants/user-metadata.constants';
+import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
 
 // Mock email service
 const mockEmailService: EmailSendInterface = {
@@ -49,6 +52,7 @@ class MockConfigModule {}
 
 describe('RocketsAuthSignUpModule (e2e)', () => {
   let app: INestApplication;
+  let userModelService: UserModelService;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -178,6 +182,7 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    userModelService = app.get(UserModelService);
     const exceptionsFilter = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
@@ -651,6 +656,41 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
       expect(response.body.username).toBe('validmetadata');
       expect(response.body.email).toBe('validmetadata@example.com');
       expect(response.body.id).toBeDefined();
+    });
+
+    it('should rollback user creation when metadata creation fails', async () => {
+      // Get metadata service and mock it to throw
+      const metadataService = app.get<GenericUserMetadataModelService>(
+        UserMetadataModelService,
+      );
+      jest
+        .spyOn(metadataService, 'createOrUpdate')
+        .mockRejectedValueOnce(new Error('Database connection failed'));
+
+      const userData = {
+        username: 'rollbackuser',
+        email: 'rollbackuser@example.com',
+        password: 'Password123!',
+        active: true,
+        userMetadata: { firstName: 'Test' }, // Must include metadata to trigger the failure
+      };
+
+      // Should return 500 Internal Server Error
+      const response = await request(app.getHttpServer())
+        .post('/signup')
+        .send(userData)
+        .expect(500);
+
+      expect(response.body.message).toBe(
+        'Failed to complete signup. Please try again.',
+      );
+
+      // Verify user was NOT created (rollback happened)
+      const users = await userModelService.find({
+        where: { email: 'rollbackuser@example.com' },
+      });
+
+      expect(users).toHaveLength(0); // User should not exist due to rollback
     });
   });
 });
