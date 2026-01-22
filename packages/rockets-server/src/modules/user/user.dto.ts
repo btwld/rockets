@@ -57,6 +57,7 @@ export class UserResponseDto {
   @ApiPropertyOptional({
     description: 'User roles from auth provider',
     example: ['user', 'admin'],
+    type: String,
     isArray: true,
   })
   @IsOptional()
