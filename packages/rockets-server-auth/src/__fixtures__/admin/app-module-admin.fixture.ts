@@ -1,10 +1,14 @@
 import { Global, Module } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AUTHENTICATION_MODULE_SETTINGS_TOKEN } from '@concepta/nestjs-authentication';
 
+import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 
 import { RocketsAuthModule } from '../../rockets-auth.module';
 import { FederatedEntityFixture } from '../federated/federated.entity.fixture';
+import { InvitationEntityFixture } from '../invitation/invitation.entity.fixture';
 import { ormConfig } from '../ormconfig.fixture';
 import { RoleEntityFixture } from '../role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../role/user-role.entity.fixture';
@@ -27,6 +31,7 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
 @Global()
 @Module({
   imports: [
+    EventModule.forRoot({}),
     // TypeORM datasource
     TypeOrmModule.forRoot({
       ...ormConfig,
@@ -38,6 +43,7 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
         FederatedEntityFixture,
         RoleEntityFixture,
         UserRoleEntityFixture,
+        InvitationEntityFixture,
       ],
     }),
     // Dynamic repos for feature modules
@@ -54,6 +60,7 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
             FederatedEntityFixture,
             UserRoleEntityFixture,
             RoleEntityFixture,
+            InvitationEntityFixture,
           ],
         };
       },
@@ -64,6 +71,7 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
       userRole: { entity: UserRoleEntityFixture },
       userOtp: { entity: UserOtpEntityFixture },
       federated: { entity: FederatedEntityFixture },
+      invitation: { entity: InvitationEntityFixture },
     }),
     TypeOrmModule.forFeature([
       UserFixture,
@@ -82,6 +90,12 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
           updateOne: RocketsAuthUserUpdateDto,
         },
         userMetadataConfig: {
+          imports: [
+            TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+            TypeOrmExtModule.forFeature({
+              userMetadata: { entity: UserMetadataEntityFixture },
+            }),
+          ],
           adapter: UserMetadataAdapter,
           entity: UserMetadataEntityFixture,
           createDto: RocketsAuthUserMetadataDto,
@@ -100,12 +114,46 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
       enableGlobalJWTGuard: true,
       inject: [],
       useFactory: () => ({
+        settings: {
+          role: { adminRoleName: 'admin' },
+          email: {
+            from: 'test@test.com',
+            baseUrl: 'http://localhost',
+            templates: {
+              sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+              invitation: {
+                logo: '',
+                fileName: 'inv.hbs',
+                subject: 'Invitation',
+              },
+              invitationAccepted: {
+                logo: '',
+                fileName: 'inv-acc.hbs',
+                subject: 'Accepted',
+              },
+            },
+          },
+          otp: {
+            assignment: 'userOtp' as const,
+            category: 'test',
+            type: 'uuid',
+            expiresIn: '1h',
+          },
+        },
         jwt: {
           settings: {
             access: { secret: 'test-secret' },
             refresh: { secret: 'test-secret' },
             default: { secret: 'test-secret' },
           },
+        },
+        invitation: {
+          imports: [
+            TypeOrmExtModule.forFeature({
+              invitation: { entity: InvitationEntityFixture },
+            }),
+          ],
+          userModelService: undefined as never,
         },
         services: {
           mailerService: { sendMail: () => Promise.resolve() },
@@ -114,6 +162,11 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
     }),
   ],
   providers: [
+    Reflector,
+    {
+      provide: AUTHENTICATION_MODULE_SETTINGS_TOKEN,
+      useValue: {},
+    },
     // {
     //   provide: APP_GUARD,
     //   useClass: JwtAuthGuard,

@@ -34,7 +34,8 @@
       "Bash(timeout 10s npm run start:dev)",
       "Bash(npm install:*)",
       "Bash(yarn add:*)",
-      "Bash(yarn test:*)"
+      "Bash(yarn test:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

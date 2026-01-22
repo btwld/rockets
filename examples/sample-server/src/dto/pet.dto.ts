@@ -18,6 +18,7 @@ import {
   PetModelUpdatableInterface,
   PetStatus,
 } from '../modules/pet/pet.interface';
+import { UUID } from 'typeorm/driver/mongodb/bson.typings';
 
 /**
  * Base Pet DTO that implements the PetInterface

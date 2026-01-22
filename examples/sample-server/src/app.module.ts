@@ -4,7 +4,7 @@ import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import {
   RocketsModule,
   RocketsOptionsInterface,
-} from '@bitwild/rockets-server';
+} from '@bitwild/rockets';
 import { DocumentBuilder } from '@nestjs/swagger';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
 import { PetEntity } from './entities/pet.entity';

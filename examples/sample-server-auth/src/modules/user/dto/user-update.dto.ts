@@ -1,4 +1,4 @@
-import { RocketsAuthUserUpdateDto } from '@bitwild/rockets-server-auth';
+import { RocketsAuthUserUpdateDto } from '@bitwild/rockets-auth';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';

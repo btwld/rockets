@@ -1,13 +1,17 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { EventModule } from '@concepta/nestjs-event';
 import {
   RocketsAuthModule,
   RocketsJwtAuthProvider,
-} from '@bitwild/rockets-server-auth';
+} from '@bitwild/rockets-auth';
 import {
   RocketsModule,
-} from '@bitwild/rockets-server';
+} from '@bitwild/rockets';
+import {
+  EmailSendOptionsInterface,
+} from '@concepta/nestjs-common';
 
 // Import ACL configuration
 import { ACService } from './access-control.service';
@@ -26,6 +30,7 @@ import {
   UserOtpEntity,
   UserRoleEntity,
   FederatedEntity,
+  InvitationEntity,
   UserDto,
   UserCreateDto,
   UserUpdateDto,
@@ -49,6 +54,7 @@ import { RoleCreateDto } from './modules/role/role.dto';
 @Global()
 @Module({
   imports: [
+    EventModule.forRoot({}),
     // TypeORM configuration with SQLite in-memory
     TypeOrmExtModule.forRoot({
       type: 'sqlite',
@@ -62,7 +68,8 @@ import { RoleCreateDto } from './modules/role/role.dto';
         UserOtpEntity,
         RoleEntity,
         UserRoleEntity,
-        FederatedEntity
+        FederatedEntity,
+        InvitationEntity
       ],
       synchronize: true,
       dropSchema: true,
@@ -77,6 +84,7 @@ import { RoleCreateDto } from './modules/role/role.dto';
       userRole: { entity: UserRoleEntity },
       userOtp: { entity: UserOtpEntity },
       federated: { entity: FederatedEntity },
+      invitation: { entity: InvitationEntity },
     }), 
     // RocketsAuthModule MUST be imported BEFORE RocketsModule
     // because RocketsModule depends on RocketsJwtAuthProvider from RocketsAuthModule
@@ -84,6 +92,8 @@ import { RoleCreateDto } from './modules/role/role.dto';
       imports: [
         TypeOrmExtModule.forFeature({
           user: { entity: UserEntity },
+          userMetadata: { entity: UserMetadataEntity },
+          invitation: { entity: InvitationEntity },
         }),
       ],
       // this should be false if we are using the global guard from rockets server
@@ -93,8 +103,9 @@ import { RoleCreateDto } from './modules/role/role.dto';
         // Required services configuration
         services: {
           mailerService: {
-            sendMail: async (options: { to: string; subject?: string; text?: string; html?: string }) => {
+            sendMail: async (options: EmailSendOptionsInterface) => {
               console.log('📧 Email would be sent:', options.to);
+              console.log('📧 Email would be html:', options);
               return Promise.resolve();
             },
           },
@@ -110,8 +121,18 @@ import { RoleCreateDto } from './modules/role/role.dto';
             baseUrl: 'http://localhost:3000',
             templates: {
               sendOtp: {
-                fileName: __dirname + '/../../assets/send-otp.template.hbs',
+                fileName: __dirname + '/../assets/send-otp.template.hbs',
                 subject: 'Your One Time Password',
+              },
+              invitation: {
+                logo: '',
+                fileName: __dirname + '/../assets/invitation.template.hbs',
+                subject: 'You have been invited',
+              },
+              invitationAccepted: {
+                logo: '',
+                fileName: __dirname + '/../assets/invitation-accepted.template.hbs',
+                subject: 'Invitation Accepted',
               },
             },
           },
@@ -124,9 +145,17 @@ import { RoleCreateDto } from './modules/role/role.dto';
         },
       }),
       // Admin user CRUD functionality
+      // This configuration is also used by:
+      // - InvitationAcceptanceModule: validates userMetadata during invitation acceptance
+      // - SignUpModule: validates userMetadata during user signup
+      // - UserMetadataModule: provides CRUD operations for user metadata
       userCrud: {
         imports: [
-          TypeOrmModule.forFeature([UserEntity, UserMetadataEntity])
+          TypeOrmModule.forFeature([UserEntity, UserMetadataEntity]),
+          TypeOrmExtModule.forFeature({
+            user: { entity: UserEntity },
+            userMetadata: { entity: UserMetadataEntity },
+          }),
         ],
         adapter: UserTypeOrmCrudAdapter,
         model: UserDto,
@@ -134,11 +163,21 @@ import { RoleCreateDto } from './modules/role/role.dto';
           createOne: UserCreateDto,
           updateOne: UserUpdateDto,
         },
+        // User Metadata Configuration
+        // The updateDto is used by InvitationAcceptanceListener to validate
+        // userMetadata when users accept invitations (e.g., firstName, lastName)
         userMetadataConfig: {
+          imports: [
+            TypeOrmModule.forFeature([UserEntity, UserMetadataEntity]),
+            TypeOrmExtModule.forFeature({
+              user: { entity: UserEntity },
+              userMetadata: { entity: UserMetadataEntity },
+            }),
+          ],
           adapter: UserMetadataTypeOrmCrudAdapter,
           entity: UserMetadataEntity,
           createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto,
+          updateDto: UserMetadataUpdateDto, // Used for validation in invitation acceptance
         },
       },
       // Admin role CRUD functionality
@@ -169,7 +208,9 @@ import { RoleCreateDto } from './modules/role/role.dto';
       ],
       inject:[RocketsJwtAuthProvider],
       useFactory: (rocketsJwtAuthProvider: RocketsJwtAuthProvider) => ({
-        settings: {},
+        settings: {
+          
+        },
         // This enables the serverGuard that needs rocketsJwtAuthProvider
         enableGlobalGuard: true,
         authProvider: rocketsJwtAuthProvider,

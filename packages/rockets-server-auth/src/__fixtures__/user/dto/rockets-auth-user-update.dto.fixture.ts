@@ -12,9 +12,6 @@ import { RocketsAuthUserFixtureDto } from './rockets-auth-user.dto.fixture';
  */
 export class RocketsAuthUserUpdateDtoFixture
   extends PickType(RocketsAuthUserFixtureDto, [
-    'id',
-    'username',
-    'email',
     'active',
     'userMetadata',
   ] as const)

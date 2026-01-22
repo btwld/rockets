@@ -1,6 +1,9 @@
 export { AdminUserRolesController } from './controllers/admin-user-roles.controller';
 export { RocketsAuthRoleAdminModule } from './modules/rockets-auth-role-admin.module';
 
+// Services
+export { RocketsAuthRoleService } from './services/rockets-auth-role.service';
+
 // Interfaces
 export { RocketsAuthRoleInterface } from './interfaces/rockets-auth-role.interface';
 export { RocketsAuthRoleEntityInterface } from './interfaces/rockets-auth-role-entity.interface';

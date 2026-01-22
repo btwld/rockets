@@ -1,4 +1,5 @@
 import { EmailSendInterface, ExceptionsFilter } from '@concepta/nestjs-common';
+import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { INestApplication, Module, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -8,6 +9,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import request from 'supertest';
 import { AdminUserTypeOrmCrudAdapter } from '../../../__fixtures__/admin/admin-user-crud.adapter';
 import { FederatedEntityFixture } from '../../../__fixtures__/federated/federated.entity.fixture';
+import { InvitationEntityFixture } from '../../../__fixtures__/invitation/invitation.entity.fixture';
 import { ormConfig } from '../../../__fixtures__/ormconfig.fixture';
 import { RoleEntityFixture } from '../../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../../__fixtures__/role/user-role.entity.fixture';
@@ -21,6 +23,9 @@ import { UserMetadataEntityFixture } from '../../../__fixtures__/user/user-metad
 import { UserMetadataTypeOrmCrudAdapterFixture } from '../../../__fixtures__/services/user-metadata-typeorm-crud.adapter.fixture';
 import { UserFixture } from '../../../__fixtures__/user/user.entity.fixture';
 import { RocketsAuthModule } from '../../../rockets-auth.module';
+import { UserModelService } from '@concepta/nestjs-user';
+import { UserMetadataModelService } from '../constants/user-metadata.constants';
+import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
 
 // Mock email service
 const mockEmailService: EmailSendInterface = {
@@ -47,11 +52,13 @@ class MockConfigModule {}
 
 describe('RocketsAuthSignUpModule (e2e)', () => {
   let app: INestApplication;
+  let userModelService: UserModelService;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         MockConfigModule,
+        EventModule.forRoot({}),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => ({ ...ormConfig }),
@@ -66,6 +73,7 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
             FederatedEntityFixture,
             UserRoleEntityFixture,
             RoleEntityFixture,
+            InvitationEntityFixture,
           ],
         }),
         TypeOrmModule.forFeature([
@@ -89,6 +97,12 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
               updateOne: RocketsAuthUserUpdateDtoFixture,
             },
             userMetadataConfig: {
+              imports: [
+                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+                TypeOrmExtModule.forFeature({
+                  userMetadata: { entity: UserMetadataEntityFixture },
+                }),
+              ],
               adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
@@ -129,12 +143,46 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
               }),
             ],
           },
+          invitation: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                invitation: { entity: InvitationEntityFixture },
+              }),
+            ],
+          },
+          settings: {
+            role: { adminRoleName: 'admin' },
+            email: {
+              from: 'test@test.com',
+              baseUrl: 'http://localhost',
+              templates: {
+                sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                invitation: {
+                  logo: '',
+                  fileName: 'inv.hbs',
+                  subject: 'Invitation',
+                },
+                invitationAccepted: {
+                  logo: '',
+                  fileName: 'inv-acc.hbs',
+                  subject: 'Accepted',
+                },
+              },
+            },
+            otp: {
+              assignment: 'userOtp' as const,
+              category: 'test',
+              type: 'uuid',
+              expiresIn: '1h',
+            },
+          },
           services: { mailerService: mockEmailService },
         }),
       ],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    userModelService = app.get(UserModelService);
     const exceptionsFilter = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
@@ -608,6 +656,41 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
       expect(response.body.username).toBe('validmetadata');
       expect(response.body.email).toBe('validmetadata@example.com');
       expect(response.body.id).toBeDefined();
+    });
+
+    it('should rollback user creation when metadata creation fails', async () => {
+      // Get metadata service and mock it to throw
+      const metadataService = app.get<GenericUserMetadataModelService>(
+        UserMetadataModelService,
+      );
+      jest
+        .spyOn(metadataService, 'createOrUpdate')
+        .mockRejectedValueOnce(new Error('Database connection failed'));
+
+      const userData = {
+        username: 'rollbackuser',
+        email: 'rollbackuser@example.com',
+        password: 'Password123!',
+        active: true,
+        userMetadata: { firstName: 'Test' }, // Must include metadata to trigger the failure
+      };
+
+      // Should return 500 Internal Server Error
+      const response = await request(app.getHttpServer())
+        .post('/signup')
+        .send(userData)
+        .expect(500);
+
+      expect(response.body.message).toBe(
+        'Failed to complete signup. Please try again.',
+      );
+
+      // Verify user was NOT created (rollback happened)
+      const users = await userModelService.find({
+        where: { email: 'rollbackuser@example.com' },
+      });
+
+      expect(users).toHaveLength(0); // User should not exist due to rollback
     });
   });
 });

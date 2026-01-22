@@ -21,7 +21,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthUser } from '@concepta/nestjs-authentication';
-import { AuthorizedUser } from '@bitwild/rockets-server';
+import { AuthorizedUser } from '@bitwild/rockets';
 import { PetCreateDto, PetUpdateDto, PetResponseDto } from '../dto/pet.dto';
 import { PetModelService } from '../modules/pet/pet-model.service';
 import { PetEntityInterface } from '../modules/pet/pet.interface';

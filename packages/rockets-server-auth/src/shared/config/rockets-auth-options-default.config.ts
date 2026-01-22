@@ -1,7 +1,10 @@
 import { registerAs } from '@nestjs/config';
 
 import { RocketsAuthSettingsInterface } from '../interfaces/rockets-auth-settings.interface';
-import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../constants/rockets-auth.constants';
+import {
+  ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+  ROCKETS_AUTH_OTP_ASSIGNMENT,
+} from '../constants/rockets-auth.constants';
 
 /**
  * Authentication combined configuration
@@ -27,10 +30,20 @@ export const rocketsAuthOptionsDefaultConfig = registerAs(
             fileName: __dirname + '/../assets/send-otp.template.hbs',
             subject: 'Your One Time Password',
           },
+          invitation: {
+            logo: '',
+            fileName: __dirname + '/../assets/invitation.template.hbs',
+            subject: 'You have been invited',
+          },
+          invitationAccepted: {
+            logo: '',
+            fileName: __dirname + '/../assets/invitation-accepted.template.hbs',
+            subject: 'Invitation Accepted',
+          },
         },
       },
       otp: {
-        assignment: 'userOtp',
+        assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
         category: 'auth-login',
         type: 'uuid',
         expiresIn: '1h',

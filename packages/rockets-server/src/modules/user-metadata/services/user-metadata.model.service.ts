@@ -111,6 +111,7 @@ export class GenericUserMetadataModelService
     try {
       const userMetadata = await this.findByUserId(userId);
       if (!userMetadata) {
+        // TODO update exception
         throw new NotFoundException(
           `UserMetadata for user ID ${userId} not found`,
         );

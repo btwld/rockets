@@ -1,6 +1,7 @@
 import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
 import {
   FederatedSqliteEntity,
+  InvitationSqliteEntity,
   OtpSqliteEntity,
   RoleAssignmentSqliteEntity,
   RoleSqliteEntity,
@@ -63,9 +64,10 @@ class UserOtpEntity extends OtpSqliteEntity {
 class FederatedEntity extends FederatedSqliteEntity {}
 
 @Entity()
-class UserMetadataEntity implements RocketsAuthUserMetadataEntityInterface {
-  [key: string]: unknown;
+class InvitationEntity extends InvitationSqliteEntity {}
 
+@Entity()
+class UserMetadataEntity implements RocketsAuthUserMetadataEntityInterface {
   @Column({ type: 'varchar', primary: true })
   id!: string;
 
@@ -171,10 +173,16 @@ async function generateSwaggerJson() {
             UserRoleEntity,
             UserOtpEntity,
             FederatedEntity,
+            InvitationEntity,
             UserMetadataEntity,
           ],
         }),
-        TypeOrmModule.forFeature([UserEntity, RoleEntity, UserMetadataEntity]),
+        TypeOrmModule.forFeature([
+          UserEntity,
+          RoleEntity,
+          UserMetadataEntity,
+          InvitationEntity,
+        ]),
         TypeOrmExtModule.forRootAsync({
           inject: [],
           useFactory: () => {
@@ -190,6 +198,7 @@ async function generateSwaggerJson() {
                 UserRoleEntity,
                 UserOtpEntity,
                 FederatedEntity,
+                InvitationEntity,
                 UserMetadataEntity,
               ],
             };
@@ -201,6 +210,7 @@ async function generateSwaggerJson() {
               UserEntity,
               RoleEntity,
               UserMetadataEntity,
+              InvitationEntity,
             ]),
             TypeOrmExtModule.forFeature({
               user: { entity: UserEntity },
@@ -208,6 +218,7 @@ async function generateSwaggerJson() {
               userRole: { entity: UserRoleEntity },
               userOtp: { entity: UserOtpEntity },
               federated: { entity: FederatedEntity },
+              invitation: { entity: InvitationEntity },
             }),
           ],
           userCrud: {
@@ -228,7 +239,7 @@ async function generateSwaggerJson() {
             },
           },
           roleCrud: {
-            imports: [TypeOrmModule.forFeature([RoleEntity])],
+            imports: [TypeOrmModule.forFeature([RoleEntity, InvitationEntity])],
             adapter: AdminRoleTypeOrmCrudAdapter,
             model: RocketsAuthRoleDto,
             dto: {
@@ -244,7 +255,40 @@ async function generateSwaggerJson() {
               }),
             ],
           },
+          invitation: {
+            imports: [
+              TypeOrmExtModule.forFeature({
+                invitation: { entity: InvitationEntity },
+              }),
+            ],
+          },
           useFactory: () => ({
+            settings: {
+              role: { adminRoleName: 'admin' },
+              email: {
+                from: 'test@test.com',
+                baseUrl: 'http://localhost',
+                templates: {
+                  sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+                  invitation: {
+                    logo: '',
+                    fileName: 'inv.hbs',
+                    subject: 'Invitation',
+                  },
+                  invitationAccepted: {
+                    logo: '',
+                    fileName: 'inv-acc.hbs',
+                    subject: 'Accepted',
+                  },
+                },
+              },
+              otp: {
+                assignment: 'userOtp' as const,
+                category: 'test',
+                type: 'uuid',
+                expiresIn: '1h',
+              },
+            },
             services: {
               mailerService: {
                 sendMail: () => Promise.resolve(),

@@ -43,7 +43,7 @@ import {
 import { PetEntity } from './pet.entity';
 import { PetVaccinationEntity, PetVaccinationCrudService } from '../pet-vaccination';
 import { PetAppointmentEntity, PetAppointmentCrudService } from '../pet-appointment';
-import { AuthorizedUser } from '@bitwild/rockets-server';
+import { AuthorizedUser } from '@bitwild/rockets';
 import { AuthUser } from '@concepta/nestjs-authentication';
 import { UseGuards } from '@nestjs/common';
 import { AuthJwtGuard } from '@concepta/nestjs-auth-jwt';

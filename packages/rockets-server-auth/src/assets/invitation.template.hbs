@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You've been invited!</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo img {
+            max-width: 150px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .cta-container {
+            text-align: center;
+        }
+        .expiry {
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {{#if logo}}
+        <div class="logo">
+            <img src="{{logo}}" alt="Logo">
+        </div>
+        {{/if}}
+        
+        <h1>You've been invited!</h1>
+        
+        <p>Hello!</p>
+        
+        <p>You have received an invitation to join our platform. We're excited to have you on board!</p>
+        
+        <p>To complete your registration and accept this invitation, please click the button below:</p>
+        
+        <div class="cta-container">
+            <a href="{{tokenUrl}}" class="cta-button">Accept Invitation</a>
+        </div>
+        
+        <p class="expiry">This invitation link will expire on <strong>{{tokenExp}}</strong></p>
+        
+        <div class="footer">
+            <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+            <p>If you're having trouble with the button above, copy and paste the following URL into your web browser:</p>
+            <p style="word-break: break-all; font-size: 0.8em;">{{tokenUrl}}</p>
+        </div>
+    </div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

@@ -1,8 +1,9 @@
 import { AccessControlOptionsInterface } from '@concepta/nestjs-access-control';
 import { AuthRouterOptionsExtrasInterface } from '@concepta/nestjs-auth-router';
 import { CrudAdapter } from '@concepta/nestjs-crud';
+import { RepositoryInterface } from '@concepta/nestjs-common';
 import { RocketsAuthUserMetadataEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
-import { RocketsAuthUserMetadataCreateDtoInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-dto.interface';
+import { RocketsAuthUserMetadataCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
 import { RoleOptionsExtrasInterface } from '@concepta/nestjs-role/dist/interfaces/role-options-extras.interface';
 import { DynamicModule, Type } from '@nestjs/common';
 import { RocketsAuthUserEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-entity.interface';
@@ -11,6 +12,8 @@ import { RocketsAuthUserUpdatableInterface } from '../../domains/user/interfaces
 import { RocketsAuthRoleEntityInterface } from '../../domains/role/interfaces/rockets-auth-role-entity.interface';
 import { RocketsAuthRoleCreatableInterface } from '../../domains/role/interfaces/rockets-auth-role-creatable.interface';
 import { RocketsAuthRoleUpdatableInterface } from '../../domains/role/interfaces/rockets-auth-role-updatable.interface';
+import { GenericUserMetadataModelService } from '../../domains/user/services/rockets-auth-user-metadata.model.service';
+import { RocketsAuthUserMetadataModelUpdatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
 
 /**
  * Generic userMetadata configuration interface
@@ -19,20 +22,27 @@ import { RocketsAuthRoleUpdatableInterface } from '../../domains/role/interfaces
  * Follows the same pattern as rockets-server's UserMetadataConfigInterface.
  */
 export interface UserMetadataConfigInterface<
-  TCreateDto extends RocketsAuthUserMetadataCreateDtoInterface = RocketsAuthUserMetadataCreateDtoInterface,
-  TUpdateDto extends RocketsAuthUserMetadataEntityInterface = RocketsAuthUserMetadataEntityInterface,
+  TCreateDto extends RocketsAuthUserMetadataCreatableInterface = RocketsAuthUserMetadataCreatableInterface,
+  TUpdateDto extends RocketsAuthUserMetadataModelUpdatableInterface = RocketsAuthUserMetadataModelUpdatableInterface,
 > {
+  /**
+   * Optional module imports for UserMetadata configuration
+   * Use this for TypeORM entity registration when using test fixtures
+   */
+  imports?: DynamicModule[];
   /**
    * Required adapter for user metadata entity. Relations are wired opinionately
    * as one-to-one on property 'userMetadata', foreignKey 'userId', primaryKey 'id'.
+   *
+   * This is the ONLY place where userMetadataAdapter needs to be configured.
    */
   adapter: Type<CrudAdapter<RocketsAuthUserMetadataEntityInterface>>;
   /**
-   * Optional entity class for user metadata.
+   * Entity class for user metadata.
    * Used for dynamic repository registration with TypeOrmExtModule.
-   * If not provided, the module will extract the repository from the adapter.
+   * ALWAYS required - every adapter has an associated entity.
    */
-  entity?: Type;
+  entity: Type;
   /**
    * UserMetadata create DTO class
    * Must extend RocketsAuthUserMetadataCreateDtoInterface
@@ -43,9 +53,27 @@ export interface UserMetadataConfigInterface<
    * Must extend RocketsAuthUserMetadataEntityInterface
    */
   updateDto: new () => TUpdateDto;
+  /**
+   * Optional custom UserMetadataModelService override
+   * If provided, this class will be instantiated instead of the default GenericUserMetadataModelService
+   * Useful for implementing custom metadata logic while maintaining centralization
+   */
+  userMetadataModelService?: new (
+    repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
+    createDto: new () => TCreateDto,
+    updateDto: new () => TUpdateDto,
+  ) => GenericUserMetadataModelService;
 }
 
 export interface UserCrudOptionsExtrasInterface {
+  /**
+   * Module imports for user CRUD
+   *
+   * IMPORTANT: Must include TypeOrmExtModule.forFeature with 'authUserMetadata' key:
+   * TypeOrmExtModule.forFeature(\{ authUserMetadata: \{ entity: YourUserMetadataEntity \} \})
+   *
+   * This is required for the AuthUserMetadataModelService to work correctly.
+   */
   imports?: DynamicModule['imports'];
   path?: string;
   model: Type;
@@ -75,16 +103,71 @@ export interface RoleCrudOptionsExtrasInterface {
   };
 }
 
+/**
+ * Configuration interface for disabling specific controllers.
+ *
+ * All controllers are **enabled by default**. Set a property to `true` to disable
+ * that specific controller. This allows SDK users to selectively disable features
+ * they don't need without requiring explicit enablement of every feature.
+ *
+ * @example
+ * ```typescript
+ * // Disable only the password and signup controllers
+ * disableController: {
+ *   password: true,
+ *   signup: true,
+ * }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // All controllers enabled (default behavior, no config needed)
+ * disableController: {}
+ * ```
+ */
 export interface DisableControllerOptionsInterface {
-  password?: boolean; // true = disabled
-  refresh?: boolean; // true = disabled
-  recovery?: boolean; // true = disabled
-  otp?: boolean; // true = disabled
-  oAuth?: boolean; // true = disabled
-  signup?: boolean; // true = disabled (admin submodule)
-  admin?: boolean; // true = disabled (admin submodule)
-  adminRoles?: boolean; // true = disabled (roles admin submodule)
-  user?: boolean; // legacy/tests compatibility
+  /** Set to `true` to disable the password change controller. Default: false (enabled) */
+  password?: boolean;
+
+  /** Set to `true` to disable the token refresh controller. Default: false (enabled) */
+  refresh?: boolean;
+
+  /** Set to `true` to disable the password recovery controller. Default: false (enabled) */
+  recovery?: boolean;
+
+  /** Set to `true` to disable the OTP (One-Time Password) controller. Default: false (enabled) */
+  otp?: boolean;
+
+  /** Set to `true` to disable the OAuth controllers (Google, Apple, GitHub, etc.). Default: false (enabled) */
+  oAuth?: boolean;
+
+  /** Set to `true` to disable the user signup controller. Default: false (enabled) */
+  signup?: boolean;
+
+  /** Set to `true` to disable the admin user management submodule. Default: false (enabled) */
+  admin?: boolean;
+
+  /** Set to `true` to disable the admin roles management submodule. Default: false (enabled) */
+  adminRoles?: boolean;
+
+  /**
+   * Set to `true` to disable the user controller. Default: false (enabled)
+   *
+   * @deprecated Legacy/tests compatibility - prefer using specific controller flags
+   */
+  user?: boolean;
+
+  /** Set to `true` to disable the invitation creation controller. Default: false (enabled) */
+  invitation?: boolean;
+
+  /** Set to `true` to disable the invitation acceptance controller. Default: false (enabled) */
+  invitationAcceptance?: boolean;
+
+  /** Set to `true` to disable the invitation revocation controller. Default: false (enabled) */
+  invitationRevocation?: boolean;
+
+  /** Set to `true` to disable the invitation reattempt controller. Default: false (enabled) */
+  invitationReattempt?: boolean;
 }
 
 export interface RocketsAuthOptionsExtrasInterface
@@ -110,4 +193,7 @@ export interface RocketsAuthOptionsExtrasInterface
    */
   accessControl?: AccessControlOptionsInterface;
   disableController?: DisableControllerOptionsInterface;
+  invitation?: {
+    imports?: DynamicModule['imports']; // For registering invitation entity
+  };
 }

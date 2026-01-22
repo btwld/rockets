@@ -1,4 +1,4 @@
-import { RocketsAuthOtpSettingsInterface } from '../../domains/otp/interfaces/rockets-auth-otp-settings.interface';
+import { RocketsAuthUserOtpSettingsInterface } from '../../domains/otp/interfaces/rockets-auth-user-otp-settings.interface';
 
 /**
  * Rockets Server settings interface
@@ -17,10 +17,20 @@ export interface RocketsAuthSettingsInterface {
         fileName: string;
         subject: string;
       };
+      invitation: {
+        logo: string;
+        fileName: string;
+        subject: string;
+      };
+      invitationAccepted: {
+        logo: string;
+        fileName: string;
+        subject: string;
+      };
     };
   };
   /**
-   * OTP settings
+   * OTP settings for user-scoped OTP
    */
-  otp: RocketsAuthOtpSettingsInterface;
+  otp: RocketsAuthUserOtpSettingsInterface;
 }

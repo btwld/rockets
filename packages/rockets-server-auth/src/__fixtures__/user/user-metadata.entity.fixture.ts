@@ -49,6 +49,9 @@ export class UserMetadataEntityFixture {
   @Column({ type: 'text', nullable: true })
   bio?: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phoneNumber?: string;
+
   @Column({ type: 'integer', nullable: true })
   age?: number;
 }

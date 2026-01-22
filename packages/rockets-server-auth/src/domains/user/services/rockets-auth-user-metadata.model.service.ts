@@ -1,12 +1,20 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { RepositoryInterface, ModelService } from '@concepta/nestjs-common';
+import { Injectable } from '@nestjs/common';
+import {
+  RepositoryInterface,
+  ModelService,
+  InjectDynamicRepository,
+} from '@concepta/nestjs-common';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
-import { RocketsAuthUserMetadataCreateDtoInterface } from '../interfaces/rockets-auth-user-metadata-dto.interface';
-import { AUTH_USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
+import { RocketsAuthUserMetadataCreatableInterface } from '../interfaces/rockets-auth-user-metadata-creatable.interface';
+import { USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
 import {
   UserMetadataException,
   UserMetadataNotFoundException,
 } from '../user-metadata.exception';
+import {
+  RocketsAuthUserMetadataModelUpdatableInterface,
+  RocketsAuthUserMetadataUpdatableInterface,
+} from '../interfaces/rockets-auth-user-metadata-updatable.interface';
 
 /**
  * Generic User Metadata Model Service
@@ -20,17 +28,17 @@ import {
 @Injectable()
 export class GenericUserMetadataModelService extends ModelService<
   RocketsAuthUserMetadataEntityInterface,
-  RocketsAuthUserMetadataCreateDtoInterface,
-  RocketsAuthUserMetadataEntityInterface
+  RocketsAuthUserMetadataCreatableInterface,
+  RocketsAuthUserMetadataModelUpdatableInterface
 > {
-  public readonly createDto: new () => RocketsAuthUserMetadataCreateDtoInterface;
-  public readonly updateDto: new () => RocketsAuthUserMetadataEntityInterface;
+  public readonly createDto: new () => RocketsAuthUserMetadataCreatableInterface;
+  public readonly updateDto: new () => RocketsAuthUserMetadataModelUpdatableInterface;
 
   constructor(
-    @Inject(AUTH_USER_METADATA_MODULE_ENTITY_KEY)
+    @InjectDynamicRepository(USER_METADATA_MODULE_ENTITY_KEY)
     public readonly repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
-    createDto: new () => RocketsAuthUserMetadataCreateDtoInterface,
-    updateDto: new () => RocketsAuthUserMetadataEntityInterface,
+    createDto: new () => RocketsAuthUserMetadataCreatableInterface,
+    updateDto: new () => RocketsAuthUserMetadataModelUpdatableInterface,
   ) {
     super(repo);
     this.createDto = createDto;
@@ -65,7 +73,7 @@ export class GenericUserMetadataModelService extends ModelService<
    */
   async updateUserMetadata(
     userId: string,
-    userMetadataData: Partial<RocketsAuthUserMetadataEntityInterface>,
+    userMetadataData: Partial<RocketsAuthUserMetadataUpdatableInterface>,
   ): Promise<RocketsAuthUserMetadataEntityInterface> {
     const userMetadata = await this.getUserMetadataByUserId(userId);
     return this.update({
@@ -99,17 +107,23 @@ export class GenericUserMetadataModelService extends ModelService<
    */
   async createOrUpdate(
     userId: string,
-    data: Record<string, unknown>,
+    data: RocketsAuthUserMetadataUpdatableInterface,
   ): Promise<RocketsAuthUserMetadataEntityInterface> {
     const existingUserMetadata = await this.findByUserId(userId);
 
     if (existingUserMetadata) {
       // Update existing userMetadata with new data
-      const updateData = { ...existingUserMetadata, ...data };
+      const updateData: RocketsAuthUserMetadataModelUpdatableInterface = {
+        ...existingUserMetadata,
+        ...data,
+      };
       return this.update(updateData);
     } else {
       // Create new userMetadata with user ID and userMetadata data
-      const createData = { userId, ...data };
+      const createData: RocketsAuthUserMetadataCreatableInterface = {
+        ...data,
+        userId,
+      };
       return this.create(createData);
     }
   }
@@ -131,7 +145,7 @@ export class GenericUserMetadataModelService extends ModelService<
    * Update metadata by ID
    */
   async update(
-    data: RocketsAuthUserMetadataEntityInterface,
+    data: RocketsAuthUserMetadataModelUpdatableInterface,
   ): Promise<RocketsAuthUserMetadataEntityInterface> {
     const { id } = data;
     if (!id) {

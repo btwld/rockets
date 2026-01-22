@@ -1,0 +1,13 @@
+# Exclude test files
+**/*.spec.ts
+**/*.e2e-spec.ts
+**/*.spec.js
+**/*.e2e-spec.js
+**/__fixtures__/**
+**/__mocks__/**
+**/__stubs__/**
+
+# Exclude dependencies and build artifacts
+**/node_modules/**
+**/dist/**
+**/coverage/**

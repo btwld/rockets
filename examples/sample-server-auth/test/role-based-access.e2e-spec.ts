@@ -3,7 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { HttpAdapterHost } from '@nestjs/core';
-import { ExceptionsFilter } from '@bitwild/rockets-server';
+import { ExceptionsFilter } from '@bitwild/rockets';
 import { RoleModelService, RoleService } from '@concepta/nestjs-role';
 import { acRules } from '../src/app.acl';
 

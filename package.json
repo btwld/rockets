@@ -5,15 +5,42 @@
   "private": true,
   "workspaces": {
     "packages": [
-      "packages/*",
-      "examples/*"
+      "packages/*"
     ]
   },
   "resolutions": {
+    "jws": "3.2.3",
+    "qs": "6.14.1",
     "path-to-regexp": "3.3.0",
     "form-data": "4.0.4",
     "multer": "2.0.2",
-    "tar-fs": "2.1.4"
+    "tar-fs": "2.1.4",
+    "js-yaml": "4.1.1",
+    "tar": "7.5.2",
+    "@concepta/nestjs-access-control": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-apple": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-github": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-google": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-jwt": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-local": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-recovery": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-refresh": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-router": "7.0.0-alpha.8",
+    "@concepta/nestjs-auth-verify": "7.0.0-alpha.8",
+    "@concepta/nestjs-authentication": "7.0.0-alpha.8",
+    "@concepta/nestjs-common": "7.0.0-alpha.8",
+    "@concepta/nestjs-crud": "7.0.0-alpha.8",
+    "@concepta/nestjs-email": "7.0.0-alpha.8",
+    "@concepta/nestjs-event": "7.0.0-alpha.8",
+    "@concepta/nestjs-federated": "7.0.0-alpha.8",
+    "@concepta/nestjs-invitation": "7.0.0-alpha.8",
+    "@concepta/nestjs-jwt": "7.0.0-alpha.8",
+    "@concepta/nestjs-otp": "7.0.0-alpha.8",
+    "@concepta/nestjs-password": "7.0.0-alpha.8",
+    "@concepta/nestjs-role": "7.0.0-alpha.8",
+    "@concepta/nestjs-swagger-ui": "7.0.0-alpha.8",
+    "@concepta/nestjs-typeorm-ext": "7.0.0-alpha.8",
+    "@concepta/nestjs-user": "7.0.0-alpha.8"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.4.0",
@@ -86,11 +113,15 @@
     "changelog:minor": "standard-version --release-as minor",
     "changelog:patch": "standard-version --release-as patch",
     "changelog:major": "standard-version --release-as major",
-    "generate-swagger": "cd packages/rockets-server-auth && yarn generate-swagger"
+    "generate-swagger": "cd packages/rockets-server-auth && yarn generate-swagger",
+    "codacy:analyze": ".codacy/cli.sh analyze",
+    "codacy:analyze:fix": ".codacy/cli.sh analyze --fix",
+    "codacy:analyze:file": ".codacy/cli.sh analyze",
+    "codacy:analyze:security": ".codacy/cli.sh analyze -t trivy"
   },
   "packageManager": "yarn@4.4.0",
   "dependencies": {
-    "@nestjs/swagger": "^11.2.1",
+    "@nestjs/swagger": "^7.4.0",
     "@nestjs/throttler": "^6.4.0",
     "helmet": "^8.1.0",
     "swagger-ui-express": "^5.0.1"

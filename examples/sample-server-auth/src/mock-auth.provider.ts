@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuthProviderInterface, AuthorizedUser } from '@bitwild/rockets-server';
+import { AuthProviderInterface, AuthorizedUser } from '@bitwild/rockets';
 
 @Injectable()
 export class MockAuthProvider implements AuthProviderInterface {

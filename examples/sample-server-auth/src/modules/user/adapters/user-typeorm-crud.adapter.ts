@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RocketsAuthUserEntityInterface } from '@bitwild/rockets-server-auth';
+import { RocketsAuthUserEntityInterface } from '@bitwild/rockets-auth';
 import { UserEntity } from '../entities/user.entity';
 
 @Injectable()

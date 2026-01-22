@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { BaseUserMetadataEntityInterface } from '@bitwild/rockets-server';
+import { BaseUserMetadataEntityInterface } from '@bitwild/rockets';
 
 @Entity('userMetadata')
 export class UserMetadataEntity implements BaseUserMetadataEntityInterface {

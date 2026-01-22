@@ -13,10 +13,9 @@ import {
   ValidationPipe,
   applyDecorators,
   Inject,
-  forwardRef,
-  Injectable,
   BadRequestException,
 } from '@nestjs/common';
+import { UserMetadataCrudService } from './rockets-auth-user-metadata.module';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { RocketsAuthUserUpdateDto } from '../dto/rockets-auth-user-update.dto';
 import { RocketsAuthUserDto } from '../dto/rockets-auth-user.dto';
@@ -24,7 +23,6 @@ import { AdminGuard } from '../../../guards/admin.guard';
 import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import {
   ADMIN_USER_CRUD_SERVICE_TOKEN,
-  ROCKETS_ADMIN_USER_METADATA_ADAPTER,
   ROCKETS_ADMIN_USER_RELATION_REGISTRY,
 } from '../../../shared/constants/rockets-auth.constants';
 
@@ -35,18 +33,9 @@ import { RocketsAuthUserUpdatableInterface } from '../interfaces/rockets-auth-us
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserInterface } from '../interfaces/rockets-auth-user.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
-import { RocketsAuthUserMetadataDto } from '../dto/rockets-auth-user-metadata.dto';
-import {
-  RepositoryInterface,
-  getDynamicRepositoryToken,
-} from '@concepta/nestjs-common';
-import {
-  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-  AuthUserMetadataModelService,
-} from '../constants/user-metadata.constants';
+import { UserMetadataModelService } from '../constants/user-metadata.constants';
 import { CrudApiParam } from '@concepta/nestjs-crud/dist/crud/decorators/openapi/crud-api-param.decorator';
 import { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 
 @Module({})
 export class RocketsAuthAdminModule {
@@ -65,17 +54,7 @@ export class RocketsAuthAdminModule {
       data: RocketsAuthUserInterface[] = [];
     }
 
-    // Service for hydrating user metadata (relation target)
-    // This service is used by the CrudRelations system to fetch related metadata
-    @Injectable()
-    class UserMetadataCrudService extends CrudService<RocketsAuthUserMetadataEntityInterface> {
-      constructor(
-        @Inject(ROCKETS_ADMIN_USER_METADATA_ADAPTER)
-        metadataAdapter: CrudAdapter<RocketsAuthUserMetadataEntityInterface>,
-      ) {
-        super(metadataAdapter);
-      }
-    }
+    // Note: UserMetadataCrudService is now provided by the centralized RocketsAuthUserMetadataModule
 
     const builder = new ConfigurableCrudBuilder<
       RocketsAuthUserEntityInterface,
@@ -142,13 +121,13 @@ export class RocketsAuthAdminModule {
       constructor(
         @Inject(admin.adapter)
         protected readonly crudAdapter: CrudAdapter<RocketsAuthUserEntityInterface>,
-        @Inject(forwardRef(() => ROCKETS_ADMIN_USER_RELATION_REGISTRY))
+        @Inject(ROCKETS_ADMIN_USER_RELATION_REGISTRY)
         protected readonly relationRegistry: CrudRelationRegistry<
           RocketsAuthUserEntityInterface,
           [RocketsAuthUserMetadataEntityInterface]
         >,
-        @Inject(AuthUserMetadataModelService)
-        private readonly userMetadataService: GenericUserMetadataModelService,
+        @Inject(UserMetadataModelService)
+        private readonly userMetadataModelService: GenericUserMetadataModelService,
       ) {
         super(crudAdapter, relationRegistry);
       }
@@ -163,7 +142,11 @@ export class RocketsAuthAdminModule {
         const { userMetadata, ...userDto } = dto;
 
         // Validate metadata if provided
-        if (userMetadata && Object.keys(userMetadata).length > 0) {
+        if (
+          userMetadata &&
+          Object.keys(userMetadata).length > 0 &&
+          admin.userMetadataConfig
+        ) {
           const MetadataDto = admin.userMetadataConfig.updateDto;
           const metadataInstance = plainToInstance(MetadataDto, userMetadata);
 
@@ -192,7 +175,7 @@ export class RocketsAuthAdminModule {
         // Manually create/update metadata using userMetadataService
         if (userMetadata) {
           try {
-            await this.userMetadataService.createOrUpdate(
+            await this.userMetadataModelService.createOrUpdate(
               result.id,
               userMetadata,
             );
@@ -212,50 +195,11 @@ export class RocketsAuthAdminModule {
 
     return {
       module: RocketsAuthAdminModule,
-      imports: [
-        ...(admin.imports || []),
-        // Register the metadata entity with TypeOrmExtModule for dynamic repository injection if provided
-        ...(admin.userMetadataConfig.entity
-          ? [
-              TypeOrmExtModule.forFeature({
-                [AUTH_USER_METADATA_MODULE_ENTITY_KEY]: {
-                  entity: admin.userMetadataConfig.entity,
-                },
-              }),
-            ]
-          : []),
-      ],
+      imports: [...(admin.imports || [])],
       controllers: [AdminUserCrudController],
       providers: [
         admin.adapter,
-        // Provide metadata adapter for relations system
-        admin.userMetadataConfig.adapter,
-        {
-          provide: ROCKETS_ADMIN_USER_METADATA_ADAPTER,
-          useExisting: admin.userMetadataConfig.adapter,
-        },
-        // Provide the UserMetadataModelService for manual create/update operations
-        {
-          provide: AuthUserMetadataModelService,
-          useFactory: (
-            repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
-          ) => {
-            // Get DTOs from config, or use default base DTO
-            const { createDto, updateDto } = admin.userMetadataConfig || {
-              createDto: RocketsAuthUserMetadataDto,
-              updateDto: RocketsAuthUserMetadataDto,
-            };
-            return new GenericUserMetadataModelService(
-              repo,
-              createDto,
-              updateDto,
-            );
-          },
-          inject: [
-            getDynamicRepositoryToken(AUTH_USER_METADATA_MODULE_ENTITY_KEY),
-          ],
-        },
-        UserMetadataCrudService,
+        // Note: UserMetadataCrudService and metadata adapter are now provided by RocketsAuthUserMetadataModule
         {
           provide: ROCKETS_ADMIN_USER_RELATION_REGISTRY,
           inject: [UserMetadataCrudService],
@@ -274,11 +218,7 @@ export class RocketsAuthAdminModule {
           useClass: AdminUserCrudService,
         },
       ],
-      exports: [
-        AdminUserCrudService,
-        admin.adapter,
-        admin.userMetadataConfig.adapter,
-      ],
+      exports: [AdminUserCrudService, admin.adapter],
     };
   }
 }

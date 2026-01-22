@@ -1,10 +1,14 @@
 import { Global, Module } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AUTHENTICATION_MODULE_SETTINGS_TOKEN } from '@concepta/nestjs-authentication';
 
+import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 
 import { RocketsAuthModule } from '../../rockets-auth.module';
 import { FederatedEntityFixture } from '../federated/federated.entity.fixture';
+import { InvitationEntityFixture } from '../invitation/invitation.entity.fixture';
 import { ormConfig } from '../ormconfig.fixture';
 import { RoleEntityFixture } from '../role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../role/user-role.entity.fixture';
@@ -29,6 +33,7 @@ import { acRulesFixture } from './app.acl.fixture';
 @Global()
 @Module({
   imports: [
+    EventModule.forRoot({}),
     TypeOrmModule.forRoot({
       ...ormConfig,
       entities: [
@@ -39,6 +44,7 @@ import { acRulesFixture } from './app.acl.fixture';
         FederatedEntityFixture,
         RoleEntityFixture,
         UserRoleEntityFixture,
+        InvitationEntityFixture,
       ],
     }),
     TypeOrmExtModule.forRootAsync({
@@ -53,6 +59,7 @@ import { acRulesFixture } from './app.acl.fixture';
           FederatedEntityFixture,
           UserRoleEntityFixture,
           RoleEntityFixture,
+          InvitationEntityFixture,
         ],
       }),
     }),
@@ -62,6 +69,7 @@ import { acRulesFixture } from './app.acl.fixture';
       userRole: { entity: UserRoleEntityFixture },
       userOtp: { entity: UserOtpEntityFixture },
       federated: { entity: FederatedEntityFixture },
+      invitation: { entity: InvitationEntityFixture },
     }),
     TypeOrmModule.forFeature([
       UserFixture,
@@ -80,6 +88,12 @@ import { acRulesFixture } from './app.acl.fixture';
           updateOne: RocketsAuthUserUpdateDto,
         },
         userMetadataConfig: {
+          imports: [
+            TypeOrmModule.forFeature([UserMetadataEntityFixture]),
+            TypeOrmExtModule.forFeature({
+              userMetadata: { entity: UserMetadataEntityFixture },
+            }),
+          ],
           adapter: UserMetadataAdapter,
           entity: UserMetadataEntityFixture,
           createDto: RocketsAuthUserMetadataFixtureDto,
@@ -98,6 +112,32 @@ import { acRulesFixture } from './app.acl.fixture';
       enableGlobalJWTGuard: true,
       inject: [],
       useFactory: () => ({
+        settings: {
+          role: { adminRoleName: 'admin' },
+          email: {
+            from: 'test@test.com',
+            baseUrl: 'http://localhost',
+            templates: {
+              sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+              invitation: {
+                logo: '',
+                fileName: 'inv.hbs',
+                subject: 'Invitation',
+              },
+              invitationAccepted: {
+                logo: '',
+                fileName: 'inv-acc.hbs',
+                subject: 'Accepted',
+              },
+            },
+          },
+          otp: {
+            assignment: 'userOtp' as const,
+            category: 'test',
+            type: 'uuid',
+            expiresIn: '1h',
+          },
+        },
         jwt: {
           settings: {
             access: { secret: 'test-secret' },
@@ -115,7 +155,14 @@ import { acRulesFixture } from './app.acl.fixture';
       }),
     }),
   ],
-  providers: [ACServiceFixture],
+  providers: [
+    Reflector,
+    {
+      provide: AUTHENTICATION_MODULE_SETTINGS_TOKEN,
+      useValue: {},
+    },
+    ACServiceFixture,
+  ],
   exports: [ACServiceFixture],
 })
 export class AppModuleAdminRelationsFixture {}

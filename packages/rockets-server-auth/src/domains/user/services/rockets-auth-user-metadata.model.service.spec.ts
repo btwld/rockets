@@ -1,18 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RepositoryInterface } from '@concepta/nestjs-common';
 import { GenericUserMetadataModelService } from './rockets-auth-user-metadata.model.service';
-import { AUTH_USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
+import { USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
 import {
   UserMetadataException,
   UserMetadataNotFoundException,
 } from '../user-metadata.exception';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
+import {
+  RocketsAuthUserMetadataModelUpdatableInterface,
+  RocketsAuthUserMetadataUpdatableInterface,
+} from '../interfaces/rockets-auth-user-metadata-updatable.interface';
 
 describe('GenericUserMetadataModelService', () => {
   let service: GenericUserMetadataModelService;
   let mockRepository: jest.Mocked<
     RepositoryInterface<RocketsAuthUserMetadataEntityInterface>
   >;
+  interface ExtendedUserMetadataUpdatable
+    extends RocketsAuthUserMetadataUpdatableInterface {
+    firstName?: string;
+    lastName?: string;
+  }
 
   const mockUserMetadata = {
     id: 'metadata-123',
@@ -27,7 +36,6 @@ describe('GenericUserMetadataModelService', () => {
     firstName?: string;
     lastName?: string;
     bio?: string;
-    [key: string]: unknown;
   };
 
   const mockUpdateDto = class {
@@ -36,7 +44,6 @@ describe('GenericUserMetadataModelService', () => {
     firstName?: string;
     lastName?: string;
     bio?: string;
-    [key: string]: unknown;
   };
 
   beforeEach(async () => {
@@ -70,7 +77,7 @@ describe('GenericUserMetadataModelService', () => {
             ),
         },
         {
-          provide: AUTH_USER_METADATA_MODULE_ENTITY_KEY,
+          provide: USER_METADATA_MODULE_ENTITY_KEY,
           useValue: mockRepository,
         },
       ],
@@ -164,9 +171,12 @@ describe('GenericUserMetadataModelService', () => {
   });
 
   describe('createOrUpdate', () => {
-    const newData = { firstName: 'Jane', lastName: 'Smith' };
+    const newData: ExtendedUserMetadataUpdatable = {
+      firstName: 'Jane',
+      lastName: 'Smith',
+    };
 
-    it('should create new metadata when none exists', async () => {
+    it.only('should create new metadata when none exists', async () => {
       // Arrange
       jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
       jest
@@ -231,7 +241,9 @@ describe('GenericUserMetadataModelService', () => {
   describe('updateUserMetadata', () => {
     it('should update existing user metadata', async () => {
       // Arrange
-      const updateData = { firstName: 'Updated Name' };
+      const updateData: ExtendedUserMetadataUpdatable = {
+        firstName: 'Updated Name',
+      };
       jest
         .spyOn(service, 'getUserMetadataByUserId')
         .mockResolvedValue(mockUserMetadata);
@@ -277,21 +289,17 @@ describe('GenericUserMetadataModelService', () => {
 
     it('should throw UserMetadataException when ID is missing', async () => {
       // Arrange - Create incomplete data that's missing the required 'id' field
-      const incompleteData: Partial<RocketsAuthUserMetadataEntityInterface> = {
-        firstName: 'Updated',
+      const incompleteData: RocketsAuthUserMetadataModelUpdatableInterface = {
+        id: '',
       };
 
       // Act & Assert
-      await expect(
-        service.update(
-          incompleteData as RocketsAuthUserMetadataEntityInterface,
-        ),
-      ).rejects.toThrow(UserMetadataException);
-      await expect(
-        service.update(
-          incompleteData as RocketsAuthUserMetadataEntityInterface,
-        ),
-      ).rejects.toThrow('ID is required for update operation');
+      await expect(service.update(incompleteData)).rejects.toThrow(
+        UserMetadataException,
+      );
+      await expect(service.update(incompleteData)).rejects.toThrow(
+        'ID is required for update operation',
+      );
     });
 
     it('should throw UserMetadataNotFoundException when entity not found', async () => {

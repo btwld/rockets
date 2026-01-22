@@ -10,17 +10,28 @@ export { RocketsAuthUserEntityInterface } from './interfaces/rockets-auth-user-e
 export { RocketsAuthUserCreatableInterface } from './interfaces/rockets-auth-user-creatable.interface';
 export { RocketsAuthUserUpdatableInterface } from './interfaces/rockets-auth-user-updatable.interface';
 export { RocketsAuthUserMetadataEntityInterface } from './interfaces/rockets-auth-user-metadata-entity.interface';
-export { RocketsAuthUserMetadataCreateDtoInterface } from './interfaces/rockets-auth-user-metadata-dto.interface';
+export { RocketsAuthUserMetadataCreatableInterface as RocketsAuthUserMetadataCreateDtoInterface } from './interfaces/rockets-auth-user-metadata-creatable.interface';
 
 // Services
 export { GenericUserMetadataModelService } from './services/rockets-auth-user-metadata.model.service';
 
 // Constants
 export {
-  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-  AuthUserMetadataModelService,
+  USER_METADATA_MODULE_ENTITY_KEY,
+  UserMetadataModelService,
 } from './constants/user-metadata.constants';
 
 // Modules
 export { RocketsAuthAdminModule } from './modules/rockets-auth-admin.module';
 export { RocketsAuthSignUpModule } from './modules/rockets-auth-signup.module';
+export {
+  RocketsAuthUserMetadataModule,
+  UserMetadataCrudService,
+  ROCKETS_USER_METADATA_ADAPTER,
+} from './modules/rockets-auth-user-metadata.module';
+export {
+  RocketsAuthUserMetadataModuleClass,
+  RocketsAuthUserMetadataOptions,
+  RocketsAuthUserMetadataAsyncOptions,
+  RAW_USER_METADATA_OPTIONS_TOKEN,
+} from './modules/rockets-auth-user-metadata.module-definition';

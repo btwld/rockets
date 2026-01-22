@@ -1,5 +1,6 @@
 import {
   PasswordPlainInterface,
+  RuntimeException,
   UserCreatableInterface,
 } from '@concepta/nestjs-common';
 import {
@@ -13,11 +14,12 @@ import { PasswordCreationService } from '@concepta/nestjs-password';
 import {
   BadRequestException,
   DynamicModule,
+  forwardRef,
   Inject,
+  InternalServerErrorException,
+  Logger,
   Module,
   ValidationPipe,
-  Injectable,
-  forwardRef,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -27,34 +29,24 @@ import {
 } from '@nestjs/swagger';
 import {
   SIGNUP_USER_CRUD_SERVICE_TOKEN,
-  ROCKETS_SIGNUP_USER_METADATA_ADAPTER,
   ROCKETS_SIGNUP_USER_RELATION_REGISTRY,
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
 } from '../../../shared/constants/rockets-auth.constants';
 import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthUserCreateDto } from '../dto/rockets-auth-user-create.dto';
 import { RocketsAuthUserDto } from '../dto/rockets-auth-user.dto';
-import { getErrorDetails } from '../../../shared/utils/error-logging.helper';
 import { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
 
 import { AuthPublic } from '@concepta/nestjs-authentication';
-import {
-  RepositoryInterface,
-  getDynamicRepositoryToken,
-} from '@concepta/nestjs-common';
 import { UserModelService } from '@concepta/nestjs-user';
-import {
-  AuthUserMetadataModelService,
-  AUTH_USER_METADATA_MODULE_ENTITY_KEY,
-} from '../constants/user-metadata.constants';
-import { RocketsAuthUserMetadataDto } from '../dto/rockets-auth-user-metadata.dto';
 import { RocketsAuthUserCreatableInterface } from '../interfaces/rockets-auth-user-creatable.interface';
 import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
+import { UserMetadataModelService } from '../constants/user-metadata.constants';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { UserMetadataCrudService } from './rockets-auth-user-metadata.module';
 import { RocketsAuthSettingsInterface } from '../../../shared/interfaces/rockets-auth-settings.interface';
+import { RocketsAuthRoleService } from '../../role/services/rockets-auth-role.service';
 
 @Module({})
 export class RocketsAuthSignUpModule {
@@ -62,17 +54,7 @@ export class RocketsAuthSignUpModule {
     const ModelDto = admin.model || RocketsAuthUserDto;
     const CreateDto = admin.dto?.createOne || RocketsAuthUserCreateDto;
 
-    // Service for hydrating user metadata (relation target)
-    // This service is used by the CrudRelations system to fetch related metadata
-    @Injectable()
-    class UserMetadataCrudService extends CrudService<RocketsAuthUserMetadataEntityInterface> {
-      constructor(
-        @Inject(ROCKETS_SIGNUP_USER_METADATA_ADAPTER)
-        metadataAdapter: CrudAdapter<RocketsAuthUserMetadataEntityInterface>,
-      ) {
-        super(metadataAdapter);
-      }
-    }
+    // Note: UserMetadataCrudService is now provided by the centralized RocketsAuthUserMetadataModule
 
     const builder = new ConfigurableCrudBuilder<
       RocketsAuthUserEntityInterface,
@@ -119,6 +101,8 @@ export class RocketsAuthSignUpModule {
       RocketsAuthUserEntityInterface,
       [RocketsAuthUserMetadataEntityInterface]
     > {
+      private readonly logger = new Logger(SignupCrudService.name);
+
       constructor(
         @Inject(admin.adapter)
         protected readonly crudAdapter: CrudAdapter<RocketsAuthUserEntityInterface>,
@@ -131,12 +115,10 @@ export class RocketsAuthSignUpModule {
         private readonly userModelService: UserModelService,
         @Inject(PasswordCreationService)
         private readonly passwordCreationService: PasswordCreationService,
-        @Inject(AuthUserMetadataModelService)
-        private readonly metadataService: GenericUserMetadataModelService,
-        @Inject(RoleModelService)
-        private readonly roleModelService: RoleModelService,
-        @Inject(RoleService)
-        private readonly roleService: RoleService,
+        @Inject(UserMetadataModelService)
+        private readonly metadataModelService: GenericUserMetadataModelService,
+        @Inject(RocketsAuthRoleService)
+        private readonly authRoleService: RocketsAuthRoleService,
         @Inject(ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN)
         private readonly settings: RocketsAuthSettingsInterface,
       ) {
@@ -182,44 +164,66 @@ export class RocketsAuthSignUpModule {
           ...passwordHash,
         });
 
+        let userMetadata;
         // Manually create metadata if provided using userMetadataService
         if (nested) {
           try {
-            await this.metadataService.createOrUpdate(
+            // on signup do not consider the id and userId,
+            const { id, userId, ...safeMetadata } = nested;
+
+            if (id || userId) {
+              // TODO: review so we dont need this, if we send it with id and userId it will save with wrong info
+              this.logger.log(
+                'Id and userId should not be used on this payload',
+              );
+            }
+
+            userMetadata = await this.metadataModelService.createOrUpdate(
               created.id,
-              nested as Record<string, unknown>,
+              safeMetadata,
             );
           } catch (metadataError) {
-            // Log error but don't fail signup if metadata creation fails
-            console.warn(
-              'Failed to create user metadata during signup:',
-              metadataError,
+            // Log the error with full context for debugging
+            this.logger.error('Failed to create user metadata during signup', {
+              userId: created.id,
+              error: metadataError,
+            });
+
+            // Rollback: delete the created user to maintain data consistency
+            try {
+              await this.userModelService.remove({ id: created.id });
+              this.logger.debug(
+                'Rolled back user creation after metadata failure',
+                {
+                  userId: created.id,
+                },
+              );
+            } catch (rollbackError) {
+              this.logger.error('Failed to rollback user creation', {
+                userId: created.id,
+                error: rollbackError,
+              });
+            }
+
+            // If it's a known HTTP exception (validation, bad request, etc.), rethrow it
+            if (metadataError instanceof RuntimeException) {
+              throw metadataError;
+            }
+
+            // Otherwise, throw a generic internal server error
+            throw new InternalServerErrorException(
+              'Failed to complete signup. Please try again.',
             );
           }
         }
 
         // Assign default role if configured
-        if (this.settings.role.defaultUserRoleName) {
-          try {
-            const defaultRoles = await this.roleModelService.find({
-              where: { name: this.settings.role.defaultUserRoleName },
-            });
-
-            if (defaultRoles && defaultRoles.length > 0) {
-              await this.roleService.assignRole({
-                assignment: 'user',
-                assignee: { id: created.id },
-                role: { id: defaultRoles[0].id },
-              });
-            }
-          } catch (error) {
-            // Log but don't fail signup if role assignment fails
-            const { errorMessage } = getErrorDetails(error);
-            console.warn(`Failed to assign default role: ${errorMessage}`);
-          }
-        }
-
-        return created;
+        // Don't throw error - we don't want to fail signup if role assignment fails
+        await this.authRoleService.assignDefaultRoleToUser(created.id, false);
+        return {
+          ...created,
+          userMetadata,
+        };
       }
     }
     // TODO: add decorators and option to overwrite or disable controller
@@ -284,48 +288,11 @@ export class RocketsAuthSignUpModule {
       module: RocketsAuthSignUpModule,
       imports: [
         ...(admin.imports || []),
-        // Register the metadata entity with TypeOrmExtModule for dynamic repository injection if provided
-        ...(admin.userMetadataConfig.entity
-          ? [
-              TypeOrmExtModule.forFeature({
-                [AUTH_USER_METADATA_MODULE_ENTITY_KEY]: {
-                  entity: admin.userMetadataConfig.entity,
-                },
-              }),
-            ]
-          : []),
+        // Note: UserMetadata entity registration is now handled by RocketsAuthUserMetadataModule
       ],
       controllers: [SignupCrudController],
       providers: [
         admin.adapter,
-        // Provide metadata adapter for relations system
-        admin.userMetadataConfig.adapter,
-        {
-          provide: ROCKETS_SIGNUP_USER_METADATA_ADAPTER,
-          useExisting: admin.userMetadataConfig.adapter,
-        },
-        // Provide the UserMetadataModelService for manual create operations
-        {
-          provide: AuthUserMetadataModelService,
-          useFactory: (
-            repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
-          ) => {
-            // Get DTOs from config, or use default base DTO
-            const { createDto, updateDto } = admin.userMetadataConfig || {
-              createDto: RocketsAuthUserMetadataDto,
-              updateDto: RocketsAuthUserMetadataDto,
-            };
-            return new GenericUserMetadataModelService(
-              repo,
-              createDto,
-              updateDto,
-            );
-          },
-          inject: [
-            getDynamicRepositoryToken(AUTH_USER_METADATA_MODULE_ENTITY_KEY),
-          ],
-        },
-        UserMetadataCrudService,
         {
           provide: ROCKETS_SIGNUP_USER_RELATION_REGISTRY,
           inject: [UserMetadataCrudService],

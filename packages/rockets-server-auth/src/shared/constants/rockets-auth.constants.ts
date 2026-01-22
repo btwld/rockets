@@ -59,3 +59,9 @@ export const ROCKETS_SIGNUP_USER_METADATA_ADAPTER = Symbol(
 export const ROCKETS_SIGNUP_USER_RELATION_REGISTRY = Symbol(
   '__ROCKETS_SIGNUP_USER_RELATION_REGISTRY__',
 );
+
+/**
+ * OTP assignment constant for user-scoped OTP
+ * This value must match the entity key used in OtpModule configuration
+ */
+export const ROCKETS_AUTH_OTP_ASSIGNMENT = 'userOtp' as const;

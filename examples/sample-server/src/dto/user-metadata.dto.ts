@@ -11,7 +11,7 @@ import {
   BaseUserMetadataDto, 
   UserMetadataCreatableInterface, 
   UserMetadataModelUpdatableInterface 
-} from '@bitwild/rockets-server';
+} from '@bitwild/rockets';
 import { UserMetadataEntity } from '../entities/user-metadata.entity';
 
 @Exclude()
@@ -77,9 +77,6 @@ export class UserMetadataCreateDto
   @IsString()
   @IsNotEmpty()
   userId!: string;
-
-  // Add index signature to satisfy Record<string, unknown>
-  [key: string]: unknown;
 }
 
 export class UserMetadataUpdateDto extends PartialType(PickType(UserMetadataDto, ['firstName', 'lastName', 'username', 'bio'] as const)) implements UserMetadataModelUpdatableInterface {

@@ -37,6 +37,7 @@ import { RocketsAuthUserModelServiceInterface } from './rockets-auth-user-model-
 import { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui/dist/interfaces/swagger-ui-options.interface';
 import { CrudModuleOptionsInterface } from '@concepta/nestjs-crud/dist/interfaces/crud-module-options.interface';
 import { RoleOptionsInterface } from '@concepta/nestjs-role/dist/interfaces/role-options.interface';
+import { InvitationOptionsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-options.interface';
 
 /**
  * Combined options interface for the AuthenticationCombinedModule
@@ -46,7 +47,7 @@ export interface RocketsAuthOptionsInterface {
    * Global settings for the Rockets Server module
    * Used to configure default behaviors and settings
    */
-  settings?: RocketsAuthSettingsInterface;
+  settings: RocketsAuthSettingsInterface;
 
   /**
    * Swagger UI configuration options
@@ -112,7 +113,13 @@ export interface RocketsAuthOptionsInterface {
    * Auth Recovery module options
    * Used in: AuthRecoveryModule.forRootAsync
    */
-  authRecovery?: AuthRecoveryOptionsInterface;
+  authRecovery?: Pick<
+    AuthRecoveryOptionsInterface,
+    | 'userModelService'
+    | 'userPasswordService'
+    | 'notificationService'
+    | 'settings'
+  >;
 
   /**
    * Auth Refresh module options
@@ -142,6 +149,18 @@ export interface RocketsAuthOptionsInterface {
   crud?: CrudModuleOptionsInterface;
 
   role?: Partial<RoleOptionsInterface>;
+
+  /**
+   * Invitation module options
+   * Used in: InvitationModule.forRootAsync
+   */
+  invitation?: Pick<InvitationOptionsInterface, 'settings'> &
+    Partial<
+      Pick<
+        InvitationOptionsInterface,
+        'userModelService' | 'invitationSendService'
+      >
+    >;
 
   /**
    * Core services used across different modules
