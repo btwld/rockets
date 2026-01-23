@@ -56,13 +56,12 @@ export class UserResponseDto {
 
   @ApiPropertyOptional({
     description: 'User roles from auth provider',
-    example: ['user', 'admin'],
-    type: String,
-    isArray: true,
+    example: [{ role: { name: 'user' } }, { role: { name: 'admin' } }],
+    type: 'array',
   })
   @IsOptional()
   @Allow()
-  roles?: string[];
+  userRoles?: { role: { name: string } }[];
 
   @ApiPropertyOptional({
     description: 'User claims from auth provider',

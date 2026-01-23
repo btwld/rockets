@@ -371,8 +371,8 @@ __metadata:
   linkType: hard
 
 "@bitwild/rockets-auth@file:../../packages/rockets-server-auth::locator=sample-server-auth%40workspace%3A.":
-  version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=bad603&locator=sample-server-auth%40workspace%3A."
+  version: 1.0.0-alpha.3
+  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=34e896&locator=sample-server-auth%40workspace%3A."
   dependencies:
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.8"
     "@concepta/nestjs-auth-apple": "npm:7.0.0-alpha.8"
@@ -415,13 +415,13 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-auth-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/09b3fc7c853ada2df3952197a7a21d8909709e08a260255b6eaf916ae8567c8c80cd6faffbdc3e02f5675c2c27fe5016d1372e4caf924f1f75fc4546b98a39ec
+  checksum: 10c0/6a2c51a68f148fea4a44064b44ab2ad441418d608b081354119769dbdb603867392f7f3062927f5a7e399abffa34f00919ffc13f0afc329defa39b6e5226f9e5
   languageName: node
   linkType: hard
 
 "@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server-auth%40workspace%3A.":
-  version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=dd8250&locator=sample-server-auth%40workspace%3A."
+  version: 1.0.0-alpha.3
+  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=01d99d&locator=sample-server-auth%40workspace%3A."
   dependencies:
     "@concepta/nestjs-authentication": "npm:7.0.0-alpha.8"
     "@concepta/nestjs-common": "npm:7.0.0-alpha.8"
@@ -436,7 +436,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/f08acaade901ed1e1f748f64a2a235220480afbc702fdb1fc6c381114d4c32da3fc623efa6556a379af5a934fb3f4b3475d30f1cf1837836ee9384b9abcf6888
+  checksum: 10c0/49780a25b8545a9fcdb766d29f12469d5433c3ee6247cd063857d6986f16c01209e007513445abbffc37470a34eaa1dd7622c2a0dda516d8961391ae32af2cb6
   languageName: node
   linkType: hard
 
