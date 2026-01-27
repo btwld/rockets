@@ -43,7 +43,7 @@
           }
         },
         "tags": [
-          "auth"
+          "Authentication"
         ]
       }
     },
@@ -88,7 +88,7 @@
           }
         },
         "tags": [
-          "auth"
+          "Authentication"
         ],
         "security": [
           {
@@ -131,7 +131,7 @@
           }
         },
         "tags": [
-          "auth"
+          "Authentication"
         ]
       }
     },
@@ -169,7 +169,7 @@
           }
         },
         "tags": [
-          "auth"
+          "Authentication"
         ]
       },
       "patch": {
@@ -206,7 +206,7 @@
           }
         },
         "tags": [
-          "auth"
+          "Authentication"
         ]
       }
     },
@@ -236,7 +236,7 @@
           }
         },
         "tags": [
-          "auth"
+          "Authentication"
         ]
       }
     },
@@ -274,7 +274,7 @@
           }
         },
         "tags": [
-          "otp"
+          "Authentication"
         ]
       },
       "patch": {
@@ -321,7 +321,7 @@
           }
         },
         "tags": [
-          "otp"
+          "Authentication"
         ]
       }
     },
@@ -369,7 +369,7 @@
           }
         },
         "tags": [
-          "oauth"
+          "Authentication"
         ]
       }
     },
@@ -390,7 +390,7 @@
           }
         },
         "tags": [
-          "oauth"
+          "Authentication"
         ]
       },
       "post": {
@@ -409,7 +409,107 @@
           }
         },
         "tags": [
-          "oauth"
+          "Authentication"
+        ]
+      }
+    },
+    "/admin/invitations": {
+      "post": {
+        "operationId": "InvitationController_create",
+        "summary": "Create and send invitation (Admin only)",
+        "description": "Creates a new user invitation and sends an email with OTP for acceptance",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RocketsAuthInvitationCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation created and email sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RocketsAuthInvitationDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/admin/invitations/revoke": {
+      "post": {
+        "operationId": "InvitationRevocationController_revoke",
+        "summary": "Revoke invitations (Admin only)",
+        "description": "Revoke all active invitations for a specific email and category",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RocketsAuthInvitationRevokeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitations revoked successfully"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/admin/invitations/{code}/reattempt": {
+      "post": {
+        "operationId": "InvitationReattemptController_reattempt",
+        "summary": "Re-send invitation email (Admin only)",
+        "description": "Generates a new OTP and re-sends the invitation email",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Invitation code",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitation email re-sent successfully"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
@@ -614,7 +714,6 @@
         "responses": {
           "200": {
             "description": "Read-One ExtendedUserDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -659,7 +758,6 @@
         "responses": {
           "200": {
             "description": "Update-One ExtendedUserDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -712,12 +810,57 @@
         ]
       }
     },
+    "/invitation-acceptance/{code}": {
+      "patch": {
+        "operationId": "InvitationAcceptanceController_accept",
+        "summary": "Accept invitation (Public with OTP)",
+        "description": "Accept an invitation by providing the code and OTP passcode. Include password and userMetadata in the payload.",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Invitation code from email",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RocketsAuthInvitationAcceptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation accepted successfully"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/admin/roles/{id}": {
       "patch": {
         "operationId": "admin_roles_updateOne",
         "summary": "",
         "description": "Updates role information",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "description": "Role information to update",
@@ -811,7 +954,6 @@
         "responses": {
           "200": {
             "description": "Read-One RocketsAuthRoleDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -847,9 +989,7 @@
           "200": {
             "description": "Delete-One RocketsAuthRoleDto",
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "application/json": {}
             }
           }
         },
@@ -1024,7 +1164,6 @@
         "responses": {
           "200": {
             "description": "Create-One RocketsAuthRoleDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -1124,7 +1263,13 @@
     "title": "Rockets API",
     "description": "API documentation for Rockets Server",
     "version": "1.0",
-    "contact": {}
+    "contact": {
+      "email": "api@rockets.dev",
+      "name": "Rockets API Team"
+    },
+    "license": {
+      "name": "BSD-3-Clause"
+    }
   },
   "tags": [],
   "servers": [],
@@ -1277,6 +1422,169 @@
           "refreshToken"
         ]
       },
+      "RocketsAuthInvitationCreateDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Category of invitation that refers the following table name: user, org..."
+          },
+          "constraints": {
+            "type": "object",
+            "title": "Payload",
+            "description": "payload content that will be passed through another module ir order to complete the invitation. This payload will have necessary info to target module complete the invitation e.g. new password or what ever required info. The object not have any strong type defined on purpose because the target moules will have object different signatures"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email that the invitation will be sent to"
+          }
+        },
+        "required": [
+          "category",
+          "email"
+        ]
+      },
+      "RocketsAuthInvitationDto": {
+        "type": "object",
+        "properties": {
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date created"
+          },
+          "dateUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date updated"
+          },
+          "dateDeleted": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date deleted",
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "description": "Version of the data"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "True if Invitation is active"
+          },
+          "code": {
+            "type": "string",
+            "description": "Code claim invitation"
+          },
+          "category": {
+            "type": "string",
+            "description": "Category of invitation that refers the following table name: user, org..."
+          },
+          "constraints": {
+            "type": "object",
+            "title": "Payload",
+            "description": "payload content that will be passed through another module ir order to complete the invitation. This payload will have necessary info to target module complete the invitation e.g. new password or what ever required info. The object not have any strong type defined on purpose because the target moules will have object different signatures"
+          },
+          "userId": {
+            "type": "string",
+            "description": "The invited user ID."
+          }
+        },
+        "required": [
+          "dateCreated",
+          "dateUpdated",
+          "dateDeleted",
+          "version",
+          "id",
+          "active",
+          "code",
+          "category",
+          "constraints",
+          "userId"
+        ]
+      },
+      "RocketsAuthInvitationRevokeDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address to revoke invitations for",
+            "example": "user@example.com"
+          },
+          "category": {
+            "type": "string",
+            "description": "Category of invitations to revoke",
+            "example": "user"
+          }
+        },
+        "required": [
+          "email",
+          "category"
+        ]
+      },
+      "ExtendedUserMetadataDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Metadata ID"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Date created"
+          },
+          "dateUpdated": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Date updated"
+          },
+          "dateDeleted": {
+            "type": "object",
+            "description": "Date deleted"
+          },
+          "version": {
+            "type": "number",
+            "description": "Version"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "bio": {
+            "type": "string",
+            "description": "User bio",
+            "maxLength": 500
+          },
+          "age": {
+            "type": "number",
+            "description": "User age",
+            "minimum": 18
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "dateCreated",
+          "dateUpdated",
+          "version"
+        ]
+      },
       "ExtendedUserDto": {
         "type": "object",
         "properties": {
@@ -1316,14 +1624,13 @@
             "type": "boolean",
             "description": "Active"
           },
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
-          },
-          "test": {
-            "type": "string"
+          "userMetadata": {
+            "description": "User metadata containing additional profile information",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExtendedUserMetadataDto"
+              }
+            ]
           }
         },
         "required": [
@@ -1334,8 +1641,7 @@
           "id",
           "email",
           "username",
-          "active",
-          "test"
+          "active"
         ]
       },
       "PaginatedDto": {
@@ -1378,37 +1684,63 @@
           "pageCount"
         ]
       },
+      "UserMetadataInputDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "First name",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "bio": {
+            "type": "string",
+            "description": "User bio",
+            "maxLength": 500
+          },
+          "age": {
+            "type": "number",
+            "description": "User age",
+            "minimum": 18
+          }
+        }
+      },
       "ExtendedUserUpdateDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "description": "Unique identifier"
-          },
-          "email": {
-            "type": "string",
-            "description": "Email"
+            "description": "User ID"
           },
           "username": {
             "type": "string",
             "description": "Username"
           },
+          "email": {
+            "type": "string",
+            "description": "Email address"
+          },
           "active": {
             "type": "boolean",
-            "description": "Active"
+            "description": "Whether the user is active"
           },
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
+          "userMetadata": {
+            "description": "User metadata updates",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserMetadataInputDto"
+              }
+            ]
           }
         },
         "required": [
-          "id",
-          "email",
-          "username",
-          "active"
+          "id"
         ]
       },
       "ExtendedUserCreateDto": {
@@ -1426,15 +1758,17 @@
             "type": "boolean",
             "description": "Active"
           },
-          "firstName": {
-            "type": "string"
-          },
-          "lastName": {
-            "type": "string"
-          },
           "password": {
             "type": "string",
             "description": "Plain text password to set"
+          },
+          "userMetadata": {
+            "description": "Initial user metadata",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserMetadataInputDto"
+              }
+            ]
           }
         },
         "required": [
@@ -1442,6 +1776,24 @@
           "username",
           "active",
           "password"
+        ]
+      },
+      "RocketsAuthInvitationAcceptDto": {
+        "type": "object",
+        "properties": {
+          "passcode": {
+            "type": "string",
+            "title": "passcode activate invitation",
+            "description": "Passcode used to activate account"
+          },
+          "payload": {
+            "type": "object",
+            "title": "Payload",
+            "description": "payload content that will be passed through another module ir order to complete the activation. This payload will have necessary info to target module complete the activation e.g. new password or what ever required info. The object not have any strong type defined on purpose because the target moules will have object different signatures"
+          }
+        },
+        "required": [
+          "passcode"
         ]
       },
       "RocketsAuthRoleUpdateDto": {

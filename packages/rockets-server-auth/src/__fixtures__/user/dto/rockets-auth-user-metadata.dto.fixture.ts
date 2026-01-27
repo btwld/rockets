@@ -34,13 +34,14 @@ export class RocketsAuthUserMetadataFixtureDto extends RocketsAuthUserMetadataDt
     description: 'Last name',
     minLength: 1,
     maxLength: 100,
+    nullable: true,
   })
   @Expose()
   @IsOptional()
   @IsString({ message: 'Last name must be a string' })
   @MinLength(1, { message: 'Last name must be at least 1 character' })
   @MaxLength(100, { message: 'Last name must not exceed 100 characters' })
-  lastName?: string;
+  lastName?: string | null;
 
   @ApiPropertyOptional({
     description: 'Username',
