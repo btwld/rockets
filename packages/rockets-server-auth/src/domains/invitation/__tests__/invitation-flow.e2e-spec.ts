@@ -313,7 +313,6 @@ describe('Invitation Flow (E2E)', () => {
         return Promise.resolve(undefined);
       },
     );
-
   });
 
   describe('POST /admin/invitations (Create Invitation)', () => {
@@ -501,7 +500,6 @@ describe('Invitation Flow (E2E)', () => {
       // Restore original mock
       sendMailSpy.mockRestore();
     });
-
   });
 
   describe('PATCH /invitation-acceptance/:code (Accept Invitation)', () => {
