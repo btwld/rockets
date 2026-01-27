@@ -51,7 +51,7 @@ import { RocketsAuthUserMetadataUpdatableInterface } from '../../user/interfaces
  *   userMetadata: {
  *     firstName: string;
  *     lastName: string;
- *     phoneNumber?: string;
+ *     phoneNumber?: string; 
  *   };
  * }
  * ```

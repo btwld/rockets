@@ -110,6 +110,11 @@ dist
 # generated docs
 /docs
 
+# generated SDK (orval)
+**/generated/api
+**/generated/models
+**/generated/zod
+
 # .yarn meta
 .yarn
 

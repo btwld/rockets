@@ -20,8 +20,17 @@ import {
   SwaggerModule,
 } from '@nestjs/swagger';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
-import { Expose } from 'class-transformer';
-import { IsOptional, IsString } from 'class-validator';
+import { Expose, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Column, Entity, Repository } from 'typeorm';
@@ -85,6 +94,18 @@ class UserMetadataEntity implements RocketsAuthUserMetadataEntityInterface {
 
   @Column({ type: 'int', default: 1 })
   version!: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  firstName?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  lastName?: string;
+
+  @Column({ type: 'text', nullable: true })
+  bio?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  age?: number;
 }
 
 class AdminUserTypeOrmCrudAdapter extends TypeOrmCrudAdapter<RocketsAuthUserEntityInterface> {
@@ -114,44 +135,311 @@ class AdminRoleTypeOrmCrudAdapter extends TypeOrmCrudAdapter<RocketsAuthRoleEnti
   }
 }
 
-// New DTOs with firstName and lastName fields
-@Expose()
-class ExtendedUserDto extends RocketsAuthUserDto {
-  @ApiPropertyOptional()
-  @IsString()
+/**
+ * Extended User Metadata DTO
+ * Contains all metadata fields that can be associated with a user
+ */
+class ExtendedUserMetadataDto extends RocketsAuthUserMetadataDto {
+  // Index signature to allow additional properties
+  [key: string]: unknown;
+
+  @ApiPropertyOptional({
+    description: 'First name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
   @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
   firstName?: string;
 
-  @ApiPropertyOptional()
-  @IsString()
+  @ApiPropertyOptional({
+    description: 'Last name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
   @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
   lastName?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: 'User bio',
+    maxLength: 500,
+  })
   @Expose()
+  @IsOptional()
   @IsString()
-  test: string = '';
+  @MaxLength(500)
+  bio?: string;
+
+  @ApiPropertyOptional({
+    description: 'User age',
+    minimum: 18,
+    type: 'number',
+  })
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  @Min(18)
+  age?: number;
 }
 
-class ExtendedUserCreateDto extends IntersectionType(
-  PickType(ExtendedUserDto, [
-    'email',
-    'username',
-    'active',
-    'firstName',
-    'lastName',
-  ] as const),
-  UserPasswordDto,
-) {}
+/**
+ * User Metadata Create DTO
+ * Used when creating user metadata (includes userId as required by interface)
+ */
+class ExtendedUserMetadataCreateDto {
+  // Index signature to allow additional properties
+  [key: string]: unknown;
 
-class ExtendedUserUpdateDto extends PickType(ExtendedUserDto, [
-  'id',
-  'username',
-  'email',
-  'active',
-  'firstName',
-  'lastName',
-] as const) {}
+  @ApiProperty({ description: 'User ID to associate metadata with' })
+  @Expose()
+  @IsString()
+  userId!: string;
+
+  @ApiPropertyOptional({
+    description: 'First name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  firstName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Last name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  lastName?: string;
+
+  @ApiPropertyOptional({
+    description: 'User bio',
+    maxLength: 500,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  bio?: string;
+
+  @ApiPropertyOptional({
+    description: 'User age',
+    minimum: 18,
+    type: 'number',
+  })
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  @Min(18)
+  age?: number;
+}
+
+/**
+ * User Metadata Update DTO
+ * Used when updating user metadata (includes id as required by interface)
+ */
+class ExtendedUserMetadataUpdateDto {
+  // Index signature to allow additional properties
+  [key: string]: unknown;
+
+  @ApiProperty({ description: 'Metadata ID' })
+  @Expose()
+  @IsString()
+  id!: string;
+
+  @ApiPropertyOptional({
+    description: 'First name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  firstName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Last name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  lastName?: string;
+
+  @ApiPropertyOptional({
+    description: 'User bio',
+    maxLength: 500,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  bio?: string;
+
+  @ApiPropertyOptional({
+    description: 'User age',
+    minimum: 18,
+    type: 'number',
+  })
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  @Min(18)
+  age?: number;
+}
+
+/**
+ * User Metadata Input DTO (for nested use in User DTOs)
+ * Used when providing metadata as part of user create/update operations
+ */
+class UserMetadataInputDto {
+  // Index signature to allow additional properties
+  [key: string]: unknown;
+
+  @ApiPropertyOptional({
+    description: 'First name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  firstName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Last name',
+    minLength: 1,
+    maxLength: 100,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  lastName?: string;
+
+  @ApiPropertyOptional({
+    description: 'User bio',
+    maxLength: 500,
+  })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  bio?: string;
+
+  @ApiPropertyOptional({
+    description: 'User age',
+    minimum: 18,
+    type: 'number',
+  })
+  @Expose()
+  @IsOptional()
+  @IsNumber()
+  @Min(18)
+  age?: number;
+}
+
+/**
+ * Extended User DTO
+ * Complete user representation with nested metadata
+ */
+class ExtendedUserDto extends RocketsAuthUserDto {
+  @ApiPropertyOptional({
+    type: ExtendedUserMetadataDto,
+    description: 'User metadata containing additional profile information',
+  })
+  @Expose()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ExtendedUserMetadataDto)
+  userMetadata?: ExtendedUserMetadataDto;
+}
+
+/**
+ * User Create DTO
+ * Used when creating a new user with optional metadata
+ */
+class ExtendedUserCreateDto extends IntersectionType(
+  PickType(ExtendedUserDto, ['email', 'username', 'active'] as const),
+  UserPasswordDto,
+) {
+  // Index signature to allow additional properties
+  [key: string]: unknown;
+
+  @ApiPropertyOptional({
+    type: UserMetadataInputDto,
+    description: 'Initial user metadata',
+  })
+  @Expose()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UserMetadataInputDto)
+  userMetadata?: UserMetadataInputDto;
+}
+
+/**
+ * User Update DTO
+ * Used when updating an existing user with optional metadata updates
+ */
+class ExtendedUserUpdateDto {
+  // Index signature to allow additional properties
+  [key: string]: unknown;
+
+  @ApiProperty({ description: 'User ID' })
+  @Expose()
+  @IsString()
+  id!: string;
+
+  @ApiPropertyOptional({ description: 'Username' })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @ApiPropertyOptional({ description: 'Email address' })
+  @Expose()
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @ApiPropertyOptional({ description: 'Whether the user is active' })
+  @Expose()
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @ApiPropertyOptional({
+    type: UserMetadataInputDto,
+    description: 'User metadata updates',
+  })
+  @Expose()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UserMetadataInputDto)
+  userMetadata?: UserMetadataInputDto;
+}
 
 /**
  * Generate Swagger documentation JSON file based on RocketsAuth controllers
@@ -175,6 +463,7 @@ async function generateSwaggerJson() {
             FederatedEntity,
             InvitationEntity,
             UserMetadataEntity,
+            InvitationEntity,
           ],
         }),
         TypeOrmModule.forFeature([
@@ -200,6 +489,7 @@ async function generateSwaggerJson() {
                 FederatedEntity,
                 InvitationEntity,
                 UserMetadataEntity,
+                InvitationEntity,
               ],
             };
           },
@@ -232,10 +522,16 @@ async function generateSwaggerJson() {
               updateOne: ExtendedUserUpdateDto,
             },
             userMetadataConfig: {
+              imports: [
+                TypeOrmModule.forFeature([UserMetadataEntity]),
+                TypeOrmExtModule.forFeature({
+                  userMetadata: { entity: UserMetadataEntity },
+                }),
+              ],
               adapter: UserMetadataTypeOrmCrudAdapter,
               entity: UserMetadataEntity,
-              createDto: RocketsAuthUserMetadataDto,
-              updateDto: RocketsAuthUserMetadataDto,
+              createDto: ExtendedUserMetadataCreateDto,
+              updateDto: ExtendedUserMetadataUpdateDto,
             },
           },
           roleCrud: {
@@ -288,6 +584,14 @@ async function generateSwaggerJson() {
                 type: 'uuid',
                 expiresIn: '1h',
               },
+            },
+            invitation: {
+              imports: [
+                TypeOrmExtModule.forFeature({
+                  invitation: { entity: InvitationEntity },
+                }),
+              ],
+              userModelService: undefined as never,
             },
             services: {
               mailerService: {

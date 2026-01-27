@@ -17,8 +17,8 @@ import { UserPasswordHistoryEntityFixture } from '../user/user-password-history.
 import { UserMetadataEntityFixture } from '../user/user-metadata.entity.fixture';
 import { UserFixture } from '../user/user.entity.fixture';
 
-import { RocketsAuthUserCreateDto } from '../../domains/user/dto/rockets-auth-user-create.dto';
-import { RocketsAuthUserUpdateDto } from '../../domains/user/dto/rockets-auth-user-update.dto';
+import { RocketsAuthUserCreateDtoFixture } from '../user/dto/rockets-auth-user-create.dto.fixture';
+import { RocketsAuthUserUpdateDtoFixture } from '../user/dto/rockets-auth-user-update.dto.fixture';
 import { AdminUserTypeOrmCrudAdapter } from './admin-user-crud.adapter';
 import { RocketsAuthRoleDto } from '../../domains/role/dto/rockets-auth-role.dto';
 import { RocketsAuthRoleUpdateDto } from '../../domains/role/dto/rockets-auth-role-update.dto';
@@ -84,8 +84,8 @@ import { acRulesFixture } from './app.acl.fixture';
         adapter: AdminUserTypeOrmCrudAdapter,
         model: RocketsAuthUserFixtureDto,
         dto: {
-          createOne: RocketsAuthUserCreateDto,
-          updateOne: RocketsAuthUserUpdateDto,
+          createOne: RocketsAuthUserCreateDtoFixture,
+          updateOne: RocketsAuthUserUpdateDtoFixture,
         },
         userMetadataConfig: {
           imports: [
