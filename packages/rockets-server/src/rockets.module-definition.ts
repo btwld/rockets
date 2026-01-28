@@ -79,14 +79,20 @@ function definitionTransform(
  * Create controllers for the combined module
  * Follows SDK patterns for controller creation
  */
-export function createRocketsControllers(_options: {
+export function createRocketsControllers(options: {
   controllers?: DynamicModule['controllers'];
   extras?: RocketsOptionsExtrasInterface;
 }): DynamicModule['controllers'] {
-  return (() => {
-    const list: DynamicModule['controllers'] = [MeController];
-    return list;
-  })();
+  return options?.controllers !== undefined
+    ? options.controllers
+    : (() => {
+        const disableController = options?.extras?.disableController || {};
+        const list: DynamicModule['controllers'] = [];
+
+        if (!disableController.me) list.push(MeController);
+
+        return list;
+      })();
 }
 
 /**

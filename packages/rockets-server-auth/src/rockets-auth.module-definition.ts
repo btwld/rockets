@@ -57,6 +57,7 @@ import {
 import { ConfigModule } from '@nestjs/config';
 import { rocketsAuthOptionsDefaultConfig } from './shared/config/rockets-auth-options-default.config';
 import { AuthPasswordController } from './domains/auth/controllers/auth-password.controller';
+import { MePasswordController } from './domains/auth/controllers/me-password.controller';
 import { RocketsAuthRecoveryController } from './domains/auth/controllers/auth-recovery.controller';
 import { AuthTokenRefreshController } from './domains/auth/controllers/auth-refresh.controller';
 import { AuthOAuthController } from './domains/oauth/controllers/auth-oauth.controller';
@@ -202,6 +203,7 @@ export function createRocketsAuthControllers(options: {
           list.push(InvitationRevocationController);
         if (!disableController.invitationReattempt)
           list.push(InvitationReattemptController);
+        if (!disableController.mePassword) list.push(MePasswordController);
 
         return list;
       })();

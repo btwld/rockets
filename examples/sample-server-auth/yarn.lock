@@ -372,7 +372,7 @@ __metadata:
 
 "@bitwild/rockets-auth@file:../../packages/rockets-server-auth::locator=sample-server-auth%40workspace%3A.":
   version: 1.0.0-alpha.4
-  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=bd783b&locator=sample-server-auth%40workspace%3A."
+  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=fdf6b3&locator=sample-server-auth%40workspace%3A."
   dependencies:
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.8"
     "@concepta/nestjs-auth-apple": "npm:7.0.0-alpha.8"
@@ -415,7 +415,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-auth-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/78e553bee678105af51de7a8453044cedcc6eb6d6814c3cbed11887e35684063ab0b138b2b706c47737cda910320a0de8ef2474f38d744f20411c2706a527312
+  checksum: 10c0/803121cff5f9f15ee1ff765bb3a20d1e3c838b072d0208751651808a36ec6621555d23a30887a27f748484996cd72d1aa995ab1f10ce73f16f1085804d13453b
   languageName: node
   linkType: hard
 

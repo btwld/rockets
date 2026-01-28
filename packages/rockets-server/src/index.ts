@@ -3,7 +3,10 @@ export type {
   RocketsOptionsInterface,
   UserMetadataConfigInterface,
 } from './interfaces/rockets-options.interface';
-export type { RocketsOptionsExtrasInterface } from './interfaces/rockets-options-extras.interface';
+export type {
+  RocketsOptionsExtrasInterface,
+  DisableControllerOptionsInterface,
+} from './interfaces/rockets-options-extras.interface';
 
 // Export auth components
 export { AuthServerGuard } from './guards/auth-server.guard';
