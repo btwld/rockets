@@ -372,7 +372,7 @@ __metadata:
 
 "@bitwild/rockets-auth@file:../../packages/rockets-server-auth::locator=sample-server-auth%40workspace%3A.":
   version: 1.0.0-alpha.4
-  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=fdf6b3&locator=sample-server-auth%40workspace%3A."
+  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=4d76d1&locator=sample-server-auth%40workspace%3A."
   dependencies:
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.8"
     "@concepta/nestjs-auth-apple": "npm:7.0.0-alpha.8"
@@ -415,13 +415,13 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-auth-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/803121cff5f9f15ee1ff765bb3a20d1e3c838b072d0208751651808a36ec6621555d23a30887a27f748484996cd72d1aa995ab1f10ce73f16f1085804d13453b
+  checksum: 10c0/9b8a6d91b743b2001cbd542d8714fc4767e7e6113c70e4b37ff8ee90f3420c19d8cabe1368c08db52dad68f7f609b254d803611fae316f5f1c01c9f68257a8a9
   languageName: node
   linkType: hard
 
 "@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server-auth%40workspace%3A.":
   version: 1.0.0-alpha.4
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=b5860f&locator=sample-server-auth%40workspace%3A."
+  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=1f4000&locator=sample-server-auth%40workspace%3A."
   dependencies:
     "@concepta/nestjs-authentication": "npm:7.0.0-alpha.8"
     "@concepta/nestjs-common": "npm:7.0.0-alpha.8"
@@ -436,7 +436,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/4e3f561007534c875130fca42493404a3200e4213c1d7009dc2f0ecc1cbb20c42ba8c41543219e6a5d2f62be498a941e7e09575cbb71c955856d8a8bf6fecdea
+  checksum: 10c0/cdfea2df73003ac078b5b9a1d55dbd6c7c0f23b8342fe17d394929c56de9fe03f9930b6e9a8ebe37a31afef92f825ae05bf75895118ea146f4db50f58a4e8c06
   languageName: node
   linkType: hard
 
@@ -4789,14 +4789,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:4.17.21":
-  version: 4.17.21
-  resolution: "lodash@npm:4.17.21"
-  checksum: 10c0/d8cbea072bb08655bb4c989da418994b073a608dffa608b09ac04b43a791b12aeae7cd7ad919aa4c925f33b48490b5cfe6c1f71d827956071dae2e7bb3a6b74c
-  languageName: node
-  linkType: hard
-
-"lodash@npm:^4.7.0":
+"lodash@npm:4.17.23":
   version: 4.17.23
   resolution: "lodash@npm:4.17.23"
   checksum: 10c0/1264a90469f5bb95d4739c43eb6277d15b6d9e186df4ac68c3620443160fc669e2f14c11e7d8b2ccf078b81d06147c01a8ccced9aab9f9f63d50dcf8cace6bf6

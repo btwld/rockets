@@ -40,7 +40,8 @@
     "@concepta/nestjs-role": "7.0.0-alpha.8",
     "@concepta/nestjs-swagger-ui": "7.0.0-alpha.8",
     "@concepta/nestjs-typeorm-ext": "7.0.0-alpha.8",
-    "@concepta/nestjs-user": "7.0.0-alpha.8"
+    "@concepta/nestjs-user": "7.0.0-alpha.8",
+    "lodash": "4.17.23"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.4.0",

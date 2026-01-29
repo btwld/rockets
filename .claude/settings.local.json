@@ -35,7 +35,9 @@
       "Bash(npm install:*)",
       "Bash(yarn add:*)",
       "Bash(yarn test:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git diff:*)",
+      "Bash(yarn install:*)"
     ],
     "deny": []
   }
