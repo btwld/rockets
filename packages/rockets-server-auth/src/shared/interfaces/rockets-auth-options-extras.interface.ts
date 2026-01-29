@@ -168,6 +168,9 @@ export interface DisableControllerOptionsInterface {
 
   /** Set to `true` to disable the invitation reattempt controller. Default: false (enabled) */
   invitationReattempt?: boolean;
+
+  /** Set to `true` to disable the me/password controller (authenticated password change). Default: false (enabled) */
+  mePassword?: boolean;
 }
 
 export interface RocketsAuthOptionsExtrasInterface

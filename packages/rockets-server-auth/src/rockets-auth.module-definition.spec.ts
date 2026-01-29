@@ -5,6 +5,7 @@ import { UserFixture } from './__fixtures__/user/user.entity.fixture';
 import { UserOtpEntityFixture } from './__fixtures__/user/user-otp-entity.fixture';
 import { InvitationEntityFixture } from './__fixtures__/invitation/invitation.entity.fixture';
 import { AuthPasswordController } from './domains/auth/controllers/auth-password.controller';
+import { MePasswordController } from './domains/auth/controllers/me-password.controller';
 import { RocketsAuthRecoveryController } from './domains/auth/controllers/auth-recovery.controller';
 import { AuthTokenRefreshController } from './domains/auth/controllers/auth-refresh.controller';
 import { AuthOAuthController } from './domains/oauth/controllers/auth-oauth.controller';
@@ -154,6 +155,7 @@ describe('RocketsAuthModuleDefinition', () => {
         InvitationController,
         InvitationRevocationController,
         InvitationReattemptController,
+        MePasswordController,
       ]);
     });
 
@@ -181,6 +183,7 @@ describe('RocketsAuthModuleDefinition', () => {
         InvitationController,
         InvitationRevocationController,
         InvitationReattemptController,
+        MePasswordController,
       ]);
     });
 

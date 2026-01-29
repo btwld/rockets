@@ -1,5 +1,22 @@
-import { IsOptional, IsObject, IsDefined, Allow } from 'class-validator';
+import {
+  IsOptional,
+  IsObject,
+  IsDefined,
+  Allow,
+  IsArray,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
+export class RoleNameDto {
+  @ApiProperty({ description: 'Role name', example: 'admin' })
+  name!: string;
+}
+export class UserRoleItemDto {
+  @ApiProperty({ description: 'Role object', type: () => RoleNameDto })
+  @Type(() => RoleNameDto)
+  role!: RoleNameDto;
+}
 
 /**
  * Generic User Update DTO
@@ -56,12 +73,14 @@ export class UserResponseDto {
 
   @ApiPropertyOptional({
     description: 'User roles from auth provider',
-    example: ['user', 'admin'],
+    example: [{ role: { name: 'user' } }, { role: { name: 'admin' } }],
+    type: UserRoleItemDto,
     isArray: true,
   })
   @IsOptional()
-  @Allow()
-  roles?: string[];
+  @IsArray()
+  @Type(() => UserRoleItemDto)
+  userRoles?: UserRoleItemDto[];
 
   @ApiPropertyOptional({
     description: 'User claims from auth provider',

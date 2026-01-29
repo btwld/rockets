@@ -894,7 +894,7 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
     );
   });
 
-  it('should handle null and empty string values in metadata', async () => {
+  it('should handle null values in metadata and reject empty strings', async () => {
     // Create or get admin role
     const existingRoles = await roleModelService.find({
       where: { name: 'admin' },
@@ -910,7 +910,20 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
       });
     }
 
-    // create user via signup with null/empty metadata values
+    // First, verify that empty string for firstName is rejected (MinLength validation)
+    const invalidUsername = `edge-invalid-${Date.now()}`;
+    await request(app.getHttpServer())
+      .post('/signup')
+      .send({
+        username: invalidUsername,
+        email: `${invalidUsername}@example.com`,
+        password: 'Password123!',
+        active: true,
+        userMetadata: { firstName: '', lastName: 'Valid', bio: 'Valid bio' },
+      })
+      .expect(400);
+
+    // Now create user with valid data (null lastName is allowed)
     const username = `edge-${Date.now()}`;
     const signupRes = await request(app.getHttpServer())
       .post('/signup')
@@ -919,7 +932,7 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
         email: `${username}@example.com`,
         password: 'Password123!',
         active: true,
-        userMetadata: { firstName: '', lastName: null, bio: 'Valid bio' },
+        userMetadata: { firstName: 'Valid', lastName: null, bio: 'Valid bio' },
       })
       .expect(201);
 
@@ -946,7 +959,7 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
 
     expect(getRes.body).toBeDefined();
     expect(getRes.body.userMetadata).toBeDefined();
-    expect(getRes.body.userMetadata.firstName).toBe('');
+    expect(getRes.body.userMetadata.firstName).toBe('Valid');
     expect(getRes.body.userMetadata.lastName).toBeNull();
     expect(getRes.body.userMetadata.bio).toBe('Valid bio');
 
@@ -955,12 +968,12 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
       .patch(`/admin/users/${userId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({
-        userMetadata: { firstName: 'Now', lastName: 'Valid' },
+        userMetadata: { lastName: 'Now Valid' },
       })
       .expect(200);
 
-    expect(updateRes.body.userMetadata.firstName).toBe('Now');
-    expect(updateRes.body.userMetadata.lastName).toBe('Valid');
+    expect(updateRes.body.userMetadata.firstName).toBe('Valid');
+    expect(updateRes.body.userMetadata.lastName).toBe('Now Valid');
     expect(updateRes.body.userMetadata.bio).toBe('Valid bio');
   });
 

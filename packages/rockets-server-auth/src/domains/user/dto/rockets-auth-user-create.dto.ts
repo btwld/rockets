@@ -6,7 +6,11 @@ import { RocketsAuthUserDto } from './rockets-auth-user.dto';
 /**
  * Rockets Server User Create DTO
  *
- * Extends the base user create DTO from the user module
+ * Extends the base user create DTO from the user module.
+ * Includes userMetadata for creating users with metadata.
+ *
+ * Note: When extending this DTO and overriding userMetadata,
+ * do NOT use 'declare' - redefine the property with your own decorators.
  */
 export class RocketsAuthUserCreateDto
   extends IntersectionType(
@@ -14,7 +18,6 @@ export class RocketsAuthUserCreateDto
       'email',
       'username',
       'active',
-      // Allow nested metadata during signup
       'userMetadata',
     ] as const),
     UserPasswordDto,
