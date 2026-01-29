@@ -1,0 +1,53 @@
+---
+# Testing Rules
+Configuration for AI behavior when completing tasks
+
+## CRITICAL: Before completing any task that involves code changes
+
+After making code changes, you MUST run the following commands before finalizing your response:
+
+1. **Build the project:**
+   ```bash
+   yarn build
+   ```
+   - If build fails, fix the errors before proceeding
+
+2. **Run unit tests:**
+   ```bash
+   yarn test
+   ```
+   - If tests fail, fix the failing tests before proceeding
+
+3. **Run e2e tests:**
+   ```bash
+   yarn test:e2e
+   ```
+   - If tests fail, fix the failing tests before proceeding
+
+4. **Run linting:**
+   ```bash
+   yarn lint
+   ```
+   - If lint errors are found, fix them before proceeding
+
+## Execution Order
+
+The commands must be run in this order:
+1. `yarn build` - Ensure code compiles
+2. `yarn test` - Run unit tests
+3. `yarn test:e2e` - Run end-to-end tests
+4. `yarn lint` - Check code style
+
+## When to Skip
+
+You may skip these checks if:
+- The user explicitly asks you to skip testing
+- You are only making documentation changes (*.md files)
+- You are only making configuration changes that don't affect code
+
+## Reporting
+
+When reporting results to the user, include:
+- Number of tests passed/failed
+- Any lint errors that were found and fixed
+- Build status
