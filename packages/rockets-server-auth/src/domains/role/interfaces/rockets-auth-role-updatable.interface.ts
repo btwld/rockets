@@ -7,5 +7,7 @@ import { RocketsAuthRoleInterface } from './rockets-auth-role.interface';
  * Combines required id field with optional updatable fields
  */
 export interface RocketsAuthRoleUpdatableInterface
-  extends Pick<RocketsAuthRoleInterface, 'id'>,
-    Partial<Pick<RocketsAuthRoleCreatableInterface, 'name' | 'description'>> {}
+  extends Partial<
+    Pick<RocketsAuthRoleInterface, 'id'> &
+      Pick<RocketsAuthRoleCreatableInterface, 'name' | 'description'>
+  > {}

@@ -4,11 +4,12 @@ import { RocketsAuthRoleCreatableInterface, RocketsAuthRoleDto, RocketsAuthRoleU
 export class RoleDto extends RocketsAuthRoleDto { }
 
 export class RoleUpdateDto
-  extends IntersectionType(
-    PickType(RocketsAuthRoleDto, ['id'] as const),
-    PartialType(PickType(RocketsAuthRoleDto, ['name', 'description'] as const)),
+  extends PartialType(
+    PickType(RocketsAuthRoleDto, ['id', 'name', 'description'] as const),
   )
-  implements RocketsAuthRoleUpdatableInterface { }
+  implements RocketsAuthRoleUpdatableInterface {
+  id!: string;
+}
 
 export class RoleCreateDto
   extends PickType(RocketsAuthRoleDto, ['name', 'description'] as const)

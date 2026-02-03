@@ -29,6 +29,7 @@ export class UserUpdateDto {
     description:
       'UserMetadata data to update - structure is defined dynamically',
     type: 'object',
+    additionalProperties: true,
     example: {
       firstName: 'John',
       lastName: 'Doe',
@@ -95,6 +96,7 @@ export class UserResponseDto {
     description:
       'UserMetadata data from user userMetadata - structure is defined dynamically',
     type: 'object',
+    additionalProperties: true,
     example: {
       firstName: 'John',
       lastName: 'Doe',

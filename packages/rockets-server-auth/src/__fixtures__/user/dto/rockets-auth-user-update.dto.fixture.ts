@@ -1,4 +1,4 @@
-import { PickType } from '@nestjs/swagger';
+import { PartialType, PickType } from '@nestjs/swagger';
 import { RocketsAuthUserUpdatableInterface } from '../../../domains/user/interfaces/rockets-auth-user-updatable.interface';
 import { RocketsAuthUserFixtureDto } from './rockets-auth-user.dto.fixture';
 
@@ -11,8 +11,7 @@ import { RocketsAuthUserFixtureDto } from './rockets-auth-user.dto.fixture';
  * Note: Properties like age, firstName, lastName should be in userMetadata.
  */
 export class RocketsAuthUserUpdateDtoFixture
-  extends PickType(RocketsAuthUserFixtureDto, [
-    'active',
-    'userMetadata',
-  ] as const)
+  extends PartialType(
+    PickType(RocketsAuthUserFixtureDto, ['active', 'userMetadata'] as const),
+  )
   implements RocketsAuthUserUpdatableInterface {}

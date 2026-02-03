@@ -65,7 +65,9 @@ export interface UserMetadataModelServiceInterface {
   /**
    * Get userMetadata by user ID with proper error handling
    */
-  getUserMetadataByUserId(userId: string): Promise<UserMetadataEntityInterface>;
+  getUserMetadataByUserId(
+    userId: string,
+  ): Promise<UserMetadataEntityInterface | null>;
 
   /**
    * Get userMetadata by ID with proper error handling
