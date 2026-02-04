@@ -7,6 +7,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-alpha.5] - 2026-02-03
+
+### Added
+
+- **User metadata model service interface**: `UserMetadataModelServiceInterface` and `UserMetadataModelUpdatableInterface` for consistent model-layer contracts and SDK patterns.
+- **Me controller**: `/me` endpoint now returns authenticated user data with user metadata via injectable `UserMetadataModelService`.
+
+### Changed
+
+- **User metadata module**: User metadata model service is now injectable and follows the shared `UserMetadataModelServiceInterface` for custom implementations.
+- **User DTOs**: `UserUpdateDto` and `UserResponseDto` aligned with user metadata integration for the me controller.
+- **Rockets options**: Extras interface and module definition updates for extensibility.
+
+## [1.0.0-alpha.4] - 2026-01-23
+
+### Changed
+
+- **User response DTO**: Updated user response DTO for consistency with user metadata and API responses.
+
+## [1.0.0-alpha.3] - 2026-01-22
+
+### Changed
+
+- Type and array handling improvements for DTOs and interfaces.
+
+## [1.0.0-alpha.2] - 2025-12-03
+
+### Changed
+
+- Package and configuration updates; alignment with rockets-server-auth changes.
+
+## [1.0.0-alpha.1] - 2025-10-28
+
+### Changed
+
+- **NPM package metadata**: Improved package metadata and configuration for publishing.
+- **Config**: Package and build configuration updates.
+
 ## [1.0.0-alpha.0] - 2025-10-28
 
 ### Added
@@ -47,4 +85,9 @@ and this project adheres to
 - Compatible with NestJS 10.x
 - BSD-3-Clause license
 
+[1.0.0-alpha.5]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.5
+[1.0.0-alpha.4]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.4
+[1.0.0-alpha.3]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.3
+[1.0.0-alpha.2]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.2
+[1.0.0-alpha.1]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.1
 [1.0.0-alpha.0]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.0
