@@ -6,13 +6,14 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { AppModuleAdminRelationsFixture } from '../../../__fixtures__/admin/app-module-admin-relations.fixture';
 import { ExceptionsFilter, RoleEntityInterface } from '@concepta/nestjs-common';
 import { RoleModelService, RoleService } from '@concepta/nestjs-role';
-import { AdminUserTypeOrmCrudAdapter } from '../../../__fixtures__/admin/admin-user-crud.adapter';
+import { UserMetadataModelService } from '../constants/user-metadata.constants';
+import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
 
 describe('RocketsAuthAdminModule (relations e2e)', () => {
   let app: INestApplication;
   let roleModelService: RoleModelService;
   let roleService: RoleService;
-  let adminUserCrudAdapter: AdminUserTypeOrmCrudAdapter;
+  let userMetadataModelService: GenericUserMetadataModelService;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -27,7 +28,7 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
 
     roleModelService = app.get(RoleModelService);
     roleService = app.get(RoleService);
-    adminUserCrudAdapter = app.get(AdminUserTypeOrmCrudAdapter);
+    userMetadataModelService = app.get(UserMetadataModelService);
   });
 
   afterAll(async () => {
@@ -285,17 +286,8 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
       .expect(200);
     const token = loginRes.body.accessToken;
 
-    const adapterRepo = (
-      adminUserCrudAdapter as unknown as {
-        repo: {
-          manager: {
-            transaction: (...args: unknown[]) => Promise<unknown>;
-          };
-        };
-      }
-    ).repo;
-    const transactionSpy = jest
-      .spyOn(adapterRepo.manager, 'transaction')
+    const createOrUpdateSpy = jest
+      .spyOn(userMetadataModelService, 'createOrUpdate')
       .mockImplementationOnce(async () => {
         throw new Error('metadata write failed');
       });
@@ -309,16 +301,17 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
       })
       .expect(500);
 
-    expect(transactionSpy).toHaveBeenCalled();
-    transactionSpy.mockRestore();
+    expect(createOrUpdateSpy).toHaveBeenCalled();
+    createOrUpdateSpy.mockRestore();
 
-    // Verify transaction rollback semantics for the user update
+    // Non-transactional path is database-agnostic: user update may persist
+    // even when metadata persistence fails.
     const verifyUserRes = await request(app.getHttpServer())
       .get(`/admin/users/${userId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(verifyUserRes.body.active).toBe(true);
+    expect(verifyUserRes.body.active).toBe(false);
   });
 
   it('should partially update user metadata without affecting other fields', async () => {

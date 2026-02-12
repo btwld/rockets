@@ -40,12 +40,6 @@ import { UserMetadataModelService } from '../constants/user-metadata.constants';
 import { CrudApiParam } from '@concepta/nestjs-crud';
 import { logAndGetErrorDetails } from '../../../shared/utils/error-logging.helper';
 import { CrudRelations } from '../../../shared/compat/concepta-internals';
-import {
-  EntityManager,
-  EntityTarget,
-  FindOptionsWhere,
-  Repository,
-} from 'typeorm';
 
 @Module({})
 export class RocketsAuthAdminModule {
@@ -181,21 +175,7 @@ export class RocketsAuthAdminModule {
           }
         }
 
-        // Transaction path is preferred when both adapters expose TypeORM repositories
-        // tied to the same manager. This gives atomic user + metadata writes.
-        const canUseTransactionalPath =
-          this.canUseTransactionalMetadataUpdate();
-        if (userMetadata && canUseTransactionalPath) {
-          return this.updateOneWithMetadataTransaction(
-            req,
-            userDto,
-            userMetadata,
-          );
-        }
-
-        // Fallback path keeps compatibility for non-TypeORM adapters or deployments
-        // where repositories are not transaction-capable. This path is strong-failure
-        // (request errors on metadata failure) but not guaranteed atomic.
+        // Keep this path database-agnostic: update user first, then metadata.
         const result = await super.updateOne(req, userDto);
 
         // Manually create/update metadata using userMetadataService
@@ -226,154 +206,6 @@ export class RocketsAuthAdminModule {
         // CrudRelations will fetch the complete user with metadata
         const updatedUser = await super.getOne(req);
         return updatedUser;
-      }
-
-      private async updateOneWithMetadataTransaction(
-        req: CrudRequestInterface<RocketsAuthUserEntityInterface>,
-        userDto: Partial<RocketsAuthUserEntityInterface>,
-        userMetadata: unknown,
-      ): Promise<RocketsAuthUserEntityInterface> {
-        const userRepo =
-          this.extractTypeOrmRepository<RocketsAuthUserEntityInterface>(
-            this.crudAdapter,
-          );
-        const metadataRepo =
-          this.extractTypeOrmRepository<RocketsAuthUserMetadataEntityInterface>(
-            this.userMetadataModelService.repo,
-          );
-
-        if (!userRepo || !metadataRepo) {
-          // Defensive fallback. This should be unreachable because caller gates with
-          // canUseTransactionalMetadataUpdate, but keep behavior safe if wiring changes.
-          const result = await super.updateOne(req, userDto);
-          await this.userMetadataModelService.createOrUpdate(
-            result.id,
-            userMetadata as Record<string, unknown>,
-          );
-          return super.getOne(req);
-        }
-
-        const existingUser = await super.getOne(req);
-
-        try {
-          await userRepo.manager.transaction(async (manager: EntityManager) => {
-            const txUserRepo = manager.getRepository(
-              userRepo.target as EntityTarget<RocketsAuthUserEntityInterface>,
-            );
-            const txMetadataRepo = manager.getRepository(
-              metadataRepo.target as EntityTarget<RocketsAuthUserMetadataEntityInterface>,
-            );
-
-            // Keep id authoritative from the route lookup to avoid accidental reassignment.
-            await txUserRepo.save({
-              id: existingUser.id,
-              ...userDto,
-            });
-
-            const existingMetadata = await txMetadataRepo.findOne({
-              where: {
-                userId: existingUser.id,
-              } as FindOptionsWhere<RocketsAuthUserMetadataEntityInterface>,
-            });
-
-            if (existingMetadata) {
-              await txMetadataRepo.save({
-                ...existingMetadata,
-                ...(userMetadata as Record<string, unknown>),
-                id: existingMetadata.id,
-                userId: existingUser.id,
-              });
-            } else {
-              await txMetadataRepo.save({
-                ...(userMetadata as Record<string, unknown>),
-                userId: existingUser.id,
-              });
-            }
-          });
-        } catch (metadataError: unknown) {
-          if (metadataError instanceof HttpException) {
-            throw metadataError;
-          }
-
-          logAndGetErrorDetails(
-            metadataError,
-            this.logger,
-            'Failed to update user metadata',
-            {
-              userId: existingUser.id,
-              errorId: 'ADMIN_METADATA_UPDATE_FAILED',
-            },
-          );
-
-          throw new InternalServerErrorException(
-            'Failed to update user metadata',
-          );
-        }
-
-        return super.getOne(req);
-      }
-
-      private canUseTransactionalMetadataUpdate(): boolean {
-        const userRepo =
-          this.extractTypeOrmRepository<RocketsAuthUserEntityInterface>(
-            this.crudAdapter,
-          );
-        const metadataRepo =
-          this.extractTypeOrmRepository<RocketsAuthUserMetadataEntityInterface>(
-            this.userMetadataModelService.repo,
-          );
-
-        if (!userRepo || !metadataRepo) {
-          return false;
-        }
-
-        const userManagerIdentity = this.getManagerIdentity(userRepo.manager);
-        const metadataManagerIdentity = this.getManagerIdentity(
-          metadataRepo.manager,
-        );
-
-        // If we cannot reliably determine identities, avoid assuming they
-        // share a transaction manager.
-        if (!userManagerIdentity || !metadataManagerIdentity) {
-          return false;
-        }
-
-        return userManagerIdentity === metadataManagerIdentity;
-      }
-
-      private getManagerIdentity(manager: EntityManager): object | null {
-        const dataSource = (manager as unknown as { dataSource?: object })
-          .dataSource;
-        const connection = (manager as unknown as { connection?: object })
-          .connection;
-
-        // Prefer dataSource, fall back to connection; return object identity.
-        return dataSource ?? connection ?? null;
-      }
-
-      private extractTypeOrmRepository<T extends object>(
-        adapterLike: unknown,
-      ): Repository<T> | null {
-        if (!adapterLike || typeof adapterLike !== 'object') {
-          return null;
-        }
-
-        const candidate = (adapterLike as { repo?: unknown }).repo;
-        if (!candidate || typeof candidate !== 'object') {
-          return null;
-        }
-
-        const repository = candidate as Partial<Repository<T>>;
-        if (
-          typeof repository.findOne !== 'function' ||
-          typeof repository.save !== 'function' ||
-          !repository.manager ||
-          !repository.target
-        ) {
-          return null;
-        }
-
-        return repository as Repository<T>;
       }
     }
 
