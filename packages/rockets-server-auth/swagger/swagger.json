@@ -898,7 +898,17 @@
         "operationId": "admin_roles_updateOne",
         "summary": "",
         "description": "Updates role information",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Role id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "description": "Role information to update",

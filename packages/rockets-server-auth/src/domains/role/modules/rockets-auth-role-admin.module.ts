@@ -14,6 +14,7 @@ import {
   ApiBody,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiProperty,
   ApiResponse,
   ApiTags,
@@ -99,6 +100,12 @@ export class RocketsAuthRoleAdminModule {
       @ApiOperation({
         summary: 'Update role',
         description: 'Updates role information',
+      })
+      @ApiParam({
+        name: 'id',
+        required: true,
+        description: 'Role id',
+        schema: { type: 'string' },
       })
       @ApiBody({
         type: UpdateDto,
