@@ -11,50 +11,67 @@ and this project adheres to
 
 ### Added
 
-- **User metadata model service interface**: `UserMetadataModelServiceInterface` and `UserMetadataModelUpdatableInterface` for consistent model-layer contracts and SDK patterns.
-- **Me controller**: `/me` endpoint now returns authenticated user data with user metadata via injectable `UserMetadataModelService`.
+- **User metadata model service interface**:
+  `UserMetadataModelServiceInterface` and
+  `UserMetadataModelUpdatableInterface` for consistent
+  model-layer contracts and SDK patterns.
+- **Me controller**: `/me` endpoint now returns
+  authenticated user data with user metadata via
+  injectable `UserMetadataModelService`.
 
 ### Changed
 
-- **User metadata module**: User metadata model service is now injectable and follows the shared `UserMetadataModelServiceInterface` for custom implementations.
-- **User DTOs**: `UserUpdateDto` and `UserResponseDto` aligned with user metadata integration for the me controller.
-- **Rockets options**: Extras interface and module definition updates for extensibility.
+- **User metadata module**: User metadata model service
+  is now injectable and follows the shared
+  `UserMetadataModelServiceInterface` for custom
+  implementations.
+- **User DTOs**: `UserUpdateDto` and `UserResponseDto`
+  aligned with user metadata integration for the me
+  controller.
+- **Rockets options**: Extras interface and module
+  definition updates for extensibility.
 
 ## [1.0.0-alpha.4] - 2026-01-23
 
 ### Changed
 
-- **User response DTO**: Updated user response DTO for consistency with user metadata and API responses.
+- **User response DTO**: Updated user response DTO for
+  consistency with user metadata and API responses.
 
 ## [1.0.0-alpha.3] - 2026-01-22
 
 ### Changed
 
-- Type and array handling improvements for DTOs and interfaces.
+- Type and array handling improvements for DTOs and
+  interfaces.
 
 ## [1.0.0-alpha.2] - 2025-12-03
 
 ### Changed
 
-- Package and configuration updates; alignment with rockets-server-auth changes.
+- Package and configuration updates; alignment with
+  rockets-server-auth changes.
 
 ## [1.0.0-alpha.1] - 2025-10-28
 
 ### Changed
 
-- **NPM package metadata**: Improved package metadata and configuration for publishing.
+- **NPM package metadata**: Improved package metadata and
+  configuration for publishing.
 - **Config**: Package and build configuration updates.
 
 ## [1.0.0-alpha.0] - 2025-10-28
 
 ### Added
 
-- Initial alpha release of Rockets core server functionality
+- Initial alpha release of Rockets core server
+  functionality
 - Core NestJS module for rapid API development
 - Built-in authentication infrastructure
 - User management foundation
 - User metadata system
-- Swagger documentation generator CLI tool (`rockets-swagger`)
+- Swagger documentation generator CLI tool
+  (`rockets-swagger`)
 - Exception filtering system
 - Authentication guards
 - TypeScript support with full type definitions
@@ -65,7 +82,8 @@ and this project adheres to
 - **RocketsModule**: Core module for application setup
 - **User Module**: Base user management functionality
 - **User Metadata Module**: Extensible user metadata system
-- **Authentication Provider**: Pluggable authentication interface
+- **Authentication Provider**: Pluggable authentication
+  interface
 - **Error Logging Helper**: Centralized error handling
 - **Swagger Integration**: Automatic API documentation via
   `@concepta/nestjs-swagger-ui`
