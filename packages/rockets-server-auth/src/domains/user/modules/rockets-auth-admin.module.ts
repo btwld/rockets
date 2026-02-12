@@ -327,20 +327,28 @@ export class RocketsAuthAdminModule {
           return false;
         }
 
-        return this.getManagerIdentity(userRepo.manager) ===
-          this.getManagerIdentity(metadataRepo.manager)
-          ? true
-          : false;
+        const userManagerIdentity = this.getManagerIdentity(userRepo.manager);
+        const metadataManagerIdentity = this.getManagerIdentity(
+          metadataRepo.manager,
+        );
+
+        // If we cannot reliably determine identities, avoid assuming they
+        // share a transaction manager.
+        if (!userManagerIdentity || !metadataManagerIdentity) {
+          return false;
+        }
+
+        return userManagerIdentity === metadataManagerIdentity;
       }
 
-      private getManagerIdentity(manager: EntityManager): string {
-        const dataSource = (
-          manager as unknown as { dataSource?: { name?: string } }
-        ).dataSource;
-        const connection = (
-          manager as unknown as { connection?: { name?: string } }
-        ).connection;
-        return dataSource?.name || connection?.name || '';
+      private getManagerIdentity(manager: EntityManager): object | null {
+        const dataSource = (manager as unknown as { dataSource?: object })
+          .dataSource;
+        const connection = (manager as unknown as { connection?: object })
+          .connection;
+
+        // Prefer dataSource, fall back to connection; return object identity.
+        return dataSource ?? connection ?? null;
       }
 
       private extractTypeOrmRepository<T extends object>(

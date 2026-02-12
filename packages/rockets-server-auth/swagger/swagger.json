@@ -761,7 +761,6 @@
         "responses": {
           "200": {
             "description": "Read-One ExtendedUserDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -806,7 +805,6 @@
         "responses": {
           "200": {
             "description": "Update-One ExtendedUserDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -994,7 +992,6 @@
         "responses": {
           "200": {
             "description": "Read-One RocketsAuthRoleDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -1207,7 +1204,6 @@
         "responses": {
           "200": {
             "description": "Create-One RocketsAuthRoleDto",
-            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
