@@ -9,6 +9,6 @@ import { RocketsAuthRoleDto } from './rockets-auth-role.dto';
  */
 export class RocketsAuthRoleUpdateDto
   extends PartialType(
-    PickType(RocketsAuthRoleDto, ['id', 'name', 'description'] as const),
+    PickType(RocketsAuthRoleDto, ['name', 'description'] as const),
   )
   implements RocketsAuthRoleUpdatableInterface {}

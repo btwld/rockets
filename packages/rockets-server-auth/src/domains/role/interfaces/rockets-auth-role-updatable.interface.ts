@@ -1,5 +1,4 @@
 import { RocketsAuthRoleCreatableInterface } from './rockets-auth-role-creatable.interface';
-import { RocketsAuthRoleInterface } from './rockets-auth-role.interface';
 
 /**
  * Rockets Server Role Updatable Interface
@@ -8,6 +7,5 @@ import { RocketsAuthRoleInterface } from './rockets-auth-role.interface';
  */
 export interface RocketsAuthRoleUpdatableInterface
   extends Partial<
-    Pick<RocketsAuthRoleInterface, 'id'> &
-      Pick<RocketsAuthRoleCreatableInterface, 'name' | 'description'>
+    Pick<RocketsAuthRoleCreatableInterface, 'name' | 'description'>
   > {}

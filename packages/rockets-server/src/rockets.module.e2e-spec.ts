@@ -117,7 +117,7 @@ describe('RocketsModule (e2e)', () => {
   class TestUserMetadataCreateDto implements UserMetadataCreatableInterface {
     @IsNotEmpty()
     @IsString()
-    userId: string;
+    userId!: string;
 
     @IsOptional()
     @IsString()
@@ -135,7 +135,7 @@ describe('RocketsModule (e2e)', () => {
   {
     @IsNotEmpty()
     @IsString()
-    id: string;
+    id!: string;
 
     @IsOptional()
     @IsString()

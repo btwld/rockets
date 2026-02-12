@@ -54,7 +54,7 @@ export class UserResponseDto {
   })
   @IsDefined()
   @Allow()
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'User subject from auth provider',
@@ -62,7 +62,7 @@ export class UserResponseDto {
   })
   @IsDefined()
   @Allow()
-  sub: string;
+  sub!: string;
 
   @ApiPropertyOptional({
     description: 'User email from auth provider',

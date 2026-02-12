@@ -118,9 +118,8 @@ export class GenericUserMetadataModelService extends ModelService<
       const definedData = Object.fromEntries(
         Object.entries(data).filter(([, v]) => v !== undefined),
       );
-      const plainExisting = JSON.parse(JSON.stringify(existingUserMetadata));
       const updateData: RocketsAuthUserMetadataModelUpdatableInterface = {
-        ...plainExisting,
+        ...existingUserMetadata,
         ...definedData,
       };
       return this.update(updateData);
