@@ -1,31 +1,31 @@
 import { AccessControlModule } from '@concepta/nestjs-access-control';
 import { AuthAppleGuard, AuthAppleModule } from '@concepta/nestjs-auth-apple';
-import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple/dist/interfaces/auth-apple-options.interface';
+import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple';
 import {
   AuthGithubGuard,
   AuthGithubModule,
 } from '@concepta/nestjs-auth-github';
-import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github/dist/interfaces/auth-github-options.interface';
+import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github';
 import {
   AuthGoogleGuard,
   AuthGoogleModule,
 } from '@concepta/nestjs-auth-google';
-import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google/dist/interfaces/auth-google-options.interface';
+import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google';
 import { AuthJwtModule } from '@concepta/nestjs-auth-jwt';
-import { AuthJwtOptionsInterface } from '@concepta/nestjs-auth-jwt/dist/interfaces/auth-jwt-options.interface';
+import { AuthJwtOptionsInterface } from '@concepta/nestjs-auth-jwt';
 import { AuthLocalModule } from '@concepta/nestjs-auth-local';
-import { AuthLocalOptionsInterface } from '@concepta/nestjs-auth-local/dist/interfaces/auth-local-options.interface';
+import { AuthLocalOptionsInterface } from '@concepta/nestjs-auth-local';
 import { AuthRecoveryModule } from '@concepta/nestjs-auth-recovery';
-import { AuthRecoveryOptionsInterface } from '@concepta/nestjs-auth-recovery/dist/interfaces/auth-recovery-options.interface';
+import { AuthRecoveryOptionsInterface } from '@concepta/nestjs-auth-recovery';
 import { AuthRefreshModule } from '@concepta/nestjs-auth-refresh';
-import { AuthRefreshOptionsInterface } from '@concepta/nestjs-auth-refresh/dist/interfaces/auth-refresh-options.interface';
+import { AuthRefreshOptionsInterface } from '@concepta/nestjs-auth-refresh';
 import {
   AuthRouterGuardConfigInterface,
   AuthRouterModule,
   AuthRouterOptionsInterface,
 } from '@concepta/nestjs-auth-router';
 import { AuthVerifyModule } from '@concepta/nestjs-auth-verify';
-import { AuthVerifyOptionsInterface } from '@concepta/nestjs-auth-verify/dist/interfaces/auth-verify-options.interface';
+import { AuthVerifyOptionsInterface } from '@concepta/nestjs-auth-verify';
 import { AuthenticationModule } from '@concepta/nestjs-authentication';
 import { createSettingsProvider } from '@concepta/nestjs-common';
 import { CrudModule } from '@concepta/nestjs-crud';
@@ -35,11 +35,9 @@ import {
   EmailServiceInterface,
 } from '@concepta/nestjs-email';
 import { FederatedModule } from '@concepta/nestjs-federated';
-import { FederatedOptionsInterface } from '@concepta/nestjs-federated/dist/interfaces/federated-options.interface';
 import { InvitationModule } from '@concepta/nestjs-invitation';
-import { InvitationOptionsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-options.interface';
 import { JwtModule } from '@concepta/nestjs-jwt';
-import { JwtOptionsInterface } from '@concepta/nestjs-jwt/dist/interfaces/jwt-options.interface';
+import { JwtOptionsInterface } from '@concepta/nestjs-jwt';
 import { OtpModule, OtpService } from '@concepta/nestjs-otp';
 import { PasswordModule } from '@concepta/nestjs-password';
 import { RoleModule } from '@concepta/nestjs-role';
@@ -86,7 +84,11 @@ import {
 import { RocketsAuthInvitationAcceptanceModule } from './domains/invitation/modules/rockets-auth-invitation-acceptance.module';
 import { RocketsAuthUserMetadataModule } from './domains/user/modules/rockets-auth-user-metadata.module';
 import { UserCrudOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
-import { InvitationSettingsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-settings.interface';
+import {
+  FederatedOptionsInterface,
+  InvitationOptionsInterface,
+  InvitationSettingsInterface,
+} from './shared/compat/concepta-internals';
 
 export const RAW_OPTIONS_TOKEN = Symbol(
   '__ROCKETS_SERVER_MODULE_RAW_OPTIONS_TOKEN__',
@@ -138,7 +140,7 @@ function definitionTransform(
     ...definition,
     global: extras.global,
     imports: createRocketsAuthImports({ imports, extras }),
-    controllers: createRocketsAuthControllers({ controllers, extras }) || [],
+    controllers: createRocketsAuthControllers({ controllers, extras }),
     providers: [...createRocketsAuthProviders({ providers, extras, userCrud })],
     exports: createRocketsAuthExports({ exports, extras }),
   };
@@ -150,7 +152,7 @@ function definitionTransform(
     // Import centralized UserMetadata module - single configuration point
     // userMetadataConfig is required for full functionality but optional for basic tests
     baseModule.imports = [
-      ...(baseModule.imports || []),
+      ...(baseModule.imports ?? []),
       ...(userCrud.userMetadataConfig
         ? [RocketsAuthUserMetadataModule.forRoot(userCrud.userMetadataConfig)]
         : []),
@@ -170,7 +172,7 @@ function definitionTransform(
   if (roleCrud) {
     const disableController = extras.disableController || {};
     baseModule.imports = [
-      ...(baseModule.imports || []),
+      ...(baseModule.imports ?? []),
       ...(!disableController.adminRoles
         ? [RocketsAuthRoleAdminModule.register(roleCrud)]
         : []),
@@ -197,8 +199,7 @@ export function createRocketsAuthControllers(options: {
         if (!disableController.otp) list.push(RocketsAuthOtpController);
         if (!disableController.oAuth) list.push(AuthOAuthController);
         if (!disableController.invitation) list.push(InvitationController);
-        // InvitationAcceptanceController is now created dynamically by RocketsAuthInvitationAcceptanceModule
-        // and is registered conditionally above, so we don't add it here
+        // InvitationAcceptanceController is registered by RocketsAuthInvitationAcceptanceModule
         if (!disableController.invitationRevocation)
           list.push(InvitationRevocationController);
         if (!disableController.invitationReattempt)

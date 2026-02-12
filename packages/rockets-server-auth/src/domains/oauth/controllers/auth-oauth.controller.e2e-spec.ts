@@ -127,7 +127,7 @@ describe('AuthOAuthController (e2e)', () => {
           userCrud: {
             imports: [
               TypeOrmExtModule.forFeature({
-                authUserMetadata: { entity: UserMetadataEntityFixture },
+                userMetadata: { entity: UserMetadataEntityFixture },
               }),
             ],
             adapter: AdminUserTypeOrmCrudAdapter,

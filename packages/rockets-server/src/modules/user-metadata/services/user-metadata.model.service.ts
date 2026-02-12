@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  HttpException,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
@@ -53,7 +54,7 @@ export class GenericUserMetadataModelService
       }
       return userMetadata;
     } catch (error) {
-      if (error instanceof RuntimeException) {
+      if (error instanceof RuntimeException || error instanceof HttpException) {
         throw error;
       }
       logAndGetErrorDetails(
@@ -118,7 +119,7 @@ export class GenericUserMetadataModelService
       }
       return userMetadata;
     } catch (error) {
-      if (error instanceof RuntimeException) {
+      if (error instanceof RuntimeException || error instanceof HttpException) {
         throw error;
       }
       logAndGetErrorDetails(
@@ -146,7 +147,7 @@ export class GenericUserMetadataModelService
       }
       return super.update(data);
     } catch (error) {
-      if (error instanceof RuntimeException) {
+      if (error instanceof RuntimeException || error instanceof HttpException) {
         throw error;
       }
       logAndGetErrorDetails(

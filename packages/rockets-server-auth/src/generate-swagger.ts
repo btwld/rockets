@@ -614,6 +614,8 @@ async function generateSwaggerJson() {
       .setTitle('Rockets API')
       .setDescription('API documentation for Rockets Server')
       .setVersion('1.0')
+      .setContact('Rockets API Team', '', 'api@rockets.dev')
+      .setLicense('BSD-3-Clause', '')
       .addBearerAuth()
       .build();
 

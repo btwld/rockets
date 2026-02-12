@@ -13,7 +13,6 @@ import { GlobalModuleFixture } from './__fixtures__/global.module.fixture';
 
 import { AuthJwtGuard, AuthJwtStrategy } from '@concepta/nestjs-auth-jwt';
 import { AuthRefreshGuard } from '@concepta/nestjs-auth-refresh';
-import { AuthRefreshStrategy } from '@concepta/nestjs-auth-refresh/dist/auth-refresh.strategy';
 import {
   IssueTokenService,
   VerifyTokenService,
@@ -47,6 +46,7 @@ import { AuthTokenRefreshController } from './domains/auth/controllers/auth-refr
 import { RocketsAuthRecoveryController } from './domains/auth/controllers/auth-recovery.controller';
 import { RocketsAuthOtpController } from './domains/otp/controllers/rockets-auth-otp.controller';
 import { AuthOAuthController } from './domains/oauth/controllers/auth-oauth.controller';
+import { AuthRefreshStrategy } from './shared/compat/concepta-internals';
 // Mock user lookup service
 export const mockUserModelService: RocketsAuthUserModelServiceInterface = {
   bySubject: jest.fn().mockResolvedValue({ id: '1', username: 'test' }),

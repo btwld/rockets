@@ -417,7 +417,7 @@
       "post": {
         "operationId": "InvitationController_create",
         "summary": "Create and send invitation (Admin only)",
-        "description": "Creates a new user invitation and sends an email with OTP for acceptance",
+        "description": "Creates a new user invitation and sends an email with OTP for acceptance. If email sending fails, the invitation is still returned. Check emailSent field and use POST /admin/invitations/:code/reattempt to retry.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -431,11 +431,11 @@
         },
         "responses": {
           "201": {
-            "description": "Invitation created and email sent successfully",
+            "description": "Invitation created. Check emailSent field to verify if email was sent successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RocketsAuthInvitationDto"
+                  "$ref": "#/components/schemas/RocketsAuthInvitationResponseDto"
                 }
               }
             }
@@ -468,7 +468,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Invitations revoked successfully"
           }
         },
@@ -499,12 +499,59 @@
           }
         ],
         "responses": {
-          "200": {
+          "201": {
             "description": "Invitation email re-sent successfully"
           }
         },
         "tags": [
           "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/me/password": {
+      "patch": {
+        "operationId": "changeMyPassword",
+        "summary": "Change password",
+        "description": "Allows authenticated user to change their own password by providing current and new password",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Current and new password",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RocketsAuthChangePasswordDto"
+              },
+              "examples": {
+                "standard": {
+                  "value": {
+                    "currentPassword": "CurrentP@ssw0rd",
+                    "newPassword": "NewSecureP@ssw0rd"
+                  },
+                  "summary": "Standard password change"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed successfully"
+          },
+          "400": {
+            "description": "New password does not meet requirements"
+          },
+          "401": {
+            "description": "Invalid current password or authentication token"
+          }
+        },
+        "tags": [
+          "Me"
         ],
         "security": [
           {
@@ -714,6 +761,7 @@
         "responses": {
           "200": {
             "description": "Read-One ExtendedUserDto",
+            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -758,6 +806,7 @@
         "responses": {
           "200": {
             "description": "Update-One ExtendedUserDto",
+            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -814,7 +863,7 @@
       "patch": {
         "operationId": "InvitationAcceptanceController_accept",
         "summary": "Accept invitation (Public with OTP)",
-        "description": "Accept an invitation by providing the code and OTP passcode. Include password and userMetadata in the payload.",
+        "description": "Accept an invitation by providing the code and OTP passcode. Include user data in the payload.",
         "parameters": [
           {
             "name": "code",
@@ -851,16 +900,7 @@
         "operationId": "admin_roles_updateOne",
         "summary": "",
         "description": "Updates role information",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "description": "Role information to update",
@@ -954,6 +994,7 @@
         "responses": {
           "200": {
             "description": "Read-One RocketsAuthRoleDto",
+            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -989,7 +1030,9 @@
           "200": {
             "description": "Delete-One RocketsAuthRoleDto",
             "content": {
-              "application/json": {}
+              "application/json": {
+                "schema": {}
+              }
             }
           }
         },
@@ -1164,6 +1207,7 @@
         "responses": {
           "200": {
             "description": "Create-One RocketsAuthRoleDto",
+            "schema": {},
             "content": {
               "application/json": {
                 "schema": {
@@ -1264,11 +1308,13 @@
     "description": "API documentation for Rockets Server",
     "version": "1.0",
     "contact": {
-      "email": "api@rockets.dev",
-      "name": "Rockets API Team"
+      "name": "Rockets API Team",
+      "url": "",
+      "email": "api@rockets.dev"
     },
     "license": {
-      "name": "BSD-3-Clause"
+      "name": "BSD-3-Clause",
+      "url": ""
     }
   },
   "tags": [],
@@ -1444,7 +1490,7 @@
           "email"
         ]
       },
-      "RocketsAuthInvitationDto": {
+      "RocketsAuthInvitationResponseDto": {
         "type": "object",
         "properties": {
           "dateCreated": {
@@ -1491,6 +1537,16 @@
           "userId": {
             "type": "string",
             "description": "The invited user ID."
+          },
+          "emailSent": {
+            "type": "boolean",
+            "description": "Whether the invitation email was sent successfully",
+            "example": true
+          },
+          "emailError": {
+            "type": "string",
+            "description": "Error message if email sending failed. Use POST /admin/invitations/:code/reattempt to retry.",
+            "example": "SMTP connection timeout"
           }
         },
         "required": [
@@ -1503,7 +1559,8 @@
           "code",
           "category",
           "constraints",
-          "userId"
+          "userId",
+          "emailSent"
         ]
       },
       "RocketsAuthInvitationRevokeDto": {
@@ -1516,13 +1573,35 @@
           },
           "category": {
             "type": "string",
-            "description": "Category of invitations to revoke",
+            "description": "Category of invitations to revoke (implementation-specific, e.g., \"user\", \"admin\")",
             "example": "user"
           }
         },
         "required": [
           "email",
           "category"
+        ]
+      },
+      "RocketsAuthChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "title": "Current Password",
+            "description": "The user current password for verification",
+            "example": "CurrentP@ssw0rd"
+          },
+          "newPassword": {
+            "type": "string",
+            "title": "New Password",
+            "description": "The new password to set (minimum 8 characters)",
+            "example": "NewSecureP@ssw0rd",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
         ]
       },
       "ExtendedUserMetadataDto": {

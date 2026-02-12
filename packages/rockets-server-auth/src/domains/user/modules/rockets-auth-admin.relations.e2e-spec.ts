@@ -6,11 +6,13 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { AppModuleAdminRelationsFixture } from '../../../__fixtures__/admin/app-module-admin-relations.fixture';
 import { ExceptionsFilter, RoleEntityInterface } from '@concepta/nestjs-common';
 import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { AdminUserTypeOrmCrudAdapter } from '../../../__fixtures__/admin/admin-user-crud.adapter';
 
 describe('RocketsAuthAdminModule (relations e2e)', () => {
   let app: INestApplication;
   let roleModelService: RoleModelService;
   let roleService: RoleService;
+  let adminUserCrudAdapter: AdminUserTypeOrmCrudAdapter;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -25,6 +27,7 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
 
     roleModelService = app.get(RoleModelService);
     roleService = app.get(RoleService);
+    adminUserCrudAdapter = app.get(AdminUserTypeOrmCrudAdapter);
   });
 
   afterAll(async () => {
@@ -244,6 +247,78 @@ describe('RocketsAuthAdminModule (relations e2e)', () => {
     expect(verifyRes.body.userMetadata.firstName).toBe('Added');
     expect(verifyRes.body.userMetadata.lastName).toBe('Later');
     expect(verifyRes.body.userMetadata.bio).toBe('New metadata');
+  });
+
+  it('should fail admin update when metadata persistence fails', async () => {
+    const existingRoles = await roleModelService.find({
+      where: { name: 'admin' },
+    });
+    const adminRole =
+      existingRoles && existingRoles.length > 0
+        ? existingRoles[0]
+        : await roleModelService.create({
+            name: 'admin',
+            description: 'Administrator role',
+          });
+
+    const username = `meta-fail-${Date.now()}`;
+    const signupRes = await request(app.getHttpServer())
+      .post('/signup')
+      .send({
+        username,
+        email: `${username}@example.com`,
+        password: 'Password123!',
+        active: true,
+      })
+      .expect(201);
+
+    const userId = signupRes.body.id;
+    await roleService.assignRole({
+      assignment: 'user',
+      role: { id: adminRole.id },
+      assignee: { id: userId },
+    });
+
+    const loginRes = await request(app.getHttpServer())
+      .post('/token/password')
+      .send({ username, password: 'Password123!' })
+      .expect(200);
+    const token = loginRes.body.accessToken;
+
+    const adapterRepo = (
+      adminUserCrudAdapter as unknown as {
+        repo: {
+          manager: {
+            transaction: (...args: unknown[]) => Promise<unknown>;
+          };
+        };
+      }
+    ).repo;
+    const transactionSpy = jest
+      .spyOn(adapterRepo.manager, 'transaction')
+      .mockImplementationOnce(async () => {
+        throw new Error('metadata write failed');
+      });
+
+    await request(app.getHttpServer())
+      .patch(`/admin/users/${userId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        active: false,
+        userMetadata: { firstName: 'ShouldFail' },
+      })
+      .expect(500);
+
+    expect(transactionSpy).toHaveBeenCalled();
+    transactionSpy.mockRestore();
+
+    // Verify transaction rollback semantics for the user update
+    const verifyUserRes = await request(app.getHttpServer())
+      .get(`/admin/users/${userId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(verifyUserRes.body.active).toBe(true);
   });
 
   it('should partially update user metadata without affecting other fields', async () => {

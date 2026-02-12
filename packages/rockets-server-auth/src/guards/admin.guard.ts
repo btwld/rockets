@@ -45,7 +45,7 @@ export class AdminGuard implements CanActivate {
         },
       });
 
-      if (roles && roles.length > 0) {
+      if (roles.length > 0) {
         const admin = roles[0];
         const isAdmin = await this.roleService.isAssignedRole({
           assignment: 'user',

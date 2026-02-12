@@ -20,8 +20,6 @@ export {
 
 // Controllers
 export { InvitationController } from './controllers/invitation.controller';
-// Note: InvitationAcceptanceController is now created dynamically by RocketsAuthInvitationAcceptanceModule
-// The static export is kept for backward compatibility but should not be used directly
 export { InvitationAcceptanceController } from './controllers/invitation-acceptance.controller';
 export { InvitationRevocationController } from './controllers/invitation-revocation.controller';
 export { InvitationReattemptController } from './controllers/invitation-reattempt.controller';

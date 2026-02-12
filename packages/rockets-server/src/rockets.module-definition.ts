@@ -67,7 +67,7 @@ function definitionTransform(
     ...definition,
     global: extras.global,
     imports: [...createRocketsImports({ imports: defImports, extras })],
-    controllers: createRocketsControllers({ extras }) || [],
+    controllers: createRocketsControllers({ extras }),
     providers: [...createRocketsProviders({ providers, extras })],
     exports: createRocketsExports({ exports, extras }),
   };

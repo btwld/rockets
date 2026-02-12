@@ -8,28 +8,13 @@ import {
   Provider,
   Type,
   ValidationPipe,
-  Controller,
-  HttpCode,
-  Param,
-  Patch,
-  Body,
 } from '@nestjs/common';
 import { EventAsyncInterface, EventListenerOn } from '@concepta/nestjs-event';
-import {
-  InvitationAcceptedEventAsync,
-  InvitationService,
-} from '@concepta/nestjs-invitation';
+import { InvitationAcceptedEventAsync } from '@concepta/nestjs-invitation';
 import { PasswordCreationService } from '@concepta/nestjs-password';
 import { RoleService } from '@concepta/nestjs-role';
 import { UserModelService } from '@concepta/nestjs-user';
 import { plainToInstance } from 'class-transformer';
-import {
-  ApiOkResponse,
-  ApiOperation,
-  ApiParam,
-  ApiTags,
-} from '@nestjs/swagger';
-import { AuthPublic } from '@concepta/nestjs-authentication';
 import {
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
   RocketsAuthSettingsInterface,
@@ -44,8 +29,7 @@ import {
   TypedInvitationAcceptedEventPayloadInterface,
   InvitationAcceptanceDataInterface,
 } from '../interfaces/invitation-acceptance-data.interface';
-import { RocketsAuthInvitationAcceptDto } from '../dto/rockets-auth-invitation-accept.dto';
-import { RocketsAuthInvitationNotAcceptedException } from '../invitation.exception';
+import { InvitationAcceptanceController } from '../controllers/invitation-acceptance.controller';
 
 export const RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN = Symbol(
   '__ROCKETS_INVITATION_ACCEPTANCE_MODULE_RAW_OPTIONS_TOKEN__',
@@ -54,19 +38,17 @@ export const RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN = Symbol(
 export const INVITATION_ACCEPTANCE_LISTENER_TOKEN =
   'INVITATION_ACCEPTANCE_LISTENER';
 
+type InvitationAcceptanceEvent = EventAsyncInterface<
+  TypedInvitationAcceptedEventPayloadInterface<InvitationAcceptanceDataInterface>,
+  boolean
+>;
+
 /**
  * Options interface for Invitation Acceptance Module
  */
 export interface InvitationAcceptanceOptionsInterface {
   userCrud?: UserCrudOptionsExtrasInterface;
-  listenerService?: Type<
-    EventListenerOn<
-      EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface<InvitationAcceptanceDataInterface>,
-        boolean
-      >
-    >
-  >;
+  listenerService?: Type<EventListenerOn<InvitationAcceptanceEvent>>;
 }
 
 type InvitationAcceptanceExtrasInterface =
@@ -125,17 +107,14 @@ function definitionTransform(
 function createInvitationAcceptanceControllers(_options: {
   extras?: Partial<InvitationAcceptanceExtrasInterface>;
 }): DynamicModule['controllers'] {
-  // Get the controller class from factory method (KISS)
-  const ControllerClass = createInvitationAcceptanceControllerClass();
-
-  return [ControllerClass];
+  return [InvitationAcceptanceController];
 }
 
 /**
  * Create providers following the rockets-auth pattern
  */
 function createInvitationAcceptanceProviders(options: {
-  providers: DynamicModule['providers'];
+  providers: Provider[];
   extras?: Partial<InvitationAcceptanceExtrasInterface>;
 }): Provider[] {
   const { extras } = options;
@@ -146,7 +125,7 @@ function createInvitationAcceptanceProviders(options: {
     extras?.listenerService || createInvitationUserAcceptanceListenerClass();
 
   return [
-    ...(options.providers || []),
+    ...options.providers,
 
     // Listener provider - use the class directly with useClass
     {
@@ -160,11 +139,11 @@ function createInvitationAcceptanceProviders(options: {
  * Create exports following the rockets-auth pattern
  */
 function createInvitationAcceptanceExports(options: {
-  exports: DynamicModule['exports'];
+  exports: Exclude<DynamicModule['exports'], undefined>;
   extras?: Partial<InvitationAcceptanceExtrasInterface>;
 }): DynamicModule['exports'] {
   return [
-    ...(options.exports || []),
+    ...options.exports,
     RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN,
     INVITATION_ACCEPTANCE_LISTENER_TOKEN,
   ];
@@ -174,70 +153,6 @@ function createInvitationAcceptanceExports(options: {
  * Create the Invitation Acceptance Controller class
  * KISS: This method creates and returns ONE class
  */
-function createInvitationAcceptanceControllerClass() {
-  @Controller('invitation-acceptance')
-  @AuthPublic()
-  @ApiTags('auth')
-  class InvitationAcceptanceController {
-    constructor(private readonly invitationService: InvitationService) {}
-
-    /**
-     * Accept an invitation
-     *
-     * Users accept invitations by providing the invitation code and OTP passcode.
-     * The payload can contain password and userMetadata (firstName, lastName, etc.)
-     * which will be processed by the InvitationUserAcceptanceListener.
-     *
-     * SECURITY: Only password and userMetadata are accepted. User fields (active, email, username)
-     * cannot be updated via this endpoint to prevent mass assignment attacks.
-     *
-     * @param code - The invitation code (UUID) from the email
-     * @param dto - Acceptance data containing passcode and optional user data payload
-     * @returns void on success, throws exception on failure
-     */
-    @Patch(':code')
-    @HttpCode(200)
-    @ApiOperation({
-      summary: 'Accept invitation (Public with OTP)',
-      description:
-        'Accept an invitation by providing the code and OTP passcode. Include password and userMetadata in the payload.',
-    })
-    @ApiParam({
-      name: 'code',
-      description: 'Invitation code from email',
-      type: 'string',
-    })
-    @ApiOkResponse({
-      description: 'Invitation accepted successfully',
-    })
-    async accept(
-      @Param('code') code: string,
-      @Body() dto: RocketsAuthInvitationAcceptDto,
-    ): Promise<void> {
-      const { passcode, payload } = dto;
-
-      let success: boolean | null | undefined;
-
-      try {
-        success = await this.invitationService.accept({
-          code,
-          passcode,
-          payload,
-        });
-      } catch (e) {
-        Logger.error(e);
-        throw e;
-      }
-
-      if (!success) {
-        throw new RocketsAuthInvitationNotAcceptedException();
-      }
-    }
-  }
-
-  return InvitationAcceptanceController;
-}
-
 /**
  * Create the Invitation User Acceptance Listener class
  * KISS: This method creates and returns ONE class
@@ -304,150 +219,50 @@ function createInvitationUserAcceptanceListenerClass() {
      * @param event - The invitation accepted event containing invitation and user data
      * @returns true if successful, false if failed (causes rollback)
      */
-    async listen(
-      event: EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface<InvitationAcceptanceDataInterface>,
-        boolean
-      >,
-    ): Promise<boolean> {
+    async listen(event: InvitationAcceptanceEvent): Promise<boolean> {
       const { invitation, data } = event.payload;
 
-      // Only handle 'user' category invitations
-      // Other categories can have their own listeners
       if (invitation.category !== 'user') {
-        return true; // Let other listeners handle other categories
+        return true;
       }
 
       try {
-        // Extract only password and userMetadata from payload
-        // SECURITY: User fields (active, email, username) are NOT extracted
-        // They cannot be updated via invitation acceptance to prevent mass assignment
-        const { password, userMetadata } = data || {};
+        const { password, userMetadata } = this.extractAcceptedData(data);
 
-        // Verify user exists
-        const user = await this.userModelService.byId(invitation.userId);
-        if (!user) {
-          this.logger.error('User not found for invitation', {
-            userId: invitation.userId,
-            invitationId: invitation.id,
-          });
+        const userExists = await this.ensureUserExists({
+          userId: invitation.userId,
+          invitationId: invitation.id,
+        });
+        if (!userExists) {
           return false;
         }
 
-        // 1. Hash password if provided
-        const passwordFields: Record<string, unknown> = {};
-        if (password && typeof password === 'string') {
-          const passwordHash = await this.passwordService.create(password);
-          Object.assign(passwordFields, passwordHash);
-          this.logger.debug('Password hashed successfully', {
-            userId: invitation.userId,
-          });
-        }
+        const passwordFields = await this.getPasswordFields(
+          password,
+          invitation.userId,
+        );
+        await this.updateUserActivation(invitation.userId, passwordFields);
 
-        // 2. Update user with password only (no userData spread - security)
-        // active is set to true by code, not by user input
-        await this.userModelService.update({
-          id: invitation.userId,
-          ...passwordFields,
-          active: true,
-        });
-        this.logger.debug('User updated successfully', {
+        const metadataSaved = await this.updateUserMetadata({
           userId: invitation.userId,
+          userMetadata,
         });
-
-        // 3. Validate and create/update user metadata
-        // If DTO is configured, validate using ValidationPipe (same pattern as AdminUserCrudService)
-        if (userMetadata && Object.keys(userMetadata).length > 0) {
-          const MetadataUpdateDto =
-            this.moduleOptions.userCrud?.userMetadataConfig?.updateDto;
-          if (MetadataUpdateDto) {
-            // Validate userMetadata using DTO (same pattern as AdminUserCrudService.updateOne)
-            const metadataInstance = plainToInstance(
-              MetadataUpdateDto,
-              userMetadata,
-            );
-
-            // Note: forbidUnknownValues is intentionally NOT set to support dynamic metadata properties
-            // This allows the DTO to validate known fields while still accepting additional custom fields
-            // eslint-disable-next-line @darraghor/nestjs-typed/should-specify-forbid-unknown-values
-            const pipe = new ValidationPipe({
-              transform: true,
-              whitelist: true,
-              forbidNonWhitelisted: false,
-            });
-
-            try {
-              // Validate metadata (validation ensures only known fields pass)
-              await pipe.transform(metadataInstance, {
-                type: 'body',
-                metatype: MetadataUpdateDto,
-              });
-              // Use original userMetadata (validation passed, but preserve all fields)
-              // This allows DTOs with index signature to work correctly
-              await this.userMetadataService.createOrUpdate(
-                invitation.userId,
-                userMetadata,
-              );
-            } catch (error: unknown) {
-              const message =
-                error instanceof Error ? error.message : 'Invalid metadata';
-              this.logger.error(
-                'Invalid userMetadata in invitation acceptance',
-                {
-                  userId: invitation.userId,
-                  error: message,
-                },
-              );
-              return false; // Rollback invitation acceptance
-            }
-          } else {
-            // Fallback: no DTO configured, use basic validation
-            await this.userMetadataService.createOrUpdate(
-              invitation.userId,
-              userMetadata,
-            );
-          }
-
-          this.logger.log('User metadata created/updated successfully', {
-            userId: invitation.userId,
-          });
+        if (!metadataSaved) {
+          return false;
         }
 
-        // 4. Assign role to user
-        // SECURITY: Role is read from invitation.constraints.roleId (admin-controlled, set at creation)
-        // NOT from user-controlled acceptance payload to prevent privilege escalation attacks
-        // Priority: invitation.constraints.roleId > default role from settings
         const allowedRoleId = invitation.constraints?.roleId as
           | string
           | undefined;
-        if (allowedRoleId) {
-          // Use the specific roleId set by admin in invitation constraints
-          await this.roleService.assignRole({
-            assignment: 'user',
-            assignee: { id: invitation.userId },
-            role: { id: allowedRoleId },
-          });
-        } else {
-          // Fall back to default role if no roleId set in constraints
-          // Throw error to rollback entire invitation acceptance on failure
-          await this.authRoleService.assignDefaultRoleToUser(
-            invitation.userId,
-            true,
-          );
-        }
-
-        this.logger.debug('Role assigned successfully', {
-          userId: invitation.userId,
-          roleId: allowedRoleId || 'default',
-        });
-
-        this.logger.log('Invitation accepted successfully', {
+        await this.assignUserRole(invitation.userId, allowedRoleId);
+        this.logAcceptanceSuccess({
           invitationId: invitation.id,
           userId: invitation.userId,
           category: invitation.category,
+          roleId: allowedRoleId,
         });
 
-        return true; // Success - invitation will be accepted
+        return true;
       } catch (error) {
         this.logger.error('Failed to process invitation acceptance', {
           invitationId: invitation.id,
@@ -455,8 +270,138 @@ function createInvitationUserAcceptanceListenerClass() {
           category: invitation.category,
           error: error instanceof Error ? error.message : String(error),
         });
-        return false; // Failure - will rollback invitation acceptance
+        return false;
       }
+    }
+
+    private extractAcceptedData(data: InvitationAcceptanceDataInterface = {}) {
+      return {
+        password: data.password,
+        userMetadata: data.userMetadata,
+      };
+    }
+
+    private async ensureUserExists(options: {
+      userId: string;
+      invitationId: string;
+    }): Promise<boolean> {
+      const user = await this.userModelService.byId(options.userId);
+      if (!user) {
+        this.logger.error('User not found for invitation', {
+          userId: options.userId,
+          invitationId: options.invitationId,
+        });
+        return false;
+      }
+      return true;
+    }
+
+    private async getPasswordFields(
+      password: InvitationAcceptanceDataInterface['password'],
+      userId: string,
+    ): Promise<Record<string, unknown>> {
+      if (!password || typeof password !== 'string') {
+        return {};
+      }
+
+      const passwordHash = await this.passwordService.create(password);
+      this.logger.debug('Password hashed successfully', { userId });
+      return { ...passwordHash };
+    }
+
+    private async updateUserActivation(
+      userId: string,
+      passwordFields: Record<string, unknown>,
+    ): Promise<void> {
+      await this.userModelService.update({
+        id: userId,
+        ...passwordFields,
+        active: true,
+      });
+      this.logger.debug('User updated successfully', { userId });
+    }
+
+    private async updateUserMetadata(options: {
+      userId: string;
+      userMetadata?: InvitationAcceptanceDataInterface['userMetadata'];
+    }): Promise<boolean> {
+      const { userId, userMetadata } = options;
+      if (!userMetadata || Object.keys(userMetadata).length === 0) {
+        return true;
+      }
+
+      const MetadataUpdateDto =
+        this.moduleOptions.userCrud?.userMetadataConfig?.updateDto;
+
+      if (!MetadataUpdateDto) {
+        await this.userMetadataService.createOrUpdate(userId, userMetadata);
+        this.logger.log('User metadata created/updated successfully', {
+          userId,
+        });
+        return true;
+      }
+
+      try {
+        const metadataInstance = plainToInstance(
+          MetadataUpdateDto,
+          userMetadata,
+        );
+        // eslint-disable-next-line @darraghor/nestjs-typed/should-specify-forbid-unknown-values
+        const pipe = new ValidationPipe({
+          transform: true,
+          whitelist: true,
+          forbidNonWhitelisted: false,
+        });
+        await pipe.transform(metadataInstance, {
+          type: 'body',
+          metatype: MetadataUpdateDto,
+        });
+        await this.userMetadataService.createOrUpdate(userId, userMetadata);
+        this.logger.log('User metadata created/updated successfully', {
+          userId,
+        });
+        return true;
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : 'Invalid metadata';
+        this.logger.error('Invalid userMetadata in invitation acceptance', {
+          userId,
+          error: message,
+        });
+        return false;
+      }
+    }
+
+    private async assignUserRole(
+      userId: string,
+      allowedRoleId?: string,
+    ): Promise<void> {
+      if (allowedRoleId) {
+        await this.roleService.assignRole({
+          assignment: 'user',
+          assignee: { id: userId },
+          role: { id: allowedRoleId },
+        });
+      } else {
+        await this.authRoleService.assignDefaultRoleToUser(userId, true);
+      }
+    }
+
+    private logAcceptanceSuccess(options: {
+      invitationId: string;
+      userId: string;
+      category: string;
+      roleId?: string;
+    }): void {
+      this.logger.debug('Role assigned successfully', {
+        userId: options.userId,
+        roleId: options.roleId || 'default',
+      });
+      this.logger.log('Invitation accepted successfully', {
+        invitationId: options.invitationId,
+        userId: options.userId,
+        category: options.category,
+      });
     }
   }
 

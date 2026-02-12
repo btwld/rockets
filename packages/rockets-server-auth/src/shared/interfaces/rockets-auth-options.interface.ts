@@ -5,9 +5,9 @@ import { ValidateTokenServiceInterface } from '@concepta/nestjs-authentication';
 
 import { CanAccess } from '@concepta/nestjs-access-control';
 // TODO: update on core modules
-import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple/dist/interfaces/auth-apple-options.interface';
-import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github/dist/interfaces/auth-github-options.interface';
-import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google/dist/interfaces/auth-google-options.interface';
+import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple';
+import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github';
+import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google';
 import {
   AuthLocalOptionsInterface,
   AuthLocalValidateUserServiceInterface,
@@ -23,21 +23,23 @@ import {
   EmailOptionsInterface,
   EmailServiceInterface,
 } from '@concepta/nestjs-email';
-import { FederatedOptionsInterface } from '@concepta/nestjs-federated/dist/interfaces/federated-options.interface';
 import { JwtOptionsInterface } from '@concepta/nestjs-jwt';
 import { AuthRouterOptionsInterface } from '@concepta/nestjs-auth-router';
 import { OtpOptionsInterface } from '@concepta/nestjs-otp';
 import { PasswordOptionsInterface } from '@concepta/nestjs-password';
 import { UserPasswordServiceInterface } from '@concepta/nestjs-user';
-import { UserOptionsInterface } from '@concepta/nestjs-user/dist/interfaces/user-options.interface';
-import { UserPasswordHistoryServiceInterface } from '@concepta/nestjs-user/dist/interfaces/user-password-history-service.interface';
 import { RocketsAuthNotificationServiceInterface } from './rockets-auth-notification.service.interface';
 import { RocketsAuthSettingsInterface } from './rockets-auth-settings.interface';
 import { RocketsAuthUserModelServiceInterface } from './rockets-auth-user-model-service.interface';
-import { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui/dist/interfaces/swagger-ui-options.interface';
-import { CrudModuleOptionsInterface } from '@concepta/nestjs-crud/dist/interfaces/crud-module-options.interface';
-import { RoleOptionsInterface } from '@concepta/nestjs-role/dist/interfaces/role-options.interface';
-import { InvitationOptionsInterface } from '@concepta/nestjs-invitation/dist/interfaces/options/invitation-options.interface';
+import { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui';
+import {
+  CrudModuleOptionsInterface,
+  FederatedOptionsInterface,
+  InvitationOptionsInterface,
+  RoleOptionsInterface,
+  UserOptionsInterface,
+  UserPasswordHistoryServiceInterface,
+} from '../compat/concepta-internals';
 
 /**
  * Combined options interface for the AuthenticationCombinedModule

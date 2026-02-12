@@ -176,7 +176,7 @@ describe('GenericUserMetadataModelService', () => {
       lastName: 'Smith',
     };
 
-    it.only('should create new metadata when none exists', async () => {
+    it('should create new metadata when none exists', async () => {
       // Arrange
       jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
       jest

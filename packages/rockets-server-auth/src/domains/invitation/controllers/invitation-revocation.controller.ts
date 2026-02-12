@@ -3,7 +3,7 @@ import {
   ApiBearerAuth,
   ApiTags,
   ApiOperation,
-  ApiOkResponse,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { InvitationService } from '@concepta/nestjs-invitation';
 import { AdminGuard } from '../../../guards/admin.guard';
@@ -36,7 +36,7 @@ export class InvitationRevocationController {
     description:
       'Revoke all active invitations for a specific email and category',
   })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: 'Invitations revoked successfully',
   })
   async revoke(@Body() dto: RocketsAuthInvitationRevokeDto): Promise<void> {

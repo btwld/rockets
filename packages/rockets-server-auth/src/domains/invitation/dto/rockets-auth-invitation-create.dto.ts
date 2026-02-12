@@ -1,4 +1,4 @@
-import { InvitationCreateInviteDto } from '@concepta/nestjs-invitation/dist/dto/invitation-create-invite.dto';
+import { InvitationCreateInviteDto } from '../../../shared/compat/concepta-internals';
 
 /**
  * Rockets Auth Invitation Create DTO

@@ -1,4 +1,4 @@
-import { AuthRefreshSettingsInterface } from '@concepta/nestjs-auth-refresh/dist/interfaces/auth-refresh-settings.interface';
+import { AuthRefreshSettingsInterface } from '@concepta/nestjs-auth-refresh';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
