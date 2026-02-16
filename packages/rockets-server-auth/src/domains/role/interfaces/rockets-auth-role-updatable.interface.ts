@@ -3,7 +3,7 @@ import { RocketsAuthRoleCreatableInterface } from './rockets-auth-role-creatable
 /**
  * Rockets Server Role Updatable Interface
  *
- * Combines required id field with optional updatable fields
+ * Optional updatable fields for role (name and description)
  */
 export interface RocketsAuthRoleUpdatableInterface
   extends Partial<
