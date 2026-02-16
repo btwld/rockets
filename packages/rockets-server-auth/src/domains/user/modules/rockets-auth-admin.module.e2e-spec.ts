@@ -117,5 +117,15 @@ describe('RocketsAuthAdminModule (e2e)', () => {
 
     // Accept 200 (relations enabled) or 400 (relations disabled in fixture)
     expect([200, 400]).toContain(relFilterResponse.status);
+
+    // Update user via admin endpoint
+    const updateRes = await request(app.getHttpServer())
+      .patch(`/admin/users/${userId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ active: false })
+      .expect(200);
+
+    expect(updateRes.body.active).toBe(false);
+    expect(updateRes.body.id).toBe(userId);
   });
 });

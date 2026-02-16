@@ -29,6 +29,7 @@ export class UserUpdateDto {
     description:
       'UserMetadata data to update - structure is defined dynamically',
     type: 'object',
+    additionalProperties: true,
     example: {
       firstName: 'John',
       lastName: 'Doe',
@@ -53,7 +54,7 @@ export class UserResponseDto {
   })
   @IsDefined()
   @Allow()
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'User subject from auth provider',
@@ -61,7 +62,7 @@ export class UserResponseDto {
   })
   @IsDefined()
   @Allow()
-  sub: string;
+  sub!: string;
 
   @ApiPropertyOptional({
     description: 'User email from auth provider',
@@ -95,6 +96,7 @@ export class UserResponseDto {
     description:
       'UserMetadata data from user userMetadata - structure is defined dynamically',
     type: 'object',
+    additionalProperties: true,
     example: {
       firstName: 'John',
       lastName: 'Doe',

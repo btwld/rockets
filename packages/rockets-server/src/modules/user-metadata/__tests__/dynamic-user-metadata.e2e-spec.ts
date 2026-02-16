@@ -30,7 +30,7 @@ import { ExceptionsFilter } from '../../../filter/exceptions.filter';
 class CustomUserMetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
   @IsString()
-  userId: string;
+  userId!: string;
 
   @IsOptional()
   @IsString()
@@ -65,7 +65,7 @@ class CustomUserMetadataUpdateDto
 {
   @IsNotEmpty()
   @IsString()
-  id: string;
+  id!: string;
 
   @IsOptional()
   @IsString()

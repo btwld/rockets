@@ -9,5 +9,8 @@
     "strict": false,
     "stern": false
   },
+  "MD024": {
+    "siblings_only": true
+  },
   "MD025": false
 }
