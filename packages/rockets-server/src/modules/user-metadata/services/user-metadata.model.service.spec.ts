@@ -105,9 +105,9 @@ describe('GenericUserMetadataModelService', () => {
       jest.spyOn(service, 'byId').mockResolvedValue(null);
 
       // Act & Assert
-      await expect(
-        service.getUserMetadataById('non-existent'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getUserMetadataById('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should rethrow RuntimeException', async () => {
@@ -117,9 +117,9 @@ describe('GenericUserMetadataModelService', () => {
         .mockRejectedValue(new RuntimeException('runtime error'));
 
       // Act & Assert
-      await expect(
-        service.getUserMetadataById('metadata-123'),
-      ).rejects.toThrow(RuntimeException);
+      await expect(service.getUserMetadataById('metadata-123')).rejects.toThrow(
+        RuntimeException,
+      );
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
@@ -127,9 +127,9 @@ describe('GenericUserMetadataModelService', () => {
       jest.spyOn(service, 'byId').mockRejectedValue(new Error('db error'));
 
       // Act & Assert
-      await expect(
-        service.getUserMetadataById('metadata-123'),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.getUserMetadataById('metadata-123')).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
@@ -288,9 +288,9 @@ describe('GenericUserMetadataModelService', () => {
         .mockRejectedValue(new RuntimeException('runtime error'));
 
       // Act & Assert
-      await expect(
-        service.getUserMetadataByUserId('user-123'),
-      ).rejects.toThrow(RuntimeException);
+      await expect(service.getUserMetadataByUserId('user-123')).rejects.toThrow(
+        RuntimeException,
+      );
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
@@ -300,9 +300,9 @@ describe('GenericUserMetadataModelService', () => {
         .mockRejectedValue(new Error('db error'));
 
       // Act & Assert
-      await expect(
-        service.getUserMetadataByUserId('user-123'),
-      ).rejects.toThrow(InternalServerErrorException);
+      await expect(service.getUserMetadataByUserId('user-123')).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 
