@@ -1,233 +1,217 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="127" failures="0" errors="0" time="12.029">
-  <testsuite name="AuthTokenRefreshController" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:47" time="5.335" tests="5">
-    <testcase classname="AuthTokenRefreshController refresh should return authentication response when user is provided" name="AuthTokenRefreshController refresh should return authentication response when user is provided" time="0.041">
+<testsuites name="jest tests" tests="171" failures="0" errors="0" time="12.363">
+  <testsuite name="AuthOAuthController" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:43" time="5.919" tests="10">
+    <testcase classname="AuthOAuthController authorize should return void for authorize endpoint" name="AuthOAuthController authorize should return void for authorize endpoint" time="0.043">
     </testcase>
-    <testcase classname="AuthTokenRefreshController refresh should handle service errors" name="AuthTokenRefreshController refresh should handle service errors" time="0.037">
+    <testcase classname="AuthOAuthController callback should return authentication response when user is provided" name="AuthOAuthController callback should return authentication response when user is provided" time="0.003">
     </testcase>
-    <testcase classname="AuthTokenRefreshController refresh should handle different user IDs" name="AuthTokenRefreshController refresh should handle different user IDs" time="0.003">
+    <testcase classname="AuthOAuthController callback should handle service errors" name="AuthOAuthController callback should handle service errors" time="0.058">
     </testcase>
-    <testcase classname="AuthTokenRefreshController controller instantiation should be defined" name="AuthTokenRefreshController controller instantiation should be defined" time="0.003">
+    <testcase classname="AuthOAuthController callbackPost should return authentication response when user is provided" name="AuthOAuthController callbackPost should return authentication response when user is provided" time="0.009">
     </testcase>
-    <testcase classname="AuthTokenRefreshController controller instantiation should have refresh method" name="AuthTokenRefreshController controller instantiation should have refresh method" time="0.008">
+    <testcase classname="AuthOAuthController callbackPost should handle service errors" name="AuthOAuthController callbackPost should handle service errors" time="0.008">
     </testcase>
-  </testsuite>
-  <testsuite name="AuthOAuthController" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:47" time="5.449" tests="10">
-    <testcase classname="AuthOAuthController authorize should return void for authorize endpoint" name="AuthOAuthController authorize should return void for authorize endpoint" time="0.023">
+    <testcase classname="AuthOAuthController callbackPost should handle different user IDs" name="AuthOAuthController callbackPost should handle different user IDs" time="0.005">
     </testcase>
-    <testcase classname="AuthOAuthController callback should return authentication response when user is provided" name="AuthOAuthController callback should return authentication response when user is provided" time="0.009">
+    <testcase classname="AuthOAuthController controller instantiation should be defined" name="AuthOAuthController controller instantiation should be defined" time="0.004">
     </testcase>
-    <testcase classname="AuthOAuthController callback should handle service errors" name="AuthOAuthController callback should handle service errors" time="0.182">
+    <testcase classname="AuthOAuthController controller instantiation should have authorize method" name="AuthOAuthController controller instantiation should have authorize method" time="0.001">
     </testcase>
-    <testcase classname="AuthOAuthController callbackPost should return authentication response when user is provided" name="AuthOAuthController callbackPost should return authentication response when user is provided" time="0.007">
+    <testcase classname="AuthOAuthController controller instantiation should have callback method" name="AuthOAuthController controller instantiation should have callback method" time="0.003">
     </testcase>
-    <testcase classname="AuthOAuthController callbackPost should handle service errors" name="AuthOAuthController callbackPost should handle service errors" time="0.006">
-    </testcase>
-    <testcase classname="AuthOAuthController callbackPost should handle different user IDs" name="AuthOAuthController callbackPost should handle different user IDs" time="0.008">
-    </testcase>
-    <testcase classname="AuthOAuthController controller instantiation should be defined" name="AuthOAuthController controller instantiation should be defined" time="0.005">
-    </testcase>
-    <testcase classname="AuthOAuthController controller instantiation should have authorize method" name="AuthOAuthController controller instantiation should have authorize method" time="0.005">
-    </testcase>
-    <testcase classname="AuthOAuthController controller instantiation should have callback method" name="AuthOAuthController controller instantiation should have callback method" time="0.007">
-    </testcase>
-    <testcase classname="AuthOAuthController controller instantiation should have callbackPost method" name="AuthOAuthController controller instantiation should have callbackPost method" time="0.004">
+    <testcase classname="AuthOAuthController controller instantiation should have callbackPost method" name="AuthOAuthController controller instantiation should have callbackPost method" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="AuthPasswordController" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:47" time="5.718" tests="4">
-    <testcase classname="AuthPasswordController login should return authentication response when user is provided" name="AuthPasswordController login should return authentication response when user is provided" time="0.028">
+  <testsuite name="AuthPasswordController" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:44" time="6.141" tests="4">
+    <testcase classname="AuthPasswordController login should return authentication response when user is provided" name="AuthPasswordController login should return authentication response when user is provided" time="0.015">
     </testcase>
-    <testcase classname="AuthPasswordController login should handle service errors" name="AuthPasswordController login should handle service errors" time="0.02">
+    <testcase classname="AuthPasswordController login should handle service errors" name="AuthPasswordController login should handle service errors" time="0.009">
     </testcase>
-    <testcase classname="AuthPasswordController controller instantiation should be defined" name="AuthPasswordController controller instantiation should be defined" time="0.004">
+    <testcase classname="AuthPasswordController controller instantiation should be defined" name="AuthPasswordController controller instantiation should be defined" time="0.007">
     </testcase>
     <testcase classname="AuthPasswordController controller instantiation should have login method" name="AuthPasswordController controller instantiation should have login method" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="InvitationUserAcceptanceListener" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:47" time="6.638" tests="12">
-    <testcase classname="InvitationUserAcceptanceListener listen should return true for non-user category invitations" name="InvitationUserAcceptanceListener listen should return true for non-user category invitations" time="0.024">
+  <testsuite name="MePasswordController" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:43" time="7.814" tests="7">
+    <testcase classname="MePasswordController controller instantiation should be defined" name="MePasswordController controller instantiation should be defined" time="0.086">
     </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should process user invitation with password successfully" name="InvitationUserAcceptanceListener listen should process user invitation with password successfully" time="0.011">
+    <testcase classname="MePasswordController controller instantiation should have changePassword method" name="MePasswordController controller instantiation should have changePassword method" time="0.006">
     </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should process invitation without password" name="InvitationUserAcceptanceListener listen should process invitation without password" time="0.006">
+    <testcase classname="MePasswordController changePassword should successfully change password when current password is valid" name="MePasswordController changePassword should successfully change password when current password is valid" time="0.054">
     </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should create user metadata when provided" name="InvitationUserAcceptanceListener listen should create user metadata when provided" time="0.008">
+    <testcase classname="MePasswordController changePassword should throw UnauthorizedException when current password is invalid" name="MePasswordController changePassword should throw UnauthorizedException when current password is invalid" time="0.035">
     </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should assign specific roleId when provided" name="InvitationUserAcceptanceListener listen should assign specific roleId when provided" time="0.011">
+    <testcase classname="MePasswordController changePassword should throw error when getPasswordStore fails" name="MePasswordController changePassword should throw error when getPasswordStore fails" time="0.012">
     </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should assign default role when roleId not provided" name="InvitationUserAcceptanceListener listen should assign default role when roleId not provided" time="0.004">
+    <testcase classname="MePasswordController changePassword should throw error when setPassword fails" name="MePasswordController changePassword should throw error when setPassword fails" time="0.005">
     </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should return false when user not found" name="InvitationUserAcceptanceListener listen should return false when user not found" time="0.008">
-    </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should return false and log error when password creation fails" name="InvitationUserAcceptanceListener listen should return false and log error when password creation fails" time="0.006">
-    </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should return false when user update fails" name="InvitationUserAcceptanceListener listen should return false when user update fails" time="0.002">
-    </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should return false when role assignment fails" name="InvitationUserAcceptanceListener listen should return false when role assignment fails" time="0.003">
-    </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should handle empty data payload" name="InvitationUserAcceptanceListener listen should handle empty data payload" time="0.004">
-    </testcase>
-    <testcase classname="InvitationUserAcceptanceListener listen should handle undefined data payload" name="InvitationUserAcceptanceListener listen should handle undefined data payload" time="0.002">
+    <testcase classname="MePasswordController changePassword should handle user with empty passwordSalt" name="MePasswordController changePassword should handle user with empty passwordSalt" time="0.005">
     </testcase>
   </testsuite>
-  <testsuite name="RocketsAuthOtpService" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:53" time="2.033" tests="11">
-    <testcase classname="RocketsAuthOtpService sendOtp should send OTP when user exists" name="RocketsAuthOtpService sendOtp should send OTP when user exists" time="0.031">
+  <testsuite name="GenericUserMetadataModelService - Exception Mapping" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:49" time="2.448" tests="27">
+    <testcase classname="GenericUserMetadataModelService - Exception Mapping rethrows NotFoundException from getUserMetadataById" name="GenericUserMetadataModelService - Exception Mapping rethrows NotFoundException from getUserMetadataById" time="0.045">
     </testcase>
-    <testcase classname="RocketsAuthOtpService sendOtp should not send OTP when user does not exist" name="RocketsAuthOtpService sendOtp should not send OTP when user does not exist" time="0.002">
+    <testcase classname="GenericUserMetadataModelService - Exception Mapping maps unexpected errors to InternalServerErrorException in getUserMetadataById" name="GenericUserMetadataModelService - Exception Mapping maps unexpected errors to InternalServerErrorException in getUserMetadataById" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthOtpService sendOtp should throw error when notification service fails" name="RocketsAuthOtpService sendOtp should throw error when notification service fails" time="0.059">
+    <testcase classname="GenericUserMetadataModelService - Exception Mapping returns null from getUserMetadataByUserId when user not found" name="GenericUserMetadataModelService - Exception Mapping returns null from getUserMetadataByUserId when user not found" time="0">
     </testcase>
-    <testcase classname="RocketsAuthOtpService sendOtp should throw error when OTP service fails" name="RocketsAuthOtpService sendOtp should throw error when OTP service fails" time="0.005">
+    <testcase classname="GenericUserMetadataModelService - Exception Mapping maps unexpected errors to InternalServerErrorException in getUserMetadataByUserId" name="GenericUserMetadataModelService - Exception Mapping maps unexpected errors to InternalServerErrorException in getUserMetadataByUserId" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthOtpService confirmOtp should confirm OTP successfully when user exists and OTP is valid" name="RocketsAuthOtpService confirmOtp should confirm OTP successfully when user exists and OTP is valid" time="0.004">
+    <testcase classname="GenericUserMetadataModelService - Exception Mapping rethrows NotFoundException from update when target record does not exist" name="GenericUserMetadataModelService - Exception Mapping rethrows NotFoundException from update when target record does not exist" time="0">
     </testcase>
-    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when user does not exist" name="RocketsAuthOtpService confirmOtp should throw OtpException when user does not exist" time="0.004">
+    <testcase classname="GenericUserMetadataModelService - Exception Mapping maps unexpected errors to InternalServerErrorException in update" name="GenericUserMetadataModelService - Exception Mapping maps unexpected errors to InternalServerErrorException in update" time="0.005">
     </testcase>
-    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when OTP is invalid" name="RocketsAuthOtpService confirmOtp should throw OtpException when OTP is invalid" time="0.009">
+    <testcase classname="GenericUserMetadataModelService getUserMetadataById should return user metadata when found" name="GenericUserMetadataModelService getUserMetadataById should return user metadata when found" time="0.221">
     </testcase>
-    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when OTP service throws error" name="RocketsAuthOtpService confirmOtp should throw OtpException when OTP service throws error" time="0.007">
+    <testcase classname="GenericUserMetadataModelService getUserMetadataById should throw NotFoundException when not found" name="GenericUserMetadataModelService getUserMetadataById should throw NotFoundException when not found" time="0.029">
     </testcase>
-    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when user lookup service throws error" name="RocketsAuthOtpService confirmOtp should throw OtpException when user lookup service throws error" time="0.01">
+    <testcase classname="GenericUserMetadataModelService getUserMetadataById should rethrow RuntimeException" name="GenericUserMetadataModelService getUserMetadataById should rethrow RuntimeException" time="0.014">
     </testcase>
-    <testcase classname="RocketsAuthOtpService constructor should be defined" name="RocketsAuthOtpService constructor should be defined" time="0.003">
+    <testcase classname="GenericUserMetadataModelService getUserMetadataById should throw InternalServerErrorException on unexpected error" name="GenericUserMetadataModelService getUserMetadataById should throw InternalServerErrorException on unexpected error" time="0.002">
     </testcase>
-    <testcase classname="RocketsAuthOtpService constructor should have all required dependencies injected" name="RocketsAuthOtpService constructor should have all required dependencies injected" time="0.01">
+    <testcase classname="GenericUserMetadataModelService findByUserId should return user metadata for existing user" name="GenericUserMetadataModelService findByUserId should return user metadata for existing user" time="0.001">
     </testcase>
-  </testsuite>
-  <testsuite name="ErrorLoggingHelper" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:54" time="0.965" tests="8">
-    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should handle Error instance correctly" name="ErrorLoggingHelper logAndGetErrorDetails should handle Error instance correctly" time="0.058">
+    <testcase classname="GenericUserMetadataModelService findByUserId should return null for non-existent user" name="GenericUserMetadataModelService findByUserId should return null for non-existent user" time="0.034">
     </testcase>
-    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should handle non-Error objects correctly" name="ErrorLoggingHelper logAndGetErrorDetails should handle non-Error objects correctly" time="0.002">
+    <testcase classname="GenericUserMetadataModelService hasUserMetadata should return true when user has metadata" name="GenericUserMetadataModelService hasUserMetadata should return true when user has metadata" time="0.004">
     </testcase>
-    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should handle null/undefined errors correctly" name="ErrorLoggingHelper logAndGetErrorDetails should handle null/undefined errors correctly" time="0">
-    </testcase>
-    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should work without context parameter" name="ErrorLoggingHelper logAndGetErrorDetails should work without context parameter" time="0.002">
-    </testcase>
-    <testcase classname="ErrorLoggingHelper getErrorDetails should extract details from Error instance without logging" name="ErrorLoggingHelper getErrorDetails should extract details from Error instance without logging" time="0.001">
-    </testcase>
-    <testcase classname="ErrorLoggingHelper getErrorDetails should handle non-Error objects without logging" name="ErrorLoggingHelper getErrorDetails should handle non-Error objects without logging" time="0.001">
-    </testcase>
-    <testcase classname="ErrorLoggingHelper getErrorDetails should handle Error with custom properties" name="ErrorLoggingHelper getErrorDetails should handle Error with custom properties" time="0">
-    </testcase>
-    <testcase classname="ErrorLoggingHelper ErrorDetails interface should have correct type structure" name="ErrorLoggingHelper ErrorDetails interface should have correct type structure" time="0.002">
-    </testcase>
-  </testsuite>
-  <testsuite name="RocketsAuthNotificationService" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:53" time="1.982" tests="8">
-    <testcase classname="RocketsAuthNotificationService sendOtpEmail should send OTP email successfully" name="RocketsAuthNotificationService sendOtpEmail should send OTP email successfully" time="0.09">
-    </testcase>
-    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle different email and passcode values" name="RocketsAuthNotificationService sendOtpEmail should handle different email and passcode values" time="0.005">
-    </testcase>
-    <testcase classname="RocketsAuthNotificationService sendOtpEmail should use settings from configuration" name="RocketsAuthNotificationService sendOtpEmail should use settings from configuration" time="0.02">
-    </testcase>
-    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle email service errors" name="RocketsAuthNotificationService sendOtpEmail should handle email service errors" time="0.144">
-    </testcase>
-    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle empty passcode" name="RocketsAuthNotificationService sendOtpEmail should handle empty passcode" time="0.003">
-    </testcase>
-    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle special characters in passcode" name="RocketsAuthNotificationService sendOtpEmail should handle special characters in passcode" time="0.002">
-    </testcase>
-    <testcase classname="RocketsAuthNotificationService service instantiation should be defined" name="RocketsAuthNotificationService service instantiation should be defined" time="0.002">
-    </testcase>
-    <testcase classname="RocketsAuthNotificationService service instantiation should implement RocketsAuthOtpNotificationServiceInterface" name="RocketsAuthNotificationService service instantiation should implement RocketsAuthOtpNotificationServiceInterface" time="0.006">
-    </testcase>
-  </testsuite>
-  <testsuite name="GenericUserMetadataModelService" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:53" time="2.086" tests="15">
-    <testcase classname="GenericUserMetadataModelService getUserMetadataById should return user metadata when found" name="GenericUserMetadataModelService getUserMetadataById should return user metadata when found" time="0.019">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService getUserMetadataById should throw UserMetadataNotFoundException when not found" name="GenericUserMetadataModelService getUserMetadataById should throw UserMetadataNotFoundException when not found" time="0.104">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService findByUserId should return user metadata for existing user" name="GenericUserMetadataModelService findByUserId should return user metadata for existing user" time="0.003">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService findByUserId should return null for non-existent user" name="GenericUserMetadataModelService findByUserId should return null for non-existent user" time="0.003">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService hasUserMetadata should return true when user has metadata" name="GenericUserMetadataModelService hasUserMetadata should return true when user has metadata" time="0.002">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService hasUserMetadata should return false when user has no metadata" name="GenericUserMetadataModelService hasUserMetadata should return false when user has no metadata" time="0.002">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService createOrUpdate should create new metadata when none exists" name="GenericUserMetadataModelService createOrUpdate should create new metadata when none exists" time="0.003">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService createOrUpdate should update existing metadata when it exists" name="GenericUserMetadataModelService createOrUpdate should update existing metadata when it exists" time="0.004">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should return metadata when user exists" name="GenericUserMetadataModelService getUserMetadataByUserId should return metadata when user exists" time="0.007">
-    </testcase>
-    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should throw UserMetadataNotFoundException when user not found" name="GenericUserMetadataModelService getUserMetadataByUserId should throw UserMetadataNotFoundException when user not found" time="0.014">
+    <testcase classname="GenericUserMetadataModelService hasUserMetadata should return false when user has no metadata" name="GenericUserMetadataModelService hasUserMetadata should return false when user has no metadata" time="0.003">
     </testcase>
     <testcase classname="GenericUserMetadataModelService updateUserMetadata should update existing user metadata" name="GenericUserMetadataModelService updateUserMetadata should update existing user metadata" time="0.003">
     </testcase>
-    <testcase classname="GenericUserMetadataModelService update should update metadata successfully" name="GenericUserMetadataModelService update should update metadata successfully" time="0.005">
+    <testcase classname="GenericUserMetadataModelService updateUserMetadata should throw NotFoundException when user metadata not found" name="GenericUserMetadataModelService updateUserMetadata should throw NotFoundException when user metadata not found" time="0.003">
     </testcase>
-    <testcase classname="GenericUserMetadataModelService update should throw UserMetadataException when ID is missing" name="GenericUserMetadataModelService update should throw UserMetadataException when ID is missing" time="0.005">
+    <testcase classname="GenericUserMetadataModelService createOrUpdate should create new metadata when none exists" name="GenericUserMetadataModelService createOrUpdate should create new metadata when none exists" time="0.004">
     </testcase>
-    <testcase classname="GenericUserMetadataModelService update should throw UserMetadataNotFoundException when entity not found" name="GenericUserMetadataModelService update should throw UserMetadataNotFoundException when entity not found" time="0.003">
+    <testcase classname="GenericUserMetadataModelService createOrUpdate should update existing metadata when it exists" name="GenericUserMetadataModelService createOrUpdate should update existing metadata when it exists" time="0.089">
     </testcase>
-    <testcase classname="GenericUserMetadataModelService validate should skip validation and return data as-is" name="GenericUserMetadataModelService validate should skip validation and return data as-is" time="0.003">
+    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should return metadata when user exists" name="GenericUserMetadataModelService getUserMetadataByUserId should return metadata when user exists" time="0.01">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should return null when user has no metadata" name="GenericUserMetadataModelService getUserMetadataByUserId should return null when user has no metadata" time="0.003">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should rethrow RuntimeException" name="GenericUserMetadataModelService getUserMetadataByUserId should rethrow RuntimeException" time="0.002">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should throw InternalServerErrorException on unexpected error" name="GenericUserMetadataModelService getUserMetadataByUserId should throw InternalServerErrorException on unexpected error" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should update metadata successfully" name="GenericUserMetadataModelService update should update metadata successfully" time="0.01">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should throw BadRequestException when ID is missing" name="GenericUserMetadataModelService update should throw BadRequestException when ID is missing" time="0.02">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should throw NotFoundException when entity not found" name="GenericUserMetadataModelService update should throw NotFoundException when entity not found" time="0.002">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should rethrow HttpException errors" name="GenericUserMetadataModelService update should rethrow HttpException errors" time="0.003">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should throw InternalServerErrorException on unexpected error" name="GenericUserMetadataModelService update should throw InternalServerErrorException on unexpected error" time="0.001">
     </testcase>
   </testsuite>
-  <testsuite name="RocketsAuthModuleDefinition" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:47" time="7.856" tests="48">
-    <testcase classname="RocketsAuthModuleDefinition Module Class Definition should define RocketsAuthModuleClass" name="RocketsAuthModuleDefinition Module Class Definition should define RocketsAuthModuleClass" time="0.003">
+  <testsuite name="InvitationUserAcceptanceListener" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:44" time="8.394" tests="14">
+    <testcase classname="InvitationUserAcceptanceListener listen should return true for non-user category invitations" name="InvitationUserAcceptanceListener listen should return true for non-user category invitations" time="0.037">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should process user invitation with password successfully" name="InvitationUserAcceptanceListener listen should process user invitation with password successfully" time="0.008">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should process invitation without password" name="InvitationUserAcceptanceListener listen should process invitation without password" time="0.007">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should create user metadata when provided" name="InvitationUserAcceptanceListener listen should create user metadata when provided" time="0.006">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should assign specific roleId from invitation constraints" name="InvitationUserAcceptanceListener listen should assign specific roleId from invitation constraints" time="0.006">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should ignore roleId from acceptance payload (security test)" name="InvitationUserAcceptanceListener listen should ignore roleId from acceptance payload (security test)" time="0.002">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should assign default role when roleId not in constraints" name="InvitationUserAcceptanceListener listen should assign default role when roleId not in constraints" time="0.011">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should return false when user not found" name="InvitationUserAcceptanceListener listen should return false when user not found" time="0.007">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should return false and log error when password creation fails" name="InvitationUserAcceptanceListener listen should return false and log error when password creation fails" time="0.072">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should return false when user update fails" name="InvitationUserAcceptanceListener listen should return false when user update fails" time="0.038">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should return false when role assignment fails" name="InvitationUserAcceptanceListener listen should return false when role assignment fails" time="0.052">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should handle empty data payload" name="InvitationUserAcceptanceListener listen should handle empty data payload" time="0.004">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener listen should handle undefined data payload" name="InvitationUserAcceptanceListener listen should handle undefined data payload" time="0.001">
+    </testcase>
+    <testcase classname="InvitationUserAcceptanceListener Custom listener override should allow custom listener service to be used" name="InvitationUserAcceptanceListener Custom listener override should allow custom listener service to be used" time="0.007">
+    </testcase>
+  </testsuite>
+  <testsuite name="AuthTokenRefreshController" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:50" time="2.437" tests="5">
+    <testcase classname="AuthTokenRefreshController refresh should return authentication response when user is provided" name="AuthTokenRefreshController refresh should return authentication response when user is provided" time="0.032">
+    </testcase>
+    <testcase classname="AuthTokenRefreshController refresh should handle service errors" name="AuthTokenRefreshController refresh should handle service errors" time="0.006">
+    </testcase>
+    <testcase classname="AuthTokenRefreshController refresh should handle different user IDs" name="AuthTokenRefreshController refresh should handle different user IDs" time="0.001">
+    </testcase>
+    <testcase classname="AuthTokenRefreshController controller instantiation should be defined" name="AuthTokenRefreshController controller instantiation should be defined" time="0.001">
+    </testcase>
+    <testcase classname="AuthTokenRefreshController controller instantiation should have refresh method" name="AuthTokenRefreshController controller instantiation should have refresh method" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="RocketsAuthModuleDefinition" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:44" time="8.813" tests="48">
+    <testcase classname="RocketsAuthModuleDefinition Module Class Definition should define RocketsAuthModuleClass" name="RocketsAuthModuleDefinition Module Class Definition should define RocketsAuthModuleClass" time="0.005">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Module Class Definition should define ROCKETS_SERVER_MODULE_OPTIONS_TYPE" name="RocketsAuthModuleDefinition Module Class Definition should define ROCKETS_SERVER_MODULE_OPTIONS_TYPE" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Class Definition should define ROCKETS_SERVER_MODULE_ASYNC_OPTIONS_TYPE" name="RocketsAuthModuleDefinition Module Class Definition should define ROCKETS_SERVER_MODULE_ASYNC_OPTIONS_TYPE" time="0">
+    <testcase classname="RocketsAuthModuleDefinition Module Class Definition should define ROCKETS_SERVER_MODULE_ASYNC_OPTIONS_TYPE" name="RocketsAuthModuleDefinition Module Class Definition should define ROCKETS_SERVER_MODULE_ASYNC_OPTIONS_TYPE" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when no controllers provided" name="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when no controllers provided" time="0.003">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when no controllers provided" name="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when no controllers provided" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should return provided controllers when controllers are specified" name="RocketsAuthModuleDefinition createRocketsAuthControllers should return provided controllers when controllers are specified" time="0.005">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should return provided controllers when controllers are specified" name="RocketsAuthModuleDefinition createRocketsAuthControllers should return provided controllers when controllers are specified" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when controllers is explicitly undefined" name="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when controllers is explicitly undefined" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when controllers is explicitly undefined" name="RocketsAuthModuleDefinition createRocketsAuthControllers should return default controllers when controllers is explicitly undefined" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should handle empty controllers array" name="RocketsAuthModuleDefinition createRocketsAuthControllers should handle empty controllers array" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthControllers should handle empty controllers array" name="RocketsAuthModuleDefinition createRocketsAuthControllers should handle empty controllers array" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthSettingsProvider should create settings provider without options overrides" name="RocketsAuthModuleDefinition createRocketsAuthSettingsProvider should create settings provider without options overrides" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthSettingsProvider should create settings provider without options overrides" name="RocketsAuthModuleDefinition createRocketsAuthSettingsProvider should create settings provider without options overrides" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition createRocketsAuthSettingsProvider should create settings provider with options overrides" name="RocketsAuthModuleDefinition createRocketsAuthSettingsProvider should create settings provider with options overrides" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should create imports with default configuration" name="RocketsAuthModuleDefinition createRocketsAuthImports should create imports with default configuration" time="0.034">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should create imports with default configuration" name="RocketsAuthModuleDefinition createRocketsAuthImports should create imports with default configuration" time="0.003">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should include all required modules in imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should include all required modules in imports" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should include all required modules in imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should include all required modules in imports" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should merge additional imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should merge additional imports" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should merge additional imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should merge additional imports" time="0.007">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with user imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with user imports" time="0.003">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with user imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with user imports" time="0.002">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with otp imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with otp imports" time="0.013">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with otp imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with otp imports" time="0.003">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with federated imports" name="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with federated imports" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with authGuardRouter guards" name="RocketsAuthModuleDefinition createRocketsAuthImports should handle extras with authGuardRouter guards" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthExports should return default exports when no exports provided" name="RocketsAuthModuleDefinition createRocketsAuthExports should return default exports when no exports provided" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthExports should return default exports when no exports provided" name="RocketsAuthModuleDefinition createRocketsAuthExports should return default exports when no exports provided" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition createRocketsAuthExports should merge additional exports with default exports" name="RocketsAuthModuleDefinition createRocketsAuthExports should merge additional exports with default exports" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthExports should handle undefined exports" name="RocketsAuthModuleDefinition createRocketsAuthExports should handle undefined exports" time="0">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthExports should handle undefined exports" name="RocketsAuthModuleDefinition createRocketsAuthExports should handle undefined exports" time="0.002">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthProviders should return default providers when no providers provided" name="RocketsAuthModuleDefinition createRocketsAuthProviders should return default providers when no providers provided" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthProviders should return default providers when no providers provided" name="RocketsAuthModuleDefinition createRocketsAuthProviders should return default providers when no providers provided" time="0.006">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthProviders should include required service providers" name="RocketsAuthModuleDefinition createRocketsAuthProviders should include required service providers" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthProviders should include required service providers" name="RocketsAuthModuleDefinition createRocketsAuthProviders should include required service providers" time="0.002">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition createRocketsAuthProviders should merge additional providers with default providers" name="RocketsAuthModuleDefinition createRocketsAuthProviders should merge additional providers with default providers" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthProviders should handle undefined providers" name="RocketsAuthModuleDefinition createRocketsAuthProviders should handle undefined providers" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition createRocketsAuthProviders should handle undefined providers" name="RocketsAuthModuleDefinition createRocketsAuthProviders should handle undefined providers" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Integration Tests should create a valid module with all dependencies" name="RocketsAuthModuleDefinition Module Integration Tests should create a valid module with all dependencies" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Module Integration Tests should create a valid module with all dependencies" name="RocketsAuthModuleDefinition Module Integration Tests should create a valid module with all dependencies" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Module Integration Tests should handle global module configuration" name="RocketsAuthModuleDefinition Module Integration Tests should handle global module configuration" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle authentication service configuration" name="RocketsAuthModuleDefinition Service Configuration Tests should handle authentication service configuration" time="0">
+    <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle authentication service configuration" name="RocketsAuthModuleDefinition Service Configuration Tests should handle authentication service configuration" time="0.002">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle JWT service configuration" name="RocketsAuthModuleDefinition Service Configuration Tests should handle JWT service configuration" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle user model service configuration" name="RocketsAuthModuleDefinition Service Configuration Tests should handle user model service configuration" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle user model service configuration" name="RocketsAuthModuleDefinition Service Configuration Tests should handle user model service configuration" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle email service configuration" name="RocketsAuthModuleDefinition Service Configuration Tests should handle email service configuration" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle OAuth service configurations" name="RocketsAuthModuleDefinition Service Configuration Tests should handle OAuth service configurations" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition Service Configuration Tests should handle OAuth service configurations" name="RocketsAuthModuleDefinition Service Configuration Tests should handle OAuth service configurations" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test SwaggerUiModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test SwaggerUiModule useFactory" time="0.005">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test SwaggerUiModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test SwaggerUiModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthenticationModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthenticationModule useFactory" time="0">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthenticationModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthenticationModule useFactory" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test JwtModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test JwtModule useFactory" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test JwtModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test JwtModule useFactory" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthJwtModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthJwtModule useFactory" time="0">
     </testcase>
@@ -235,45 +219,155 @@
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthAppleModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthAppleModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGithubModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGithubModule useFactory" time="0">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGithubModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGithubModule useFactory" time="0.003">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGoogleModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGoogleModule useFactory" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGoogleModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGoogleModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGuardRouterModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGuardRouterModule useFactory" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGuardRouterModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthGuardRouterModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRefreshModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRefreshModule useFactory" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRefreshModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRefreshModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthLocalModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthLocalModule useFactory" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthLocalModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthLocalModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRecoveryModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRecoveryModule useFactory" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRecoveryModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthRecoveryModule useFactory" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthVerifyModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test AuthVerifyModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test PasswordModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test PasswordModule useFactory" time="0.001">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test PasswordModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test PasswordModule useFactory" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test UserModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test UserModule useFactory" time="0.001">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test OtpModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test OtpModule useFactory" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test OtpModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test OtpModule useFactory" time="0">
     </testcase>
     <testcase classname="RocketsAuthModuleDefinition Module Factory Function Tests should test EmailModule useFactory" name="RocketsAuthModuleDefinition Module Factory Function Tests should test EmailModule useFactory" time="0">
     </testcase>
-    <testcase classname="RocketsAuthModuleDefinition Provider Factory Function Tests should test RocketsAuthUserLookupService provider factory" name="RocketsAuthModuleDefinition Provider Factory Function Tests should test RocketsAuthUserLookupService provider factory" time="0.002">
+    <testcase classname="RocketsAuthModuleDefinition Provider Factory Function Tests should test RocketsAuthUserLookupService provider factory" name="RocketsAuthModuleDefinition Provider Factory Function Tests should test RocketsAuthUserLookupService provider factory" time="0">
     </testcase>
   </testsuite>
-  <testsuite name="AuthenticationCombinedImportModule Integration" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:47" time="8.718" tests="5">
-    <testcase classname="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules" name="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules" time="0.789">
+  <testsuite name="ErrorLoggingHelper" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:53" time="0.824" tests="8">
+    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should handle Error instance correctly" name="ErrorLoggingHelper logAndGetErrorDetails should handle Error instance correctly" time="0.018">
     </testcase>
-    <testcase classname="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules using main imports" name="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules using main imports" time="0.198">
+    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should handle non-Error objects correctly" name="ErrorLoggingHelper logAndGetErrorDetails should handle non-Error objects correctly" time="0.013">
     </testcase>
-    <testcase classname="AuthenticationCombinedImportModule Integration forRoot (sync) with direct options should define all required services and modules" name="AuthenticationCombinedImportModule Integration forRoot (sync) with direct options should define all required services and modules" time="0.13">
+    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should handle null/undefined errors correctly" name="ErrorLoggingHelper logAndGetErrorDetails should handle null/undefined errors correctly" time="0.028">
     </testcase>
-    <testcase classname="AuthenticationCombinedImportModule Integration with custom refresh controller should use custom refresh controller when provided" name="AuthenticationCombinedImportModule Integration with custom refresh controller should use custom refresh controller when provided" time="0.146">
+    <testcase classname="ErrorLoggingHelper logAndGetErrorDetails should work without context parameter" name="ErrorLoggingHelper logAndGetErrorDetails should work without context parameter" time="0.021">
     </testcase>
-    <testcase classname="AuthenticationCombinedImportModule Integration disableController flags should disable all controllers when configured" name="AuthenticationCombinedImportModule Integration disableController flags should disable all controllers when configured" time="0.132">
+    <testcase classname="ErrorLoggingHelper getErrorDetails should extract details from Error instance without logging" name="ErrorLoggingHelper getErrorDetails should extract details from Error instance without logging" time="0.022">
+    </testcase>
+    <testcase classname="ErrorLoggingHelper getErrorDetails should handle non-Error objects without logging" name="ErrorLoggingHelper getErrorDetails should handle non-Error objects without logging" time="0.001">
+    </testcase>
+    <testcase classname="ErrorLoggingHelper getErrorDetails should handle Error with custom properties" name="ErrorLoggingHelper getErrorDetails should handle Error with custom properties" time="0.003">
+    </testcase>
+    <testcase classname="ErrorLoggingHelper ErrorDetails interface should have correct type structure" name="ErrorLoggingHelper ErrorDetails interface should have correct type structure" time="0.032">
     </testcase>
   </testsuite>
-  <testsuite name="Roles Admin (e2e)" errors="0" failures="0" skipped="0" timestamp="2025-11-26T16:03:47" time="8.908" tests="1">
-    <testcase classname="Roles Admin (e2e) should CRUD roles and manage user-role assignments (with admin auth)" name="Roles Admin (e2e) should CRUD roles and manage user-role assignments (with admin auth)" time="0.332">
+  <testsuite name="RocketsAuthNotificationService" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:52" time="2.085" tests="8">
+    <testcase classname="RocketsAuthNotificationService sendOtpEmail should send OTP email successfully" name="RocketsAuthNotificationService sendOtpEmail should send OTP email successfully" time="0.026">
+    </testcase>
+    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle different email and passcode values" name="RocketsAuthNotificationService sendOtpEmail should handle different email and passcode values" time="0.002">
+    </testcase>
+    <testcase classname="RocketsAuthNotificationService sendOtpEmail should use settings from configuration" name="RocketsAuthNotificationService sendOtpEmail should use settings from configuration" time="0.008">
+    </testcase>
+    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle email service errors" name="RocketsAuthNotificationService sendOtpEmail should handle email service errors" time="0.055">
+    </testcase>
+    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle empty passcode" name="RocketsAuthNotificationService sendOtpEmail should handle empty passcode" time="0.001">
+    </testcase>
+    <testcase classname="RocketsAuthNotificationService sendOtpEmail should handle special characters in passcode" name="RocketsAuthNotificationService sendOtpEmail should handle special characters in passcode" time="0.002">
+    </testcase>
+    <testcase classname="RocketsAuthNotificationService service instantiation should be defined" name="RocketsAuthNotificationService service instantiation should be defined" time="0.034">
+    </testcase>
+    <testcase classname="RocketsAuthNotificationService service instantiation should implement RocketsAuthOtpNotificationServiceInterface" name="RocketsAuthNotificationService service instantiation should implement RocketsAuthOtpNotificationServiceInterface" time="0.043">
+    </testcase>
+  </testsuite>
+  <testsuite name="RocketsModuleDefinition" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:52" time="2.012" tests="8">
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should return MeController by default when no options provided" name="RocketsModuleDefinition createRocketsControllers should return MeController by default when no options provided" time="0.002">
+    </testcase>
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should return MeController when extras is empty object" name="RocketsModuleDefinition createRocketsControllers should return MeController when extras is empty object" time="0.005">
+    </testcase>
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should return MeController when disableController is empty object" name="RocketsModuleDefinition createRocketsControllers should return MeController when disableController is empty object" time="0.001">
+    </testcase>
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should return MeController when disableController.me is false" name="RocketsModuleDefinition createRocketsControllers should return MeController when disableController.me is false" time="0">
+    </testcase>
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should exclude MeController when disableController.me is true" name="RocketsModuleDefinition createRocketsControllers should exclude MeController when disableController.me is true" time="0.001">
+    </testcase>
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should return custom controllers when controllers is explicitly provided" name="RocketsModuleDefinition createRocketsControllers should return custom controllers when controllers is explicitly provided" time="0">
+    </testcase>
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should return empty array when controllers is explicitly empty" name="RocketsModuleDefinition createRocketsControllers should return empty array when controllers is explicitly empty" time="0">
+    </testcase>
+    <testcase classname="RocketsModuleDefinition createRocketsControllers should ignore disableController when controllers is explicitly provided" name="RocketsModuleDefinition createRocketsControllers should ignore disableController when controllers is explicitly provided" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="GenericUserMetadataModelService" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:52" time="2.029" tests="15">
+    <testcase classname="GenericUserMetadataModelService getUserMetadataById should return user metadata when found" name="GenericUserMetadataModelService getUserMetadataById should return user metadata when found" time="0.046">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService getUserMetadataById should throw UserMetadataNotFoundException when not found" name="GenericUserMetadataModelService getUserMetadataById should throw UserMetadataNotFoundException when not found" time="0.043">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService findByUserId should return user metadata for existing user" name="GenericUserMetadataModelService findByUserId should return user metadata for existing user" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService findByUserId should return null for non-existent user" name="GenericUserMetadataModelService findByUserId should return null for non-existent user" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService hasUserMetadata should return true when user has metadata" name="GenericUserMetadataModelService hasUserMetadata should return true when user has metadata" time="0.012">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService hasUserMetadata should return false when user has no metadata" name="GenericUserMetadataModelService hasUserMetadata should return false when user has no metadata" time="0.003">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService createOrUpdate should create new metadata when none exists" name="GenericUserMetadataModelService createOrUpdate should create new metadata when none exists" time="0.002">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService createOrUpdate should update existing metadata when it exists" name="GenericUserMetadataModelService createOrUpdate should update existing metadata when it exists" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should return metadata when user exists" name="GenericUserMetadataModelService getUserMetadataByUserId should return metadata when user exists" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService getUserMetadataByUserId should throw UserMetadataNotFoundException when user not found" name="GenericUserMetadataModelService getUserMetadataByUserId should throw UserMetadataNotFoundException when user not found" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService updateUserMetadata should update existing user metadata" name="GenericUserMetadataModelService updateUserMetadata should update existing user metadata" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should update metadata successfully" name="GenericUserMetadataModelService update should update metadata successfully" time="0.002">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should throw UserMetadataException when ID is missing" name="GenericUserMetadataModelService update should throw UserMetadataException when ID is missing" time="0.011">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService update should throw UserMetadataNotFoundException when entity not found" name="GenericUserMetadataModelService update should throw UserMetadataNotFoundException when entity not found" time="0.001">
+    </testcase>
+    <testcase classname="GenericUserMetadataModelService validate should skip validation and return data as-is" name="GenericUserMetadataModelService validate should skip validation and return data as-is" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="RocketsAuthOtpService" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:52" time="2.064" tests="11">
+    <testcase classname="RocketsAuthOtpService sendOtp should send OTP when user exists" name="RocketsAuthOtpService sendOtp should send OTP when user exists" time="0.013">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService sendOtp should not send OTP when user does not exist" name="RocketsAuthOtpService sendOtp should not send OTP when user does not exist" time="0.005">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService sendOtp should throw error when notification service fails" name="RocketsAuthOtpService sendOtp should throw error when notification service fails" time="0.022">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService sendOtp should throw error when OTP service fails" name="RocketsAuthOtpService sendOtp should throw error when OTP service fails" time="0.003">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService confirmOtp should confirm OTP successfully when user exists and OTP is valid" name="RocketsAuthOtpService confirmOtp should confirm OTP successfully when user exists and OTP is valid" time="0.002">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when user does not exist" name="RocketsAuthOtpService confirmOtp should throw OtpException when user does not exist" time="0.002">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when OTP is invalid" name="RocketsAuthOtpService confirmOtp should throw OtpException when OTP is invalid" time="0.002">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when OTP service throws error" name="RocketsAuthOtpService confirmOtp should throw OtpException when OTP service throws error" time="0.002">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService confirmOtp should throw OtpException when user lookup service throws error" name="RocketsAuthOtpService confirmOtp should throw OtpException when user lookup service throws error" time="0.004">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService constructor should be defined" name="RocketsAuthOtpService constructor should be defined" time="0.001">
+    </testcase>
+    <testcase classname="RocketsAuthOtpService constructor should have all required dependencies injected" name="RocketsAuthOtpService constructor should have all required dependencies injected" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="AuthenticationCombinedImportModule Integration" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:44" time="11.011" tests="5">
+    <testcase classname="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules" name="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules" time="0.603">
+    </testcase>
+    <testcase classname="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules using main imports" name="AuthenticationCombinedImportModule Integration forRootAsync with import strategy should define all required services and modules using main imports" time="0.4">
+    </testcase>
+    <testcase classname="AuthenticationCombinedImportModule Integration forRoot (sync) with direct options should define all required services and modules" name="AuthenticationCombinedImportModule Integration forRoot (sync) with direct options should define all required services and modules" time="0.465">
+    </testcase>
+    <testcase classname="AuthenticationCombinedImportModule Integration with custom refresh controller should use custom refresh controller when provided" name="AuthenticationCombinedImportModule Integration with custom refresh controller should use custom refresh controller when provided" time="0.268">
+    </testcase>
+    <testcase classname="AuthenticationCombinedImportModule Integration disableController flags should disable all controllers when configured" name="AuthenticationCombinedImportModule Integration disableController flags should disable all controllers when configured" time="0.206">
+    </testcase>
+  </testsuite>
+  <testsuite name="Roles Admin (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-02-17T10:35:44" time="11.05" tests="1">
+    <testcase classname="Roles Admin (e2e) should CRUD roles and manage user-role assignments (with admin auth)" name="Roles Admin (e2e) should CRUD roles and manage user-role assignments (with admin auth)" time="0.483">
     </testcase>
   </testsuite>
 </testsuites>

@@ -163,14 +163,15 @@ export class PetCreateDto
 /**
  * Pet Update DTO
  * Follows SDK patterns using IntersectionType and PartialType
+ * Required id via PickType + optional fields via PartialType
  * Excludes userId from updates for security
  */
 export class PetUpdateDto extends IntersectionType(
   PickType(PetDto, ['id'] as const),
-  PartialType(PickType(PetDto, ['name', 'species', 'breed', 'age', 'color', 'description', 'status'] as const)),
-) implements PetModelUpdatableInterface {
-  // userId is intentionally excluded - cannot be updated
-}
+  PartialType(
+    PickType(PetDto, ['name', 'species', 'breed', 'age', 'color', 'description', 'status'] as const),
+  ),
+) implements PetModelUpdatableInterface {}
 
 /**
  * Pet Response DTO

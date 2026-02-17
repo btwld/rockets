@@ -1,11 +1,5 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "globals": {
-    "ts-jest": {
-      "tsconfig": "tsconfig.jest.json"
-    }
-  },
-  "preset": "ts-jest",
   "coverageProvider": "v8",
   "coverageThreshold": {
     "global": {
@@ -18,7 +12,7 @@
   "testRegex": "packages/.*\\.spec\\.ts$",
   "testPathIgnorePatterns": ["/node_modules/", "/dist/", "/examples/"],
   "transform": {
-    "^.+\\.ts$": "ts-jest"
+    "^.+\\.ts$": ["ts-jest", { "tsconfig": "tsconfig.jest.json" }]
   },
   "collectCoverageFrom": [
     "packages/**/*.ts",

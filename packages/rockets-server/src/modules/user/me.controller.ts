@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Body,
-  Inject,
-  Logger,
-  NotFoundException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Body, Inject } from '@nestjs/common';
 import { AuthUser } from '@concepta/nestjs-authentication';
 import {
   ApiTags,
@@ -16,13 +7,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import type { AuthorizedUser } from '../../interfaces/auth-user.interface';
-import {
-  UserMetadataEntityInterface,
-  UserMetadataModelServiceInterface,
-} from '../user-metadata/interfaces/user-metadata.interface';
+import { UserMetadataModelServiceInterface } from '../user-metadata/interfaces/user-metadata.interface';
 import { UserUpdateDto, UserResponseDto } from './user.dto';
 import { UserMetadataModelService } from '../user-metadata/constants/user-metadata.constants';
-import { logAndGetErrorDetails } from '../../utils/error-logging.helper';
 
 /**
  * User Controller
@@ -33,8 +20,6 @@ import { logAndGetErrorDetails } from '../../utils/error-logging.helper';
 @ApiBearerAuth()
 @Controller('me')
 export class MeController {
-  private readonly logger = new Logger(MeController.name);
-
   constructor(
     @Inject(UserMetadataModelService)
     private readonly userMetadataModelService: UserMetadataModelServiceInterface,
@@ -58,42 +43,13 @@ export class MeController {
     description: 'Unauthorized - Invalid or missing token',
   })
   async me(@AuthUser() user: AuthorizedUser): Promise<UserResponseDto> {
-    // Get user userMetadata from database
-    let userMetadata: UserMetadataEntityInterface | null;
+    const userMetadata =
+      await this.userMetadataModelService.getUserMetadataByUserId(user.id);
 
-    try {
-      const metadata =
-        await this.userMetadataModelService.getUserMetadataByUserId(user.id);
-
-      userMetadata = metadata;
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        (error instanceof Error && error.message?.includes('not found'))
-      ) {
-        // Expected: user has no metadata yet
-        userMetadata = null;
-      } else {
-        // Unexpected: database error
-        logAndGetErrorDetails(
-          error,
-          this.logger,
-          'Failed to fetch user metadata',
-          { userId: user.id, errorId: 'USER_METADATA_FETCH_FAILED' },
-        );
-        // Either throw or return partial data - decide based on UX requirements
-        throw new InternalServerErrorException(
-          'Failed to load complete profile',
-        );
-      }
-    }
-
-    const response = {
+    return {
       ...user,
       userMetadata: userMetadata ? { ...userMetadata } : {},
     };
-
-    return response;
   }
 
   /**

@@ -71,7 +71,12 @@ export class GenericUserMetadataModelService
     userId: string,
     userMetadataData: UserMetadataUpdatableInterface,
   ): Promise<UserMetadataEntityInterface> {
-    const userMetadata = await this.getUserMetadataByUserId(userId);
+    const userMetadata = await this.findByUserId(userId);
+    if (!userMetadata) {
+      throw new NotFoundException(
+        `UserMetadata for user ID ${userId} not found`,
+      );
+    }
     return this.update({
       ...userMetadata,
       ...userMetadataData,
@@ -108,16 +113,9 @@ export class GenericUserMetadataModelService
 
   async getUserMetadataByUserId(
     userId: string,
-  ): Promise<UserMetadataEntityInterface> {
+  ): Promise<UserMetadataEntityInterface | null> {
     try {
-      const userMetadata = await this.findByUserId(userId);
-      if (!userMetadata) {
-        // TODO update exception
-        throw new NotFoundException(
-          `UserMetadata for user ID ${userId} not found`,
-        );
-      }
-      return userMetadata;
+      return await this.findByUserId(userId);
     } catch (error) {
       if (error instanceof RuntimeException || error instanceof HttpException) {
         throw error;
