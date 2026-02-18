@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  Param,
-  Patch,
-  Logger,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, Param, Patch } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -34,8 +27,8 @@ export class InvitationAcceptanceController {
    * Accept an invitation
    *
    * Users accept invitations by providing the invitation code and OTP passcode.
-   * The payload can contain any user data (firstName, lastName, password, metadata, etc.)
-   * which will be processed by the InvitationUserAcceptanceListener.
+   * The payload can contain `password` and `userMetadata`.
+   * The listener ignores direct user field updates (email, username, active).
    *
    * @param code - The invitation code (UUID) from the email
    * @param dto - Acceptance data containing passcode and optional user data payload
@@ -61,19 +54,11 @@ export class InvitationAcceptanceController {
     @Body() dto: RocketsAuthInvitationAcceptDto,
   ): Promise<void> {
     const { passcode, payload } = dto;
-
-    let success: boolean | null | undefined;
-
-    try {
-      success = await this.invitationService.accept({
-        code,
-        passcode,
-        payload,
-      });
-    } catch (e) {
-      Logger.error(e);
-      throw e;
-    }
+    const success = await this.invitationService.accept({
+      code,
+      passcode,
+      payload,
+    });
 
     if (!success) {
       throw new RocketsAuthInvitationNotAcceptedException();

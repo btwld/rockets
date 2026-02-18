@@ -4,10 +4,10 @@ import {
   ApiTags,
   ApiOperation,
   ApiParam,
-  ApiOkResponse,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
-import { InvitationAttemptService } from '@concepta/nestjs-invitation/dist/services/invitation-attempt.service';
 import { AdminGuard } from '../../../guards/admin.guard';
+import { InvitationAttemptService } from '../../../shared/compat/concepta-internals';
 
 /**
  * Invitation Reattempt Controller
@@ -42,7 +42,7 @@ export class InvitationReattemptController {
     description: 'Invitation code',
     type: 'string',
   })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: 'Invitation email re-sent successfully',
   })
   async reattempt(@Param('code') code: string): Promise<void> {

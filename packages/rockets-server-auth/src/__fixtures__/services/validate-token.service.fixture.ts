@@ -1,4 +1,4 @@
-import { ValidateTokenServiceInterface } from '@concepta/nestjs-authentication/dist/interfaces/validate-token-service.interface';
+import { ValidateTokenServiceInterface } from '@concepta/nestjs-authentication';
 
 export class ValidateTokenServiceFixture
   implements ValidateTokenServiceInterface

@@ -35,7 +35,7 @@ import {
 import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthUserCreateDto } from '../dto/rockets-auth-user-create.dto';
 import { RocketsAuthUserDto } from '../dto/rockets-auth-user.dto';
-import { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
+import { CrudRelations } from '../../../shared/compat/concepta-internals';
 
 import { AuthPublic } from '@concepta/nestjs-authentication';
 import { UserModelService } from '@concepta/nestjs-user';

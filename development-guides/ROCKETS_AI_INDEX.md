@@ -2,6 +2,13 @@
 
 > **For AI Tools**: This is your navigation hub for Rockets SDK development. Use this to quickly find the right guide for your task.
 
+## 🧭 Agent Instruction Files
+
+- Canonical repository instructions: [`../AGENTS.md`](../AGENTS.md)
+- Compatibility alias: `../CLAUDE.md` (symlink to `../AGENTS.md`)
+- Shared collaboration notes: [`../.context/notes.md`](../.context/notes.md)
+- Shared task handoff list: [`../.context/todos.md`](../.context/todos.md)
+
 ## 📋 **Quick Tasks**
 
 ### **🏗️ Phase 1: Project Foundation Setup**

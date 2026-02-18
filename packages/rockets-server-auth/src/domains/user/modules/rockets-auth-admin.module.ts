@@ -14,6 +14,9 @@ import {
   applyDecorators,
   Inject,
   BadRequestException,
+  HttpException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { UserMetadataCrudService } from './rockets-auth-user-metadata.module';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
@@ -34,8 +37,9 @@ import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-au
 import { RocketsAuthUserInterface } from '../interfaces/rockets-auth-user.interface';
 import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
 import { UserMetadataModelService } from '../constants/user-metadata.constants';
-import { CrudApiParam } from '@concepta/nestjs-crud/dist/crud/decorators/openapi/crud-api-param.decorator';
-import { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
+import { CrudApiParam } from '@concepta/nestjs-crud';
+import { logAndGetErrorDetails } from '../../../shared/utils/error-logging.helper';
+import { CrudRelations } from '../../../shared/compat/concepta-internals';
 
 @Module({})
 export class RocketsAuthAdminModule {
@@ -118,6 +122,8 @@ export class RocketsAuthAdminModule {
       RocketsAuthUserEntityInterface,
       [RocketsAuthUserMetadataEntityInterface]
     > {
+      private readonly logger = new Logger(AdminUserCrudService.name);
+
       constructor(
         @Inject(admin.adapter)
         protected readonly crudAdapter: CrudAdapter<RocketsAuthUserEntityInterface>,
@@ -169,7 +175,7 @@ export class RocketsAuthAdminModule {
           }
         }
 
-        // Update user fields first (excluding metadata)
+        // Keep this path database-agnostic: update user first, then metadata.
         const result = await super.updateOne(req, userDto);
 
         // Manually create/update metadata using userMetadataService
@@ -179,8 +185,21 @@ export class RocketsAuthAdminModule {
               result.id,
               userMetadata,
             );
-          } catch (metadataError) {
-            // Don't fail the entire update if metadata fails
+          } catch (metadataError: unknown) {
+            if (metadataError instanceof HttpException) {
+              throw metadataError;
+            }
+
+            logAndGetErrorDetails(
+              metadataError,
+              this.logger,
+              'Failed to update user metadata',
+              { userId: result.id, errorId: 'ADMIN_METADATA_UPDATE_FAILED' },
+            );
+
+            throw new InternalServerErrorException(
+              'Failed to update user metadata',
+            );
           }
         }
 

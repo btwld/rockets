@@ -60,14 +60,22 @@ function definitionTransform(
   definition: DynamicModule,
   extras: RocketsOptionsExtrasInterface,
 ): DynamicModule {
-  const { imports: defImports = [], providers = [], exports = [] } = definition;
+  const {
+    imports: defImports = [],
+    controllers: defControllers,
+    providers = [],
+    exports = [],
+  } = definition;
 
   // Base module
   const baseModule: DynamicModule = {
     ...definition,
     global: extras.global,
     imports: [...createRocketsImports({ imports: defImports, extras })],
-    controllers: createRocketsControllers({ extras }) || [],
+    controllers: createRocketsControllers({
+      controllers: extras.controllers ?? defControllers,
+      extras,
+    }),
     providers: [...createRocketsProviders({ providers, extras })],
     exports: createRocketsExports({ exports, extras }),
   };

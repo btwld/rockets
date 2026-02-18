@@ -4,7 +4,6 @@ import { CrudAdapter } from '@concepta/nestjs-crud';
 import { RepositoryInterface } from '@concepta/nestjs-common';
 import { RocketsAuthUserMetadataEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
-import { RoleOptionsExtrasInterface } from '@concepta/nestjs-role/dist/interfaces/role-options-extras.interface';
 import { DynamicModule, Type } from '@nestjs/common';
 import { RocketsAuthUserEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-entity.interface';
 import { RocketsAuthUserCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-creatable.interface';
@@ -14,6 +13,7 @@ import { RocketsAuthRoleCreatableInterface } from '../../domains/role/interfaces
 import { RocketsAuthRoleUpdatableInterface } from '../../domains/role/interfaces/rockets-auth-role-updatable.interface';
 import { GenericUserMetadataModelService } from '../../domains/user/services/rockets-auth-user-metadata.model.service';
 import { RocketsAuthUserMetadataModelUpdatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
+import { RoleOptionsExtrasInterface } from '../compat/concepta-internals';
 
 /**
  * Generic userMetadata configuration interface
@@ -69,8 +69,8 @@ export interface UserCrudOptionsExtrasInterface {
   /**
    * Module imports for user CRUD
    *
-   * IMPORTANT: Must include TypeOrmExtModule.forFeature with 'authUserMetadata' key:
-   * TypeOrmExtModule.forFeature(\{ authUserMetadata: \{ entity: YourUserMetadataEntity \} \})
+   * IMPORTANT: Must include TypeOrmExtModule.forFeature with 'userMetadata' key:
+   * TypeOrmExtModule.forFeature(\{ userMetadata: \{ entity: YourUserMetadataEntity \} \})
    *
    * This is required for the AuthUserMetadataModelService to work correctly.
    */
@@ -105,49 +105,30 @@ export interface RoleCrudOptionsExtrasInterface {
 
 /**
  * Configuration interface for disabling specific controllers.
- *
- * All controllers are **enabled by default**. Set a property to `true` to disable
- * that specific controller. This allows SDK users to selectively disable features
- * they don't need without requiring explicit enablement of every feature.
- *
- * @example
- * ```typescript
- * // Disable only the password and signup controllers
- * disableController: {
- *   password: true,
- *   signup: true,
- * }
- * ```
- *
- * @example
- * ```typescript
- * // All controllers enabled (default behavior, no config needed)
- * disableController: {}
- * ```
  */
 export interface DisableControllerOptionsInterface {
-  /** Set to `true` to disable the password change controller. Default: false (enabled) */
+  /** Disable password change controller. */
   password?: boolean;
 
-  /** Set to `true` to disable the token refresh controller. Default: false (enabled) */
+  /** Disable token refresh controller. */
   refresh?: boolean;
 
-  /** Set to `true` to disable the password recovery controller. Default: false (enabled) */
+  /** Disable password recovery controller. */
   recovery?: boolean;
 
-  /** Set to `true` to disable the OTP (One-Time Password) controller. Default: false (enabled) */
+  /** Disable OTP controller. */
   otp?: boolean;
 
-  /** Set to `true` to disable the OAuth controllers (Google, Apple, GitHub, etc.). Default: false (enabled) */
+  /** Disable OAuth controllers. */
   oAuth?: boolean;
 
-  /** Set to `true` to disable the user signup controller. Default: false (enabled) */
+  /** Disable user signup controller. */
   signup?: boolean;
 
-  /** Set to `true` to disable the admin user management submodule. Default: false (enabled) */
+  /** Disable admin user management submodule. */
   admin?: boolean;
 
-  /** Set to `true` to disable the admin roles management submodule. Default: false (enabled) */
+  /** Disable admin roles management submodule. */
   adminRoles?: boolean;
 
   /**
@@ -157,29 +138,26 @@ export interface DisableControllerOptionsInterface {
    */
   user?: boolean;
 
-  /** Set to `true` to disable the invitation creation controller. Default: false (enabled) */
+  /** Disable invitation creation controller. */
   invitation?: boolean;
 
-  /** Set to `true` to disable the invitation acceptance controller. Default: false (enabled) */
+  /** Disable invitation acceptance controller. */
   invitationAcceptance?: boolean;
 
-  /** Set to `true` to disable the invitation revocation controller. Default: false (enabled) */
+  /** Disable invitation revocation controller. */
   invitationRevocation?: boolean;
 
-  /** Set to `true` to disable the invitation reattempt controller. Default: false (enabled) */
+  /** Disable invitation reattempt controller. */
   invitationReattempt?: boolean;
 
-  /** Set to `true` to disable the me/password controller (authenticated password change). Default: false (enabled) */
+  /** Disable authenticated me/password controller. */
   mePassword?: boolean;
 }
 
 export interface RocketsAuthOptionsExtrasInterface
   extends Pick<DynamicModule, 'global' | 'controllers'> {
   /**
-   * Enable global auth guard
-   * When true, registers AuthGuard as APP_GUARD globally
-   * When false, only provides AuthGuard as a service (not global)
-   * Default: true
+   * Register JWT auth guard as an application-wide guard.
    */
   enableGlobalJWTGuard?: boolean;
   user?: { imports: DynamicModule['imports'] };
@@ -190,13 +168,11 @@ export interface RocketsAuthOptionsExtrasInterface
   userCrud?: UserCrudOptionsExtrasInterface;
   roleCrud?: RoleCrudOptionsExtrasInterface;
   /**
-   * Optional access control configuration
-   * If present, AccessControlModule will be registered
-   * Used to configure role-based access control using the accesscontrol library
+   * Optional access control configuration.
    */
   accessControl?: AccessControlOptionsInterface;
   disableController?: DisableControllerOptionsInterface;
   invitation?: {
-    imports?: DynamicModule['imports']; // For registering invitation entity
+    imports?: DynamicModule['imports'];
   };
 }

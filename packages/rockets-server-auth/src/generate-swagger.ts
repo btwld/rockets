@@ -441,6 +441,44 @@ class ExtendedUserUpdateDto {
   userMetadata?: UserMetadataInputDto;
 }
 
+function stripTopLevelResponseSchemas(document: {
+  paths?: Record<string, unknown>;
+}): void {
+  const { paths } = document;
+  if (!paths) {
+    return;
+  }
+
+  for (const pathItem of Object.values(paths)) {
+    if (!pathItem || typeof pathItem !== 'object') {
+      continue;
+    }
+
+    for (const operation of Object.values(
+      pathItem as Record<string, unknown>,
+    )) {
+      if (!operation || typeof operation !== 'object') {
+        continue;
+      }
+
+      const responses = (operation as { responses?: Record<string, unknown> })
+        .responses;
+      if (!responses || typeof responses !== 'object') {
+        continue;
+      }
+
+      for (const response of Object.values(responses)) {
+        if (!response || typeof response !== 'object') {
+          continue;
+        }
+
+        // OpenAPI 3 expects schemas under content.<mediaType>.schema.
+        delete (response as { schema?: unknown }).schema;
+      }
+    }
+  }
+}
+
 /**
  * Generate Swagger documentation JSON file based on RocketsAuth controllers
  */
@@ -614,11 +652,14 @@ async function generateSwaggerJson() {
       .setTitle('Rockets API')
       .setDescription('API documentation for Rockets Server')
       .setVersion('1.0')
+      .setContact('Rockets API Team', '', 'api@rockets.dev')
+      .setLicense('BSD-3-Clause', '')
       .addBearerAuth()
       .build();
 
     // Create the swagger document using SwaggerModule
     const document = SwaggerModule.createDocument(app, options);
+    stripTopLevelResponseSchemas(document);
 
     // Create output directory
     const outputDir = path.resolve('./swagger');

@@ -1,4 +1,4 @@
-import { AuthJwtSettingsInterface } from '@concepta/nestjs-auth-jwt/dist/interfaces/auth-jwt-settings.interface';
+import { AuthJwtSettingsInterface } from '@concepta/nestjs-auth-jwt';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
