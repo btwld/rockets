@@ -7,6 +7,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-alpha.6] - 2026-02-19
+
+### Changed
+
+- **NestJS 11 upgrade**: Bumped all `@nestjs/*` dependencies
+  to v11 (`@nestjs/common`, `@nestjs/core`, `@nestjs/swagger`,
+  `@nestjs/jwt`, `@nestjs/passport`, `@nestjs/config`,
+  `@nestjs/throttler`, `@nestjs/testing`, `@nestjs/typeorm`,
+  `@nestjs/platform-express`) and updated `@concepta/*`
+  packages from `7.0.0-alpha.8` to `7.0.0-alpha.10`.
+- **Invitation acceptance module**: Simplified and
+  consolidated module definition; reduced boilerplate in
+  `invitation-acceptance-data.interface` and acceptance
+  controller.
+- **Admin module**: Refactored `RocketsAuthAdminModule` for
+  consistency; added CRUD relations support for roles in
+  `RocketsAuthRoleAdminModule`.
+- **Options interfaces**: Trimmed verbose JSDoc in
+  `rockets-auth-options-extras.interface` and
+  `rockets-auth-options.interface` to concise descriptions.
+- **Module definition**: Simplified `rockets-auth.module-definition`
+  configuration and provider setup.
+- **Fixture imports**: Replaced deep `dist/` imports with
+  root package imports for `auth-jwt`, `auth-refresh`, and
+  `authentication` service fixtures.
+- **Swagger generation**: Added `stripTopLevelResponseSchemas`
+  cleanup pass, set contact and license metadata, and
+  updated generated `swagger.json`.
+
+### Added
+
+- **Compatibility shim**: New
+  `shared/compat/concepta-internals.ts` centralizes all
+  deep `@concepta/*/dist` imports to minimize churn when
+  upstream packages update exports.
+- **Admin relations e2e tests**: New
+  `rockets-auth-admin.relations.e2e-spec.ts` covering
+  user-role CRUD relation endpoints.
+
 ## [1.0.0-alpha.5] - 2026-02-03
 
 ### Added
@@ -178,6 +217,7 @@ and this project adheres to
   `class-validator`, `rxjs`
 - BSD-3-Clause license
 
+[1.0.0-alpha.6]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.6
 [1.0.0-alpha.5]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.5
 [1.0.0-alpha.4]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.3

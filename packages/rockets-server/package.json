@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets",
-  "version": "1.0.0-alpha.5",
+  "version": "1.0.0-alpha.6",
   "description": "Rockets - Core server functionality for NestJS applications with built-in authentication, user management, and API scaffolding",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
