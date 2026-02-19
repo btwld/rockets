@@ -7,6 +7,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-alpha.6] - 2026-02-19
+
+### Changed
+
+- **NestJS 11 upgrade**: Bumped all `@nestjs/*` dependencies
+  to v11 (`@nestjs/common`, `@nestjs/core`, `@nestjs/swagger`,
+  `@nestjs/config`, `@nestjs/testing`, `@nestjs/typeorm`,
+  `@nestjs/platform-express`) and updated `@concepta/*`
+  packages from `7.0.0-alpha.8` to `7.0.0-alpha.10`.
+- **User metadata model service**: `getUserMetadataByUserId`
+  now returns `null` instead of throwing `NotFoundException`
+  when no metadata exists, simplifying consumer code.
+- **Me controller**: Removed redundant try/catch and error
+  logging; relies on the model service for error handling.
+- **User DTOs**: Added `additionalProperties: true` to
+  Swagger `userMetadata` schemas for flexible metadata
+  payloads.
+- **Module definition**: `createRocketsControllers` now
+  respects `extras.controllers` for custom controller
+  overrides.
+- **Options extras interface**: Trimmed verbose JSDoc to
+  concise descriptions.
+- **Error handling**: Exception catch blocks now rethrow
+  `HttpException` subclasses alongside `RuntimeException`.
+
+### Added
+
+- **User metadata model service unit tests**: Comprehensive
+  spec covering exception mapping, CRUD operations,
+  `createOrUpdate`, and `hasUserMetadata`.
+
+### Fixed
+
+- **TypeScript strict mode**: Added definite assignment
+  assertions (`!`) to DTO properties in e2e specs and
+  `UserResponseDto`.
+
 ## [1.0.0-alpha.5] - 2026-02-03
 
 ### Added
@@ -103,6 +140,7 @@ and this project adheres to
 - Compatible with NestJS 10.x
 - BSD-3-Clause license
 
+[1.0.0-alpha.6]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.6
 [1.0.0-alpha.5]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.5
 [1.0.0-alpha.4]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.3
