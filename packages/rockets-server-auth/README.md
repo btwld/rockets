@@ -5,6 +5,9 @@
 
 [![NPM Latest](https://img.shields.io/npm/v/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
 [![NPM Downloads](https://img.shields.io/npm/dw/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
+[![CI](https://img.shields.io/github/actions/workflow/status/btwld/rockets/ci-merge.yml?branch=main&label=CI)](https://github.com/btwld/rockets/actions/workflows/ci-merge.yml)
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![GH Last Commit](https://img.shields.io/github/last-commit/btwld/rockets?logo=github)](https://github.com/btwld/rockets)
 [![GH Contrib](https://img.shields.io/github/contributors/btwld/rockets?logo=github)](https://github.com/btwld/rockets/graphs/contributors)
 [![License](https://img.shields.io/npm/l/@bitwild/rockets-auth)](https://github.com/btwld/rockets/blob/main/LICENSE.txt)
@@ -93,14 +96,14 @@ maintaining flexibility for customization and extension.
 
 **Version Requirements**:
 
-- NestJS: `^10.0.0`
+- NestJS: `^11.0.0`
 - Node.js: `>=18.0.0`
 - TypeScript: `>=4.8.0`
 
 Let's create a new NestJS project:
 
 ```bash
-npx @nestjs/cli@10 new my-app-with-rockets --package-manager yarn --language TypeScript --strict
+npx @nestjs/cli@latest new my-app-with-rockets --package-manager yarn --language TypeScript --strict
 ```
 
 Install Rockets Server Auth and required dependencies:
@@ -594,7 +597,7 @@ If you're getting dependency resolution errors:
 
 1. **NestJS Version**: Ensure you're using NestJS `^10.0.0`
 2. **Alpha Packages**: All `@concepta/*` packages should use the same alpha
-   version (e.g., `^7.0.0-alpha.6`)
+   version (e.g., `^7.0.0-alpha.10`)
 3. **Clean Installation**: Try deleting `node_modules` and `package-lock.json`,
    then run `yarn install`
 
@@ -1544,7 +1547,7 @@ services: {
 
 Add a new CRUD endpoint for any entity using `@concepta/nestjs-crud` with
 minimal boilerplate. This section provides step-by-step instructions for AI
-agents to implement CRUD operations following the v7.0.0-alpha.6 patterns.
+agents to implement CRUD operations following the v7.0.0-alpha.10 patterns.
 
 **IMPORTANT FOR AI AGENTS**: Follow this exact pattern when implementing
 CRUD functionality. The pattern uses `ConfigurableCrudBuilder` plus a
@@ -1659,7 +1662,7 @@ export class ProjectPaginatedDto extends CrudResponsePaginatedDto(ProjectDto) {}
 
 #### 3) Create a TypeOrmCrudAdapter (REQUIRED PATTERN)
 
-**AI AGENTS: This is the correct adapter pattern for v7.0.0-alpha.6:**
+**AI AGENTS: This is the correct adapter pattern for v7.0.0-alpha.10:**
 
 ```typescript
 // adapters/project-typeorm-crud.adapter.ts

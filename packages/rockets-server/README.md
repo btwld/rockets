@@ -5,6 +5,9 @@
 
 [![NPM Latest](https://img.shields.io/npm/v/@bitwild/rockets)](https://www.npmjs.com/package/@bitwild/rockets)
 [![NPM Downloads](https://img.shields.io/npm/dw/@bitwild/rockets)](https://www.npmjs.com/package/@bitwild/rockets)
+[![CI](https://img.shields.io/github/actions/workflow/status/btwld/rockets/ci-merge.yml?branch=main&label=CI)](https://github.com/btwld/rockets/actions/workflows/ci-merge.yml)
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![GH Last Commit](https://img.shields.io/github/last-commit/btwld/rockets?logo=github)](https://github.com/btwld/rockets)
 [![GH Contrib](https://img.shields.io/github/contributors/btwld/rockets?logo=github)](https://github.com/btwld/rockets/graphs/contributors)
 [![License](https://img.shields.io/npm/l/@bitwild/rockets)](https://github.com/btwld/rockets/blob/main/LICENSE.txt)
@@ -64,14 +67,14 @@ Simply implement the `AuthProviderInterface` for your authentication system:
 
 **Version Requirements**:
 
-- NestJS: `^10.0.0`
+- NestJS: `^11.0.0`
 - Node.js: `>=18.0.0`
 - TypeScript: `>=4.8.0`
 
 Let's create a new NestJS project:
 
 ```bash
-npx @nestjs/cli@10 new my-app-with-rockets --package-manager yarn --language TypeScript --strict
+npx @nestjs/cli@latest new my-app-with-rockets --package-manager yarn --language TypeScript --strict
 ```
 
 Install Rockets Server and required dependencies:
@@ -361,9 +364,9 @@ valid `Authorization: Bearer <token>` header and that your
 
 If you're getting dependency resolution errors:
 
-1. **NestJS Version**: Ensure you're using NestJS `^10.0.0`
+1. **NestJS Version**: Ensure you're using NestJS `^11.0.0`
 2. **Alpha Packages**: All `@concepta/*` packages should use the same alpha
-   version (e.g., `^7.0.0-alpha.6`)
+   version (e.g., `7.0.0-alpha.10`)
 3. **Clean Installation**: Try deleting `node_modules` and `package-lock.json`,
    then run `yarn install`
 
