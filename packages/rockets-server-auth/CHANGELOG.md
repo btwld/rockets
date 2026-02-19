@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0-alpha.6] - 2026-02-19
+## [1.0.0-alpha.7] - 2026-02-19
 
 ### Changed
 
@@ -217,7 +217,7 @@ and this project adheres to
   `class-validator`, `rxjs`
 - BSD-3-Clause license
 
-[1.0.0-alpha.6]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.6
+[1.0.0-alpha.7]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.7
 [1.0.0-alpha.5]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.5
 [1.0.0-alpha.4]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/btwld/rockets/releases/tag/v1.0.0-alpha.3
