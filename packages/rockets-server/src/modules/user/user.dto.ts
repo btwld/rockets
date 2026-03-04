@@ -12,6 +12,7 @@ export class RoleNameDto {
   @ApiProperty({ description: 'Role name', example: 'admin' })
   name!: string;
 }
+
 export class UserRoleItemDto {
   @ApiProperty({ description: 'Role object', type: () => RoleNameDto })
   @Type(() => RoleNameDto)
@@ -19,10 +20,8 @@ export class UserRoleItemDto {
 }
 
 /**
- * Generic User Update DTO
- * This DTO is generic and uses dynamic userMetadata structure
- * The actual userMetadata validation is handled by the dynamically configured DTO classes
- * Follows SDK patterns for DTOs
+ * User update DTO with dynamic userMetadata structure.
+ * Actual userMetadata validation is handled by the dynamically configured DTO classes.
  */
 export class UserUpdateDto {
   @ApiPropertyOptional({
@@ -43,9 +42,7 @@ export class UserUpdateDto {
 }
 
 /**
- * Generic User Response DTO
- * Contains auth user data + userMetadata
- * Follows SDK patterns for response DTOs
+ * User response DTO containing auth user data and userMetadata.
  */
 export class UserResponseDto {
   @ApiProperty({
@@ -89,12 +86,10 @@ export class UserResponseDto {
   })
   @IsOptional()
   @IsObject()
-  @Allow()
   claims?: Record<string, unknown>;
 
   @ApiPropertyOptional({
-    description:
-      'UserMetadata data from user userMetadata - structure is defined dynamically',
+    description: 'UserMetadata data - structure is defined dynamically',
     type: 'object',
     additionalProperties: true,
     example: {

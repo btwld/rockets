@@ -47,18 +47,16 @@ export class RocketsAuthAdminModule {
     const ModelDto = admin.model || RocketsAuthUserDto;
     const UpdateDto = admin.dto?.updateOne || RocketsAuthUserUpdateDto;
     @Exclude()
-    class PaginatedDto extends CrudResponsePaginatedDto<RocketsAuthUserInterface> {
+    class AdminUsersPaginatedDto extends CrudResponsePaginatedDto<RocketsAuthUserInterface> {
       @Expose()
       @ApiProperty({
         type: ModelDto,
         isArray: true,
-        description: 'Array of Orgs',
+        description: 'Array of Users',
       })
       @Type(() => ModelDto)
       data: RocketsAuthUserInterface[] = [];
     }
-
-    // Note: UserMetadataCrudService is now provided by the centralized RocketsAuthUserMetadataModule
 
     const builder = new ConfigurableCrudBuilder<
       RocketsAuthUserEntityInterface,
@@ -73,7 +71,7 @@ export class RocketsAuthAdminModule {
         path: admin.path || 'admin/users',
         model: {
           type: ModelDto,
-          paginatedType: PaginatedDto,
+          paginatedType: AdminUsersPaginatedDto,
         },
         extraDecorators: [
           ApiTags('admin'),
@@ -115,9 +113,6 @@ export class RocketsAuthAdminModule {
 
     const { ConfigurableControllerClass } = builder.build();
 
-    // Relation-aware Admin User CrudService that extends CrudService directly
-    // with proper generic types for relations
-    // CrudRelations handles metadata queries, but create/update require manual handling
     class AdminUserCrudService extends CrudService<
       RocketsAuthUserEntityInterface,
       [RocketsAuthUserMetadataEntityInterface]
@@ -175,10 +170,8 @@ export class RocketsAuthAdminModule {
           }
         }
 
-        // Keep this path database-agnostic: update user first, then metadata.
         const result = await super.updateOne(req, userDto);
 
-        // Manually create/update metadata using userMetadataService
         if (userMetadata) {
           try {
             await this.userMetadataModelService.createOrUpdate(
@@ -203,13 +196,10 @@ export class RocketsAuthAdminModule {
           }
         }
 
-        // CrudRelations will fetch the complete user with metadata
-        const updatedUser = await super.getOne(req);
-        return updatedUser;
+        return super.getOne(req);
       }
     }
 
-    // Controller extends ConfigurableControllerClass and delegates to service
     class AdminUserCrudController extends ConfigurableControllerClass {}
 
     return {
@@ -218,7 +208,6 @@ export class RocketsAuthAdminModule {
       controllers: [AdminUserCrudController],
       providers: [
         admin.adapter,
-        // Note: UserMetadataCrudService and metadata adapter are now provided by RocketsAuthUserMetadataModule
         {
           provide: ROCKETS_ADMIN_USER_RELATION_REGISTRY,
           inject: [UserMetadataCrudService],

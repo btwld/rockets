@@ -54,16 +54,10 @@ export class GenericUserMetadataModelService
       }
       return userMetadata;
     } catch (error) {
-      if (error instanceof RuntimeException || error instanceof HttpException) {
-        throw error;
-      }
-      logAndGetErrorDetails(
-        error,
-        this.logger,
-        'Failed to fetch user metadata',
-        { id, errorId: 'USER_METADATA_FETCH_FAILED' },
-      );
-      throw new InternalServerErrorException('Failed to fetch user metadata');
+      this.rethrowKnownOrLog(error, 'Failed to fetch user metadata', {
+        id,
+        errorId: 'USER_METADATA_FETCH_FAILED',
+      });
     }
   }
 
@@ -98,17 +92,13 @@ export class GenericUserMetadataModelService
     userId: string,
     data: Record<string, unknown>,
   ): Promise<UserMetadataEntityInterface> {
-    const existingUserMetadata = await this.findByUserId(userId);
+    const existing = await this.findByUserId(userId);
 
-    if (existingUserMetadata) {
-      // Update existing userMetadata with new data
-      const updateData = { id: existingUserMetadata.id, ...data };
-      return this.update(updateData);
-    } else {
-      // Create new userMetadata with user ID and userMetadata data
-      const createData = { userId, ...data };
-      return this.create(createData);
+    if (existing) {
+      return this.update({ id: existing.id, ...data });
     }
+
+    return this.create({ userId, ...data });
   }
 
   async getUserMetadataByUserId(
@@ -117,16 +107,10 @@ export class GenericUserMetadataModelService
     try {
       return await this.findByUserId(userId);
     } catch (error) {
-      if (error instanceof RuntimeException || error instanceof HttpException) {
-        throw error;
-      }
-      logAndGetErrorDetails(
-        error,
-        this.logger,
-        'Failed to fetch user metadata',
-        { userId, errorId: 'USER_METADATA_FETCH_BY_USER_FAILED' },
-      );
-      throw new InternalServerErrorException('Failed to fetch user metadata');
+      this.rethrowKnownOrLog(error, 'Failed to fetch user metadata', {
+        userId,
+        errorId: 'USER_METADATA_FETCH_BY_USER_FAILED',
+      });
     }
   }
 
@@ -138,23 +122,32 @@ export class GenericUserMetadataModelService
       throw new BadRequestException('ID is required for update operation');
     }
     try {
-      // Get existing entity and merge with update data
       const existing = await this.repo.findOne({ where: { id } });
       if (!existing) {
         throw new NotFoundException(`UserMetadata with ID ${id} not found`);
       }
       return super.update(data);
     } catch (error) {
-      if (error instanceof RuntimeException || error instanceof HttpException) {
-        throw error;
-      }
-      logAndGetErrorDetails(
-        error,
-        this.logger,
-        'Failed to update user metadata',
-        { id, errorId: 'USER_METADATA_UPDATE_FAILED' },
-      );
-      throw new InternalServerErrorException('Failed to update user metadata');
+      this.rethrowKnownOrLog(error, 'Failed to update user metadata', {
+        id,
+        errorId: 'USER_METADATA_UPDATE_FAILED',
+      });
     }
+  }
+
+  /**
+   * Re-throw known exceptions (RuntimeException, HttpException) as-is.
+   * For unknown errors, log details and throw InternalServerErrorException.
+   */
+  private rethrowKnownOrLog(
+    error: unknown,
+    message: string,
+    context: Record<string, unknown>,
+  ): never {
+    if (error instanceof RuntimeException || error instanceof HttpException) {
+      throw error;
+    }
+    logAndGetErrorDetails(error, this.logger, message, context);
+    throw new InternalServerErrorException(message);
   }
 }

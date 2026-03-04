@@ -1,31 +1,44 @@
 import { AccessControlModule } from '@concepta/nestjs-access-control';
-import { AuthAppleGuard, AuthAppleModule } from '@concepta/nestjs-auth-apple';
-import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple';
+import {
+  AuthAppleGuard,
+  AuthAppleModule,
+  AuthAppleOptionsInterface,
+} from '@concepta/nestjs-auth-apple';
 import {
   AuthGithubGuard,
   AuthGithubModule,
+  AuthGithubOptionsInterface,
 } from '@concepta/nestjs-auth-github';
-import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github';
 import {
   AuthGoogleGuard,
   AuthGoogleModule,
+  AuthGoogleOptionsInterface,
 } from '@concepta/nestjs-auth-google';
-import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google';
-import { AuthJwtModule } from '@concepta/nestjs-auth-jwt';
-import { AuthJwtOptionsInterface } from '@concepta/nestjs-auth-jwt';
-import { AuthLocalModule } from '@concepta/nestjs-auth-local';
-import { AuthLocalOptionsInterface } from '@concepta/nestjs-auth-local';
-import { AuthRecoveryModule } from '@concepta/nestjs-auth-recovery';
-import { AuthRecoveryOptionsInterface } from '@concepta/nestjs-auth-recovery';
-import { AuthRefreshModule } from '@concepta/nestjs-auth-refresh';
-import { AuthRefreshOptionsInterface } from '@concepta/nestjs-auth-refresh';
+import {
+  AuthJwtModule,
+  AuthJwtOptionsInterface,
+} from '@concepta/nestjs-auth-jwt';
+import {
+  AuthLocalModule,
+  AuthLocalOptionsInterface,
+} from '@concepta/nestjs-auth-local';
+import {
+  AuthRecoveryModule,
+  AuthRecoveryOptionsInterface,
+} from '@concepta/nestjs-auth-recovery';
+import {
+  AuthRefreshModule,
+  AuthRefreshOptionsInterface,
+} from '@concepta/nestjs-auth-refresh';
 import {
   AuthRouterGuardConfigInterface,
   AuthRouterModule,
   AuthRouterOptionsInterface,
 } from '@concepta/nestjs-auth-router';
-import { AuthVerifyModule } from '@concepta/nestjs-auth-verify';
-import { AuthVerifyOptionsInterface } from '@concepta/nestjs-auth-verify';
+import {
+  AuthVerifyModule,
+  AuthVerifyOptionsInterface,
+} from '@concepta/nestjs-auth-verify';
 import { AuthenticationModule } from '@concepta/nestjs-authentication';
 import { createSettingsProvider } from '@concepta/nestjs-common';
 import { CrudModule } from '@concepta/nestjs-crud';
@@ -36,8 +49,7 @@ import {
 } from '@concepta/nestjs-email';
 import { FederatedModule } from '@concepta/nestjs-federated';
 import { InvitationModule } from '@concepta/nestjs-invitation';
-import { JwtModule } from '@concepta/nestjs-jwt';
-import { JwtOptionsInterface } from '@concepta/nestjs-jwt';
+import { JwtModule, JwtOptionsInterface } from '@concepta/nestjs-jwt';
 import { OtpModule, OtpService } from '@concepta/nestjs-otp';
 import { PasswordModule } from '@concepta/nestjs-password';
 import { RoleModule } from '@concepta/nestjs-role';
@@ -147,35 +159,33 @@ function definitionTransform(
 
   const disableController = extras.disableController || {};
 
-  // If userCrud is configured, add the admin submodule and invitation acceptance module together for consistency
   if (userCrud) {
-    // Import centralized UserMetadata module - single configuration point
-    // userMetadataConfig is required for full functionality but optional for basic tests
-    baseModule.imports = [
-      ...(baseModule.imports ?? []),
-      ...(userCrud.userMetadataConfig
-        ? [RocketsAuthUserMetadataModule.forRoot(userCrud.userMetadataConfig)]
-        : []),
-      ...(!disableController.admin
-        ? [RocketsAuthAdminModule.register(userCrud)]
-        : []),
-      ...(!disableController.signup
-        ? [RocketsAuthSignUpModule.register(userCrud)]
-        : []),
-      ...(!disableController.invitationAcceptance
-        ? [RocketsAuthInvitationAcceptanceModule.forRoot({ userCrud })]
-        : []),
-    ];
+    const additionalImports: DynamicModule['imports'] = [];
+
+    if (userCrud.userMetadataConfig) {
+      additionalImports.push(
+        RocketsAuthUserMetadataModule.forRoot(userCrud.userMetadataConfig),
+      );
+    }
+    if (!disableController.admin) {
+      additionalImports.push(RocketsAuthAdminModule.register(userCrud));
+    }
+    if (!disableController.signup) {
+      additionalImports.push(RocketsAuthSignUpModule.register(userCrud));
+    }
+    if (!disableController.invitationAcceptance) {
+      additionalImports.push(
+        RocketsAuthInvitationAcceptanceModule.forRoot({ userCrud }),
+      );
+    }
+
+    baseModule.imports = [...(baseModule.imports ?? []), ...additionalImports];
   }
 
-  // If role CRUD is configured, add the role admin submodule
-  if (roleCrud) {
-    const disableController = extras.disableController || {};
+  if (roleCrud && !disableController.adminRoles) {
     baseModule.imports = [
       ...(baseModule.imports ?? []),
-      ...(!disableController.adminRoles
-        ? [RocketsAuthRoleAdminModule.register(roleCrud)]
-        : []),
+      RocketsAuthRoleAdminModule.register(roleCrud),
     ];
   }
 
@@ -186,28 +196,27 @@ export function createRocketsAuthControllers(options: {
   controllers?: DynamicModule['controllers'];
   extras?: RocketsAuthOptionsExtrasInterface;
 }): DynamicModule['controllers'] {
-  return options?.controllers !== undefined
-    ? options.controllers
-    : (() => {
-        const disableController = options?.extras?.disableController || {};
-        const list: DynamicModule['controllers'] = [];
+  if (options?.controllers !== undefined) {
+    return options.controllers;
+  }
 
-        if (!disableController.password) list.push(AuthPasswordController);
-        if (!disableController.refresh) list.push(AuthTokenRefreshController);
-        if (!disableController.recovery)
-          list.push(RocketsAuthRecoveryController);
-        if (!disableController.otp) list.push(RocketsAuthOtpController);
-        if (!disableController.oAuth) list.push(AuthOAuthController);
-        if (!disableController.invitation) list.push(InvitationController);
-        // InvitationAcceptanceController is registered by RocketsAuthInvitationAcceptanceModule
-        if (!disableController.invitationRevocation)
-          list.push(InvitationRevocationController);
-        if (!disableController.invitationReattempt)
-          list.push(InvitationReattemptController);
-        if (!disableController.mePassword) list.push(MePasswordController);
+  const disableController = options?.extras?.disableController || {};
+  const list: DynamicModule['controllers'] = [];
 
-        return list;
-      })();
+  if (!disableController.password) list.push(AuthPasswordController);
+  if (!disableController.refresh) list.push(AuthTokenRefreshController);
+  if (!disableController.recovery) list.push(RocketsAuthRecoveryController);
+  if (!disableController.otp) list.push(RocketsAuthOtpController);
+  if (!disableController.oAuth) list.push(AuthOAuthController);
+  if (!disableController.invitation) list.push(InvitationController);
+  // InvitationAcceptanceController is registered by RocketsAuthInvitationAcceptanceModule
+  if (!disableController.invitationRevocation)
+    list.push(InvitationRevocationController);
+  if (!disableController.invitationReattempt)
+    list.push(InvitationReattemptController);
+  if (!disableController.mePassword) list.push(MePasswordController);
+
+  return list;
 }
 
 export function createRocketsAuthSettingsProvider(
@@ -243,79 +252,69 @@ export function createRocketsAuthImports(importOptions: {
     ConfigModule.forFeature(rocketsAuthOptionsDefaultConfig),
     CrudModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => {
-        return {
-          settings: options.crud?.settings,
-        };
-      },
+      useFactory: (options: RocketsAuthOptionsInterface) => ({
+        settings: options.crud?.settings,
+      }),
     }),
     SwaggerUiModule.registerAsync({
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => {
-        return {
-          documentBuilder: options.swagger?.documentBuilder,
-          settings: options.swagger?.settings,
-        };
-      },
+      useFactory: (options: RocketsAuthOptionsInterface) => ({
+        documentBuilder: options.swagger?.documentBuilder,
+        settings: options.swagger?.settings,
+      }),
     }),
     AuthenticationModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => {
-        return {
-          verifyTokenService:
-            options.authentication?.verifyTokenService ||
-            options.services?.verifyTokenService,
-          issueTokenService:
-            options.authentication?.issueTokenService ||
-            options.services?.issueTokenService,
-          validateTokenService:
-            options.authentication?.validateTokenService ||
-            options.services?.validateTokenService,
-          settings: options.authentication?.settings,
-        };
-      },
+      useFactory: (options: RocketsAuthOptionsInterface) => ({
+        verifyTokenService:
+          options.authentication?.verifyTokenService ||
+          options.services?.verifyTokenService,
+        issueTokenService:
+          options.authentication?.issueTokenService ||
+          options.services?.issueTokenService,
+        validateTokenService:
+          options.authentication?.validateTokenService ||
+          options.services?.validateTokenService,
+        settings: options.authentication?.settings,
+      }),
     }),
     JwtModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (
         options: RocketsAuthOptionsInterface,
-      ): JwtOptionsInterface => {
-        return {
-          jwtIssueTokenService:
-            options.jwt?.jwtIssueTokenService ||
-            options.services?.issueTokenService,
-          jwtVerifyTokenService:
-            options.jwt?.jwtVerifyTokenService ||
-            options.services?.verifyTokenService,
-          jwtRefreshService: options.jwt?.jwtRefreshService,
-          jwtAccessService: options.jwt?.jwtAccessService,
-          // TODO: This is only used ono apple, need to review
-          jwtService: options.jwt?.jwtService,
-          settings: options.jwt?.settings,
-        };
-      },
+      ): JwtOptionsInterface => ({
+        jwtIssueTokenService:
+          options.jwt?.jwtIssueTokenService ||
+          options.services?.issueTokenService,
+        jwtVerifyTokenService:
+          options.jwt?.jwtVerifyTokenService ||
+          options.services?.verifyTokenService,
+        jwtRefreshService: options.jwt?.jwtRefreshService,
+        jwtAccessService: options.jwt?.jwtAccessService,
+        // TODO: This is only used on apple, need to review
+        jwtService: options.jwt?.jwtService,
+        settings: options.jwt?.settings,
+      }),
     }),
     AuthJwtModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN, UserModelService],
       useFactory: (
         options: RocketsAuthOptionsInterface,
         userModelService: UserModelService,
-      ): AuthJwtOptionsInterface => {
-        return {
-          appGuard:
-            importOptions.extras?.enableGlobalJWTGuard === true
-              ? undefined
-              : false,
-          verifyTokenService:
-            options.authJwt?.verifyTokenService ||
-            options.services?.verifyTokenService,
-          userModelService:
-            options.authJwt?.userModelService ||
-            options.services?.userModelService ||
-            userModelService,
-          settings: options.authJwt?.settings,
-        };
-      },
+      ): AuthJwtOptionsInterface => ({
+        appGuard:
+          importOptions.extras?.enableGlobalJWTGuard === true
+            ? undefined
+            : false,
+        verifyTokenService:
+          options.authJwt?.verifyTokenService ||
+          options.services?.verifyTokenService,
+        userModelService:
+          options.authJwt?.userModelService ||
+          options.services?.userModelService ||
+          userModelService,
+        settings: options.authJwt?.settings,
+      }),
     }),
     FederatedModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN, UserModelService],
@@ -323,60 +322,52 @@ export function createRocketsAuthImports(importOptions: {
       useFactory: (
         options: RocketsAuthOptionsInterface,
         userModelService: UserModelService,
-      ): FederatedOptionsInterface => {
-        return {
-          userModelService:
-            options.federated?.userModelService ||
-            options.services?.userModelService ||
-            userModelService,
-          settings: options.federated?.settings,
-        };
-      },
+      ): FederatedOptionsInterface => ({
+        userModelService:
+          options.federated?.userModelService ||
+          options.services?.userModelService ||
+          userModelService,
+        settings: options.federated?.settings,
+      }),
     }),
     // TODO: should we have a flag to only load if defined?
     AuthAppleModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (
         options: RocketsAuthOptionsInterface,
-      ): AuthAppleOptionsInterface => {
-        return {
-          jwtService: options.authApple?.jwtService || options.jwt?.jwtService,
-          authAppleService: options.authApple?.authAppleService,
-          issueTokenService:
-            options.authApple?.issueTokenService ||
-            options.services?.issueTokenService,
-          settingsTransform: options.authApple?.settingsTransform,
-          settings: options.authApple?.settings,
-        };
-      },
+      ): AuthAppleOptionsInterface => ({
+        jwtService: options.authApple?.jwtService || options.jwt?.jwtService,
+        authAppleService: options.authApple?.authAppleService,
+        issueTokenService:
+          options.authApple?.issueTokenService ||
+          options.services?.issueTokenService,
+        settingsTransform: options.authApple?.settingsTransform,
+        settings: options.authApple?.settings,
+      }),
     }),
     AuthGithubModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (
         options: RocketsAuthOptionsInterface,
-      ): AuthGithubOptionsInterface => {
-        return {
-          issueTokenService:
-            options.authGithub?.issueTokenService ||
-            options.services?.issueTokenService,
-          settingsTransform: options.authGithub?.settingsTransform,
-          settings: options.authGithub?.settings,
-        };
-      },
+      ): AuthGithubOptionsInterface => ({
+        issueTokenService:
+          options.authGithub?.issueTokenService ||
+          options.services?.issueTokenService,
+        settingsTransform: options.authGithub?.settingsTransform,
+        settings: options.authGithub?.settings,
+      }),
     }),
     AuthGoogleModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (
         options: RocketsAuthOptionsInterface,
-      ): AuthGoogleOptionsInterface => {
-        return {
-          issueTokenService:
-            options.authGoogle?.issueTokenService ||
-            options.services?.issueTokenService,
-          settingsTransform: options.authGoogle?.settingsTransform,
-          settings: options.authGoogle?.settings,
-        };
-      },
+      ): AuthGoogleOptionsInterface => ({
+        issueTokenService:
+          options.authGoogle?.issueTokenService ||
+          options.services?.issueTokenService,
+        settingsTransform: options.authGoogle?.settingsTransform,
+        settings: options.authGoogle?.settings,
+      }),
     }),
     AuthRouterModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
@@ -384,55 +375,48 @@ export function createRocketsAuthImports(importOptions: {
         importOptions.extras?.authRouter?.guards || defaultAuthRouterGuards,
       useFactory: (
         options: RocketsAuthOptionsInterface,
-      ): AuthRouterOptionsInterface => {
-        return {
-          settings: options.authRouter?.settings,
-        };
-      },
+      ): AuthRouterOptionsInterface => ({
+        settings: options.authRouter?.settings,
+      }),
     }),
     AuthRefreshModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN, UserModelService],
       useFactory: (
         options: RocketsAuthOptionsInterface,
         userModelService: UserModelService,
-      ): AuthRefreshOptionsInterface => {
-        return {
-          verifyTokenService:
-            options.refresh?.verifyTokenService ||
-            options.services?.verifyTokenService,
-          issueTokenService:
-            options.refresh?.issueTokenService ||
-            options.services?.issueTokenService,
-          userModelService:
-            options.refresh?.userModelService ||
-            options.services?.userModelService ||
-            userModelService,
-          settings: options.refresh?.settings,
-        };
-      },
+      ): AuthRefreshOptionsInterface => ({
+        verifyTokenService:
+          options.refresh?.verifyTokenService ||
+          options.services?.verifyTokenService,
+        issueTokenService:
+          options.refresh?.issueTokenService ||
+          options.services?.issueTokenService,
+        userModelService:
+          options.refresh?.userModelService ||
+          options.services?.userModelService ||
+          userModelService,
+        settings: options.refresh?.settings,
+      }),
     }),
     AuthLocalModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN, UserModelService],
       useFactory: (
         options: RocketsAuthOptionsInterface,
         userModelService: UserModelService,
-      ): AuthLocalOptionsInterface => {
-        return {
-          passwordValidationService:
-            options.authLocal?.passwordValidationService,
-          validateUserService:
-            options.authLocal?.validateUserService ||
-            options.services?.validateUserService,
-          issueTokenService:
-            options.authLocal?.issueTokenService ||
-            options.services?.issueTokenService,
-          userModelService:
-            options.authLocal?.userModelService ||
-            options.services?.userModelService ||
-            userModelService,
-          settings: options.authLocal?.settings,
-        };
-      },
+      ): AuthLocalOptionsInterface => ({
+        passwordValidationService: options.authLocal?.passwordValidationService,
+        validateUserService:
+          options.authLocal?.validateUserService ||
+          options.services?.validateUserService,
+        issueTokenService:
+          options.authLocal?.issueTokenService ||
+          options.services?.issueTokenService,
+        userModelService:
+          options.authLocal?.userModelService ||
+          options.services?.userModelService ||
+          userModelService,
+        settings: options.authLocal?.settings,
+      }),
     }),
     AuthRecoveryModule.forRootAsync({
       inject: [
@@ -448,25 +432,23 @@ export function createRocketsAuthImports(importOptions: {
         defaultOtpService: OtpService,
         userModelService: UserModelService,
         defaultUserPasswordService: UserPasswordService,
-      ): AuthRecoveryOptionsInterface => {
-        return {
-          // TODO: keep this one using default and user mailer service to define how to send
-          emailService: defaultEmailService,
-          otpService: defaultOtpService,
-          userModelService:
-            options.authRecovery?.userModelService ||
-            options.services?.userModelService ||
-            userModelService,
-          userPasswordService:
-            options.authRecovery?.userPasswordService ||
-            options.services?.userPasswordService ||
-            defaultUserPasswordService,
-          notificationService:
-            options.authRecovery?.notificationService ||
-            options.services?.notificationService,
-          settings: options.authRecovery?.settings,
-        };
-      },
+      ): AuthRecoveryOptionsInterface => ({
+        // TODO: keep this one using default and user mailer service to define how to send
+        emailService: defaultEmailService,
+        otpService: defaultOtpService,
+        userModelService:
+          options.authRecovery?.userModelService ||
+          options.services?.userModelService ||
+          userModelService,
+        userPasswordService:
+          options.authRecovery?.userPasswordService ||
+          options.services?.userPasswordService ||
+          defaultUserPasswordService,
+        notificationService:
+          options.authRecovery?.notificationService ||
+          options.services?.notificationService,
+        settings: options.authRecovery?.settings,
+      }),
     }),
     AuthVerifyModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN, EmailService, UserModelService, OtpService],
@@ -475,69 +457,58 @@ export function createRocketsAuthImports(importOptions: {
         defaultEmailService: EmailServiceInterface,
         userModelService: UserModelService,
         defaultOtpService: OtpService,
-      ): AuthVerifyOptionsInterface => {
-        return {
-          emailService: defaultEmailService,
-          otpService: defaultOtpService,
-          userModelService:
-            options.authVerify?.userModelService ||
-            options.services?.userModelService ||
-            userModelService,
-          notificationService:
-            options.authVerify?.notificationService ||
-            options.services?.notificationService,
-          settings: options.authVerify?.settings,
-        };
-      },
+      ): AuthVerifyOptionsInterface => ({
+        emailService: defaultEmailService,
+        otpService: defaultOtpService,
+        userModelService:
+          options.authVerify?.userModelService ||
+          options.services?.userModelService ||
+          userModelService,
+        notificationService:
+          options.authVerify?.notificationService ||
+          options.services?.notificationService,
+        settings: options.authVerify?.settings,
+      }),
     }),
     PasswordModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => {
-        return {
-          settings: options.password?.settings,
-        };
-      },
+      useFactory: (options: RocketsAuthOptionsInterface) => ({
+        settings: options.password?.settings,
+      }),
     }),
     UserModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
       imports: [...(importOptions.extras?.user?.imports || [])],
-      useFactory: (options: RocketsAuthOptionsInterface) => {
-        return {
-          settings: options.user?.settings,
-          userModelService:
-            options.user?.userModelService ||
-            options.services?.userModelService,
-          userPasswordService:
-            options.user?.userPasswordService ||
-            options.services?.userPasswordService,
-          userAccessQueryService:
-            options.user?.userAccessQueryService ||
-            options.services?.userAccessQueryService,
-          userPasswordHistoryService:
-            options.user?.userPasswordHistoryService ||
-            options.services?.userPasswordHistoryService,
-        };
-      },
+      useFactory: (options: RocketsAuthOptionsInterface) => ({
+        settings: options.user?.settings,
+        userModelService:
+          options.user?.userModelService || options.services?.userModelService,
+        userPasswordService:
+          options.user?.userPasswordService ||
+          options.services?.userPasswordService,
+        userAccessQueryService:
+          options.user?.userAccessQueryService ||
+          options.services?.userAccessQueryService,
+        userPasswordHistoryService:
+          options.user?.userPasswordHistoryService ||
+          options.services?.userPasswordHistoryService,
+      }),
     }),
     OtpModule.forRootAsync({
       imports: [...(importOptions.extras?.otp?.imports || [])],
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => {
-        return {
-          settings: options.otp?.settings,
-        };
-      },
+      useFactory: (options: RocketsAuthOptionsInterface) => ({
+        settings: options.otp?.settings,
+      }),
       entities: ['userOtp'],
     }),
     EmailModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => {
-        return {
-          settings: options.email?.settings,
-          mailerService:
-            options.email?.mailerService || options.services.mailerService,
-        };
-      },
+      useFactory: (options: RocketsAuthOptionsInterface) => ({
+        settings: options.email?.settings,
+        mailerService:
+          options.email?.mailerService || options.services.mailerService,
+      }),
     }),
     RoleModule.forRootAsync({
       imports: [...(importOptions.extras?.role?.imports || [])],
@@ -668,15 +639,7 @@ export function createRocketsAuthProviders(options: {
     RocketsJwtAuthProvider,
     AdminGuard,
     RocketsAuthRoleService,
-    // InvitationUserAcceptanceListener is now created dynamically by RocketsAuthInvitationAcceptanceModule
-    // and is registered conditionally above, so we don't add it here
   ];
-
-  // Note: AuthUserMetadataModelService provider is now handled by the centralized
-  // RocketsAuthUserMetadataModule when userCrud is configured
-  // Note: The rockets-auth module doesn't have its own AuthGuard
-  // It uses decorators like @AuthUser() and @AuthPublic() for authentication control
-  // The enableGlobalGuard option is available for future use if needed
 
   return providers;
 }

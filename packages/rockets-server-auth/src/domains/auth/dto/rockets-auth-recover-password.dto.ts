@@ -5,9 +5,4 @@ import { AuthRecoveryRecoverPasswordDto } from '@concepta/nestjs-auth-recovery';
  *
  * Extends the base recovery recover password DTO from the auth-recovery module
  */
-export class RocketsAuthRecoverPasswordDto extends AuthRecoveryRecoverPasswordDto {
-  /**
-   * When extending the base DTO, you can add additional properties
-   * specific to your application here
-   */
-}
+export class RocketsAuthRecoverPasswordDto extends AuthRecoveryRecoverPasswordDto {}

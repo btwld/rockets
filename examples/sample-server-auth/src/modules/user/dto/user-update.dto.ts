@@ -10,7 +10,7 @@ import { UserMetadataDto } from './user-metadata.dto';
  * Extends RocketsAuthUserUpdateDto with custom userMetadata field.
  * Overrides the base userMetadata to use project-specific UserMetadataDto.
  */
-export class UserUpdateDto extends RocketsAuthUserUpdateDto {
+export class SampleUserUpdateDto extends RocketsAuthUserUpdateDto {
     @ApiPropertyOptional({ type: UserMetadataDto, description: 'User metadata' })
     @Expose()
     @IsOptional()

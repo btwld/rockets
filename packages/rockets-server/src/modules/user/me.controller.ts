@@ -11,11 +11,6 @@ import { UserMetadataModelServiceInterface } from '../user-metadata/interfaces/u
 import { UserUpdateDto, UserResponseDto } from './user.dto';
 import { UserMetadataModelService } from '../user-metadata/constants/user-metadata.constants';
 
-/**
- * User Controller
- * Provides endpoints for user userMetadata management
- * Follows SDK patterns for controllers
- */
 @ApiTags('user')
 @ApiBearerAuth()
 @Controller('me')
@@ -25,9 +20,6 @@ export class MeController {
     private readonly userMetadataModelService: UserMetadataModelServiceInterface,
   ) {}
 
-  /**
-   * Get current user information with userMetadata data
-   */
   @Get()
   @ApiOperation({
     summary: 'Get current user information',
@@ -52,9 +44,6 @@ export class MeController {
     };
   }
 
-  /**
-   * Update current user userMetadata data
-   */
   @Patch()
   @ApiOperation({
     summary: 'Update user userMetadata data',
@@ -77,21 +66,15 @@ export class MeController {
     @AuthUser() user: AuthorizedUser,
     @Body() updateData: UserUpdateDto,
   ): Promise<UserResponseDto> {
-    // Extract userMetadata data from nested userMetadata property
-    const userMetadataData = updateData.userMetadata || {};
-    // Update userMetadata data
+    const userMetadataData = updateData.userMetadata ?? {};
     const userMetadata = await this.userMetadataModelService.createOrUpdate(
       user.id,
       userMetadataData,
     );
 
     return {
-      // Auth provider data
       ...user,
-      // Updated userMetadata data (spread into response)
-      userMetadata: {
-        ...userMetadata,
-      },
+      userMetadata: { ...userMetadata },
     };
   }
 }

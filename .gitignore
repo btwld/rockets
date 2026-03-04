@@ -118,6 +118,8 @@ dist
 # .yarn meta
 .yarn
 
+# local agent handoff context
+.context/
 
 
 #Ignore cursor AI rules

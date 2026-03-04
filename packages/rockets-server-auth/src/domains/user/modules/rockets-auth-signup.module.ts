@@ -54,8 +54,6 @@ export class RocketsAuthSignUpModule {
     const ModelDto = admin.model || RocketsAuthUserDto;
     const CreateDto = admin.dto?.createOne || RocketsAuthUserCreateDto;
 
-    // Note: UserMetadataCrudService is now provided by the centralized RocketsAuthUserMetadataModule
-
     const builder = new ConfigurableCrudBuilder<
       RocketsAuthUserEntityInterface,
       RocketsAuthUserCreatableInterface,
@@ -129,14 +127,11 @@ export class RocketsAuthSignUpModule {
         req: CrudRequestInterface<RocketsAuthUserEntityInterface>,
         dto: RocketsAuthUserEntityInterface & PasswordPlainInterface,
       ): Promise<RocketsAuthUserEntityInterface> {
-        const typedDto = dto;
-
-        // Check if user already exists
-        if (typedDto.username || typedDto.email) {
+        if (dto.username || dto.email) {
           const existingUser = await this.userModelService.find({
             where: [
-              ...(typedDto.username ? [{ username: typedDto.username }] : []),
-              ...(typedDto.email ? [{ email: typedDto.email }] : []),
+              ...(dto.username ? [{ username: dto.username }] : []),
+              ...(dto.email ? [{ email: dto.email }] : []),
             ],
           });
 
@@ -147,34 +142,29 @@ export class RocketsAuthSignUpModule {
           }
         }
 
-        // Hash password if provided
         let passwordHash = {};
-        if (typedDto.password) {
+        if (dto.password) {
           passwordHash = await this.passwordCreationService.create(
-            typedDto.password,
+            dto.password,
           );
         }
 
-        // Extract nested metadata if present
-        const { userMetadata: nested, ...rootDto } = typedDto;
+        const { userMetadata: nested, ...rootDto } = dto;
 
-        // Create user without metadata
         const created = await super.createOne(req, {
           ...rootDto,
           ...passwordHash,
         });
 
         let userMetadata;
-        // Manually create metadata if provided using userMetadataService
         if (nested) {
           try {
-            // on signup do not consider the id and userId,
+            // Strip id and userId from the payload to prevent saving with incorrect values
             const { id, userId, ...safeMetadata } = nested;
 
             if (id || userId) {
-              // TODO: review so we dont need this, if we send it with id and userId it will save with wrong info
-              this.logger.log(
-                'Id and userId should not be used on this payload',
+              this.logger.warn(
+                'Ignoring id and userId from metadata payload during signup',
               );
             }
 
@@ -217,8 +207,6 @@ export class RocketsAuthSignUpModule {
           }
         }
 
-        // Assign default role if configured
-        // Don't throw error - we don't want to fail signup if role assignment fails
         await this.authRoleService.assignDefaultRoleToUser(created.id, false);
         return {
           ...created,
@@ -226,7 +214,6 @@ export class RocketsAuthSignUpModule {
         };
       }
     }
-    // TODO: add decorators and option to overwrite or disable controller
     class SignupCrudController extends ConfigurableControllerClass {
       @AuthPublic()
       @ApiOperation({
@@ -286,10 +273,7 @@ export class RocketsAuthSignUpModule {
 
     return {
       module: RocketsAuthSignUpModule,
-      imports: [
-        ...(admin.imports || []),
-        // Note: UserMetadata entity registration is now handled by RocketsAuthUserMetadataModule
-      ],
+      imports: [...(admin.imports || [])],
       controllers: [SignupCrudController],
       providers: [
         admin.adapter,

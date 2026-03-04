@@ -8,7 +8,8 @@ Canonical agent instructions for this repository.
 
 1. Read `development-guides/ROCKETS_AI_INDEX.md` first.
 2. Pick only the one guide needed for the task (avoid loading all guides).
-3. Keep `.context/notes.md` updated with findings for other parallel agents.
+3. Read `.context/handoff.md` for the latest local checkpoint before editing.
+4. Keep `.context/notes.md` updated with findings for other parallel agents.
 
 ## Scope & Precedence
 
@@ -61,6 +62,7 @@ CI also runs:
 
 ## Collaboration Files
 
+- `.context/handoff.md`: auto-generated session snapshot (run `yarn handoff:update`).
 - `.context/notes.md`: concise findings, caveats, and decisions.
 - `.context/todos.md`: actionable follow-ups for parallel agents.
 

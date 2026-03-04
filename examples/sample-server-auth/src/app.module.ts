@@ -33,7 +33,7 @@ import {
   InvitationEntity,
   UserDto,
   UserCreateDto,
-  UserUpdateDto,
+  SampleUserUpdateDto,
   UserTypeOrmCrudAdapter,
   UserMetadataTypeOrmCrudAdapter,
 } from './modules/user';
@@ -161,7 +161,7 @@ import { RoleCreateDto } from './modules/role/role.dto';
         model: UserDto,
         dto: {
           createOne: UserCreateDto,
-          updateOne: UserUpdateDto,
+          updateOne: SampleUserUpdateDto,
         },
         // User Metadata Configuration
         // The updateDto is used by InvitationAcceptanceListener to validate
@@ -228,4 +228,3 @@ import { RoleCreateDto } from './modules/role/role.dto';
   exports: [ACService],
 })
 export class AppModule {}
-

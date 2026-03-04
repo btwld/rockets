@@ -6,10 +6,10 @@ import {
   Inject,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { AUTHENTICATION_MODULE_DISABLE_GUARDS_TOKEN } from '@concepta/nestjs-authentication';
 import { AuthProviderInterface } from '../interfaces/auth-provider.interface';
 import { AuthorizedUser } from '../interfaces/auth-user.interface';
 import { RocketsAuthProvider } from '../rockets.constants';
-import { AUTHENTICATION_MODULE_DISABLE_GUARDS_TOKEN } from '@concepta/nestjs-authentication';
 
 @Injectable()
 export class AuthServerGuard implements CanActivate {
@@ -20,19 +20,12 @@ export class AuthServerGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // get the context handler and class
-    const contextHandler = context.getHandler();
-    const contextClass = context.getClass();
-
-    // check if guards are disabled on the handler or class
     const isDisabled = this.reflector.getAllAndOverride<boolean>(
       AUTHENTICATION_MODULE_DISABLE_GUARDS_TOKEN,
-      [contextHandler, contextClass],
+      [context.getHandler(), context.getClass()],
     );
 
-    // disabled via context?
     if (isDisabled === true) {
-      // yes, immediate activation
       return true;
     }
 
@@ -44,12 +37,8 @@ export class AuthServerGuard implements CanActivate {
     }
 
     try {
-      // Verify the token using the auth provider directly
       const user: AuthorizedUser = await this.authProvider.validateToken(token);
-
-      // Attach user to request for use in controllers (this makes @AuthUser() work)
       request.user = user;
-
       return true;
     } catch (error) {
       if (error instanceof UnauthorizedException) {

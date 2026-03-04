@@ -5,9 +5,4 @@ import { AuthRefreshDto } from '@concepta/nestjs-auth-refresh';
  *
  * Extends the base refresh DTO from the auth-refresh module
  */
-export class RocketsAuthRefreshDto extends AuthRefreshDto {
-  /**
-   * When extending the base DTO, you can add additional properties
-   * specific to your application here
-   */
-}
+export class RocketsAuthRefreshDto extends AuthRefreshDto {}

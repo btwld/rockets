@@ -13,6 +13,7 @@ import { isObject } from '@nestjs/common/utils/shared.utils';
 import { HttpAdapterHost } from '@nestjs/core';
 
 export const ERROR_MESSAGE_FALLBACK = 'Internal Server Error';
+
 // TODO: use the exception filter from concepta modules need to update rockets to add validation errors
 @Catch()
 export class ExceptionsFilter implements ExceptionsFilter {
@@ -22,54 +23,37 @@ export class ExceptionsFilter implements ExceptionsFilter {
     const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
 
-    // error code is UNKNOWN unless it gets overridden
     let errorCode = 'ERROR_CODE_UNKNOWN';
-
-    // error is 500 unless it gets overridden
     let statusCode = 500;
-
-    // what will this message be?
     let message: unknown = ERROR_MESSAGE_FALLBACK;
 
-    // is this an http exception?
     if (exception instanceof HttpException) {
-      // set the status code
       statusCode = exception.getStatus();
-      // map the error code
       errorCode = mapHttpStatus(statusCode);
-      // get res
+
       const res = exception.getResponse();
-      // set the message
-      if (isObject(res) && 'message' in res) {
-        message = res.message;
-      } else {
-        message = res;
-      }
+      message = isObject(res) && 'message' in res ? res.message : res;
     } else if (exception instanceof RuntimeException) {
-      // its a runtime exception, set error code
       errorCode = exception.errorCode;
-      // did they provide a status hint?
-      if (exception?.httpStatus) {
+
+      if (exception.httpStatus) {
         statusCode = exception.httpStatus;
       }
-      // set the message
+
       if (statusCode >= 500) {
-        // use safe message or internal sever error
-        message = exception?.safeMessage ?? 'ERROR_MESSAGE_FALLBACK';
-      } else if (exception?.safeMessage) {
-        // use the safe message
+        message = exception.safeMessage ?? ERROR_MESSAGE_FALLBACK;
+      } else if (exception.safeMessage) {
         message = exception.safeMessage;
       } else {
-        // use the error message with safe message as fallback
         message =
-          exception.message ?? exception?.safeMessage ?? ERROR_MESSAGE_FALLBACK;
+          exception.message ?? exception.safeMessage ?? ERROR_MESSAGE_FALLBACK;
       }
     }
 
     if (exception.context?.validationErrors) {
       const nestValidationPipe = new ValidationPipe();
       message = nestValidationPipe['flattenValidationErrors'](
-        exception.context?.validationErrors as [],
+        exception.context.validationErrors as [],
       );
       statusCode = 400;
     }

@@ -5,9 +5,4 @@ import { AuthenticationJwtResponseDto } from '@concepta/nestjs-authentication';
  *
  * Extends the base authentication JWT response DTO from the authentication module
  */
-export class RocketsAuthJwtResponseDto extends AuthenticationJwtResponseDto {
-  /**
-   * When extending the base DTO, you can add additional properties
-   * specific to your application here
-   */
-}
+export class RocketsAuthJwtResponseDto extends AuthenticationJwtResponseDto {}

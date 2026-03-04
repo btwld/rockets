@@ -9,7 +9,6 @@ export class UserModule {
       module: UserModule,
       imports: [UserMetadataModule.register()],
       controllers: [MeController],
-      exports: [],
     };
   }
 }

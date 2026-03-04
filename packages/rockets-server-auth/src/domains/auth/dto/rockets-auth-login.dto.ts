@@ -5,9 +5,4 @@ import { AuthLocalLoginDto } from '@concepta/nestjs-auth-local';
  *
  * Extends the base local login DTO from the auth-local module
  */
-export class RocketsAuthLoginDto extends AuthLocalLoginDto {
-  /**
-   * When extending the base DTO, you can add additional properties
-   * specific to your application here
-   */
-}
+export class RocketsAuthLoginDto extends AuthLocalLoginDto {}

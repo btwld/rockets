@@ -9,7 +9,20 @@ export interface ErrorDetails {
 }
 
 /**
- * Helper function to extract error details and log them consistently
+ * Extract error details from an unknown error object.
+ *
+ * @param error - Unknown error object
+ * @returns Object containing errorMessage and errorStack
+ */
+export function getErrorDetails(error: unknown): ErrorDetails {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  const errorStack = error instanceof Error ? error.stack : undefined;
+
+  return { errorMessage, errorStack };
+}
+
+/**
+ * Extract error details and log them consistently.
  *
  * @param error - Unknown error object
  * @param logger - NestJS Logger instance
@@ -23,30 +36,13 @@ export function logAndGetErrorDetails(
   customMessage: string,
   context?: Record<string, unknown>,
 ): ErrorDetails {
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  const errorStack = error instanceof Error ? error.stack : undefined;
+  const details = getErrorDetails(error);
 
-  logger.error(`${customMessage}: ${errorMessage}`, errorStack, context);
+  logger.error(
+    `${customMessage}: ${details.errorMessage}`,
+    details.errorStack,
+    context,
+  );
 
-  return {
-    errorMessage,
-    errorStack,
-  };
-}
-
-/**
- * Helper function to extract error details without logging
- * Useful when you want to handle logging separately
- *
- * @param error - Unknown error object
- * @returns Object containing errorMessage and errorStack
- */
-export function getErrorDetails(error: unknown): ErrorDetails {
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  const errorStack = error instanceof Error ? error.stack : undefined;
-
-  return {
-    errorMessage,
-    errorStack,
-  };
+  return details;
 }

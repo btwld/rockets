@@ -109,6 +109,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./jest.config-e2e.json --testTimeout 30000",
     "test:all": "yarn test && yarn test:e2e",
+    "handoff:update": "node scripts/update-handoff.cjs",
     "doc": "rimraf ./docs && typedoc",
     "doc:cov": "yarn doc --coverageOutputType all",
     "changelog": "standard-version",

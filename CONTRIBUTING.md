@@ -13,37 +13,36 @@ inclusive environment for everyone.
 ### Prerequisites
 
 - Node.js >= 18.0.0
-- npm >= 8.0.0
-- Yarn (package manager)
+- Yarn >= 1.22.0 (package manager)
 
 ### Setup
 
 1. Fork the repository
-2. Clone your fork:
+1. Clone your fork:
 
-```bash
-git clone https://github.com/<your-username>/rockets.git
-cd rockets
-```
+   ```bash
+   git clone https://github.com/<your-username>/rockets.git
+   cd rockets
+   ```
 
-3. Install dependencies:
+1. Install dependencies:
 
-```bash
-yarn install
-```
+   ```bash
+   yarn install
+   ```
 
-4. Build the packages:
+1. Build the packages:
 
-```bash
-yarn build
-```
+   ```bash
+   yarn build
+   ```
 
-5. Run the tests:
+1. Run the tests:
 
-```bash
-yarn test
-yarn test:e2e
-```
+   ```bash
+   yarn test
+   yarn test:e2e
+   ```
 
 ## Development Workflow
 
@@ -51,7 +50,7 @@ yarn test:e2e
 
 Use descriptive branch names with a prefix:
 
-- `feat/` - New features (e.g., `feat/add-mfa-support`)
+- `feature/` - New features (e.g., `feature/add-mfa-support`)
 - `fix/` - Bug fixes (e.g., `fix/token-refresh-race-condition`)
 - `chore/` - Maintenance tasks (e.g., `chore/release-1.0.0-alpha.8`)
 - `docs/` - Documentation changes (e.g., `docs/update-auth-guide`)
@@ -62,7 +61,7 @@ Use descriptive branch names with a prefix:
 Follow the [Conventional Commits](https://www.conventionalcommits.org/)
 specification:
 
-```
+```text
 feat(auth): add OAuth2 PKCE support
 fix(server): handle null user metadata gracefully
 chore: bump dependencies
@@ -72,18 +71,18 @@ docs: update installation guide
 ### Pull Requests
 
 1. Create a feature branch from `main`
-2. Make your changes with clear, focused commits
-3. Ensure all checks pass:
+1. Make your changes with clear, focused commits
+1. Ensure all checks pass:
 
-```bash
-yarn build
-yarn test
-yarn test:e2e
-yarn lint
-```
+   ```bash
+   yarn build
+   yarn test
+   yarn test:e2e
+   yarn lint
+   ```
 
-4. Push your branch and open a PR against `main`
-5. Fill in the PR template with a summary and test plan
+1. Push your branch and open a PR against `main`
+1. Fill in the PR template with a summary and test plan
 
 ### Code Guidelines
 
@@ -102,7 +101,7 @@ yarn lint
 
 ## Project Structure
 
-```
+```text
 rockets/
   packages/
     rockets-server/        # Core server module (@bitwild/rockets)
@@ -112,9 +111,12 @@ rockets/
 
 ## Reporting Issues
 
-- Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml) for bugs
-- Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml) for new features
-- Use the [package proposal template](.github/ISSUE_TEMPLATE/package_proposal.yml) for new packages
+- Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml)
+  for bugs
+- Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml)
+  for new features
+- Use the [package proposal template](.github/ISSUE_TEMPLATE/package_proposal.yml)
+  for new packages
 
 ## License
 

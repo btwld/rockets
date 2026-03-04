@@ -6,6 +6,7 @@
 
 - Canonical repository instructions: [`../AGENTS.md`](../AGENTS.md)
 - Compatibility alias: `../CLAUDE.md` (symlink to `../AGENTS.md`)
+- Session handoff snapshot: [`../.context/handoff.md`](../.context/handoff.md)
 - Shared collaboration notes: [`../.context/notes.md`](../.context/notes.md)
 - Shared task handoff list: [`../.context/todos.md`](../.context/todos.md)
 

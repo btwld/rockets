@@ -54,9 +54,9 @@ export class RocketsAuthNotificationService
 
       if (error instanceof RuntimeException) {
         throw error;
-      } else {
-        throw new RocketsAuthException(errorMessage);
       }
+
+      throw new RocketsAuthException(errorMessage);
     }
   }
 }

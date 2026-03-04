@@ -69,7 +69,7 @@ Simply implement the `AuthProviderInterface` for your authentication system:
 
 - NestJS: `^11.0.0`
 - Node.js: `>=18.0.0`
-- TypeScript: `>=4.8.0`
+- TypeScript: `>=5.0.0`
 
 Let's create a new NestJS project:
 

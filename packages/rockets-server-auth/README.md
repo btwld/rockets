@@ -98,7 +98,7 @@ maintaining flexibility for customization and extension.
 
 - NestJS: `^11.0.0`
 - Node.js: `>=18.0.0`
-- TypeScript: `>=4.8.0`
+- TypeScript: `>=5.0.0`
 
 Let's create a new NestJS project:
 
@@ -595,9 +595,9 @@ Nest core). The sample app includes `Reflector` in providers.
 
 If you're getting dependency resolution errors:
 
-1. **NestJS Version**: Ensure you're using NestJS `^10.0.0`
+1. **NestJS Version**: Ensure you're using NestJS `^11.0.0`
 2. **Alpha Packages**: All `@concepta/*` packages should use the same alpha
-   version (e.g., `^7.0.0-alpha.10`)
+   version (e.g., `7.0.0-alpha.10`)
 3. **Clean Installation**: Try deleting `node_modules` and `package-lock.json`,
    then run `yarn install`
 

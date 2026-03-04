@@ -51,7 +51,7 @@ export class AdminUserRolesController {
   @ApiParam({ name: 'userId', required: true })
   @ApiOkResponse({ description: 'Roles for the user' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  @Get('')
+  @Get()
   async list(@Param('userId') userId: string) {
     return this.roleService.getAssignedRoles({
       assignment: 'user',
@@ -64,7 +64,7 @@ export class AdminUserRolesController {
   @ApiCreatedResponse({ description: 'Role assigned' })
   @ApiBadRequestResponse({ description: 'Invalid payload' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  @Post('')
+  @Post()
   async assign(
     @Param('userId') userId: string,
     @Body() dto: AdminAssignUserRoleDto,

@@ -33,40 +33,34 @@ export class RocketsAuthOtpService implements RocketsAuthOtpServiceInterface {
 
   async sendOtp(email: string): Promise<void> {
     try {
-      // Find user by email
       const user = await this.userModelService.byEmail(email);
       const { assignment, category, expiresIn } = this.settings.otp;
 
       if (user) {
-        // Generate OTP
         const otp = await this.otpService.create({
           assignment,
           otp: {
             category,
             type: 'uuid',
             assigneeId: user.id,
-            expiresIn: expiresIn, // 1 hour expiration
+            expiresIn,
           },
         });
 
-        // Send email with OTP
         await this.otpNotificationService.sendOtpEmail({
           email,
           passcode: otp.passcode,
         });
 
-        // Log success for audit trail
         this.logger.log('OTP sent successfully', {
           category,
           expiresIn,
           timestamp: new Date().toISOString(),
         });
       } else {
-        // Log attempts for security monitoring (don't log email)
         this.logger.log('OTP request for non-existent user');
       }
     } catch (error) {
-      // Log error for observability (NestJS filters will handle HTTP response)
       const { errorMessage } = logAndGetErrorDetails(
         error,
         this.logger,
@@ -76,9 +70,9 @@ export class RocketsAuthOtpService implements RocketsAuthOtpServiceInterface {
 
       if (error instanceof RuntimeException) {
         throw error;
-      } else {
-        throw new RocketsAuthException(errorMessage);
       }
+
+      throw new RocketsAuthException(errorMessage);
     }
     // Always return void for security (don't reveal if user exists)
   }
@@ -88,20 +82,15 @@ export class RocketsAuthOtpService implements RocketsAuthOtpServiceInterface {
     passcode: string,
   ): Promise<ReferenceIdInterface> {
     const { assignment, category } = this.settings.otp;
-    // Find user by email
     const user = await this.userModelService.byEmail(email);
 
     if (!user) {
       throw new OtpException();
     }
 
-    // Validate OTP
     const isValid = await this.otpService.validate(
       assignment,
-      {
-        category: category,
-        passcode,
-      },
+      { category, passcode },
       true,
     );
 

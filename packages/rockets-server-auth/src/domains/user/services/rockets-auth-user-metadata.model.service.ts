@@ -112,8 +112,7 @@ export class GenericUserMetadataModelService extends ModelService<
     const existingUserMetadata = await this.findByUserId(userId);
 
     if (existingUserMetadata) {
-      // Update existing userMetadata with new data
-      // Filter out undefined values from data to prevent overriding existing values
+      // Filter out undefined values to prevent overriding existing values
       // (class instances from class-transformer may include undefined properties)
       const definedData = Object.fromEntries(
         Object.entries(data).filter(([, v]) => v !== undefined),
@@ -123,14 +122,13 @@ export class GenericUserMetadataModelService extends ModelService<
         ...definedData,
       };
       return this.update(updateData);
-    } else {
-      // Create new userMetadata with user ID and userMetadata data
-      const createData: RocketsAuthUserMetadataCreatableInterface = {
-        ...data,
-        userId,
-      };
-      return this.create(createData);
     }
+
+    const createData: RocketsAuthUserMetadataCreatableInterface = {
+      ...data,
+      userId,
+    };
+    return this.create(createData);
   }
 
   /**
@@ -156,7 +154,6 @@ export class GenericUserMetadataModelService extends ModelService<
     if (!id) {
       throw new UserMetadataException('ID is required for update operation');
     }
-    // Get existing entity and merge with update data
     const existing = await this.repo.findOne({ where: { id } });
     if (!existing) {
       throw new UserMetadataNotFoundException();

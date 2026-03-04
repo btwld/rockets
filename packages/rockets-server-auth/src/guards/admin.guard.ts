@@ -40,26 +40,23 @@ export class AdminGuard implements CanActivate {
 
     try {
       const roles = await this.roleModelService.find({
-        where: {
-          name: ADMIN_ROLE,
-        },
+        where: { name: ADMIN_ROLE },
       });
 
-      if (roles.length > 0) {
-        const admin = roles[0];
-        const isAdmin = await this.roleService.isAssignedRole({
-          assignment: 'user',
-          assignee: { id: user.id },
-          role: { id: admin.id },
-        });
-        return isAdmin;
-      } else throw new ForbiddenException();
+      if (roles.length === 0) {
+        throw new ForbiddenException();
+      }
+
+      return await this.roleService.isAssignedRole({
+        assignment: 'user',
+        assignee: { id: user.id },
+        role: { id: roles[0].id },
+      });
     } catch (error) {
       if (error instanceof ForbiddenException) {
         throw error;
       }
 
-      // Log the actual error for debugging
       logAndGetErrorDetails(
         error,
         this.logger,
@@ -67,7 +64,6 @@ export class AdminGuard implements CanActivate {
         { userId: user.id, errorId: 'ADMIN_CHECK_FAILED' },
       );
 
-      // Return appropriate 5xx for infrastructure issues
       throw new ServiceUnavailableException('Unable to verify admin access');
     }
   }

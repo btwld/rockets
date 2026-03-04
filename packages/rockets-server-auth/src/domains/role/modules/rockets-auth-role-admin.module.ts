@@ -41,7 +41,7 @@ export class RocketsAuthRoleAdminModule {
     const CreateDto = admin.dto?.createOne || RocketsAuthRoleCreateDto;
 
     @Exclude()
-    class PaginatedDto extends CrudResponsePaginatedDto<RocketsAuthRoleInterface> {
+    class AdminRolesPaginatedDto extends CrudResponsePaginatedDto<RocketsAuthRoleInterface> {
       @Expose()
       @ApiProperty({
         type: ModelDto,
@@ -65,7 +65,7 @@ export class RocketsAuthRoleAdminModule {
         path: admin.path || 'admin/roles',
         model: {
           type: ModelDto,
-          paginatedType: PaginatedDto,
+          paginatedType: AdminRolesPaginatedDto,
         },
         extraDecorators: [
           ApiTags('admin'),

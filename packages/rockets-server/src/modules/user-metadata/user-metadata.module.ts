@@ -3,11 +3,7 @@ import {
   RepositoryInterface,
   getDynamicRepositoryToken,
 } from '@concepta/nestjs-common';
-import {
-  UserMetadataEntityInterface,
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from './interfaces/user-metadata.interface';
+import { UserMetadataEntityInterface } from './interfaces/user-metadata.interface';
 import {
   USER_METADATA_MODULE_ENTITY_KEY,
   UserMetadataModelService,
@@ -15,14 +11,6 @@ import {
 import { GenericUserMetadataModelService } from './services/user-metadata.model.service';
 import { RAW_OPTIONS_TOKEN } from '../../rockets.tokens';
 import { RocketsOptionsInterface } from '../../interfaces/rockets-options.interface';
-
-export interface UserMetadataModuleOptionsInterface<
-  TCreateDto extends UserMetadataCreatableInterface = UserMetadataCreatableInterface,
-  TUpdateDto extends UserMetadataModelUpdatableInterface = UserMetadataModelUpdatableInterface,
-> {
-  createDto: new () => TCreateDto;
-  updateDto: new () => TUpdateDto;
-}
 
 @Module({})
 export class UserMetadataModule {

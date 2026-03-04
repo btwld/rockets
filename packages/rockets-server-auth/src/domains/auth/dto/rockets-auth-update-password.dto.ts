@@ -8,20 +8,12 @@ import { IsNotEmpty, IsString } from 'class-validator';
  * Extends the base recovery update password DTO from the auth-recovery module
  */
 export class RocketsAuthUpdatePasswordDto extends AuthRecoveryUpdatePasswordDto {
-  /**
-   * Recovery passcode
-   */
   @IsNotEmpty()
+  @IsString()
   @ApiProperty({
     title: 'account reset passcode',
     type: 'string',
     description: 'Passcode used to reset account password',
   })
-  @IsString()
   passcode = '';
-
-  /**
-   * When extending the base DTO, you can add additional properties
-   * specific to your application here
-   */
 }

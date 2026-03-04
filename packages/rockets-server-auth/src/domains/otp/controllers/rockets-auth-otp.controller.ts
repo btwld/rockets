@@ -57,7 +57,7 @@ export class RocketsAuthOtpController {
     description: 'Invalid email format',
   })
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 OTP requests per minute
-  @Post('')
+  @Post()
   async sendOtp(@Body() dto: RocketsAuthOtpSendDto): Promise<void> {
     return this.otpService.sendOtp(dto.email);
   }
@@ -91,7 +91,7 @@ export class RocketsAuthOtpController {
     description: 'Invalid OTP or expired passcode',
   })
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 confirmation attempts per minute
-  @Patch('')
+  @Patch()
   async confirmOtp(
     @Body() dto: RocketsAuthOtpConfirmDto,
   ): Promise<RocketsAuthAuthenticationResponseInterface> {

@@ -1,4 +1,8 @@
-import { createSettingsProvider } from '@concepta/nestjs-common';
+import {
+  createSettingsProvider,
+  getDynamicRepositoryToken,
+  RepositoryInterface,
+} from '@concepta/nestjs-common';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,
@@ -6,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { SwaggerUiModule } from '@concepta/nestjs-swagger-ui';
+import { ConfigModule } from '@nestjs/config';
 import {
   RocketsAuthProvider,
   ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
@@ -14,7 +19,6 @@ import { MeController } from './modules/user/me.controller';
 import { AuthProviderInterface } from './interfaces/auth-provider.interface';
 import { RocketsOptionsInterface } from './interfaces/rockets-options.interface';
 import { RocketsOptionsExtrasInterface } from './interfaces/rockets-options-extras.interface';
-import { ConfigModule } from '@nestjs/config';
 import { RocketsSettingsInterface } from './interfaces/rockets-settings.interface';
 import { rocketsOptionsDefaultConfig } from './config/rockets-options-default.config';
 import { AuthServerGuard } from './guards/auth-server.guard';
@@ -23,12 +27,7 @@ import {
   UserMetadataModelService,
   USER_METADATA_MODULE_ENTITY_KEY,
 } from './modules/user-metadata/constants/user-metadata.constants';
-import {
-  getDynamicRepositoryToken,
-  RepositoryInterface,
-} from '@concepta/nestjs-common';
 import { UserMetadataEntityInterface } from './modules/user-metadata/interfaces/user-metadata.interface';
-
 import { RAW_OPTIONS_TOKEN } from './rockets.tokens';
 
 export const {
@@ -53,8 +52,8 @@ export type RocketsAsyncOptions = Omit<
 >;
 
 /**
- * Transform the definition to include the combined modules
- * Follows SDK patterns for module transformation
+ * Transform the definition to include the combined modules.
+ * Follows SDK patterns for module transformation.
  */
 function definitionTransform(
   definition: DynamicModule,
@@ -67,45 +66,44 @@ function definitionTransform(
     exports = [],
   } = definition;
 
-  // Base module
-  const baseModule: DynamicModule = {
+  return {
     ...definition,
     global: extras.global,
-    imports: [...createRocketsImports({ imports: defImports, extras })],
+    imports: createRocketsImports({ imports: defImports }),
     controllers: createRocketsControllers({
       controllers: extras.controllers ?? defControllers,
       extras,
     }),
-    providers: [...createRocketsProviders({ providers, extras })],
-    exports: createRocketsExports({ exports, extras }),
+    providers: createRocketsProviders({ providers, extras }),
+    exports: createRocketsExports({ exports }),
   };
-
-  return baseModule;
 }
 
 /**
- * Create controllers for the combined module
- * Follows SDK patterns for controller creation
+ * Create controllers for the combined module.
+ * When explicit controllers are provided, use them directly.
+ * Otherwise, build the default list based on disable flags.
  */
 export function createRocketsControllers(options: {
   controllers?: DynamicModule['controllers'];
   extras?: RocketsOptionsExtrasInterface;
 }): DynamicModule['controllers'] {
-  return options?.controllers !== undefined
-    ? options.controllers
-    : (() => {
-        const disableController = options?.extras?.disableController || {};
-        const list: DynamicModule['controllers'] = [];
+  if (options.controllers !== undefined) {
+    return options.controllers;
+  }
 
-        if (!disableController.me) list.push(MeController);
+  const disableController = options.extras?.disableController ?? {};
+  const controllers: DynamicModule['controllers'] = [];
 
-        return list;
-      })();
+  if (!disableController.me) {
+    controllers.push(MeController);
+  }
+
+  return controllers;
 }
 
 /**
- * Create settings provider
- * Follows SDK patterns for settings providers
+ * Create settings provider.
  */
 export function createRocketsSettingsProvider(
   optionsOverrides?: RocketsOptionsInterface,
@@ -122,39 +120,33 @@ export function createRocketsSettingsProvider(
 }
 
 /**
- * Create imports for the combined module
- * Follows SDK patterns for import creation
+ * Create imports for the combined module.
  */
 export function createRocketsImports(options: {
   imports?: DynamicModule['imports'];
-  extras?: RocketsOptionsExtrasInterface;
 }): NonNullable<DynamicModule['imports']> {
   const baseImports: NonNullable<DynamicModule['imports']> = [
     ConfigModule.forFeature(rocketsOptionsDefaultConfig),
     SwaggerUiModule.registerAsync({
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsOptionsInterface) => {
-        return {
-          documentBuilder: options.swagger?.documentBuilder,
-          settings: options.swagger?.settings,
-        };
-      },
+      useFactory: (opts: RocketsOptionsInterface) => ({
+        documentBuilder: opts.swagger?.documentBuilder,
+        settings: opts.swagger?.settings,
+      }),
     }),
   ];
-  const extraImports = options.imports ?? [];
-  return [...extraImports, ...baseImports];
+
+  return [...(options.imports ?? []), ...baseImports];
 }
 
 /**
- * Create exports for the combined module
- * Follows SDK patterns for export creation
+ * Create exports for the combined module.
  */
 export function createRocketsExports(options: {
   exports: DynamicModule['exports'];
-  extras?: RocketsOptionsExtrasInterface;
 }): DynamicModule['exports'] {
   return [
-    ...(options.exports || []),
+    ...(options.exports ?? []),
     ConfigModule,
     RAW_OPTIONS_TOKEN,
     ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
@@ -163,8 +155,7 @@ export function createRocketsExports(options: {
 }
 
 /**
- * Create providers for the combined module
- * Follows SDK patterns for provider creation
+ * Create providers for the combined module.
  */
 export function createRocketsProviders(options: {
   providers?: Provider[];
@@ -173,15 +164,13 @@ export function createRocketsProviders(options: {
   const providers: Provider[] = [
     ...(options.providers ?? []),
     createRocketsSettingsProvider(),
-    Reflector, // Add Reflector explicitly
+    Reflector,
     {
       provide: RocketsAuthProvider,
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (opts: RocketsOptionsInterface): AuthProviderInterface => {
-        return opts.authProvider;
-      },
+      useFactory: (opts: RocketsOptionsInterface): AuthProviderInterface =>
+        opts.authProvider,
     },
-    // UserMetadata service provider
     {
       provide: UserMetadataModelService,
       inject: [
@@ -202,8 +191,6 @@ export function createRocketsProviders(options: {
     },
   ];
 
-  // Conditionally add global guard based on enableGlobalGuard in extras
-  // Default: true (when enableGlobalGuard is not explicitly set to false)
   if (options.extras?.enableGlobalGuard !== false) {
     providers.push({
       provide: APP_GUARD,

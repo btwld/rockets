@@ -7,6 +7,7 @@ import {
   HttpCode,
   Inject,
   Logger,
+  Patch,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -22,7 +23,6 @@ import {
 import { RocketsAuthChangePasswordDto } from '../dto/rockets-auth-change-password.dto';
 import { RocketsAuthUserInterface } from '../../user/interfaces/rockets-auth-user.interface';
 import { logAndGetErrorDetails } from '../../../shared/utils/error-logging.helper';
-import { Patch } from '@nestjs/common';
 
 /**
  * Controller for authenticated password change

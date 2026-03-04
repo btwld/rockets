@@ -150,12 +150,7 @@ function createInvitationAcceptanceExports(options: {
 }
 
 /**
- * Create the Invitation Acceptance Controller class
- * KISS: This method creates and returns ONE class
- */
-/**
- * Create the Invitation User Acceptance Listener class
- * KISS: This method creates and returns ONE class
+ * Create the Invitation User Acceptance Listener class.
  *
  * The listener receives moduleOptions via DI which contains:
  * - userCrud.userMetadataConfig.updateDto for validation

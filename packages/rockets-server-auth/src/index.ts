@@ -15,6 +15,16 @@ export * from './shared';
 // Export Swagger generator
 export { generateSwaggerJson } from './generate-swagger';
 
+// Export JWT auth provider
+export { RocketsJwtAuthProvider } from './provider/rockets-jwt-auth.provider';
+
+// Re-export commonly used constants for backward compatibility
+export {
+  ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+  ADMIN_USER_CRUD_SERVICE_TOKEN,
+  ADMIN_ROLE_CRUD_SERVICE_TOKEN,
+} from './shared/constants/rockets-auth.constants';
+
 // Re-export commonly used interfaces and types for backward compatibility
 export type { RocketsAuthOptionsInterface } from './shared/interfaces/rockets-auth-options.interface';
 export type { RocketsAuthOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
@@ -29,13 +39,3 @@ export type { RocketsAuthRoleEntityInterface } from './domains/role/interfaces/r
 export type { RocketsAuthUserMetadataEntityInterface } from './domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
 export type { RocketsAuthUserMetadataCreatableInterface } from './domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
 export type { RocketsAuthUserMetadataRequestInterface } from './domains/user/interfaces/rockets-auth-user-metadata-request.interface';
-
-// Export JWT auth provider
-export { RocketsJwtAuthProvider } from './provider/rockets-jwt-auth.provider';
-
-// Export commonly used constants for backward compatibility
-export { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from './shared/constants/rockets-auth.constants';
-export {
-  ADMIN_USER_CRUD_SERVICE_TOKEN,
-  ADMIN_ROLE_CRUD_SERVICE_TOKEN,
-} from './shared/constants/rockets-auth.constants';
