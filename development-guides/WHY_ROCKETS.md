@@ -139,7 +139,9 @@ pet.exception.ts              — custom exceptions
 
 **10 files. ~1,175 lines per entity.** Every layer is explicit. Nothing is hidden. You can debug any behavior by reading the file that owns it.
 
-This is powerful — but most of those files are structural boilerplate. The field `name: string` appears in 6 places across 5 files. The adapter is always the same 16-line class. The CRUD service is always the same try/catch pattern.
+The sample app has three of these: Pet (the parent), PetVaccination (vaccine records — name, date, vet, batch number), and PetAppointment (vet visits — date, type, status, diagnosis, treatment). Each child entity has the same 10-file structure. Pet has two `@OneToMany` relations on the entity, but those same relations are **redefined** in the controller's `@CrudRelations` decorator with `foreignKey`, `primaryKey`, `cardinality`, and `service` — duplicating what the entity already knows.
+
+This is powerful — but most of those files are structural boilerplate. The field `name: string` appears in 6 places across 5 files. The adapter is always the same 16-line class. The CRUD service is always the same try/catch pattern. And relations are defined twice — once on the entity, once on the controller.
 
 ### Where we're going: entity as single source of truth
 
@@ -162,6 +164,12 @@ export class PetEntity extends CrudEntity {
   @CrudField({ type: 'int', min: 0, max: 50 })
   age!: number;
 
+  @CrudField({ optional: true, maxLength: 100 })
+  color?: string;
+
+  @CrudField({ optional: true })
+  description?: string;
+
   @CrudField({ enum: PetStatus, default: PetStatus.ACTIVE })
   status!: PetStatus;
 
@@ -170,6 +178,9 @@ export class PetEntity extends CrudEntity {
 
   @HasMany(() => PetVaccinationEntity, 'petId')
   vaccinations?: PetVaccinationEntity[];
+
+  @HasMany(() => PetAppointmentEntity, 'petId')
+  appointments?: PetAppointmentEntity[];
 }
 ```
 
@@ -185,7 +196,73 @@ export class PetEntity extends CrudEntity {
 - Ownership verification on readOne/update/delete
 - No separate `AccessQueryService` file needed
 
-One file. One declaration per field. Everything derived.
+`@HasMany()` is the **single source of truth** for relations. Today, the same relation is defined twice — `@OneToMany` on the entity AND `@CrudRelations` on the controller with duplicate `foreignKey`/`primaryKey`/`cardinality` config. With `@HasMany`, the relation metadata lives on the entity once. The controller just references which ones to load by name.
+
+One file. One declaration per field. One declaration per relation. Everything derived.
+
+#### The child entities follow the same pattern
+
+A Pet has two child entities — **vaccinations** and **appointments** — both linked by `petId`:
+
+```typescript
+// Vaccination: tracks vaccine records for a pet
+@Entity('pet_vaccinations')
+export class PetVaccinationEntity extends CrudEntity {
+  @CrudField({ required: true, maxLength: 255 })
+  vaccineName!: string;
+
+  @CrudField({ required: true, type: 'date' })
+  administeredDate!: Date;
+
+  @CrudField({ optional: true, type: 'date' })
+  nextDueDate?: Date;
+
+  @CrudField({ required: true, maxLength: 255 })
+  veterinarian!: string;
+
+  @CrudField({ optional: true, maxLength: 100 })
+  batchNumber?: string;
+
+  @CrudField({ optional: true })
+  notes?: string;
+
+  @BelongsTo(() => PetEntity, 'petId')
+  pet?: PetEntity;
+}
+
+// Appointment: tracks vet visits with status tracking
+@Entity('pet_appointments')
+export class PetAppointmentEntity extends CrudEntity {
+  @CrudField({ required: true, type: 'date' })
+  appointmentDate!: Date;
+
+  @CrudField({ required: true, maxLength: 100 })
+  appointmentType!: string;  // checkup, surgery, grooming, emergency
+
+  @CrudField({ required: true, maxLength: 255 })
+  veterinarian!: string;
+
+  @CrudField({ enum: PetAppointmentStatus, default: PetAppointmentStatus.SCHEDULED })
+  status!: PetAppointmentStatus;  // scheduled, completed, cancelled, no_show
+
+  @CrudField({ required: true })
+  reason!: string;
+
+  @CrudField({ optional: true })
+  notes?: string;
+
+  @CrudField({ optional: true })
+  diagnosis?: string;
+
+  @CrudField({ optional: true })
+  treatment?: string;
+
+  @BelongsTo(() => PetEntity, 'petId')
+  pet?: PetEntity;
+}
+```
+
+`@BelongsTo()` is the inverse of `@HasMany()`. Together they define the full relationship graph on the entities — no duplicate config on the controller.
 
 #### File 2 — Controller (pure declaration)
 
@@ -195,15 +272,17 @@ One file. One declaration per field. Everything derived.
   entity: PetEntity,
   resource: 'pet',
   operations: ['readMany', 'readOne', 'createOne', 'updateOne', 'deleteOne', 'recoverOne'],
-  relations: ['vaccinations', 'appointments'],
+  relations: ['vaccinations', 'appointments'],  // references @HasMany on the entity — no join config here
 })
 export class PetController {}
 ```
 
+`relations` doesn't redefine join config. It just says "load these" — the `@HasMany`/`@BelongsTo` metadata on the entity already knows the target entity, foreign key, and cardinality.
+
 `@RocketsCrud()` composes:
-- `@CrudController()` with model types
-- `@CrudRelations()` with join configuration
-- `@AccessControlQuery()` with auto-generated ownership service
+- `@CrudController()` with model types (derived from entity's `@CrudField` metadata)
+- `@CrudRelations()` with join config (derived from entity's `@HasMany`/`@BelongsTo` metadata)
+- `@AccessControlQuery()` with auto-generated ownership service (derived from `@OwnerField`)
 - `@UseGuards(AccessControlGuard)`
 - `@ApiTags()` + `@ApiBearerAuth()`
 - All `@CrudReadMany()` + `@AccessControlReadMany()` pairings
