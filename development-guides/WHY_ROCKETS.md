@@ -105,6 +105,216 @@ services: {
 
 Sensible defaults. Total escape hatches.
 
+### The AuthProvider: bridging full-auth and external-auth
+
+Rockets has two modes: **full auth** (RocketsAuthModule handles everything) and **external auth** (bring your own identity provider like Firebase, Auth0, Clerk, or Supabase). Both need to produce the same thing: a validated user that the rest of Rockets (guards, access control, `/me` endpoint, `@OwnerField`) can consume.
+
+Today, this bridge is the `AuthProviderInterface`:
+
+```typescript
+// The entire contract — one method
+interface AuthProviderInterface {
+  validateToken(token: string): Promise<AuthorizedUser>;
+}
+
+// The user shape it returns
+interface AuthorizedUser {
+  id: string;
+  sub: string;
+  email?: string;
+  userRoles?: { role: { name: string } }[];  // ← nested shape leaks TypeORM structure
+  claims?: Record<string, unknown>;           // ← untyped bag
+}
+```
+
+This works, but it has problems:
+
+**1. `AuthorizedUser` leaks internal structure.** The `userRoles: [{ role: { name: string } }]` shape exists because `RocketsJwtAuthProvider` maps from TypeORM's `UserRoleEntity → RoleEntity` graph. External providers (Firebase, Auth0) don't have this shape — they have flat role arrays or custom claims. Every integration has to construct this nested format:
+
+```typescript
+// Every external provider writes this awkward mapping
+userRoles: roles.map(name => ({ role: { name } }))
+```
+
+Meanwhile, the only consumer (`AccessControlService`) immediately unwraps it:
+
+```typescript
+// The access control service does this on every request
+const roles = user.userRoles?.map(ur => ur.role.name) || [];
+```
+
+Wrap and unwrap. Every request. For no reason.
+
+**2. `RocketsJwtAuthProvider` tangles four concerns.** It verifies the JWT, looks up the user, fetches roles, and maps to `AuthorizedUser` — all in one 87-line method. There's no way to reuse just the token verification or just the role lookup.
+
+**3. The simple mock is too simple.** The `MockAuthProvider` in sample-server hardcodes users by token string. It doesn't show how you'd actually integrate Firebase Admin SDK or Auth0's `jose` verification. Developers copying the pattern get no guidance on the real integration.
+
+**4. `claims` is untyped.** `Record<string, unknown>` means downstream code needs type assertions to use any claim.
+
+#### Where we're going: clean provider contract
+
+```typescript
+// Flat roles. Typed generics. Clear contract.
+interface AuthorizedUser<TClaims extends Record<string, unknown> = Record<string, unknown>> {
+  id: string;
+  sub: string;
+  email?: string;
+  roles: string[];            // flat array — no nested wrapping
+  claims?: TClaims;           // generic — typed per provider
+}
+
+interface AuthProviderInterface<TClaims extends Record<string, unknown> = Record<string, unknown>> {
+  /**
+   * Validate a bearer token and return the authorized user.
+   * Called by AuthServerGuard on every protected request.
+   *
+   * Throw UnauthorizedException for invalid/expired tokens.
+   * Throw nothing else — the guard catches and normalizes other errors.
+   */
+  validateToken(token: string): Promise<AuthorizedUser<TClaims>>;
+}
+```
+
+**What changed:**
+- `userRoles: [{ role: { name } }]` → `roles: string[]` — flat, no wrapping, no unwrapping
+- `claims?: Record<string, unknown>` → `claims?: TClaims` — generic, typed per provider
+- JSDoc contract makes the guard's error handling explicit
+
+#### Built-in providers for common external services
+
+Instead of one mock, Rockets ships typed provider starters for the most common external auth services:
+
+```typescript
+// Firebase — verifies ID token via Admin SDK
+import { RocketsFirebaseAuthProvider } from '@bitwild/rockets/providers/firebase';
+
+const authProvider = new RocketsFirebaseAuthProvider({
+  projectId: 'my-project',
+  // Optionally map Firebase custom claims to Rockets roles
+  mapRoles: (decodedToken) => decodedToken.roles ?? ['user'],
+});
+
+// Auth0 — verifies JWT via JWKS
+import { RocketsAuth0Provider } from '@bitwild/rockets/providers/auth0';
+
+const authProvider = new RocketsAuth0Provider({
+  domain: 'my-tenant.auth0.com',
+  audience: 'https://my-api.com',
+  mapRoles: (payload) => payload['https://my-api.com/roles'] ?? ['user'],
+});
+
+// Clerk — verifies session token via JWKS
+import { RocketsClerkProvider } from '@bitwild/rockets/providers/clerk';
+
+const authProvider = new RocketsClerkProvider({
+  secretKey: process.env.CLERK_SECRET_KEY,
+  mapRoles: (sessionClaims) => sessionClaims.metadata?.roles ?? ['user'],
+});
+
+// Supabase — verifies JWT from Supabase Auth
+import { RocketsSupabaseAuthProvider } from '@bitwild/rockets/providers/supabase';
+
+const authProvider = new RocketsSupabaseAuthProvider({
+  jwtSecret: process.env.SUPABASE_JWT_SECRET,
+  mapRoles: (payload) => [payload.role ?? 'user'],
+});
+```
+
+Every provider follows the same pattern:
+1. **Verify** the token using the service's native method (Admin SDK, JWKS, secret)
+2. **Extract** `id`, `sub`, `email` from the verified payload
+3. **Map roles** via a user-supplied function (because every service stores roles differently)
+4. **Return** a flat `AuthorizedUser` — ready for guards, access control, and `@OwnerField`
+
+The `mapRoles` callback is the key design choice. Every external auth service has a different convention for where roles live (Firebase custom claims, Auth0 namespaced claims, Clerk session metadata, Supabase JWT `role` field). Rather than trying to abstract all of these, Rockets gives you one function to bridge the gap.
+
+#### Custom provider for any other service
+
+For services Rockets doesn't ship a provider for, the contract is simple:
+
+```typescript
+@Injectable()
+export class MyAuthProvider implements AuthProviderInterface<MyCustomClaims> {
+  constructor(private readonly myService: MyIdentityService) {}
+
+  async validateToken(token: string): Promise<AuthorizedUser<MyCustomClaims>> {
+    const verified = await this.myService.verifyToken(token);
+
+    if (!verified) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    return {
+      id: verified.userId,
+      sub: verified.subject,
+      email: verified.email,
+      roles: verified.permissions ?? ['user'],
+      claims: {
+        orgId: verified.organizationId,
+        plan: verified.subscriptionPlan,
+      },
+    };
+  }
+}
+```
+
+No nested wrapping. No mapping to an internal TypeORM shape. Just verify and return.
+
+#### The internal provider gets cleaner too
+
+`RocketsJwtAuthProvider` (used when you run full RocketsAuthModule) splits into composable pieces:
+
+```typescript
+// Before: one 87-line method that does everything
+class RocketsJwtAuthProvider {
+  async validateToken(token: string) {
+    const payload = await this.verifyTokenService.accessToken(token);  // verify
+    const user = await this.userModelService.bySubject(payload.sub);   // lookup
+    const roleIds = await this.roleService.getAssignedRoles(...);      // fetch roles
+    const roles = await this.roleModelService.find(...);               // fetch names
+    return { id, sub, email, userRoles: roles.map(...), claims };      // awkward map
+  }
+}
+
+// After: same logic, flat output
+class RocketsJwtAuthProvider implements AuthProviderInterface {
+  async validateToken(token: string): Promise<AuthorizedUser> {
+    const payload = await this.verifyTokenService.accessToken(token);
+    const user = await this.userModelService.bySubject(payload.sub);
+    const roles = await this.roleService.getRoleNames(user.id);  // single call
+
+    return {
+      id: user.id,
+      sub: payload.sub,
+      email: user.email,
+      roles,              // flat string[] — no wrapping
+      claims: payload,
+    };
+  }
+}
+```
+
+The `roleService.getRoleNames(userId)` consolidates the current two-step lookup (get assigned role IDs → fetch role entities → extract names) into one call. The output is `string[]`, not `{ role: { name: string } }[]`.
+
+#### What stays the same
+
+- `AuthServerGuard` still extracts Bearer tokens and calls `validateToken` — no change
+- `@AuthPublic()` still disables the guard — no change
+- `@AuthUser()` still injects the user into controller methods — no change
+- `RocketsModule.forRoot({ authProvider })` still takes any provider — no change
+- The `/me` endpoint still returns the current user with metadata — no change
+
+The provider contract is the **only** thing that changes. Everything upstream (guard) and downstream (controllers, access control, `/me`) consumes `AuthorizedUser` the same way — just with `roles` instead of `userRoles[].role.name`.
+
+#### Migration
+
+The `userRoles` → `roles` change affects two places:
+
+1. **`AccessControlService.getUserRoles()`** — change `user.userRoles?.map(ur => ur.role.name)` to `user.roles ?? []`
+2. **Any controller that reads roles directly** — like Pet's `getMany()` which checks `user.userRoles?.map(ur => ur.role.name)`. With `@OwnerField()` from the CRUD vision, this manual check goes away entirely.
+
+A one-line change in access control. A deleted manual check in controllers. No breaking change for external providers — they already construct the shape manually and would just stop wrapping.
+
 ---
 
 ## Part 2: CRUD — Where the DX Leap Happens
