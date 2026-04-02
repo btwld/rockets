@@ -1,7 +1,5 @@
-// Export the main module
 export { RocketsAuthModule } from './rockets-auth.module';
 
-// Export domain APIs
 export * from './domains/auth';
 export * from './domains/user';
 export * from './domains/oauth';
@@ -9,23 +7,17 @@ export * from './domains/otp';
 export * from './domains/role';
 export * from './domains/invitation';
 
-// Export shared resources
 export * from './shared';
 
-// Export Swagger generator
 export { generateSwaggerJson } from './generate-swagger';
-
-// Export JWT auth provider
 export { RocketsJwtAuthProvider } from './provider/rockets-jwt-auth.provider';
 
-// Re-export commonly used constants for backward compatibility
 export {
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
   ADMIN_USER_CRUD_SERVICE_TOKEN,
   ADMIN_ROLE_CRUD_SERVICE_TOKEN,
 } from './shared/constants/rockets-auth.constants';
 
-// Re-export commonly used interfaces and types for backward compatibility
 export type { RocketsAuthOptionsInterface } from './shared/interfaces/rockets-auth-options.interface';
 export type { RocketsAuthOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
 export type { RocketsAuthUserInterface } from './domains/user/interfaces/rockets-auth-user.interface';

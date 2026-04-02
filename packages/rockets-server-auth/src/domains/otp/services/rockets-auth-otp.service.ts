@@ -2,7 +2,11 @@ import {
   ReferenceIdInterface,
   RuntimeException,
 } from '@concepta/nestjs-common';
-import { OtpException, OtpService } from '@concepta/nestjs-otp';
+import { OtpException } from '@concepta/nestjs-otp';
+import {
+  RocketsAuthOtpPortService,
+  ROCKETS_AUTH_OTP_PORT_TOKEN,
+} from '../../../shared/ports/rockets-auth-otp-port.service';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { RocketsAuthUserModelServiceInterface } from '../../../shared/interfaces/rockets-auth-user-model-service.interface';
 import {
@@ -26,7 +30,8 @@ export class RocketsAuthOtpService implements RocketsAuthOtpServiceInterface {
     private readonly settings: RocketsAuthSettingsInterface,
     @Inject(RocketsAuthUserModelService)
     private readonly userModelService: RocketsAuthUserModelServiceInterface,
-    private readonly otpService: OtpService,
+    @Inject(ROCKETS_AUTH_OTP_PORT_TOKEN)
+    private readonly otpService: RocketsAuthOtpPortService,
     @Inject(RocketsAuthNotificationService)
     private readonly otpNotificationService: RocketsAuthOtpNotificationServiceInterface,
   ) {}

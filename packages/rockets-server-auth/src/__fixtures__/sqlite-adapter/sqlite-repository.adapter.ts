@@ -1,11 +1,55 @@
 import * as sqlite3 from 'sqlite3';
 import { PlainLiteralObject } from '@nestjs/common';
-import {
-  DeepPartial,
-  RepositoryInternals,
-  RepositoryInterface,
-  ModelQueryException,
-} from '@concepta/nestjs-common';
+import { DeepPartial, ModelQueryException } from '@concepta/nestjs-common';
+
+/**
+ * Local definition of repository internals for SQLite adapter.
+ * The v7 RepositoryInternals namespace was removed in v8.
+ * These types provide TypeORM-compatible find/save options.
+ */
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace RepositoryInternals {
+  export interface FindManyOptions<Entity> {
+    where?: Record<string, unknown>;
+    order?: Record<string, 'ASC' | 'DESC'>;
+    take?: number;
+    skip?: number;
+    relations?: string[];
+    select?: (keyof Entity)[];
+  }
+
+  export interface FindOneOptions<Entity> extends FindManyOptions<Entity> {}
+
+  export interface SaveOptions {
+    transaction?: boolean;
+  }
+}
+
+/**
+ * Local RepositoryInterface matching v7-style adapter pattern.
+ * The v8 RepositoryInterface has a different API surface.
+ */
+interface RepositoryInterface<Entity extends PlainLiteralObject> {
+  entityName(): string;
+  find(
+    options?: RepositoryInternals.FindManyOptions<Entity>,
+  ): Promise<Entity[]>;
+  findOne(
+    options: RepositoryInternals.FindOneOptions<Entity>,
+  ): Promise<Entity | null>;
+  create(entityLike: DeepPartial<Entity>): Entity;
+  merge(mergeIntoEntity: Entity, ...entityLikes: DeepPartial<Entity>[]): Entity;
+  save<T extends DeepPartial<Entity>>(
+    entities: T[],
+    options?: RepositoryInternals.SaveOptions,
+  ): Promise<(T & Entity)[]>;
+  save<T extends DeepPartial<Entity>>(
+    entity: T,
+    options?: RepositoryInternals.SaveOptions,
+  ): Promise<T & Entity>;
+  remove(entities: Entity[]): Promise<Entity[]>;
+  remove(entity: Entity): Promise<Entity>;
+}
 
 // Query operator interface for SQLite
 interface QueryOperator<T = unknown> {

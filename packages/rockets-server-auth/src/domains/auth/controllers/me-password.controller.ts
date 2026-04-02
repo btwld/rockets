@@ -1,15 +1,14 @@
 import { AuthUser } from '@concepta/nestjs-authentication';
-import { PasswordValidationService } from '@concepta/nestjs-password';
-import { UserPasswordService } from '@concepta/nestjs-user';
+import { UpdateUserPasswordCommand } from '@concepta/nestjs-user';
 import {
   Body,
   Controller,
   HttpCode,
-  Inject,
   Logger,
   Patch,
   UnauthorizedException,
 } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import { Throttle } from '@nestjs/throttler';
 import {
   ApiBadRequestResponse,
@@ -22,26 +21,17 @@ import {
 } from '@nestjs/swagger';
 import { RocketsAuthChangePasswordDto } from '../dto/rockets-auth-change-password.dto';
 import { RocketsAuthUserInterface } from '../../user/interfaces/rockets-auth-user.interface';
+import { RocketsEntity } from '../../../shared/constants/repository-entity-keys.constants';
+import { createRepositoryContext } from '../../../shared/utils/repository-context.helper';
 import { logAndGetErrorDetails } from '../../../shared/utils/error-logging.helper';
 
-/**
- * Controller for authenticated password change
- *
- * Allows authenticated users to change their own password by
- * providing their current password for verification.
- */
 @Controller('me')
 @ApiTags('Me')
 @ApiBearerAuth()
 export class MePasswordController {
   private readonly logger = new Logger(MePasswordController.name);
 
-  constructor(
-    @Inject(UserPasswordService)
-    private readonly userPasswordService: UserPasswordService,
-    @Inject(PasswordValidationService)
-    private readonly passwordValidationService: PasswordValidationService,
-  ) {}
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Patch('password')
   @HttpCode(200)
@@ -81,30 +71,12 @@ export class MePasswordController {
     const { currentPassword, newPassword } = changePasswordDto;
 
     try {
-      // Get the stored password hash for the user
-      const passwordStore = await this.userPasswordService.getPasswordStore(
-        user.id,
-      );
-
-      // Validate the current password
-      const isValid = await this.passwordValidationService.validate({
-        password: currentPassword,
-        passwordHash: passwordStore.passwordHash,
-        passwordSalt: passwordStore.passwordSalt,
-      });
-
-      if (!isValid) {
-        throw new UnauthorizedException('Invalid current password');
-      }
-
-      // Update to the new password
-      await this.userPasswordService.setPassword(
-        {
+      const ctx = createRepositoryContext(RocketsEntity.user);
+      await this.commandBus.execute(
+        new UpdateUserPasswordCommand(ctx, user.id, {
           password: newPassword,
           passwordCurrent: currentPassword,
-        },
-        user.id,
-        user,
+        }),
       );
 
       this.logger.log('Password changed successfully', { userId: user.id });

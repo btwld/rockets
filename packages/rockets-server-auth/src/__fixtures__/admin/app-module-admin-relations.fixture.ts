@@ -5,7 +5,10 @@ import { AUTHENTICATION_MODULE_SETTINGS_TOKEN } from '@concepta/nestjs-authentic
 
 import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { RepositoryModule } from '@concepta/nestjs-repository';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../../shared/constants/rockets-auth.constants';
 import { RocketsAuthModule } from '../../rockets-auth.module';
 import { FederatedEntityFixture } from '../federated/federated.entity.fixture';
 import { InvitationEntityFixture } from '../invitation/invitation.entity.fixture';
@@ -16,15 +19,13 @@ import { UserOtpEntityFixture } from '../user/user-otp-entity.fixture';
 import { UserPasswordHistoryEntityFixture } from '../user/user-password-history.entity.fixture';
 import { UserMetadataEntityFixture } from '../user/user-metadata.entity.fixture';
 import { UserFixture } from '../user/user.entity.fixture';
+import { UserCredentialEntityFixture } from '../user/user-credential.entity.fixture';
 
 import { RocketsAuthUserCreateDtoFixture } from '../user/dto/rockets-auth-user-create.dto.fixture';
 import { RocketsAuthUserUpdateDtoFixture } from '../user/dto/rockets-auth-user-update.dto.fixture';
-import { AdminUserTypeOrmCrudAdapter } from './admin-user-crud.adapter';
 import { RocketsAuthRoleDto } from '../../domains/role/dto/rockets-auth-role.dto';
 import { RocketsAuthRoleUpdateDto } from '../../domains/role/dto/rockets-auth-role-update.dto';
-import { RoleTypeOrmCrudAdapter } from '../role/role-typeorm-crud.adapter';
 import { RocketsAuthRoleCreateDto } from '../../domains/role';
-import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '../services/user-metadata-typeorm-crud.adapter.fixture';
 import { RocketsAuthUserMetadataFixtureDto } from '../user/dto/rockets-auth-user-metadata.dto.fixture';
 import { RocketsAuthUserFixtureDto } from '../user/dto/rockets-auth-user.dto.fixture';
 import { ACServiceFixture } from './access-control.service.fixture';
@@ -34,67 +35,54 @@ import { acRulesFixture } from './app.acl.fixture';
 @Module({
   imports: [
     EventModule.forRoot({}),
-    TypeOrmModule.forRoot({
-      ...ormConfig,
-      entities: [
-        UserFixture,
-        UserMetadataEntityFixture,
-        UserPasswordHistoryEntityFixture,
-        UserOtpEntityFixture,
-        FederatedEntityFixture,
-        RoleEntityFixture,
-        UserRoleEntityFixture,
-        InvitationEntityFixture,
-      ],
-    }),
     TypeOrmExtModule.forRootAsync({
       inject: [],
       useFactory: () => ({
         ...ormConfig,
         entities: [
           UserFixture,
-          UserOtpEntityFixture,
-          UserPasswordHistoryEntityFixture,
+          UserCredentialEntityFixture,
           UserMetadataEntityFixture,
+          UserPasswordHistoryEntityFixture,
+          UserOtpEntityFixture,
           FederatedEntityFixture,
-          UserRoleEntityFixture,
           RoleEntityFixture,
+          UserRoleEntityFixture,
           InvitationEntityFixture,
         ],
       }),
     }),
-    TypeOrmExtModule.forFeature({
-      user: { entity: UserFixture },
-      role: { entity: RoleEntityFixture },
-      userRole: { entity: UserRoleEntityFixture },
-      userOtp: { entity: UserOtpEntityFixture },
-      federated: { entity: FederatedEntityFixture },
-      invitation: { entity: InvitationEntityFixture },
-    }),
     TypeOrmModule.forFeature([
       UserFixture,
-      RoleEntityFixture,
+      UserCredentialEntityFixture,
       UserMetadataEntityFixture,
+      UserRoleEntityFixture,
+      RoleEntityFixture,
     ]),
     RocketsAuthModule.forRootAsync({
+      repositoryPersistence: {
+        module: TypeOrmRepositoryModule,
+        entities: {
+          user: UserFixture,
+          userCredentials: UserCredentialEntityFixture,
+          userMetadata: UserMetadataEntityFixture,
+          userOtp: UserOtpEntityFixture,
+          role: RoleEntityFixture,
+          userRole: UserRoleEntityFixture,
+        },
+      },
       userCrud: {
         imports: [
           TypeOrmModule.forFeature([UserFixture, UserMetadataEntityFixture]),
         ],
-        adapter: AdminUserTypeOrmCrudAdapter,
+        entity: UserFixture,
         model: RocketsAuthUserFixtureDto,
         dto: {
           createOne: RocketsAuthUserCreateDtoFixture,
           updateOne: RocketsAuthUserUpdateDtoFixture,
         },
         userMetadataConfig: {
-          imports: [
-            TypeOrmModule.forFeature([UserMetadataEntityFixture]),
-            TypeOrmExtModule.forFeature({
-              userMetadata: { entity: UserMetadataEntityFixture },
-            }),
-          ],
-          adapter: UserMetadataAdapter,
+          imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
           entity: UserMetadataEntityFixture,
           createDto: RocketsAuthUserMetadataFixtureDto,
           updateDto: RocketsAuthUserMetadataFixtureDto,
@@ -102,7 +90,6 @@ import { acRulesFixture } from './app.acl.fixture';
       },
       roleCrud: {
         imports: [TypeOrmModule.forFeature([RoleEntityFixture])],
-        adapter: RoleTypeOrmCrudAdapter,
         model: RocketsAuthRoleDto,
         dto: {
           createOne: RocketsAuthRoleCreateDto,
@@ -110,6 +97,31 @@ import { acRulesFixture } from './app.acl.fixture';
         },
       },
       enableGlobalJWTGuard: true,
+      user: {
+        imports: [TypeOrmModule.forFeature([UserCredentialEntityFixture])],
+      },
+      federated: {
+        imports: [
+          TypeOrmExtModule.forFeature({
+            federated: { entity: FederatedEntityFixture },
+          }),
+          RepositoryModule.forFeature({
+            module: TypeOrmRepositoryModule,
+            entities: [{ key: 'federated', entity: FederatedEntityFixture }],
+          }),
+        ],
+      },
+      invitation: {
+        imports: [
+          TypeOrmExtModule.forFeature({
+            invitation: { entity: InvitationEntityFixture },
+          }),
+          RepositoryModule.forFeature({
+            module: TypeOrmRepositoryModule,
+            entities: [{ key: 'invitation', entity: InvitationEntityFixture }],
+          }),
+        ],
+      },
       inject: [],
       useFactory: () => ({
         settings: {
@@ -132,7 +144,7 @@ import { acRulesFixture } from './app.acl.fixture';
             },
           },
           otp: {
-            assignment: 'userOtp' as const,
+            assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
             category: 'test',
             type: 'uuid',
             expiresIn: '1h',

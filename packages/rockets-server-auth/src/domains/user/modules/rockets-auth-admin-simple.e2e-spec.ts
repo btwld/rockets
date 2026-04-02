@@ -2,16 +2,25 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { HttpAdapterHost } from '@nestjs/core';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 
 import { AppModuleAdminRelationsFixture } from '../../../__fixtures__/admin/app-module-admin-relations.fixture';
-import { ExceptionsFilter, RoleEntityInterface } from '@concepta/nestjs-common';
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { ExceptionsFilter } from '@concepta/nestjs-common';
+import {
+  CreateRoleCommand,
+  AssignRoleCommand,
+  IsAssignedRoleQuery,
+} from '@concepta/nestjs-role';
+import {
+  ROLE_CRUD_ENTITY_KEY,
+  USER_ROLE_ENTITY_KEY,
+} from '../../../shared/constants/repository-entity-keys.constants';
 
 describe('RocketsAuthAdminModule (Simple e2e)', () => {
   let app: INestApplication;
-  let roleModelService: RoleModelService;
-  let roleService: RoleService;
-  let adminRole: RoleEntityInterface;
+  let commandBus: CommandBus;
+  let queryBus: QueryBus;
+  let adminRole: { id: string };
 
   beforeAll(async () => {
     process.env.ADMIN_ROLE_NAME = 'admin';
@@ -21,17 +30,20 @@ describe('RocketsAuthAdminModule (Simple e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     const exceptionsFilter = app.get(HttpAdapterHost);
-    roleModelService = app.get(RoleModelService);
-    roleService = app.get(RoleService);
+    commandBus = app.get(CommandBus);
+    queryBus = app.get(QueryBus);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
     // Create admin role
-    adminRole = await roleModelService.create({
-      name: 'admin',
-      description: 'admin role',
-    });
+    const ctx = { entity: ROLE_CRUD_ENTITY_KEY, hooks: [] };
+    adminRole = await commandBus.execute(
+      new CreateRoleCommand(ctx, {
+        name: 'admin',
+        description: 'admin role',
+      }),
+    );
   });
 
   afterAll(async () => {
@@ -143,25 +155,19 @@ describe('RocketsAuthAdminModule (Simple e2e)', () => {
       .expect(201);
 
     // Assign admin role
-    await roleService.assignRole({
-      assignment: 'user',
-      role: { id: adminRole.id },
-      assignee: { id: signupRes.body.id },
-    });
+    const ctx = { entity: USER_ROLE_ENTITY_KEY, hooks: [] };
+    await commandBus.execute(
+      new AssignRoleCommand(ctx, adminRole.id, signupRes.body.id),
+    );
 
     // Verify the role assignment was successful
-    const hasAdminRole = await roleService.isAssignedRole({
-      assignment: 'user',
-      assignee: { id: signupRes.body.id },
-      role: { id: adminRole.id },
-    });
+    const hasAdminRole = await queryBus.execute(
+      new IsAssignedRoleQuery(ctx, adminRole.id, signupRes.body.id),
+    );
     expect(hasAdminRole).toBe(true);
   });
 
   it('should test relation filtering and sorting functionality', async () => {
-    // This test verifies that the relations system is working
-    // by testing the same functionality as the working relations test
-
     // Test filtering by relation fields (should work even with empty data)
     await request(app.getHttpServer())
       .get('/admin/users?filter=userMetadata.firstName||$eq||Test')

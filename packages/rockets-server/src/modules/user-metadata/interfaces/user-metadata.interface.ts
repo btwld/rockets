@@ -49,6 +49,13 @@ export interface UserMetadataModelUpdatableInterface
  */
 export interface UserMetadataModelServiceInterface {
   /**
+   * Optional DTO class used to validate update payloads.
+   * When provided, the controller validates incoming userMetadata against this class
+   * before persisting.
+   */
+  updateDto?: new () => UserMetadataModelUpdatableInterface;
+
+  /**
    * Find userMetadata by user ID
    */
   findByUserId(userId: string): Promise<UserMetadataEntityInterface | null>;

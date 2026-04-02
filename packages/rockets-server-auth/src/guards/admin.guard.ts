@@ -1,4 +1,3 @@
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
 import {
   CanActivate,
   ExecutionContext,
@@ -9,9 +8,15 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { QueryBus } from '@nestjs/cqrs';
+import { RoleEntityInterface } from '@concepta/nestjs-common';
+import { IsAssignedRoleQuery } from '@concepta/nestjs-role';
 import { RocketsAuthSettingsInterface } from '../shared/interfaces/rockets-auth-settings.interface';
+import { RocketsEntity } from '../shared/constants/repository-entity-keys.constants';
 import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../shared/constants/rockets-auth.constants';
+import { createRepositoryContext } from '../shared/utils/repository-context.helper';
 import { logAndGetErrorDetails } from '../shared/utils/error-logging.helper';
+import { RocketsGetRoleByNameQuery } from '../domains/role/application/queries/impl/rockets-get-role-by-name.query';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
@@ -20,10 +25,7 @@ export class AdminGuard implements CanActivate {
   constructor(
     @Inject(ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN)
     private readonly settings: RocketsAuthSettingsInterface,
-    @Inject(RoleModelService)
-    private readonly roleModelService: RoleModelService,
-    @Inject(RoleService)
-    private readonly roleService: RoleService,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -39,19 +41,19 @@ export class AdminGuard implements CanActivate {
     }
 
     try {
-      const roles = await this.roleModelService.find({
-        where: { name: ADMIN_ROLE },
-      });
+      const role = await this.queryBus.execute<
+        RocketsGetRoleByNameQuery,
+        RoleEntityInterface | null
+      >(new RocketsGetRoleByNameQuery(ADMIN_ROLE));
 
-      if (roles.length === 0) {
+      if (!role) {
         throw new ForbiddenException();
       }
 
-      return await this.roleService.isAssignedRole({
-        assignment: 'user',
-        assignee: { id: user.id },
-        role: { id: roles[0].id },
-      });
+      const ctx = createRepositoryContext(RocketsEntity.userRole);
+      return await this.queryBus.execute<IsAssignedRoleQuery, boolean>(
+        new IsAssignedRoleQuery(ctx, role.id, user.id),
+      );
     } catch (error) {
       if (error instanceof ForbiddenException) {
         throw error;

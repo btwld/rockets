@@ -2,20 +2,29 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { HttpAdapterHost } from '@nestjs/core';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 
 import { AppModuleAdminRelationsFixture } from '../../../__fixtures__/admin/app-module-admin-relations.fixture';
-import { ExceptionsFilter, RoleEntityInterface } from '@concepta/nestjs-common';
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { ExceptionsFilter } from '@concepta/nestjs-common';
+import {
+  CreateRoleCommand,
+  AssignRoleCommand,
+  IsAssignedRoleQuery,
+} from '@concepta/nestjs-role';
+import {
+  ROLE_CRUD_ENTITY_KEY,
+  USER_ROLE_ENTITY_KEY,
+} from '../../../shared/constants/repository-entity-keys.constants';
 
 describe('AdminUserRolesController (e2e)', () => {
   let app: INestApplication;
-  let roleModelService: RoleModelService;
-  let roleService: RoleService;
-  let adminRole: RoleEntityInterface;
+  let commandBus: CommandBus;
+  let queryBus: QueryBus;
+  let adminRole: { id: string };
   let adminToken: string;
   let adminUserId: string;
   let testUserId: string;
-  let testRole: RoleEntityInterface;
+  let testRole: { id: string };
 
   beforeAll(async () => {
     process.env.ADMIN_ROLE_NAME = 'admin';
@@ -25,17 +34,22 @@ describe('AdminUserRolesController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     const exceptionsFilter = app.get(HttpAdapterHost);
-    roleModelService = app.get(RoleModelService);
-    roleService = app.get(RoleService);
+    commandBus = app.get(CommandBus);
+    queryBus = app.get(QueryBus);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
+    const roleCtx = { entity: ROLE_CRUD_ENTITY_KEY, hooks: [] };
+    const userRoleCtx = { entity: USER_ROLE_ENTITY_KEY, hooks: [] };
+
     // Create admin role
-    adminRole = await roleModelService.create({
-      name: 'admin',
-      description: 'admin role',
-    });
+    adminRole = await commandBus.execute(
+      new CreateRoleCommand(roleCtx, {
+        name: 'admin',
+        description: 'admin role',
+      }),
+    );
 
     // Create admin user
     const adminSignupRes = await request(app.getHttpServer())
@@ -51,20 +65,15 @@ describe('AdminUserRolesController (e2e)', () => {
 
     adminUserId = adminSignupRes.body.id;
 
-    // Assign admin role to admin user
-    await roleService.assignRole({
-      assignment: 'user',
-      role: { id: adminRole.id },
-      assignee: { id: adminUserId },
-    });
+    // Assign admin role
+    await commandBus.execute(
+      new AssignRoleCommand(userRoleCtx, adminRole.id, adminUserId),
+    );
 
-    // Login as admin to get token
+    // Login as admin
     const loginRes = await request(app.getHttpServer())
       .post('/token/password')
-      .send({
-        username: 'admin',
-        password: 'Admin123!',
-      })
+      .send({ username: 'admin', password: 'Admin123!' })
       .expect(200);
 
     adminToken = loginRes.body.accessToken;
@@ -84,10 +93,12 @@ describe('AdminUserRolesController (e2e)', () => {
     testUserId = testSignupRes.body.id;
 
     // Create a test role
-    testRole = await roleModelService.create({
-      name: 'editor',
-      description: 'Editor role',
-    });
+    testRole = await commandBus.execute(
+      new CreateRoleCommand(roleCtx, {
+        name: 'editor',
+        description: 'Editor role',
+      }),
+    );
   });
 
   afterAll(async () => {
@@ -113,20 +124,14 @@ describe('AdminUserRolesController (e2e)', () => {
     });
 
     it('should return 403 when non-admin user tries to access', async () => {
-      // Login as non-admin user
       const loginRes = await request(app.getHttpServer())
         .post('/token/password')
-        .send({
-          username: 'testuser',
-          password: 'Test123!',
-        })
+        .send({ username: 'testuser', password: 'Test123!' })
         .expect(200);
-
-      const nonAdminToken = loginRes.body.accessToken;
 
       await request(app.getHttpServer())
         .get(`/admin/users/${testUserId}/roles`)
-        .set('Authorization', `Bearer ${nonAdminToken}`)
+        .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
         .expect(403);
     });
   });
@@ -139,13 +144,14 @@ describe('AdminUserRolesController (e2e)', () => {
         .send({ roleId: testRole.id })
         .expect(201);
 
-      // Verify the role was assigned
-      const hasRole = await roleService.isAssignedRole({
-        assignment: 'user',
-        assignee: { id: testUserId },
-        role: { id: testRole.id },
-      });
-
+      // Verify via CQRS query
+      const hasRole = await queryBus.execute(
+        new IsAssignedRoleQuery(
+          { entity: USER_ROLE_ENTITY_KEY, hooks: [] },
+          testRole.id,
+          testUserId,
+        ),
+      );
       expect(hasRole).toBe(true);
     });
 
@@ -160,14 +166,10 @@ describe('AdminUserRolesController (e2e)', () => {
       expect(response.body.length).toBeGreaterThan(0);
 
       const assignedRole = response.body.find(
-        (r: RoleEntityInterface) => r.id === testRole.id,
+        (r: { props: { roleId: string } }) => r.props.roleId === testRole.id,
       );
       expect(assignedRole).toBeDefined();
-      expect(assignedRole.id).toBe(testRole.id);
-      // Note: getAssignedRoles may return partial role data
-      if (assignedRole.name) {
-        expect(assignedRole.name).toBe('editor');
-      }
+      expect(assignedRole.props.roleId).toBe(testRole.id);
     });
 
     it('should return 400 when roleId is missing', async () => {
@@ -182,7 +184,7 @@ describe('AdminUserRolesController (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/admin/users/${testUserId}/roles`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ roleId: 123 }) // Should be string
+        .send({ roleId: 123 })
         .expect(400);
     });
 
@@ -194,20 +196,14 @@ describe('AdminUserRolesController (e2e)', () => {
     });
 
     it('should return 403 when non-admin user tries to assign role', async () => {
-      // Login as non-admin user
       const loginRes = await request(app.getHttpServer())
         .post('/token/password')
-        .send({
-          username: 'testuser',
-          password: 'Test123!',
-        })
+        .send({ username: 'testuser', password: 'Test123!' })
         .expect(200);
-
-      const nonAdminToken = loginRes.body.accessToken;
 
       await request(app.getHttpServer())
         .post(`/admin/users/${testUserId}/roles`)
-        .set('Authorization', `Bearer ${nonAdminToken}`)
+        .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
         .send({ roleId: testRole.id })
         .expect(403);
     });
@@ -215,15 +211,19 @@ describe('AdminUserRolesController (e2e)', () => {
 
   describe('Complete flow: Create role and assign to new user', () => {
     it('should create new role, create new user, and assign role successfully', async () => {
+      const roleCtx = { entity: ROLE_CRUD_ENTITY_KEY, hooks: [] };
+      const userRoleCtx = { entity: USER_ROLE_ENTITY_KEY, hooks: [] };
+
       // 1. Create a new role
-      const newRole = await roleModelService.create({
-        name: 'moderator',
-        description: 'Moderator role',
-      });
+      const newRole: { id: string } = await commandBus.execute(
+        new CreateRoleCommand(roleCtx, {
+          name: 'moderator',
+          description: 'Moderator role',
+        }),
+      );
 
       expect(newRole).toBeDefined();
       expect(newRole.id).toBeDefined();
-      expect(newRole.name).toBe('moderator');
 
       // 2. Create a new user
       const newUserRes = await request(app.getHttpServer())
@@ -238,7 +238,6 @@ describe('AdminUserRolesController (e2e)', () => {
         .expect(201);
 
       const newUserId = newUserRes.body.id;
-      expect(newUserId).toBeDefined();
 
       // 3. Verify user has no roles initially
       const rolesBeforeRes = await request(app.getHttpServer())
@@ -246,50 +245,41 @@ describe('AdminUserRolesController (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(rolesBeforeRes.body).toBeDefined();
-      expect(Array.isArray(rolesBeforeRes.body)).toBe(true);
-      expect(rolesBeforeRes.body.length).toBe(0);
+      expect(rolesBeforeRes.body).toEqual([]);
 
-      // 4. Assign the new role to the new user
+      // 4. Assign the role via HTTP endpoint
       await request(app.getHttpServer())
         .post(`/admin/users/${newUserId}/roles`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ roleId: newRole.id })
         .expect(201);
 
-      // 5. Verify the role was assigned
+      // 5. Verify via endpoint
       const rolesAfterRes = await request(app.getHttpServer())
         .get(`/admin/users/${newUserId}/roles`)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(rolesAfterRes.body).toBeDefined();
-      expect(Array.isArray(rolesAfterRes.body)).toBe(true);
       expect(rolesAfterRes.body.length).toBe(1);
-      expect(rolesAfterRes.body[0].id).toBe(newRole.id);
-      // Note: getAssignedRoles may return partial role data
-      if (rolesAfterRes.body[0].name) {
-        expect(rolesAfterRes.body[0].name).toBe('moderator');
-      }
+      expect(rolesAfterRes.body[0].props.roleId).toBe(newRole.id);
 
-      // 6. Verify using RoleService
-      const hasRole = await roleService.isAssignedRole({
-        assignment: 'user',
-        assignee: { id: newUserId },
-        role: { id: newRole.id },
-      });
-
+      // 6. Verify via CQRS query
+      const hasRole = await queryBus.execute(
+        new IsAssignedRoleQuery(userRoleCtx, newRole.id, newUserId),
+      );
       expect(hasRole).toBe(true);
     });
 
     it('should assign multiple roles to a single user', async () => {
-      // Create another role
-      const secondRole = await roleModelService.create({
-        name: 'viewer',
-        description: 'Viewer role',
-      });
+      const roleCtx = { entity: ROLE_CRUD_ENTITY_KEY, hooks: [] };
 
-      // Create a new user
+      const secondRole: { id: string } = await commandBus.execute(
+        new CreateRoleCommand(roleCtx, {
+          name: 'viewer',
+          description: 'Viewer role',
+        }),
+      );
+
       const userRes = await request(app.getHttpServer())
         .post('/signup')
         .send({
@@ -317,17 +307,16 @@ describe('AdminUserRolesController (e2e)', () => {
         .send({ roleId: secondRole.id })
         .expect(201);
 
-      // Verify both roles are assigned
+      // Verify both roles
       const rolesRes = await request(app.getHttpServer())
         .get(`/admin/users/${userId}/roles`)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(rolesRes.body).toBeDefined();
-      expect(Array.isArray(rolesRes.body)).toBe(true);
       expect(rolesRes.body.length).toBe(2);
-
-      const roleIds = rolesRes.body.map((r: RoleEntityInterface) => r.id);
+      const roleIds = rolesRes.body.map(
+        (r: { props: { roleId: string } }) => r.props.roleId,
+      );
       expect(roleIds).toContain(testRole.id);
       expect(roleIds).toContain(secondRole.id);
     });

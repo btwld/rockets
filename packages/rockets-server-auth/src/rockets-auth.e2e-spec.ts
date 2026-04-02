@@ -2,6 +2,8 @@ import { AuthJwtGuard } from '@concepta/nestjs-auth-jwt';
 import { EmailSendInterface, ExceptionsFilter } from '@concepta/nestjs-common';
 import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { RepositoryModule } from '@concepta/nestjs-repository';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   CanActivate,
   Controller,
@@ -21,25 +23,25 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Test, TestingModule } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import request from 'supertest';
 import { ormConfig } from './__fixtures__/ormconfig.fixture';
 import { InvitationEntityFixture } from './__fixtures__/invitation/invitation.entity.fixture';
 import { UserOtpEntityFixture } from './__fixtures__/user/user-otp-entity.fixture';
 import { UserFixture } from './__fixtures__/user/user.entity.fixture';
+import { UserCredentialEntityFixture } from './__fixtures__/user/user-credential.entity.fixture';
 import { FederatedEntityFixture } from './__fixtures__/federated/federated.entity.fixture';
 import { AuthPasswordController } from './domains/auth/controllers/auth-password.controller';
 import { RocketsAuthModule } from './rockets-auth.module';
 import { RoleEntityFixture } from './__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from './__fixtures__/role/user-role.entity.fixture';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserMetadataEntityFixture } from './__fixtures__/user/user-metadata.entity.fixture';
 import { UserPasswordHistoryEntityFixture } from './__fixtures__/user/user-password-history.entity.fixture';
-import { AdminUserTypeOrmCrudAdapter } from './__fixtures__/admin/admin-user-crud.adapter';
-import { RocketsAuthUserDto } from './domains/user/dto/rockets-auth-user.dto';
-import { RocketsAuthUserMetadataDto } from './domains/user/dto/rockets-auth-user-metadata.dto';
-import { RocketsAuthUserCreateDto } from './domains/user/dto/rockets-auth-user-create.dto';
-import { RocketsAuthUserUpdateDto } from './domains/user/dto/rockets-auth-user-update.dto';
-import { UserMetadataTypeOrmCrudAdapterFixture } from './__fixtures__/services/user-metadata-typeorm-crud.adapter.fixture';
+import { RocketsAuthUserDto } from './domains/user/infrastructure/dto/rockets-auth-user.dto';
+import { RocketsAuthUserMetadataDto } from './domains/user/infrastructure/dto/rockets-auth-user-metadata.dto';
+import { RocketsAuthUserCreateDto } from './domains/user/infrastructure/dto/rockets-auth-user-create.dto';
+import { RocketsAuthUserUpdateDto } from './domains/user/infrastructure/dto/rockets-auth-user-update.dto';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from './shared/constants/rockets-auth.constants';
 
 // Test controller with protected route
 @Controller('test')
@@ -97,30 +99,40 @@ describe('RocketsAuth (e2e)', () => {
         EventModule.forRoot({}),
         TypeOrmExtModule.forRootAsync({
           inject: [],
-          useFactory: () => {
-            return ormConfig;
-          },
-        }),
-        TypeOrmModule.forRoot({
-          ...ormConfig,
-          entities: [
-            UserFixture,
-            UserMetadataEntityFixture,
-            UserOtpEntityFixture,
-            UserPasswordHistoryEntityFixture,
-            FederatedEntityFixture,
-            UserRoleEntityFixture,
-            RoleEntityFixture,
-            InvitationEntityFixture,
-          ],
+          useFactory: () => ({
+            ...ormConfig,
+            entities: [
+              UserFixture,
+              UserCredentialEntityFixture,
+              UserMetadataEntityFixture,
+              UserPasswordHistoryEntityFixture,
+              UserOtpEntityFixture,
+              FederatedEntityFixture,
+              RoleEntityFixture,
+              UserRoleEntityFixture,
+              InvitationEntityFixture,
+            ],
+          }),
         }),
         TypeOrmModule.forFeature([
           UserFixture,
+          UserCredentialEntityFixture,
+          UserMetadataEntityFixture,
           UserRoleEntityFixture,
           RoleEntityFixture,
-          FederatedEntityFixture,
         ]),
         RocketsAuthModule.forRoot({
+          repositoryPersistence: {
+            module: TypeOrmRepositoryModule,
+            entities: {
+              user: UserFixture,
+              userCredentials: UserCredentialEntityFixture,
+              userMetadata: UserMetadataEntityFixture,
+              userOtp: UserOtpEntityFixture,
+              role: RoleEntityFixture,
+              userRole: UserRoleEntityFixture,
+            },
+          },
           userCrud: {
             imports: [
               TypeOrmModule.forFeature([
@@ -128,20 +140,13 @@ describe('RocketsAuth (e2e)', () => {
                 UserMetadataEntityFixture,
               ]),
             ],
-            adapter: AdminUserTypeOrmCrudAdapter,
             model: RocketsAuthUserDto,
             dto: {
               createOne: RocketsAuthUserCreateDto,
               updateOne: RocketsAuthUserUpdateDto,
             },
             userMetadataConfig: {
-              imports: [
-                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
-                TypeOrmExtModule.forFeature({
-                  userMetadata: { entity: UserMetadataEntityFixture },
-                }),
-              ],
-              adapter: UserMetadataTypeOrmCrudAdapterFixture,
+              imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
               updateDto: RocketsAuthUserMetadataDto,
@@ -155,23 +160,14 @@ describe('RocketsAuth (e2e)', () => {
             },
           },
           user: {
-            imports: [
-              TypeOrmExtModule.forFeature({ user: { entity: UserFixture } }),
-            ],
-          },
-          otp: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                userOtp: { entity: UserOtpEntityFixture },
-              }),
-            ],
+            imports: [TypeOrmModule.forFeature([UserCredentialEntityFixture])],
           },
           role: {
             imports: [
-              TypeOrmExtModule.forFeature({
-                role: { entity: RoleEntityFixture },
-                userRole: { entity: UserRoleEntityFixture },
-              }),
+              TypeOrmModule.forFeature([
+                RoleEntityFixture,
+                UserRoleEntityFixture,
+              ]),
             ],
           },
           federated: {
@@ -179,12 +175,24 @@ describe('RocketsAuth (e2e)', () => {
               TypeOrmExtModule.forFeature({
                 federated: { entity: FederatedEntityFixture },
               }),
+              RepositoryModule.forFeature({
+                module: TypeOrmRepositoryModule,
+                entities: [
+                  { key: 'federated', entity: FederatedEntityFixture },
+                ],
+              }),
             ],
           },
           invitation: {
             imports: [
               TypeOrmExtModule.forFeature({
                 invitation: { entity: InvitationEntityFixture },
+              }),
+              RepositoryModule.forFeature({
+                module: TypeOrmRepositoryModule,
+                entities: [
+                  { key: 'invitation', entity: InvitationEntityFixture },
+                ],
               }),
             ],
             userModelService: undefined as never,
@@ -209,7 +217,7 @@ describe('RocketsAuth (e2e)', () => {
               },
             },
             otp: {
-              assignment: 'userOtp' as const,
+              assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
               category: 'test',
               type: 'uuid',
               expiresIn: '1h',

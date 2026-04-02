@@ -5,7 +5,10 @@ import { AUTHENTICATION_MODULE_SETTINGS_TOKEN } from '@concepta/nestjs-authentic
 
 import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { RepositoryModule } from '@concepta/nestjs-repository';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../../shared/constants/rockets-auth.constants';
 import { RocketsAuthModule } from '../../rockets-auth.module';
 import { FederatedEntityFixture } from '../federated/federated.entity.fixture';
 import { InvitationEntityFixture } from '../invitation/invitation.entity.fixture';
@@ -16,87 +19,68 @@ import { UserOtpEntityFixture } from '../user/user-otp-entity.fixture';
 import { UserPasswordHistoryEntityFixture } from '../user/user-password-history.entity.fixture';
 import { UserMetadataEntityFixture } from '../user/user-metadata.entity.fixture';
 import { UserFixture } from '../user/user.entity.fixture';
+import { UserCredentialEntityFixture } from '../user/user-credential.entity.fixture';
 
-import { RocketsAuthUserCreateDto } from '../../domains/user/dto/rockets-auth-user-create.dto';
-import { RocketsAuthUserUpdateDto } from '../../domains/user/dto/rockets-auth-user-update.dto';
-import { RocketsAuthUserDto } from '../../domains/user/dto/rockets-auth-user.dto';
-import { RocketsAuthUserMetadataDto } from '../../domains/user/dto/rockets-auth-user-metadata.dto';
-import { AdminUserTypeOrmCrudAdapter } from './admin-user-crud.adapter';
+import { RocketsAuthUserCreateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-create.dto';
+import { RocketsAuthUserUpdateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-update.dto';
+import { RocketsAuthUserDto } from '../../domains/user/infrastructure/dto/rockets-auth-user.dto';
+import { RocketsAuthUserMetadataDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-metadata.dto';
 import { RocketsAuthRoleDto } from '../../domains/role/dto/rockets-auth-role.dto';
 import { RocketsAuthRoleUpdateDto } from '../../domains/role/dto/rockets-auth-role-update.dto';
-import { RoleTypeOrmCrudAdapter } from '../role/role-typeorm-crud.adapter';
 import { RocketsAuthRoleCreateDto } from '../../domains/role';
-import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '../services/user-metadata-typeorm-crud.adapter.fixture';
 
 @Global()
 @Module({
   imports: [
     EventModule.forRoot({}),
-    // TypeORM datasource
-    TypeOrmModule.forRoot({
-      ...ormConfig,
-      entities: [
-        UserFixture,
-        UserMetadataEntityFixture,
-        UserPasswordHistoryEntityFixture,
-        UserOtpEntityFixture,
-        FederatedEntityFixture,
-        RoleEntityFixture,
-        UserRoleEntityFixture,
-        InvitationEntityFixture,
-      ],
-    }),
-    // Dynamic repos for feature modules
     TypeOrmExtModule.forRootAsync({
       inject: [],
-      useFactory: () => {
-        return {
-          ...ormConfig,
-          entities: [
-            UserFixture,
-            UserOtpEntityFixture,
-            UserPasswordHistoryEntityFixture,
-            UserMetadataEntityFixture,
-            FederatedEntityFixture,
-            UserRoleEntityFixture,
-            RoleEntityFixture,
-            InvitationEntityFixture,
-          ],
-        };
-      },
-    }),
-    TypeOrmExtModule.forFeature({
-      user: { entity: UserFixture },
-      role: { entity: RoleEntityFixture },
-      userRole: { entity: UserRoleEntityFixture },
-      userOtp: { entity: UserOtpEntityFixture },
-      federated: { entity: FederatedEntityFixture },
-      invitation: { entity: InvitationEntityFixture },
+      useFactory: () => ({
+        ...ormConfig,
+        entities: [
+          UserFixture,
+          UserCredentialEntityFixture,
+          UserMetadataEntityFixture,
+          UserPasswordHistoryEntityFixture,
+          UserOtpEntityFixture,
+          FederatedEntityFixture,
+          RoleEntityFixture,
+          UserRoleEntityFixture,
+          InvitationEntityFixture,
+        ],
+      }),
     }),
     TypeOrmModule.forFeature([
       UserFixture,
-      RoleEntityFixture,
+      UserCredentialEntityFixture,
       UserMetadataEntityFixture,
+      UserRoleEntityFixture,
+      RoleEntityFixture,
     ]),
     RocketsAuthModule.forRootAsync({
+      repositoryPersistence: {
+        module: TypeOrmRepositoryModule,
+        entities: {
+          user: UserFixture,
+          userCredentials: UserCredentialEntityFixture,
+          userMetadata: UserMetadataEntityFixture,
+          userOtp: UserOtpEntityFixture,
+          role: RoleEntityFixture,
+          userRole: UserRoleEntityFixture,
+        },
+      },
       userCrud: {
         imports: [
           TypeOrmModule.forFeature([UserFixture, UserMetadataEntityFixture]),
         ],
-        adapter: AdminUserTypeOrmCrudAdapter,
+        entity: UserFixture,
         model: RocketsAuthUserDto,
         dto: {
           createOne: RocketsAuthUserCreateDto,
           updateOne: RocketsAuthUserUpdateDto,
         },
         userMetadataConfig: {
-          imports: [
-            TypeOrmModule.forFeature([UserMetadataEntityFixture]),
-            TypeOrmExtModule.forFeature({
-              userMetadata: { entity: UserMetadataEntityFixture },
-            }),
-          ],
-          adapter: UserMetadataAdapter,
+          imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
           entity: UserMetadataEntityFixture,
           createDto: RocketsAuthUserMetadataDto,
           updateDto: RocketsAuthUserMetadataDto,
@@ -104,7 +88,6 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
       },
       roleCrud: {
         imports: [TypeOrmModule.forFeature([RoleEntityFixture])],
-        adapter: RoleTypeOrmCrudAdapter,
         model: RocketsAuthRoleDto,
         dto: {
           createOne: RocketsAuthRoleCreateDto,
@@ -112,6 +95,31 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
         },
       },
       enableGlobalJWTGuard: true,
+      user: {
+        imports: [TypeOrmModule.forFeature([UserCredentialEntityFixture])],
+      },
+      federated: {
+        imports: [
+          TypeOrmExtModule.forFeature({
+            federated: { entity: FederatedEntityFixture },
+          }),
+          RepositoryModule.forFeature({
+            module: TypeOrmRepositoryModule,
+            entities: [{ key: 'federated', entity: FederatedEntityFixture }],
+          }),
+        ],
+      },
+      invitation: {
+        imports: [
+          TypeOrmExtModule.forFeature({
+            invitation: { entity: InvitationEntityFixture },
+          }),
+          RepositoryModule.forFeature({
+            module: TypeOrmRepositoryModule,
+            entities: [{ key: 'invitation', entity: InvitationEntityFixture }],
+          }),
+        ],
+      },
       inject: [],
       useFactory: () => ({
         settings: {
@@ -134,7 +142,7 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
             },
           },
           otp: {
-            assignment: 'userOtp' as const,
+            assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
             category: 'test',
             type: 'uuid',
             expiresIn: '1h',
@@ -146,14 +154,6 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
             refresh: { secret: 'test-secret' },
             default: { secret: 'test-secret' },
           },
-        },
-        invitation: {
-          imports: [
-            TypeOrmExtModule.forFeature({
-              invitation: { entity: InvitationEntityFixture },
-            }),
-          ],
-          userModelService: undefined as never,
         },
         services: {
           mailerService: { sendMail: () => Promise.resolve() },
@@ -167,10 +167,6 @@ import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from '..
       provide: AUTHENTICATION_MODULE_SETTINGS_TOKEN,
       useValue: {},
     },
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: JwtAuthGuard,
-    // }
   ],
   exports: [],
 })

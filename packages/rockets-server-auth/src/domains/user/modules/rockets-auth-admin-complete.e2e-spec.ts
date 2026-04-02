@@ -2,16 +2,20 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { HttpAdapterHost } from '@nestjs/core';
+import { CommandBus } from '@nestjs/cqrs';
 
 import { AppModuleAdminRelationsFixture } from '../../../__fixtures__/admin/app-module-admin-relations.fixture';
-import { ExceptionsFilter, RoleEntityInterface } from '@concepta/nestjs-common';
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { ExceptionsFilter } from '@concepta/nestjs-common';
+import { CreateRoleCommand, AssignRoleCommand } from '@concepta/nestjs-role';
+import {
+  ROLE_CRUD_ENTITY_KEY,
+  USER_ROLE_ENTITY_KEY,
+} from '../../../shared/constants/repository-entity-keys.constants';
 
 describe('RocketsAuthAdminModule (Complete e2e)', () => {
   let app: INestApplication;
-  let roleModelService: RoleModelService;
-  let roleService: RoleService;
-  let adminRole: RoleEntityInterface;
+  let commandBus: CommandBus;
+  let adminRole: { id: string };
 
   beforeAll(async () => {
     process.env.ADMIN_ROLE_NAME = 'admin';
@@ -21,17 +25,19 @@ describe('RocketsAuthAdminModule (Complete e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     const exceptionsFilter = app.get(HttpAdapterHost);
-    roleModelService = app.get(RoleModelService);
-    roleService = app.get(RoleService);
+    commandBus = app.get(CommandBus);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
     // Create admin role
-    adminRole = await roleModelService.create({
-      name: 'admin',
-      description: 'admin role',
-    });
+    const ctx = { entity: ROLE_CRUD_ENTITY_KEY, hooks: [] };
+    adminRole = await commandBus.execute(
+      new CreateRoleCommand(ctx, {
+        name: 'admin',
+        description: 'admin role',
+      }),
+    );
   });
 
   afterAll(async () => {
@@ -60,11 +66,10 @@ describe('RocketsAuthAdminModule (Complete e2e)', () => {
       .expect(201);
 
     // Assign admin role
-    await roleService.assignRole({
-      assignment: 'user',
-      role: { id: adminRole.id },
-      assignee: { id: signupRes.body.id },
-    });
+    const ctx = { entity: USER_ROLE_ENTITY_KEY, hooks: [] };
+    await commandBus.execute(
+      new AssignRoleCommand(ctx, adminRole.id, signupRes.body.id),
+    );
 
     // Login and get token
     const loginRes = await request(app.getHttpServer())
@@ -83,9 +88,8 @@ describe('RocketsAuthAdminModule (Complete e2e)', () => {
     expect(listRes.body).toBeDefined();
     expect(listRes.body.data).toBeDefined();
     expect(Array.isArray(listRes.body.data)).toBe(true);
-    // Note: data might be empty initially, which is fine
 
-    // Test admin users endpoint with relation filtering (should work even with empty data)
+    // Test admin users endpoint with relation filtering
     const filterRes = await request(app.getHttpServer())
       .get('/admin/users?filter=userMetadata.firstName||$eq||Test')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -95,7 +99,7 @@ describe('RocketsAuthAdminModule (Complete e2e)', () => {
     expect(filterRes.body.data).toBeDefined();
     expect(Array.isArray(filterRes.body.data)).toBe(true);
 
-    // Test admin users endpoint with relation sorting (should work even with empty data)
+    // Test admin users endpoint with relation sorting
     const sortRes = await request(app.getHttpServer())
       .get('/admin/users?sort[]=userMetadata.firstName,ASC')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -124,11 +128,10 @@ describe('RocketsAuthAdminModule (Complete e2e)', () => {
       .expect(201);
 
     // Assign admin role
-    await roleService.assignRole({
-      assignment: 'user',
-      role: { id: adminRole.id },
-      assignee: { id: adminSignupRes.body.id },
-    });
+    const ctx = { entity: USER_ROLE_ENTITY_KEY, hooks: [] };
+    await commandBus.execute(
+      new AssignRoleCommand(ctx, adminRole.id, adminSignupRes.body.id),
+    );
 
     // Login and get admin token
     const adminLoginRes = await request(app.getHttpServer())

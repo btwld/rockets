@@ -8,7 +8,7 @@ import {
   IsNumber,
   Min,
 } from 'class-validator';
-import { RocketsAuthUserMetadataDto } from '../../../domains/user/dto/rockets-auth-user-metadata.dto';
+import { RocketsAuthUserMetadataDto } from '../../../domains/user/infrastructure/dto/rockets-auth-user-metadata.dto';
 
 /**
  * Rockets Auth User Metadata DTO Fixture
@@ -18,6 +18,7 @@ import { RocketsAuthUserMetadataDto } from '../../../domains/user/dto/rockets-au
  * metadata fields with validation.
  */
 export class RocketsAuthUserMetadataFixtureDto extends RocketsAuthUserMetadataDto {
+  [key: string]: unknown;
   @ApiPropertyOptional({
     description: 'First name',
     minLength: 1,

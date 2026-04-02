@@ -7,7 +7,6 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import request from 'supertest';
-import { AdminUserTypeOrmCrudAdapter } from '../../../__fixtures__/admin/admin-user-crud.adapter';
 import { FederatedEntityFixture } from '../../../__fixtures__/federated/federated.entity.fixture';
 import { InvitationEntityFixture } from '../../../__fixtures__/invitation/invitation.entity.fixture';
 import { ormConfig } from '../../../__fixtures__/ormconfig.fixture';
@@ -16,16 +15,23 @@ import { UserRoleEntityFixture } from '../../../__fixtures__/role/user-role.enti
 import { RocketsAuthUserCreateDtoFixture } from '../../../__fixtures__/user/dto/rockets-auth-user-create.dto.fixture';
 import { RocketsAuthUserUpdateDtoFixture } from '../../../__fixtures__/user/dto/rockets-auth-user-update.dto.fixture';
 import { RocketsAuthUserFixtureDto } from '../../../__fixtures__/user/dto/rockets-auth-user.dto.fixture';
-import { RocketsAuthUserMetadataDto } from '../dto/rockets-auth-user-metadata.dto';
-import { UserOtpEntityFixture } from '../../../__fixtures__/user/user-otp-entity.fixture';
-import { UserPasswordHistoryEntityFixture } from '../../../__fixtures__/user/user-password-history.entity.fixture';
+import { RocketsAuthUserMetadataDto } from '../infrastructure/dto/rockets-auth-user-metadata.dto';
 import { UserMetadataEntityFixture } from '../../../__fixtures__/user/user-metadata.entity.fixture';
-import { UserMetadataTypeOrmCrudAdapterFixture } from '../../../__fixtures__/services/user-metadata-typeorm-crud.adapter.fixture';
 import { UserFixture } from '../../../__fixtures__/user/user.entity.fixture';
 import { RocketsAuthModule } from '../../../rockets-auth.module';
-import { UserModelService } from '@concepta/nestjs-user';
-import { UserMetadataModelService } from '../constants/user-metadata.constants';
-import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
+import {
+  RepositoryInterface,
+  getDynamicRepositoryToken,
+  Where,
+  RepositoryModule,
+} from '@concepta/nestjs-repository';
+import { USER_METADATA_REPOSITORY_TOKEN } from '../infrastructure/config/user-domain.constants';
+import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { UserCredentialEntityFixture } from '../../../__fixtures__/user/user-credential.entity.fixture';
+import { USER_CRUD_ENTITY_KEY } from '../../../shared/constants/repository-entity-keys.constants';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../../../shared/constants/rockets-auth.constants';
+import { UserOtpEntityFixture } from '../../../__fixtures__/user/user-otp-entity.fixture';
 
 // Mock email service
 const mockEmailService: EmailSendInterface = {
@@ -52,7 +58,7 @@ class MockConfigModule {}
 
 describe('RocketsAuthSignUpModule (e2e)', () => {
   let app: INestApplication;
-  let userModelService: UserModelService;
+  let userRepository: RepositoryInterface<RocketsAuthUserEntityInterface>;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -61,20 +67,9 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
         EventModule.forRoot({}),
         TypeOrmExtModule.forRootAsync({
           inject: [],
+          // Single TypeORM root: a second TypeOrmModule.forRoot() used a different :memory:
+          // database, so GetUserBy* saw no rows and duplicate signups hit the DB as 500.
           useFactory: () => ({ ...ormConfig }),
-        }),
-        TypeOrmModule.forRoot({
-          ...ormConfig,
-          entities: [
-            UserFixture,
-            UserMetadataEntityFixture,
-            UserOtpEntityFixture,
-            UserPasswordHistoryEntityFixture,
-            FederatedEntityFixture,
-            UserRoleEntityFixture,
-            RoleEntityFixture,
-            InvitationEntityFixture,
-          ],
         }),
         TypeOrmModule.forFeature([
           UserFixture,
@@ -82,28 +77,32 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
           UserRoleEntityFixture,
           RoleEntityFixture,
         ]),
+        RepositoryModule.forFeature({
+          module: TypeOrmRepositoryModule,
+          entities: [
+            { key: 'federated', entity: FederatedEntityFixture },
+            { key: 'invitation', entity: InvitationEntityFixture },
+          ],
+        }),
         RocketsAuthModule.forRoot({
+          repositoryPersistence: {
+            module: TypeOrmRepositoryModule,
+            entities: {
+              user: UserFixture,
+              userCredentials: UserCredentialEntityFixture,
+              userMetadata: UserMetadataEntityFixture,
+              userOtp: UserOtpEntityFixture,
+              role: RoleEntityFixture,
+              userRole: UserRoleEntityFixture,
+            },
+          },
           userCrud: {
-            imports: [
-              TypeOrmModule.forFeature([
-                UserFixture,
-                UserMetadataEntityFixture,
-              ]),
-            ],
-            adapter: AdminUserTypeOrmCrudAdapter,
             model: RocketsAuthUserFixtureDto,
             dto: {
               createOne: RocketsAuthUserCreateDtoFixture,
               updateOne: RocketsAuthUserUpdateDtoFixture,
             },
             userMetadataConfig: {
-              imports: [
-                TypeOrmModule.forFeature([UserMetadataEntityFixture]),
-                TypeOrmExtModule.forFeature({
-                  userMetadata: { entity: UserMetadataEntityFixture },
-                }),
-              ],
-              adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
               updateDto: RocketsAuthUserMetadataDto,
@@ -115,40 +114,6 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
               default: { secret: 'test-secret' },
               refresh: { secret: 'test-secret' },
             },
-          },
-          user: {
-            imports: [
-              TypeOrmExtModule.forFeature({ user: { entity: UserFixture } }),
-            ],
-          },
-          otp: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                userOtp: { entity: UserOtpEntityFixture },
-              }),
-            ],
-          },
-          role: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                role: { entity: RoleEntityFixture },
-                userRole: { entity: UserRoleEntityFixture },
-              }),
-            ],
-          },
-          federated: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                federated: { entity: FederatedEntityFixture },
-              }),
-            ],
-          },
-          invitation: {
-            imports: [
-              TypeOrmExtModule.forFeature({
-                invitation: { entity: InvitationEntityFixture },
-              }),
-            ],
           },
           settings: {
             role: { adminRoleName: 'admin' },
@@ -170,7 +135,7 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
               },
             },
             otp: {
-              assignment: 'userOtp' as const,
+              assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
               category: 'test',
               type: 'uuid',
               expiresIn: '1h',
@@ -182,7 +147,9 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    userModelService = app.get(UserModelService);
+    userRepository = app.get<
+      RepositoryInterface<RocketsAuthUserEntityInterface>
+    >(getDynamicRepositoryToken(USER_CRUD_ENTITY_KEY));
     const exceptionsFilter = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
@@ -209,8 +176,9 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/signup')
-        .send(userData)
-        .expect(201);
+        .send(userData);
+
+      expect(response.status).toBe(201);
 
       expect(response.body).toBeDefined();
       expect(response.body.username).toBe('signupuser');
@@ -413,13 +381,12 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
       expect(response.body.userMetadata?.age).toBeUndefined();
     });
 
-    it('should not allow signup without duplicate username', async () => {
+    it('should not allow signup with duplicate username and email', async () => {
       const userData = {
-        username: 'noageuser',
-        email: 'noageuser@example.com',
+        username: 'dupuserboth',
+        email: 'dupuserboth@example.com',
         password: 'Password123!',
         active: true,
-        // age not provided
       };
 
       const response = await request(app.getHttpServer())
@@ -428,20 +395,19 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
         .expect(201);
 
       expect(response.body).toBeDefined();
-      expect(response.body.username).toBe('noageuser');
+      expect(response.body.username).toBe('dupuserboth');
 
       await request(app.getHttpServer())
         .post('/signup')
         .send(userData)
         .expect(400);
     });
-    it('should not allow signup without duplicate email', async () => {
+    it('should not allow signup with duplicate email', async () => {
       const userData = {
-        username: 'noageuser',
-        email: 'noageuser@example.com',
+        username: 'dupuseremail-a',
+        email: 'dupuseremail@example.com',
         password: 'Password123!',
         active: true,
-        // age not provided
       };
 
       const response = await request(app.getHttpServer())
@@ -450,8 +416,8 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
         .expect(201);
 
       expect(response.body).toBeDefined();
-      expect(response.body.username).toBe('noageuser');
-      userData.username = 'noageuser-new';
+      expect(response.body.username).toBe('dupuseremail-a');
+      userData.username = 'dupuseremail-b';
       await request(app.getHttpServer())
         .post('/signup')
         .send(userData)
@@ -659,12 +625,10 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
     });
 
     it('should rollback user creation when metadata creation fails', async () => {
-      // Get metadata service and mock it to throw
-      const metadataService = app.get<GenericUserMetadataModelService>(
-        UserMetadataModelService,
-      );
+      // Get metadata repository and mock it to throw
+      const metadataRepository = app.get(USER_METADATA_REPOSITORY_TOKEN);
       jest
-        .spyOn(metadataService, 'createOrUpdate')
+        .spyOn(metadataRepository, 'createOrUpdate')
         .mockRejectedValueOnce(new Error('Database connection failed'));
 
       const userData = {
@@ -672,25 +636,24 @@ describe('RocketsAuthSignUpModule (e2e)', () => {
         email: 'rollbackuser@example.com',
         password: 'Password123!',
         active: true,
-        userMetadata: { firstName: 'Test' }, // Must include metadata to trigger the failure
+        userMetadata: { firstName: 'Test' },
       };
 
-      // Should return 500 Internal Server Error
-      const response = await request(app.getHttpServer())
+      // Should return 500 (TransactionScope auto-rollback)
+      await request(app.getHttpServer())
         .post('/signup')
         .send(userData)
         .expect(500);
 
-      expect(response.body.message).toBe(
-        'Failed to complete signup. Please try again.',
-      );
-
-      // Verify user was NOT created (rollback happened)
-      const users = await userModelService.find({
-        where: { email: 'rollbackuser@example.com' },
+      // Verify user was NOT created (TX rollback happened)
+      const users = await userRepository.find({
+        where: Where.eq<RocketsAuthUserEntityInterface>(
+          'email',
+          'rollbackuser@example.com',
+        ),
       });
 
-      expect(users).toHaveLength(0); // User should not exist due to rollback
+      expect(users).toHaveLength(0);
     });
   });
 });

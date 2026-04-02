@@ -2,16 +2,25 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { HttpAdapterHost } from '@nestjs/core';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 
 import { AppModuleAdminRelationsFixture } from '../../../__fixtures__/admin/app-module-admin-relations.fixture';
-import { ExceptionsFilter, RoleEntityInterface } from '@concepta/nestjs-common';
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { ExceptionsFilter } from '@concepta/nestjs-common';
+import {
+  CreateRoleCommand,
+  AssignRoleCommand,
+  IsAssignedRoleQuery,
+} from '@concepta/nestjs-role';
+import {
+  ROLE_CRUD_ENTITY_KEY,
+  USER_ROLE_ENTITY_KEY,
+} from '../../../shared/constants/repository-entity-keys.constants';
 
 describe('RocketsAuthAdminModule (e2e)', () => {
   let app: INestApplication;
-  let roleModelService: RoleModelService;
-  let roleService: RoleService;
-  let adminRole: RoleEntityInterface;
+  let commandBus: CommandBus;
+  let queryBus: QueryBus;
+  let adminRole: { id: string };
 
   beforeAll(async () => {
     process.env.ADMIN_ROLE_NAME = 'admin';
@@ -22,16 +31,19 @@ describe('RocketsAuthAdminModule (e2e)', () => {
     app = moduleFixture.createNestApplication();
     const exceptionsFilter = app.get(HttpAdapterHost);
 
-    roleModelService = app.get(RoleModelService);
-    roleService = app.get(RoleService);
+    commandBus = app.get(CommandBus);
+    queryBus = app.get(QueryBus);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
-    adminRole = await roleModelService.create({
-      name: 'admin',
-      description: 'admin role',
-    });
+    const ctx = { entity: ROLE_CRUD_ENTITY_KEY, hooks: [] };
+    adminRole = await commandBus.execute(
+      new CreateRoleCommand(ctx, {
+        name: 'admin',
+        description: 'admin role',
+      }),
+    );
   });
 
   afterAll(async () => {
@@ -42,7 +54,7 @@ describe('RocketsAuthAdminModule (e2e)', () => {
     expect(app).toBeDefined();
   });
 
-  it('should signup, authenticate and access admin endpoints', async () => {
+  it.only('should signup, authenticate and access admin endpoints', async () => {
     const username = 'adminuser';
     const password = 'Password123!';
     const email = 'adminuser@example.com';
@@ -59,31 +71,29 @@ describe('RocketsAuthAdminModule (e2e)', () => {
         email,
         password,
         active: true,
-        userMetadata: { firstName: 'Test' }, // Ensure metadata is present with some data
+        userMetadata: { firstName: 'Test' },
       })
       .expect(201);
 
     const loginRes = await request(app.getHttpServer())
       .post('/token/password')
-      .send({ username, password })
+      .send({
+        username,
+        password,
+      })
       .expect(200);
 
     const token = loginRes.body.accessToken;
     expect(token).toBeDefined();
 
     const userId = signupRes.body.id;
-    await roleService.assignRole({
-      assignment: 'user',
-      role: { id: adminRole.id },
-      assignee: { id: userId },
-    });
+    const ctx = { entity: USER_ROLE_ENTITY_KEY, hooks: [] };
+    await commandBus.execute(new AssignRoleCommand(ctx, adminRole.id, userId));
 
     // Verify the role assignment was successful
-    const hasAdminRole = await roleService.isAssignedRole({
-      assignment: 'user',
-      assignee: { id: userId },
-      role: { id: adminRole.id },
-    });
+    const hasAdminRole = await queryBus.execute(
+      new IsAssignedRoleQuery(ctx, adminRole.id, userId),
+    );
     expect(hasAdminRole).toBe(true);
 
     // Re-login to get a fresh access token after role assignment

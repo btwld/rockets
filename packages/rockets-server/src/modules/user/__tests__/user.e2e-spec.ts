@@ -17,7 +17,7 @@ import { ServerAuthProviderFixture } from '../../../__fixtures__/providers/serve
 import { UserMetadataRepositoryFixture } from '../../../__fixtures__/repositories/user-metadata.repository.fixture';
 import { RocketsOptionsInterface } from '../../../interfaces/rockets-options.interface';
 import { RocketsModule } from '../../../rockets.module';
-import { getDynamicRepositoryToken } from '@concepta/nestjs-common';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../user-metadata/constants/user-metadata.constants';
 
 // Custom DTOs for testing - extending base DTOs

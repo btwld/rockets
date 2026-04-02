@@ -4,7 +4,8 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { RepositoryInterface, RuntimeException } from '@concepta/nestjs-common';
+import { RepositoryInterface } from '@concepta/nestjs-repository';
+import { RuntimeException } from '@concepta/nestjs-common';
 import { GenericUserMetadataModelService } from './user-metadata.model.service';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
 import {
@@ -246,7 +247,7 @@ describe('GenericUserMetadataModelService', () => {
       // Assert
       expect(result).toEqual(mockUserMetadata);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { userId: 'user-123' },
+        where: { field: 'userId', operator: 'eq', value: 'user-123' },
       });
     });
 
@@ -413,19 +414,14 @@ describe('GenericUserMetadataModelService', () => {
       // Arrange
       const updateData = { ...mockUserMetadata, firstName: 'Updated' };
       mockRepository.findOne.mockResolvedValue(mockUserMetadata);
-      mockRepository.merge.mockReturnValue(updateData);
-      mockRepository.save.mockResolvedValue(updateData);
-      // Skip base class validation (class-validator) since we test update logic
-      jest
-        .spyOn(service as never, 'validate')
-        .mockResolvedValue(updateData as never);
+      mockRepository.update.mockResolvedValue(updateData);
 
       // Act
       const result = await service.update(updateData);
 
       // Assert
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'metadata-123' },
+        where: { field: 'id', operator: 'eq', value: 'metadata-123' },
       });
       expect(result).toEqual(updateData);
     });

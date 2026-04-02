@@ -4,10 +4,18 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
+import { QueryBus } from '@nestjs/cqrs';
 import { VerifyTokenService } from '@concepta/nestjs-authentication';
-import { UserModelService } from '@concepta/nestjs-user';
-import { UserEntityInterface } from '@concepta/nestjs-common';
-import { RoleService, RoleModelService } from '@concepta/nestjs-role';
+import {
+  UserEntityInterface,
+  RoleEntityInterface,
+} from '@concepta/nestjs-common';
+import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
+import { GetAssignedRolesQuery, RoleAssignment } from '@concepta/nestjs-role';
+import { GetUserBySubjectQuery } from '@concepta/nestjs-user';
+import { RocketsEntity } from '../shared/constants/repository-entity-keys.constants';
+import { createRepositoryContext } from '../shared/utils/repository-context.helper';
+import { RocketsGetRolesByIdsQuery } from '../domains/role/application/queries/impl/rockets-get-roles-by-ids.query';
 
 @Injectable()
 export class RocketsJwtAuthProvider {
@@ -16,12 +24,7 @@ export class RocketsJwtAuthProvider {
   constructor(
     @Inject(VerifyTokenService)
     private readonly verifyTokenService: VerifyTokenService,
-    @Inject(UserModelService)
-    private readonly userModelService: UserModelService,
-    @Inject(RoleService)
-    private readonly roleService: RoleService,
-    @Inject(RoleModelService)
-    private readonly roleModelService: RoleModelService,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async validateToken(token: string): Promise<{
@@ -40,24 +43,32 @@ export class RocketsJwtAuthProvider {
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      const user: UserEntityInterface | null =
-        await this.userModelService.bySubject(payload.sub);
+      const userCtx = createRepositoryContext(RocketsEntity.user);
+      const userResult = await this.queryBus.execute<
+        GetUserBySubjectQuery,
+        DomainAggregate<UserEntityInterface> | null
+      >(new GetUserBySubjectQuery(userCtx, payload.sub));
 
-      if (!user) {
+      if (!userResult) {
         this.logger.warn(`User not found for subject: ${payload.sub}`);
         throw new UnauthorizedException('User not found');
       }
 
-      const assignedRoleIds = await this.roleService.getAssignedRoles({
-        assignment: 'user',
-        assignee: { id: user.id },
-      });
+      const user = userResult.toPlain() as UserEntityInterface;
+
+      const roleCtx = createRepositoryContext(RocketsEntity.userRole);
+      const assignedRoleAssignments = await this.queryBus.execute<
+        GetAssignedRolesQuery,
+        RoleAssignment[]
+      >(new GetAssignedRolesQuery(roleCtx, user.id));
 
       let roleNames: string[] = [];
-      if (assignedRoleIds?.length > 0) {
-        const roles = await this.roleModelService.find({
-          where: assignedRoleIds.map((role) => ({ id: role.id })),
-        });
+      if (assignedRoleAssignments?.length > 0) {
+        const roleIds = assignedRoleAssignments.map((ra) => ra.roleId);
+        const roles = await this.queryBus.execute<
+          RocketsGetRolesByIdsQuery,
+          RoleEntityInterface[]
+        >(new RocketsGetRolesByIdsQuery(roleIds));
         roleNames = roles.map((role) => role.name);
       }
 

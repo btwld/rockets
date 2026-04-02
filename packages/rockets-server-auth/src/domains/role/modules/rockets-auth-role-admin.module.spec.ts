@@ -2,15 +2,19 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { HttpAdapterHost } from '@nestjs/core';
+import { CommandBus } from '@nestjs/cqrs';
 import { AppModuleAdminFixture } from '../../../__fixtures__/admin/app-module-admin.fixture';
-import { ExceptionsFilter, RoleEntityInterface } from '@concepta/nestjs-common';
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { ExceptionsFilter } from '@concepta/nestjs-common';
+import { CreateRoleCommand, AssignRoleCommand } from '@concepta/nestjs-role';
+import {
+  ROLE_CRUD_ENTITY_KEY,
+  USER_ROLE_ENTITY_KEY,
+} from '../../../shared/constants/repository-entity-keys.constants';
 
 describe('Roles Admin (e2e)', () => {
   let app: INestApplication;
-  let roleModelService: RoleModelService;
-  let adminRole: RoleEntityInterface;
-  let roleService: RoleService;
+  let commandBus: CommandBus;
+  let adminRole: { id: string };
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -19,16 +23,17 @@ describe('Roles Admin (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     const exceptionsFilter = app.get(HttpAdapterHost);
-    roleModelService = app.get(RoleModelService);
-    roleService = app.get(RoleService);
+    commandBus = app.get(CommandBus);
     app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
-    adminRole = await roleModelService.create({
-      name: 'admin',
-      description: 'admin role',
-    });
+    adminRole = await commandBus.execute(
+      new CreateRoleCommand(
+        { entity: ROLE_CRUD_ENTITY_KEY, hooks: [] },
+        { name: 'admin', description: 'admin role' },
+      ),
+    );
   });
 
   afterAll(async () => {
@@ -55,15 +60,16 @@ describe('Roles Admin (e2e)', () => {
       .expect(200);
     const token = loginRes.body.accessToken;
 
-    // Get userId from signup response
     const userId = signup.body.id;
 
     // Grant admin role to the user
-    await roleService.assignRole({
-      assignment: 'user',
-      role: { id: adminRole.id },
-      assignee: { id: userId },
-    });
+    await commandBus.execute(
+      new AssignRoleCommand(
+        { entity: USER_ROLE_ENTITY_KEY, hooks: [] },
+        adminRole.id,
+        userId,
+      ),
+    );
 
     // Create a role for CRUD flow (authorized)
     const created = await request(app.getHttpServer())
@@ -78,7 +84,6 @@ describe('Roles Admin (e2e)', () => {
       .get('/admin/roles')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    // Expect paginated response shape with data array
     expect(Array.isArray(listRes.body?.data ?? listRes.body)).toBe(true);
 
     // Update role
@@ -89,11 +94,11 @@ describe('Roles Admin (e2e)', () => {
       .expect(200);
     expect(updated.body.description).toBe('updated desc');
 
-    // Delete CRUD role (no assignments yet)
+    // Delete CRUD role
     await request(app.getHttpServer())
       .delete(`/admin/roles/${roleId}`)
       .set('Authorization', `Bearer ${token}`)
-      .expect(200);
+      .expect(204);
 
     // Create another role for assignment
     const createdAssignRole = await request(app.getHttpServer())
@@ -116,7 +121,10 @@ describe('Roles Admin (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(
-      userRoles.body.find((r: { id: string }) => r.id === assignRoleId),
+      userRoles.body.find(
+        (r: { props?: { roleId: string }; roleId?: string }) =>
+          (r.props?.roleId ?? r.roleId) === assignRoleId,
+      ),
     ).toBeTruthy();
   });
 });

@@ -59,5 +59,26 @@ module.exports = {
         'tsdoc/syntax': 'off',
       },
     },
+    {
+      files: [
+        '**/patch-concepta-common.ts',
+        'packages/rockets-server-auth/src/__fixtures__/stubs/nestjs-federated-stub.ts',
+        'packages/rockets-server-auth/src/__fixtures__/stubs/nestjs-invitation-stub.ts',
+      ],
+      rules: {
+        'tsdoc/syntax': 'off',
+      },
+    },
+    {
+      files: ['examples/sample-server-auth/**/*.ts'],
+      rules: {
+        '@darraghor/nestjs-typed/api-property-matches-property-optionality': 'off',
+        '@darraghor/nestjs-typed/api-property-returning-array-should-set-array': 'off',
+        '@darraghor/nestjs-typed/api-enum-property-best-practices': 'off',
+        '@darraghor/nestjs-typed/all-properties-are-whitelisted': 'off',
+        '@darraghor/nestjs-typed/all-properties-have-explicit-defined': 'off',
+        '@darraghor/nestjs-typed/should-specify-forbid-unknown-values': 'off',
+      },
+    },
   ],
 };

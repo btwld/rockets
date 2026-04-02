@@ -6,16 +6,22 @@
  * upstream packages expose stable root exports.
  */
 
-export { CrudRelations } from '@concepta/nestjs-crud/dist/crud/decorators/routes/crud-relations.decorator';
-export type { CrudModuleOptionsInterface } from '@concepta/nestjs-crud/dist/interfaces/crud-module-options.interface';
+export type { CrudModuleOptionsInterface } from '@concepta/nestjs-crud/dist/infrastructure/config/interfaces/crud-module-options.interface';
 
-export type { RoleOptionsExtrasInterface } from '@concepta/nestjs-role/dist/interfaces/role-options-extras.interface';
-export type { RoleOptionsInterface } from '@concepta/nestjs-role/dist/interfaces/role-options.interface';
+export type { RoleExtrasInterface as RoleOptionsExtrasInterface } from '@concepta/nestjs-role';
+export type { RoleOptionsInterface } from '@concepta/nestjs-role';
 
 export type { FederatedOptionsInterface } from '@concepta/nestjs-federated/dist/interfaces/federated-options.interface';
 
-export type { UserOptionsInterface } from '@concepta/nestjs-user/dist/interfaces/user-options.interface';
-export type { UserPasswordHistoryServiceInterface } from '@concepta/nestjs-user/dist/interfaces/user-password-history-service.interface';
+export type { UserOptionsInterface } from '@concepta/nestjs-user';
+
+/**
+ * UserPasswordHistoryServiceInterface was removed in v8.
+ * Kept as a minimal placeholder for backward compat.
+ */
+export interface UserPasswordHistoryServiceInterface {
+  [key: string]: unknown;
+}
 
 export { InvitationAttemptService } from '@concepta/nestjs-invitation/dist/services/invitation-attempt.service';
 export { InvitationAcceptInviteDto } from '@concepta/nestjs-invitation/dist/dto/invitation-accept-invite.dto';

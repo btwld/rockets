@@ -8,10 +8,10 @@ import {
 } from '@nestjs/common';
 import {
   RepositoryInterface,
-  ModelService,
   InjectDynamicRepository,
-  RuntimeException,
-} from '@concepta/nestjs-common';
+  Where,
+} from '@concepta/nestjs-repository';
+import { RuntimeException } from '@concepta/nestjs-common';
 import { logAndGetErrorDetails } from '../../../utils/error-logging.helper';
 import {
   UserMetadataEntityInterface,
@@ -24,11 +24,6 @@ import { USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.cons
 
 @Injectable()
 export class GenericUserMetadataModelService
-  extends ModelService<
-    UserMetadataEntityInterface,
-    UserMetadataCreatableInterface,
-    UserMetadataModelUpdatableInterface
-  >
   implements UserMetadataModelServiceInterface
 {
   private readonly logger = new Logger(GenericUserMetadataModelService.name);
@@ -41,9 +36,24 @@ export class GenericUserMetadataModelService
     createDto: new () => UserMetadataCreatableInterface,
     updateDto: new () => UserMetadataModelUpdatableInterface,
   ) {
-    super(repo);
     this.createDto = createDto;
     this.updateDto = updateDto;
+  }
+
+  /**
+   * Find metadata by ID
+   */
+  async byId(id: string): Promise<UserMetadataEntityInterface | null> {
+    return this.repo.findOne({ where: Where.eq('id', id) });
+  }
+
+  /**
+   * Create metadata
+   */
+  async create(
+    data: UserMetadataCreatableInterface | Record<string, unknown>,
+  ): Promise<UserMetadataEntityInterface> {
+    return this.repo.create(data as Partial<UserMetadataEntityInterface>);
   }
 
   async getUserMetadataById(id: string): Promise<UserMetadataEntityInterface> {
@@ -80,7 +90,7 @@ export class GenericUserMetadataModelService
   async findByUserId(
     userId: string,
   ): Promise<UserMetadataEntityInterface | null> {
-    return this.repo.findOne({ where: { userId } });
+    return this.repo.findOne({ where: Where.eq('userId', userId) });
   }
 
   async hasUserMetadata(userId: string): Promise<boolean> {
@@ -122,11 +132,14 @@ export class GenericUserMetadataModelService
       throw new BadRequestException('ID is required for update operation');
     }
     try {
-      const existing = await this.repo.findOne({ where: { id } });
+      const existing = await this.repo.findOne({ where: Where.eq('id', id) });
       if (!existing) {
         throw new NotFoundException(`UserMetadata with ID ${id} not found`);
       }
-      return super.update(data);
+      return this.repo.update(
+        existing,
+        data as Partial<UserMetadataEntityInterface>,
+      );
     } catch (error) {
       this.rethrowKnownOrLog(error, 'Failed to update user metadata', {
         id,

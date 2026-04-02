@@ -31,16 +31,15 @@ import { FederatedEntityFixture } from './__fixtures__/federated/federated.entit
 import { RocketsAuthOptionsInterface } from './shared/interfaces/rockets-auth-options.interface';
 import { RocketsAuthUserModelServiceInterface } from './shared/interfaces/rockets-auth-user-model-service.interface';
 import { RocketsAuthModule } from './rockets-auth.module';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from './shared/constants/rockets-auth.constants';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { RocketsAuthUserCreateDto } from './domains/user/dto/rockets-auth-user-create.dto';
-import { RocketsAuthUserUpdateDto } from './domains/user/dto/rockets-auth-user-update.dto';
-import { RocketsAuthUserDto } from './domains/user/dto/rockets-auth-user.dto';
-import { RocketsAuthUserMetadataDto } from './domains/user/dto/rockets-auth-user-metadata.dto';
+import { RocketsAuthUserCreateDto } from './domains/user/infrastructure/dto/rockets-auth-user-create.dto';
+import { RocketsAuthUserUpdateDto } from './domains/user/infrastructure/dto/rockets-auth-user-update.dto';
+import { RocketsAuthUserDto } from './domains/user/infrastructure/dto/rockets-auth-user.dto';
+import { RocketsAuthUserMetadataDto } from './domains/user/infrastructure/dto/rockets-auth-user-metadata.dto';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserRoleEntityFixture } from './__fixtures__/role/user-role.entity.fixture';
 import { RoleEntityFixture } from './__fixtures__/role/role.entity.fixture';
-import { AdminUserTypeOrmCrudAdapter } from './__fixtures__/admin/admin-user-crud.adapter';
-import { UserMetadataTypeOrmCrudAdapterFixture as UserMetadataAdapter } from './__fixtures__/services/user-metadata-typeorm-crud.adapter.fixture';
 import { AuthPasswordController } from './domains/auth/controllers/auth-password.controller';
 import { AuthTokenRefreshController } from './domains/auth/controllers/auth-refresh.controller';
 import { RocketsAuthRecoveryController } from './domains/auth/controllers/auth-recovery.controller';
@@ -59,8 +58,7 @@ export const mockUserModelService: RocketsAuthUserModelServiceInterface = {
   }),
   update: jest.fn().mockResolvedValue({ id: '1', username: 'test' }),
   create: jest.fn().mockResolvedValue({ id: '1', username: 'test' }),
-  replace: jest.fn().mockResolvedValue({ id: '1', username: 'test' }),
-  remove: jest.fn().mockResolvedValue({ id: '1', username: 'test' }),
+  find: jest.fn().mockResolvedValue([]),
 };
 
 // Mock email service
@@ -244,7 +242,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   UserMetadataEntityFixture,
                 ]),
               ],
-              adapter: AdminUserTypeOrmCrudAdapter,
               model: RocketsAuthUserDto,
               dto: {
                 createOne: RocketsAuthUserCreateDto,
@@ -257,7 +254,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                     userMetadata: { entity: UserMetadataEntityFixture },
                   }),
                 ],
-                adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
                 updateDto: RocketsAuthUserMetadataDto,
@@ -288,7 +284,7 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   },
                 },
                 otp: {
-                  assignment: 'userOtp' as const,
+                  assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
                   category: 'test',
                   type: 'uuid',
                   expiresIn: '1h',
@@ -305,7 +301,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 userModelService: mockUserModelService,
               },
               services: {
-                userModelService: mockUserModelService,
                 mailerService: mockEmailService,
                 issueTokenService,
                 validateTokenService,
@@ -364,7 +359,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   UserMetadataEntityFixture,
                 ]),
               ],
-              adapter: AdminUserTypeOrmCrudAdapter,
               model: RocketsAuthUserDto,
               dto: {
                 createOne: RocketsAuthUserCreateDto,
@@ -377,7 +371,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                     userMetadata: { entity: UserMetadataEntityFixture },
                   }),
                 ],
-                adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
                 updateDto: RocketsAuthUserMetadataDto,
@@ -406,7 +399,7 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   },
                 },
                 otp: {
-                  assignment: 'userOtp' as const,
+                  assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
                   category: 'test',
                   type: 'uuid',
                   expiresIn: '1h',
@@ -456,7 +449,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   UserMetadataEntityFixture,
                 ]),
               ],
-              adapter: AdminUserTypeOrmCrudAdapter,
               model: RocketsAuthUserDto,
               dto: {
                 createOne: RocketsAuthUserCreateDto,
@@ -469,7 +461,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                     userMetadata: { entity: UserMetadataEntityFixture },
                   }),
                 ],
-                adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
                 updateDto: RocketsAuthUserMetadataDto,
@@ -544,7 +535,7 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 },
               },
               otp: {
-                assignment: 'userOtp' as const,
+                assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
                 category: 'test',
                 type: 'uuid',
                 expiresIn: '1h',
@@ -584,7 +575,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   UserMetadataEntityFixture,
                 ]),
               ],
-              adapter: AdminUserTypeOrmCrudAdapter,
               model: RocketsAuthUserDto,
               dto: {
                 createOne: RocketsAuthUserCreateDto,
@@ -597,7 +587,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                     userMetadata: { entity: UserMetadataEntityFixture },
                   }),
                 ],
-                adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
                 updateDto: RocketsAuthUserMetadataDto,
@@ -678,7 +667,7 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 },
               },
               otp: {
-                assignment: 'userOtp' as const,
+                assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
                 category: 'test',
                 type: 'uuid',
                 expiresIn: '1h',
@@ -693,7 +682,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
             },
             services: {
               mailerService: mockEmailService,
-              userModelService: mockUserModelService,
               issueTokenService: new IssueTokenServiceFixture(),
               validateTokenService: new ValidateTokenServiceFixture(),
             },
@@ -720,7 +708,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                   UserMetadataEntityFixture,
                 ]),
               ],
-              adapter: AdminUserTypeOrmCrudAdapter,
               model: RocketsAuthUserDto,
               dto: {
                 createOne: RocketsAuthUserCreateDto,
@@ -733,7 +720,6 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                     userMetadata: { entity: UserMetadataEntityFixture },
                   }),
                 ],
-                adapter: UserMetadataAdapter,
                 entity: UserMetadataEntityFixture,
                 createDto: RocketsAuthUserMetadataDto,
                 updateDto: RocketsAuthUserMetadataDto,
@@ -796,7 +782,7 @@ describe('AuthenticationCombinedImportModule Integration', () => {
                 },
               },
               otp: {
-                assignment: 'userOtp' as const,
+                assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
                 category: 'test',
                 type: 'uuid',
                 expiresIn: '1h',

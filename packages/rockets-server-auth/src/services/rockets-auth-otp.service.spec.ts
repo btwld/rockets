@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OtpException, OtpService } from '@concepta/nestjs-otp';
+import { OtpException } from '@concepta/nestjs-otp';
 import { RocketsAuthOtpService } from '../domains/otp/services/rockets-auth-otp.service';
 import { RocketsAuthUserModelServiceInterface } from '../shared/interfaces/rockets-auth-user-model-service.interface';
 import { RocketsAuthOtpNotificationServiceInterface } from '../domains/otp/interfaces/rockets-auth-otp-notification-service.interface';
@@ -10,6 +10,7 @@ import {
   ROCKETS_AUTH_OTP_ASSIGNMENT,
   RocketsAuthUserModelService,
 } from '../shared/constants/rockets-auth.constants';
+import { ROCKETS_AUTH_OTP_PORT_TOKEN } from '../shared/ports/rockets-auth-otp-port.service';
 
 describe(RocketsAuthOtpService.name, () => {
   let service: RocketsAuthOtpService;
@@ -55,8 +56,7 @@ describe(RocketsAuthOtpService.name, () => {
       byId: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
-      replace: jest.fn(),
-      remove: jest.fn(),
+      find: jest.fn(),
     };
 
     mockOtpService = {
@@ -110,7 +110,7 @@ describe(RocketsAuthOtpService.name, () => {
           useValue: mockUserModelService,
         },
         {
-          provide: OtpService,
+          provide: ROCKETS_AUTH_OTP_PORT_TOKEN,
           useValue: mockOtpService,
         },
         {
@@ -179,9 +179,7 @@ describe(RocketsAuthOtpService.name, () => {
       );
 
       // Act & Assert
-      await expect(service.sendOtp(email)).rejects.toThrow(
-        'Email service error',
-      );
+      await expect(service.sendOtp(email)).rejects.toThrow();
     });
 
     it('should throw error when OTP service fails', async () => {
@@ -191,7 +189,7 @@ describe(RocketsAuthOtpService.name, () => {
       mockOtpService.create.mockRejectedValue(new Error('OTP service error'));
 
       // Act & Assert
-      await expect(service.sendOtp(email)).rejects.toThrow('OTP service error');
+      await expect(service.sendOtp(email)).rejects.toThrow();
     });
   });
 

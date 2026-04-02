@@ -1,9 +1,9 @@
+import { RepositoryEntityOptionInterface } from '@concepta/nestjs-repository';
 import {
-  RepositoryEntityOptionInterface,
   UserEntityInterface,
-  UserPasswordHistoryEntityInterface,
   UserEntityInterface as UserMetadataEntityInterface,
 } from '@concepta/nestjs-common';
+import { UserPasswordHistoryEntityInterface } from '@concepta/nestjs-common/dist/domain/user-password-history/interfaces/user-password-history-entity.interface';
 
 export interface RocketsAuthEntitiesOptionsInterface {
   entities: {

@@ -1,4 +1,5 @@
-import { TypeOrmCrudAdapter } from '@concepta/nestjs-crud';
+import { CrudAdapter } from '@concepta/nestjs-crud';
+import { TypeOrmRepository } from '@concepta/nestjs-repository-typeorm';
 import {
   FederatedSqliteEntity,
   InvitationSqliteEntity,
@@ -6,8 +7,10 @@ import {
   RoleAssignmentSqliteEntity,
   RoleSqliteEntity,
   TypeOrmExtModule,
+  UserPasswordHistorySqliteEntity,
   UserSqliteEntity,
 } from '@concepta/nestjs-typeorm-ext';
+import { ReferenceActive } from '@concepta/nestjs-common';
 import { UserPasswordDto } from '@concepta/nestjs-user';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -34,15 +37,19 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import { Column, Entity, Repository } from 'typeorm';
-import { RocketsAuthUserDto } from './domains/user/dto/rockets-auth-user.dto';
-import { RocketsAuthUserMetadataDto } from './domains/user/dto/rockets-auth-user-metadata.dto';
+import { RocketsAuthUserDto } from './domains/user/infrastructure/dto/rockets-auth-user.dto';
+import { RocketsAuthUserMetadataDto } from './domains/user/infrastructure/dto/rockets-auth-user-metadata.dto';
 import { RocketsAuthUserEntityInterface } from './domains/user/interfaces/rockets-auth-user-entity.interface';
 import { RocketsAuthUserMetadataEntityInterface } from './domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthRoleDto } from './domains/role/dto/rockets-auth-role.dto';
 import { RocketsAuthRoleCreateDto } from './domains/role/dto/rockets-auth-role-create.dto';
 import { RocketsAuthRoleUpdateDto } from './domains/role/dto/rockets-auth-role-update.dto';
 import { RocketsAuthRoleEntityInterface } from './domains/role/interfaces/rockets-auth-role-entity.interface';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { RepositoryModule } from '@concepta/nestjs-repository';
 import { RocketsAuthModule } from './rockets-auth.module';
+import { ROLE_CRUD_ENTITY_KEY } from './shared/constants/repository-entity-keys.constants';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from './shared/constants/rockets-auth.constants';
 
 // Create concrete entity implementations for TypeORM
 @Entity()
@@ -55,6 +62,18 @@ class UserEntity
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   lastName!: string;
+}
+
+@Entity()
+class UserCredentialEntity extends UserPasswordHistorySqliteEntity {
+  @Column({ type: 'boolean', default: true })
+  active!: ReferenceActive;
+
+  @Column({ type: 'datetime', default: () => "datetime('now')" })
+  validFrom!: Date;
+
+  @Column({ type: 'datetime', nullable: true, default: null })
+  validTo!: Date | null;
 }
 
 @Entity()
@@ -108,30 +127,14 @@ class UserMetadataEntity implements RocketsAuthUserMetadataEntityInterface {
   age?: number;
 }
 
-class AdminUserTypeOrmCrudAdapter extends TypeOrmCrudAdapter<RocketsAuthUserEntityInterface> {
-  constructor(
-    @InjectRepository(UserEntity)
-    private readonly repository: Repository<RocketsAuthUserEntityInterface>,
-  ) {
-    super(repository);
-  }
-}
-
-class UserMetadataTypeOrmCrudAdapter extends TypeOrmCrudAdapter<RocketsAuthUserMetadataEntityInterface> {
-  constructor(
-    @InjectRepository(UserMetadataEntity)
-    private readonly repository: Repository<RocketsAuthUserMetadataEntityInterface>,
-  ) {
-    super(repository);
-  }
-}
-
-class AdminRoleTypeOrmCrudAdapter extends TypeOrmCrudAdapter<RocketsAuthRoleEntityInterface> {
+class AdminRoleTypeOrmCrudAdapter extends CrudAdapter<RocketsAuthRoleEntityInterface> {
   constructor(
     @InjectRepository(RoleEntity)
-    private readonly repository: Repository<RocketsAuthRoleEntityInterface>,
+    private readonly typeOrmRepo: Repository<RocketsAuthRoleEntityInterface>,
   ) {
-    super(repository);
+    super(
+      new TypeOrmRepository(typeOrmRepo, { entityKey: ROLE_CRUD_ENTITY_KEY }),
+    );
   }
 }
 
@@ -533,6 +536,17 @@ async function generateSwaggerJson() {
           },
         }),
         RocketsAuthModule.forRootAsync({
+          repositoryPersistence: {
+            module: TypeOrmRepositoryModule,
+            entities: {
+              user: UserEntity,
+              userCredentials: UserCredentialEntity,
+              userMetadata: UserMetadataEntity,
+              userOtp: UserOtpEntity,
+              role: RoleEntity,
+              userRole: UserRoleEntity,
+            },
+          },
           imports: [
             TypeOrmModule.forFeature([
               UserEntity,
@@ -548,12 +562,18 @@ async function generateSwaggerJson() {
               federated: { entity: FederatedEntity },
               invitation: { entity: InvitationEntity },
             }),
+            RepositoryModule.forFeature({
+              module: TypeOrmRepositoryModule,
+              entities: [
+                { key: 'federated', entity: FederatedEntity },
+                { key: 'invitation', entity: InvitationEntity },
+              ],
+            }),
           ],
           userCrud: {
             imports: [
               TypeOrmModule.forFeature([UserEntity, UserMetadataEntity]),
             ],
-            adapter: AdminUserTypeOrmCrudAdapter,
             model: ExtendedUserDto,
             dto: {
               createOne: ExtendedUserCreateDto,
@@ -566,7 +586,6 @@ async function generateSwaggerJson() {
                   userMetadata: { entity: UserMetadataEntity },
                 }),
               ],
-              adapter: UserMetadataTypeOrmCrudAdapter,
               entity: UserMetadataEntity,
               createDto: ExtendedUserMetadataCreateDto,
               updateDto: ExtendedUserMetadataUpdateDto,
@@ -617,7 +636,7 @@ async function generateSwaggerJson() {
                 },
               },
               otp: {
-                assignment: 'userOtp' as const,
+                assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
                 category: 'test',
                 type: 'uuid',
                 expiresIn: '1h',

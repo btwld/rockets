@@ -5,7 +5,8 @@
   "private": true,
   "workspaces": {
     "packages": [
-      "packages/*"
+      "packages/*",
+      "examples/*"
     ]
   },
   "resolutions": {
@@ -28,19 +29,21 @@
     "@concepta/nestjs-auth-router": "7.0.0-alpha.10",
     "@concepta/nestjs-auth-verify": "7.0.0-alpha.10",
     "@concepta/nestjs-authentication": "7.0.0-alpha.10",
-    "@concepta/nestjs-common": "7.0.0-alpha.10",
-    "@concepta/nestjs-crud": "7.0.0-alpha.10",
+    "@concepta/nestjs-common": "8.0.0-alpha.2",
+    "@concepta/nestjs-crud": "8.0.0-alpha.2",
     "@concepta/nestjs-email": "7.0.0-alpha.10",
     "@concepta/nestjs-event": "7.0.0-alpha.10",
     "@concepta/nestjs-federated": "7.0.0-alpha.10",
     "@concepta/nestjs-invitation": "7.0.0-alpha.10",
     "@concepta/nestjs-jwt": "7.0.0-alpha.10",
-    "@concepta/nestjs-otp": "7.0.0-alpha.10",
+    "@concepta/nestjs-otp": "8.0.0-alpha.2",
     "@concepta/nestjs-password": "7.0.0-alpha.10",
-    "@concepta/nestjs-role": "7.0.0-alpha.10",
+    "@concepta/nestjs-repository": "8.0.0-alpha.2",
+    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.2",
+    "@concepta/nestjs-role": "8.0.0-alpha.2",
     "@concepta/nestjs-swagger-ui": "7.0.0-alpha.10",
     "@concepta/nestjs-typeorm-ext": "7.0.0-alpha.10",
-    "@concepta/nestjs-user": "7.0.0-alpha.10",
+    "@concepta/nestjs-user": "8.0.0-alpha.2",
     "@types/minimatch": "5.1.2",
     "lodash": "4.17.23"
   },
@@ -76,6 +79,7 @@
     "jsonc-eslint-parser": "^2.4.0",
     "lerna": "^3.22.1",
     "markdownlint-cli": "^0.41.0",
+    "patch-package": "^8.0.0",
     "prettier": "^2.8.8",
     "reflect-metadata": "^0.1.14",
     "rimraf": "^3.0.2",
@@ -92,12 +96,12 @@
     "typescript": "^5.4.0"
   },
   "scripts": {
-    "postinstall": "husky install",
+    "postinstall": "husky install && patch-package",
     "clean": "./node_modules/.bin/rimraf packages/*/dist packages/*/tsconfig.tsbuildinfo docs",
     "build": "./node_modules/.bin/tsc --build",
     "prepublish": "yarn clean && yarn build",
     "watch": "yarn build && ./node_modules/.bin/tsc --build --watch",
-    "lint": "eslint \"packages/*/src/**/*.{ts,js,json}\"",
+    "lint": "eslint \"packages/*/src/**/*.{ts,js,json}\" \"examples/sample-server-auth/{src,test}/**/*.{ts,js}\"",
     "lint:fix": "yarn lint --fix",
     "lint:md": "markdownlint README.md packages/**/*.md",
     "lint:md:fix": "yarn lint:md --fix",

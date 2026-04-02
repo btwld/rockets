@@ -1,9 +1,13 @@
-import { RoleService } from '@concepta/nestjs-role';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import {
+  AssignRoleCommand,
+  GetAssignedRolesQuery,
+} from '@concepta/nestjs-role';
+import { RepositoryContextInterface } from '@concepta/nestjs-repository';
 import {
   Body,
   Controller,
   Get,
-  Inject,
   Logger,
   Param,
   Post,
@@ -21,6 +25,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AdminGuard } from '../../../guards/admin.guard';
+import { USER_ROLE_ENTITY_KEY } from '../../../shared/constants/repository-entity-keys.constants';
 import { Expose } from 'class-transformer';
 import { IsString, IsNotEmpty } from 'class-validator';
 
@@ -35,6 +40,10 @@ class AdminAssignUserRoleDto {
   roleId!: string;
 }
 
+function createRoleCtx(): RepositoryContextInterface {
+  return { entity: USER_ROLE_ENTITY_KEY } as RepositoryContextInterface;
+}
+
 @UseGuards(AdminGuard)
 @ApiBearerAuth()
 @ApiTags('admin')
@@ -43,8 +52,8 @@ export class AdminUserRolesController {
   private readonly logger = new Logger(AdminUserRolesController.name);
 
   constructor(
-    @Inject(RoleService)
-    private readonly roleService: RoleService,
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
   ) {}
 
   @ApiOperation({ summary: 'List roles assigned to a user' })
@@ -53,10 +62,8 @@ export class AdminUserRolesController {
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @Get()
   async list(@Param('userId') userId: string) {
-    return this.roleService.getAssignedRoles({
-      assignment: 'user',
-      assignee: { id: userId },
-    });
+    const ctx = createRoleCtx();
+    return this.queryBus.execute(new GetAssignedRolesQuery(ctx, userId));
   }
 
   @ApiOperation({ summary: 'Assign a role to a user' })
@@ -69,11 +76,10 @@ export class AdminUserRolesController {
     @Param('userId') userId: string,
     @Body() dto: AdminAssignUserRoleDto,
   ) {
-    await this.roleService.assignRole({
-      assignment: 'user',
-      assignee: { id: userId },
-      role: { id: dto.roleId },
-    });
+    const ctx = createRoleCtx();
+    await this.commandBus.execute(
+      new AssignRoleCommand(ctx, dto.roleId, userId),
+    );
 
     this.logger.log(`Role ${dto.roleId} assigned to user ${userId}`);
   }

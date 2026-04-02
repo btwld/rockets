@@ -27,7 +27,6 @@ import { JwtOptionsInterface } from '@concepta/nestjs-jwt';
 import { AuthRouterOptionsInterface } from '@concepta/nestjs-auth-router';
 import { OtpOptionsInterface } from '@concepta/nestjs-otp';
 import { PasswordOptionsInterface } from '@concepta/nestjs-password';
-import { UserPasswordServiceInterface } from '@concepta/nestjs-user';
 import { RocketsAuthNotificationServiceInterface } from './rockets-auth-notification.service.interface';
 import { RocketsAuthSettingsInterface } from './rockets-auth-settings.interface';
 import { RocketsAuthUserModelServiceInterface } from './rockets-auth-user-model-service.interface';
@@ -169,13 +168,6 @@ export interface RocketsAuthOptionsInterface {
    */
   services: {
     /**
-     * Core user lookup service used across multiple modules
-     * Used in: AuthJwtModule, AuthRefreshModule, AuthLocalModule, AuthRecoveryModule
-     * Required: true
-     */
-    userModelService?: RocketsAuthUserModelServiceInterface;
-
-    /**
      * Notification service for sending recovery notifications
      * Can be used to customize notification delivery
      * Used in: AuthRecoveryModule
@@ -196,7 +188,6 @@ export interface RocketsAuthOptionsInterface {
      * Used in: UserModule
      * Required: false
      */
-    userPasswordService?: UserPasswordServiceInterface;
     userPasswordHistoryService?: UserPasswordHistoryServiceInterface;
     userAccessQueryService?: CanAccess;
     /**

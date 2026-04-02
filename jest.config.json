@@ -36,5 +36,13 @@
     "json-summary",
     "lcovonly"
   ],
-  "testEnvironment": "node"
+  "testEnvironment": "node",
+  "moduleNameMapper": {
+    "^@concepta/nestjs-common/aggregate$": "<rootDir>/node_modules/@concepta/nestjs-common/dist/index-aggregate",
+    "^@concepta/nestjs-federated(.*)$": "<rootDir>/packages/rockets-server-auth/src/__fixtures__/stubs/nestjs-federated-stub.ts",
+    "^@concepta/nestjs-invitation(.*)$": "<rootDir>/packages/rockets-server-auth/src/__fixtures__/stubs/nestjs-invitation-stub.ts"
+  },
+  "setupFiles": [
+    "./packages/rockets-server-auth/src/__fixtures__/stubs/patch-concepta-common.ts"
+  ]
 }

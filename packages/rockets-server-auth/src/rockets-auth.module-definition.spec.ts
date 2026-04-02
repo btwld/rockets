@@ -1,4 +1,5 @@
 import { EmailSendInterface } from '@concepta/nestjs-common';
+import { DynamicModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
 import { UserFixture } from './__fixtures__/user/user.entity.fixture';
@@ -17,18 +18,27 @@ import { RocketsAuthNotificationServiceInterface } from './shared/interfaces/roc
 import { RocketsAuthOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthOptionsInterface } from './shared/interfaces/rockets-auth-options.interface';
 import { RocketsAuthUserModelServiceInterface } from './shared/interfaces/rockets-auth-user-model-service.interface';
-import { RocketsAuthUserModelService } from './shared/constants/rockets-auth.constants';
+import {
+  ROCKETS_AUTH_OTP_ASSIGNMENT,
+  RocketsAuthUserModelService,
+} from './shared/constants/rockets-auth.constants';
 import {
   createRocketsAuthControllers,
   createRocketsAuthExports,
   createRocketsAuthImports,
   createRocketsAuthProviders,
   createRocketsAuthSettingsProvider,
+  createRepositoryPersistenceImports,
   ROCKETS_SERVER_MODULE_ASYNC_OPTIONS_TYPE,
   ROCKETS_SERVER_MODULE_OPTIONS_TYPE,
   RocketsAuthModuleClass,
 } from './rockets-auth.module-definition';
 import { FederatedEntityFixture } from './__fixtures__/federated/federated.entity.fixture';
+import { UserCredentialEntityFixture } from './__fixtures__/user/user-credential.entity.fixture';
+import { UserMetadataEntityFixture } from './__fixtures__/user/user-metadata.entity.fixture';
+import { RoleEntityFixture } from './__fixtures__/role/role.entity.fixture';
+import { UserRoleEntityFixture } from './__fixtures__/role/user-role.entity.fixture';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 
 describe('RocketsAuthModuleDefinition', () => {
   const mockUserModelService: RocketsAuthUserModelServiceInterface = {
@@ -38,8 +48,7 @@ describe('RocketsAuthModuleDefinition', () => {
     byId: jest.fn(),
     update: jest.fn(),
     create: jest.fn(),
-    replace: jest.fn(),
-    remove: jest.fn(),
+    find: jest.fn(),
   };
 
   const mockEmailService: EmailSendInterface = {
@@ -81,7 +90,7 @@ describe('RocketsAuthModuleDefinition', () => {
         },
       },
       otp: {
-        assignment: 'userOtp' as const,
+        assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
         category: 'test',
         type: 'uuid',
         expiresIn: '1h',
@@ -96,7 +105,6 @@ describe('RocketsAuthModuleDefinition', () => {
     },
     services: {
       mailerService: mockEmailService,
-      userModelService: mockUserModelService,
       notificationService: mockNotificationService,
     },
   };
@@ -505,23 +513,13 @@ describe('RocketsAuthModuleDefinition', () => {
       expect(typeof settingsProvider).toBe('object');
     });
 
-    it('should handle user model service configuration', () => {
-      const optionsWithUserModel: RocketsAuthOptionsInterface = {
-        ...mockOptions,
-        services: {
-          ...mockOptions.services,
-          userModelService: mockUserModelService,
-        },
-      };
-
+    it('should handle services configuration', () => {
       const result = createRocketsAuthImports({
         imports: [],
         extras: mockExtras,
       });
 
-      // Test settings provider with user model options
-      const settingsProvider =
-        createRocketsAuthSettingsProvider(optionsWithUserModel);
+      const settingsProvider = createRocketsAuthSettingsProvider(mockOptions);
 
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
@@ -1077,10 +1075,9 @@ describe('RocketsAuthModuleDefinition', () => {
   });
 
   describe('Provider Factory Function Tests', () => {
-    it('should test RocketsAuthUserLookupService provider factory', () => {
+    it('should test RocketsAuthUserLookupService provider uses port service', () => {
       const result = createRocketsAuthProviders({});
 
-      // Find the user lookup service provider
       const userModelProvider = result?.find(
         (provider) =>
           typeof provider === 'object' &&
@@ -1090,7 +1087,156 @@ describe('RocketsAuthModuleDefinition', () => {
       );
 
       expect(userModelProvider).toBeDefined();
-      expect(userModelProvider).toHaveProperty('useFactory');
+      expect(userModelProvider).toHaveProperty('useExisting');
+    });
+  });
+
+  describe('createRepositoryPersistenceImports', () => {
+    const findModuleByName = (
+      imports: DynamicModule['imports'],
+      name: string,
+    ) =>
+      imports?.find(
+        (m) =>
+          typeof m === 'object' &&
+          m !== null &&
+          'module' in m &&
+          (m as DynamicModule).module?.name === name,
+      );
+
+    it('should return empty array when config is undefined', () => {
+      const result = createRepositoryPersistenceImports(undefined);
+      expect(result).toEqual([]);
+    });
+
+    it('should return RepositoryModule.forFeature with mapped entity keys', () => {
+      const result = createRepositoryPersistenceImports({
+        module: TypeOrmRepositoryModule,
+        entities: {
+          user: UserFixture,
+          userCredentials: UserCredentialEntityFixture,
+        },
+      });
+
+      expect(result).toBeDefined();
+      expect(result!.length).toBe(1);
+      expect(result![0]).toBeDefined();
+      expect(typeof result![0]).toBe('object');
+    });
+
+    it('should include OtpModule.forFeature when userOtp is provided', () => {
+      const result = createRepositoryPersistenceImports({
+        module: TypeOrmRepositoryModule,
+        entities: {
+          user: UserFixture,
+          userCredentials: UserCredentialEntityFixture,
+          userOtp: UserOtpEntityFixture,
+        },
+      });
+
+      expect(result).toBeDefined();
+      expect(result!.length).toBe(2);
+      const otpFeature = findModuleByName(result, 'OtpModule');
+      expect(otpFeature).toBeDefined();
+    });
+
+    it('should NOT include OtpModule.forFeature when userOtp is omitted', () => {
+      const result = createRepositoryPersistenceImports({
+        module: TypeOrmRepositoryModule,
+        entities: {
+          user: UserFixture,
+          userCredentials: UserCredentialEntityFixture,
+        },
+      });
+
+      const otpFeature = findModuleByName(result, 'OtpModule');
+      expect(otpFeature).toBeUndefined();
+    });
+
+    it('should include all optional entities when provided', () => {
+      const result = createRepositoryPersistenceImports({
+        module: TypeOrmRepositoryModule,
+        entities: {
+          user: UserFixture,
+          userCredentials: UserCredentialEntityFixture,
+          userMetadata: UserMetadataEntityFixture,
+          userOtp: UserOtpEntityFixture,
+          role: RoleEntityFixture,
+          userRole: UserRoleEntityFixture,
+        },
+      });
+
+      expect(result).toBeDefined();
+      expect(result!.length).toBe(2);
+    });
+  });
+
+  describe('createRocketsAuthImports OTP conditional behavior', () => {
+    const findAllModulesByName = (
+      imports: DynamicModule['imports'],
+      name: string,
+    ) =>
+      imports?.filter(
+        (m) =>
+          typeof m === 'object' &&
+          m !== null &&
+          'module' in m &&
+          (m as DynamicModule).module?.name === name,
+      ) ?? [];
+
+    it('should include only OtpModule.forRootAsync when repositoryPersistence is NOT set', () => {
+      const result = createRocketsAuthImports({
+        imports: [],
+        extras: mockExtras,
+      });
+
+      const otpModules = findAllModulesByName(result, 'OtpModule');
+      expect(otpModules.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should NOT include legacy OtpModule.forFeature when repositoryPersistence IS set', () => {
+      const extrasWithPersistence: RocketsAuthOptionsExtrasInterface = {
+        ...mockExtras,
+        repositoryPersistence: {
+          module: TypeOrmRepositoryModule,
+          entities: {
+            user: UserFixture,
+            userCredentials: UserCredentialEntityFixture,
+            userOtp: UserOtpEntityFixture,
+          },
+        },
+      };
+
+      const result = createRocketsAuthImports({
+        imports: [],
+        extras: extrasWithPersistence,
+      });
+
+      const otpModules = findAllModulesByName(result, 'OtpModule');
+      // OtpModule.forRootAsync + OtpModule.forFeature (from persistence)
+      expect(otpModules.length).toBe(2);
+    });
+
+    it('should have OtpModule.forRootAsync but NOT OtpModule.forFeature when repositoryPersistence is set without userOtp', () => {
+      const extrasWithPersistenceNoOtp: RocketsAuthOptionsExtrasInterface = {
+        ...mockExtras,
+        repositoryPersistence: {
+          module: TypeOrmRepositoryModule,
+          entities: {
+            user: UserFixture,
+            userCredentials: UserCredentialEntityFixture,
+          },
+        },
+      };
+
+      const result = createRocketsAuthImports({
+        imports: [],
+        extras: extrasWithPersistenceNoOtp,
+      });
+
+      const otpModules = findAllModulesByName(result, 'OtpModule');
+      // Only OtpModule.forRootAsync, no forFeature at all
+      expect(otpModules.length).toBe(1);
     });
   });
 });

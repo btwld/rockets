@@ -60,8 +60,10 @@ export const ROCKETS_SIGNUP_USER_RELATION_REGISTRY = Symbol(
   '__ROCKETS_SIGNUP_USER_RELATION_REGISTRY__',
 );
 
+import { USER_OTP_ENTITY_KEY } from './repository-entity-keys.constants';
+
 /**
  * OTP assignment constant for user-scoped OTP
  * This value must match the entity key used in OtpModule configuration
  */
-export const ROCKETS_AUTH_OTP_ASSIGNMENT = 'userOtp' as const;
+export const ROCKETS_AUTH_OTP_ASSIGNMENT = USER_OTP_ENTITY_KEY;

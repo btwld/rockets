@@ -12,19 +12,23 @@ import {
 import { EventAsyncInterface, EventListenerOn } from '@concepta/nestjs-event';
 import { InvitationAcceptedEventAsync } from '@concepta/nestjs-invitation';
 import { PasswordCreationService } from '@concepta/nestjs-password';
-import { RoleService } from '@concepta/nestjs-role';
-import { UserModelService } from '@concepta/nestjs-user';
+import { AssignRoleCommand } from '@concepta/nestjs-role';
+import { CommandBus } from '@nestjs/cqrs';
+import { AssignDefaultRoleCommand } from '../../user/application/commands/impl/assign-default-role.command';
+import { SaveUserMetadataCommand } from '../../user/application/commands/impl/save-user-metadata.command';
+import {
+  RocketsAuthUserPortService,
+  ROCKETS_AUTH_USER_PORT_TOKEN,
+} from '../../../shared/ports/rockets-auth-user-port.service';
+import { RepositoryContextInterface } from '@concepta/nestjs-repository';
 import { plainToInstance } from 'class-transformer';
 import {
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
   RocketsAuthSettingsInterface,
+  USER_ROLE_ENTITY_KEY,
 } from '../../../shared';
 import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
-import { RocketsAuthRoleService } from '../../role';
-import {
-  UserMetadataModelService,
-  GenericUserMetadataModelService,
-} from '../../user';
+import { RocketsAuthUserMetadataUpdatableInterface } from '../../user/interfaces/rockets-auth-user-metadata-updatable.interface';
 import {
   TypedInvitationAcceptedEventPayloadInterface,
   InvitationAcceptanceDataInterface,
@@ -183,16 +187,11 @@ function createInvitationUserAcceptanceListenerClass() {
     public readonly logger = new Logger(InvitationUserAcceptanceListener.name);
 
     constructor(
-      @Inject(UserModelService)
-      public readonly userModelService: UserModelService,
+      @Inject(ROCKETS_AUTH_USER_PORT_TOKEN)
+      public readonly userModelService: RocketsAuthUserPortService,
       @Inject(PasswordCreationService)
       public readonly passwordService: PasswordCreationService,
-      @Inject(UserMetadataModelService)
-      public readonly userMetadataService: GenericUserMetadataModelService,
-      @Inject(RoleService)
-      public readonly roleService: RoleService,
-      @Inject(RocketsAuthRoleService)
-      public readonly authRoleService: RocketsAuthRoleService,
+      public readonly commandBus: CommandBus,
       @Inject(ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN)
       public readonly settings: RocketsAuthSettingsInterface,
       @Inject(RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN)
@@ -328,43 +327,43 @@ function createInvitationUserAcceptanceListenerClass() {
       const MetadataUpdateDto =
         this.moduleOptions.userCrud?.userMetadataConfig?.updateDto;
 
-      if (!MetadataUpdateDto) {
-        await this.userMetadataService.createOrUpdate(userId, userMetadata);
-        this.logger.log('User metadata created/updated successfully', {
-          userId,
-        });
-        return true;
+      let validatedMetadata: RocketsAuthUserMetadataUpdatableInterface =
+        userMetadata;
+
+      if (MetadataUpdateDto) {
+        try {
+          const metadataInstance = plainToInstance(
+            MetadataUpdateDto,
+            userMetadata,
+          );
+          // eslint-disable-next-line @darraghor/nestjs-typed/should-specify-forbid-unknown-values
+          const pipe = new ValidationPipe({
+            transform: true,
+            whitelist: true,
+            forbidNonWhitelisted: false,
+          });
+          validatedMetadata = await pipe.transform(metadataInstance, {
+            type: 'body',
+            metatype: MetadataUpdateDto,
+          });
+        } catch (error: unknown) {
+          const message =
+            error instanceof Error ? error.message : 'Invalid metadata';
+          this.logger.error('Invalid userMetadata in invitation acceptance', {
+            userId,
+            error: message,
+          });
+          return false;
+        }
       }
 
-      try {
-        const metadataInstance = plainToInstance(
-          MetadataUpdateDto,
-          userMetadata,
-        );
-        // eslint-disable-next-line @darraghor/nestjs-typed/should-specify-forbid-unknown-values
-        const pipe = new ValidationPipe({
-          transform: true,
-          whitelist: true,
-          forbidNonWhitelisted: false,
-        });
-        await pipe.transform(metadataInstance, {
-          type: 'body',
-          metatype: MetadataUpdateDto,
-        });
-        await this.userMetadataService.createOrUpdate(userId, userMetadata);
-        this.logger.log('User metadata created/updated successfully', {
-          userId,
-        });
-        return true;
-      } catch (error: unknown) {
-        const message =
-          error instanceof Error ? error.message : 'Invalid metadata';
-        this.logger.error('Invalid userMetadata in invitation acceptance', {
-          userId,
-          error: message,
-        });
-        return false;
-      }
+      await this.commandBus.execute(
+        new SaveUserMetadataCommand(userId, validatedMetadata),
+      );
+      this.logger.log('User metadata created/updated successfully', {
+        userId,
+      });
+      return true;
     }
 
     private async assignUserRole(
@@ -372,13 +371,14 @@ function createInvitationUserAcceptanceListenerClass() {
       allowedRoleId?: string,
     ): Promise<void> {
       if (allowedRoleId) {
-        await this.roleService.assignRole({
-          assignment: 'user',
-          assignee: { id: userId },
-          role: { id: allowedRoleId },
-        });
+        const ctx: RepositoryContextInterface = {
+          entity: USER_ROLE_ENTITY_KEY,
+        } as RepositoryContextInterface;
+        await this.commandBus.execute(
+          new AssignRoleCommand(ctx, allowedRoleId, userId),
+        );
       } else {
-        await this.authRoleService.assignDefaultRoleToUser(userId, true);
+        await this.commandBus.execute(new AssignDefaultRoleCommand(userId));
       }
     }
 

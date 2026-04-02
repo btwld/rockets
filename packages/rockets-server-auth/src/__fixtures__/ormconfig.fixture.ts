@@ -6,6 +6,8 @@ import { UserOtpEntityFixture } from './user/user-otp-entity.fixture';
 import { FederatedEntityFixture } from './federated/federated.entity.fixture';
 import { RoleEntityFixture } from './role/role.entity.fixture';
 import { UserRoleEntityFixture } from './role/user-role.entity.fixture';
+import { UserCredentialEntityFixture } from './user/user-credential.entity.fixture';
+import { InvitationEntityFixture } from './invitation/invitation.entity.fixture';
 
 export const ormConfig: DataSourceOptions = {
   type: 'sqlite',
@@ -16,8 +18,10 @@ export const ormConfig: DataSourceOptions = {
     UserMetadataEntityFixture,
     UserPasswordHistoryEntityFixture,
     UserOtpEntityFixture,
+    UserCredentialEntityFixture,
     FederatedEntityFixture,
     RoleEntityFixture,
     UserRoleEntityFixture,
+    InvitationEntityFixture,
   ],
 };

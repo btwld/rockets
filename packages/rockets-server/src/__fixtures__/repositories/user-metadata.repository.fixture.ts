@@ -1,12 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { RepositoryInterface } from '@concepta/nestjs-common';
 import { BaseUserMetadataEntityInterface } from '../../modules/user-metadata/interfaces/user-metadata.interface';
 import { UserMetadataEntityFixture } from '../entities/user-metadata.entity.fixture';
 
 @Injectable()
-export class UserMetadataRepositoryFixture
-  implements RepositoryInterface<BaseUserMetadataEntityInterface>
-{
+export class UserMetadataRepositoryFixture {
   private userMetadata: Map<string, UserMetadataEntityFixture> = new Map();
   constructor() {
     // Initialize with some test data
@@ -36,17 +33,33 @@ export class UserMetadataRepositoryFixture
   }): Promise<BaseUserMetadataEntityInterface | null> {
     const { where } = options;
 
+    // Extract field/value from Where clause format ({ field, operator, value })
+    // or from plain object format ({ userId: 'xxx' })
+    const resolveField = (
+      w: Record<string, unknown>,
+      fieldName: string,
+    ): unknown => {
+      // Where.eq() format: { field: 'userId', operator: 'EQ', value: '...' }
+      if (w.field === fieldName && w.value !== undefined) return w.value;
+      // Where.and() format: { operator: 'AND', conditions: [...] }
+      if (w.conditions && Array.isArray(w.conditions)) {
+        for (const c of w.conditions as Record<string, unknown>[]) {
+          const v = resolveField(c, fieldName);
+          if (v !== undefined) return v;
+        }
+      }
+      // Plain object format: { userId: '...' }
+      return w[fieldName];
+    };
+
+    const userId = resolveField(where, 'userId');
+    const id = resolveField(where, 'id');
+    const email = resolveField(where, 'email');
+
     for (const userMetadata of this.userMetadata.values()) {
-      if (where.userId && userMetadata.userId === where.userId) {
-        return userMetadata;
-      }
-      if (where.id && userMetadata.id === where.id) {
-        return userMetadata;
-      }
-      // Check userMetadata fields for email if it exists
-      if (where.email && userMetadata.email === where.email) {
-        return userMetadata;
-      }
+      if (userId && userMetadata.userId === userId) return userMetadata;
+      if (id && userMetadata.id === id) return userMetadata;
+      if (email && userMetadata.email === email) return userMetadata;
     }
 
     return null;
@@ -118,9 +131,10 @@ export class UserMetadataRepositoryFixture
   }
 
   async update(
-    id: string,
+    entityOrId: BaseUserMetadataEntityInterface | string,
     data: Partial<BaseUserMetadataEntityInterface>,
   ): Promise<BaseUserMetadataEntityInterface> {
+    const id = typeof entityOrId === 'string' ? entityOrId : entityOrId.id;
     const existing = this.userMetadata.get(id);
     if (!existing) {
       throw new Error(`UserMetadata with id ${id} not found`);

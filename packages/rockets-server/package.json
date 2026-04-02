@@ -70,6 +70,7 @@
   "dependencies": {
     "@concepta/nestjs-authentication": "7.0.0-alpha.10",
     "@concepta/nestjs-common": "7.0.0-alpha.10",
+    "@concepta/nestjs-repository": "8.0.0-alpha.2",
     "@concepta/nestjs-swagger-ui": "7.0.0-alpha.10",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",

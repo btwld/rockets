@@ -2,6 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "strict": false,
-    "removeComments": false
+    "removeComments": false,
+    "strictPropertyInitialization": false,
+    "paths": {
+      "@concepta/nestjs-common/aggregate": [
+        "./node_modules/@concepta/nestjs-common/dist/index-aggregate"
+      ]
+    }
   }
 }

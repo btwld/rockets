@@ -1,6 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "include": [
-    "packages/*/src/**/*.ts"
+    "packages/*/src/**/*.ts",
+    "examples/sample-server-auth/src/**/*.ts",
+    "examples/sample-server-auth/test/**/*.ts"
   ]
 }

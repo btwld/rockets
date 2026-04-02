@@ -4,8 +4,6 @@ import {
   RocketsAuthUserMetadataOptions,
   RocketsAuthUserMetadataAsyncOptions,
   RocketsAuthUserMetadataModuleClass,
-  UserMetadataCrudService,
-  ROCKETS_USER_METADATA_ADAPTER,
 } from './rockets-auth-user-metadata.module-definition';
 
 /**
@@ -30,6 +28,3 @@ export class RocketsAuthUserMetadataModule extends RocketsAuthUserMetadataModule
     });
   }
 }
-
-// Re-export for backwards compatibility
-export { UserMetadataCrudService, ROCKETS_USER_METADATA_ADAPTER };

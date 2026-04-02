@@ -2,7 +2,7 @@ import { DynamicModule, Module, Provider } from '@nestjs/common';
 import {
   RepositoryInterface,
   getDynamicRepositoryToken,
-} from '@concepta/nestjs-common';
+} from '@concepta/nestjs-repository';
 import { UserMetadataEntityInterface } from './interfaces/user-metadata.interface';
 import {
   USER_METADATA_MODULE_ENTITY_KEY,

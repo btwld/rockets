@@ -1,4 +1,11 @@
-import { Controller, Get, Patch, Body, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Inject,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthUser } from '@concepta/nestjs-authentication';
 import {
   ApiTags,
@@ -6,6 +13,8 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import type { AuthorizedUser } from '../../interfaces/auth-user.interface';
 import { UserMetadataModelServiceInterface } from '../user-metadata/interfaces/user-metadata.interface';
 import { UserUpdateDto, UserResponseDto } from './user.dto';
@@ -67,6 +76,31 @@ export class MeController {
     @Body() updateData: UserUpdateDto,
   ): Promise<UserResponseDto> {
     const userMetadataData = updateData.userMetadata ?? {};
+
+    // Validate userMetadata against the configured update DTO if available
+    if (this.userMetadataModelService.updateDto) {
+      const dtoInstance = plainToInstance(
+        this.userMetadataModelService.updateDto,
+        userMetadataData,
+      );
+      const errors = await validate(dtoInstance, {
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        forbidUnknownValues: true,
+        skipMissingProperties: true,
+      });
+      if (errors.length > 0) {
+        const messages = errors.flatMap((err) =>
+          Object.values(err.constraints ?? {}),
+        );
+        throw new BadRequestException({
+          statusCode: 400,
+          message: messages,
+          error: 'Bad Request',
+        });
+      }
+    }
+
     const userMetadata = await this.userMetadataModelService.createOrUpdate(
       user.id,
       userMetadataData,

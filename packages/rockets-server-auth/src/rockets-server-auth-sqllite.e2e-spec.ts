@@ -22,6 +22,7 @@ import { UserFixture } from './__fixtures__/user/user.entity.fixture';
 import { FederatedEntityFixture } from './__fixtures__/federated/federated.entity.fixture';
 import { AuthPasswordController } from './domains/auth/controllers/auth-password.controller';
 import { RocketsAuthModule } from './rockets-auth.module';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from './shared/constants/rockets-auth.constants';
 import { SqliteAdapterModule } from './__fixtures__/sqlite-adapter/sqlite-adapter.module';
 import { RoleEntityFixture } from './__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from './__fixtures__/role/user-role.entity.fixture';
@@ -141,7 +142,7 @@ describe.skip('RocketsAuth (e2e)', () => {
               },
             },
             otp: {
-              assignment: 'userOtp' as const,
+              assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
               category: 'test',
               type: 'uuid',
               expiresIn: '1h',

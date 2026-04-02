@@ -1,51 +1,58 @@
+import { DynamicModule, Module, UseGuards } from '@nestjs/common';
+import { Operation } from '@concepta/nestjs-common';
+import { CqrsModule } from '@nestjs/cqrs';
 import {
-  ConfigurableCrudBuilder,
-  CrudRequestInterface,
+  CrudModule,
   CrudResponsePaginatedDto,
-  CrudRelationRegistry,
-  CrudService,
-  CrudAdapter,
+  CrudOperationResolver,
+  CrudListQuery,
+  CrudReadQuery,
+  CrudUpdateCommand,
+  CrudDeleteCommand,
 } from '@concepta/nestjs-crud';
-import {
-  DynamicModule,
-  Module,
-  UseGuards,
-  ValidationPipe,
-  applyDecorators,
-  Inject,
-  BadRequestException,
-  HttpException,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
-import { UserMetadataCrudService } from './rockets-auth-user-metadata.module';
+import { CrudJoin } from '@concepta/nestjs-crud';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
-import { RocketsAuthUserUpdateDto } from '../dto/rockets-auth-user-update.dto';
-import { RocketsAuthUserDto } from '../dto/rockets-auth-user.dto';
-import { AdminGuard } from '../../../guards/admin.guard';
-import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
-import {
-  ADMIN_USER_CRUD_SERVICE_TOKEN,
-  ROCKETS_ADMIN_USER_RELATION_REGISTRY,
-} from '../../../shared/constants/rockets-auth.constants';
+import { Exclude, Expose, Type as TransformType } from 'class-transformer';
 
-import { Exclude, Expose, Type, plainToInstance } from 'class-transformer';
-import { RocketsAuthUserCreatableInterface } from '../interfaces/rockets-auth-user-creatable.interface';
+import { RocketsAuthUserUpdateDto } from '../infrastructure/dto/rockets-auth-user-update.dto';
+import { RocketsAuthUserDto } from '../infrastructure/dto/rockets-auth-user.dto';
+import { AdminGuard } from '../../../guards/admin.guard';
+import {
+  USER_CRUD_ENTITY_KEY,
+  USER_METADATA_MODULE_ENTITY_KEY,
+} from '../../../shared/constants/repository-entity-keys.constants';
+import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
-import { RocketsAuthUserUpdatableInterface } from '../interfaces/rockets-auth-user-updatable.interface';
-import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserInterface } from '../interfaces/rockets-auth-user.interface';
-import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
-import { UserMetadataModelService } from '../constants/user-metadata.constants';
-import { CrudApiParam } from '@concepta/nestjs-crud';
-import { logAndGetErrorDetails } from '../../../shared/utils/error-logging.helper';
-import { CrudRelations } from '../../../shared/compat/concepta-internals';
+import { USER_METADATA_REPOSITORY_TOKEN } from '../infrastructure/config/user-domain.constants';
+
+// Infrastructure
+import { UserMetadataRepository } from '../infrastructure/persistence/user-metadata.repository';
+
+// Application – Query handlers
+import { AdminUserListHandler } from '../application/queries/handlers/admin-user-list.handler';
+import { AdminUserReadHandler } from '../application/queries/handlers/admin-user-read.handler';
+
+// Application – Command handlers
+import { AdminUpdateUserHandler } from '../application/commands/handlers/admin-update-user.handler';
+import { AdminDeleteUserHandler } from '../application/commands/handlers/admin-delete-user.handler';
+import { SaveUserMetadataHandler } from '../application/commands/handlers/save-user-metadata.handler';
+import { UpdateUserHandler } from '../application/commands/handlers/update-user.handler';
+import { GetUserMetadataHandler } from '../application/queries/handlers/get-user-metadata.handler';
+
+// Application – Gateway Config
+import { AdminUserUpdateConfig } from '../gateways/http/admin/admin-crud-update-config';
 
 @Module({})
 export class RocketsAuthAdminModule {
   static register(admin: UserCrudOptionsExtrasInterface): DynamicModule {
     const ModelDto = admin.model || RocketsAuthUserDto;
     const UpdateDto = admin.dto?.updateOne || RocketsAuthUserUpdateDto;
+    const ListHandler = admin.handlers?.adminList ?? AdminUserListHandler;
+    const ReadHandler = admin.handlers?.adminRead ?? AdminUserReadHandler;
+    const UpdateHandler = admin.handlers?.adminUpdate ?? AdminUpdateUserHandler;
+    const DeleteHandler = admin.handlers?.adminDelete ?? AdminDeleteUserHandler;
+
     @Exclude()
     class AdminUsersPaginatedDto extends CrudResponsePaginatedDto<RocketsAuthUserInterface> {
       @Expose()
@@ -54,179 +61,99 @@ export class RocketsAuthAdminModule {
         isArray: true,
         description: 'Array of Users',
       })
-      @Type(() => ModelDto)
+      @TransformType(() => ModelDto)
       data: RocketsAuthUserInterface[] = [];
     }
 
-    const builder = new ConfigurableCrudBuilder<
-      RocketsAuthUserEntityInterface,
-      RocketsAuthUserCreatableInterface,
-      RocketsAuthUserUpdatableInterface
-    >({
-      service: {
-        adapter: admin.adapter,
-        injectionToken: ADMIN_USER_CRUD_SERVICE_TOKEN,
-      },
-      controller: {
-        path: admin.path || 'admin/users',
-        model: {
-          type: ModelDto,
-          paginatedType: AdminUsersPaginatedDto,
-        },
-        extraDecorators: [
-          ApiTags('admin'),
-          UseGuards(AdminGuard),
-          ApiBearerAuth(),
-          CrudRelations<
-            RocketsAuthUserEntityInterface,
-            [RocketsAuthUserMetadataEntityInterface]
-          >({
-            rootKey: 'id',
-            relations: [
-              {
-                join: 'LEFT',
-                cardinality: 'one',
-                service: UserMetadataCrudService,
-                property: 'userMetadata',
-                primaryKey: 'id',
-                foreignKey: 'userId',
-              },
-            ],
-          }),
-        ],
-      },
-      getMany: {},
-      getOne: {},
-      updateOne: {
-        dto: UpdateDto,
-        extraDecorators: [
-          applyDecorators(
-            CrudApiParam({
-              name: 'id',
-              required: true,
-              description: 'User id',
-            }),
-          ),
-        ],
-      },
-    });
-
-    const { ConfigurableControllerClass } = builder.build();
-
-    class AdminUserCrudService extends CrudService<
-      RocketsAuthUserEntityInterface,
-      [RocketsAuthUserMetadataEntityInterface]
-    > {
-      private readonly logger = new Logger(AdminUserCrudService.name);
-
-      constructor(
-        @Inject(admin.adapter)
-        protected readonly crudAdapter: CrudAdapter<RocketsAuthUserEntityInterface>,
-        @Inject(ROCKETS_ADMIN_USER_RELATION_REGISTRY)
-        protected readonly relationRegistry: CrudRelationRegistry<
-          RocketsAuthUserEntityInterface,
-          [RocketsAuthUserMetadataEntityInterface]
-        >,
-        @Inject(UserMetadataModelService)
-        private readonly userMetadataModelService: GenericUserMetadataModelService,
-      ) {
-        super(crudAdapter, relationRegistry);
-      }
-
-      async updateOne(
-        req: CrudRequestInterface<RocketsAuthUserEntityInterface>,
-        dto:
-          | RocketsAuthUserEntityInterface
-          | Partial<RocketsAuthUserEntityInterface>,
-      ): Promise<RocketsAuthUserEntityInterface> {
-        // Extract userMetadata from DTO if present
-        const { userMetadata, ...userDto } = dto;
-
-        // Validate metadata if provided
-        if (
-          userMetadata &&
-          Object.keys(userMetadata).length > 0 &&
-          admin.userMetadataConfig
-        ) {
-          const MetadataDto = admin.userMetadataConfig.updateDto;
-          const metadataInstance = plainToInstance(MetadataDto, userMetadata);
-
-          const pipe = new ValidationPipe({
-            transform: true,
-            whitelist: true,
-            forbidNonWhitelisted: false,
-            forbidUnknownValues: true,
-          });
-
-          try {
-            await pipe.transform(metadataInstance, {
-              type: 'body',
-              metatype: MetadataDto,
-            });
-          } catch (error: unknown) {
-            const message =
-              error instanceof Error ? error.message : 'Invalid metadata';
-            throw new BadRequestException(message);
-          }
-        }
-
-        const result = await super.updateOne(req, userDto);
-
-        if (userMetadata) {
-          try {
-            await this.userMetadataModelService.createOrUpdate(
-              result.id,
-              userMetadata,
-            );
-          } catch (metadataError: unknown) {
-            if (metadataError instanceof HttpException) {
-              throw metadataError;
-            }
-
-            logAndGetErrorDetails(
-              metadataError,
-              this.logger,
-              'Failed to update user metadata',
-              { userId: result.id, errorId: 'ADMIN_METADATA_UPDATE_FAILED' },
-            );
-
-            throw new InternalServerErrorException(
-              'Failed to update user metadata',
-            );
-          }
-        }
-
-        return super.getOne(req);
-      }
-    }
-
-    class AdminUserCrudController extends ConfigurableControllerClass {}
-
     return {
       module: RocketsAuthAdminModule,
-      imports: [...(admin.imports || [])],
-      controllers: [AdminUserCrudController],
-      providers: [
-        admin.adapter,
-        {
-          provide: ROCKETS_ADMIN_USER_RELATION_REGISTRY,
-          inject: [UserMetadataCrudService],
-          useFactory: (userMetadataCrudService: UserMetadataCrudService) => {
-            const registry = new CrudRelationRegistry<
-              RocketsAuthUserEntityInterface,
-              [RocketsAuthUserMetadataEntityInterface]
-            >();
-            registry.register(userMetadataCrudService);
-            return registry;
+      imports: [
+        ...(admin.imports || []),
+        CqrsModule,
+        CrudModule.forFeature<RocketsAuthUserEntityInterface>({
+          crud: {
+            controller: {
+              path: admin.path || 'admin/users',
+              entity: USER_CRUD_ENTITY_KEY,
+              resolver: CrudOperationResolver,
+              response: {
+                resource: ModelDto,
+                paginated: AdminUsersPaginatedDto,
+              },
+              extraDecorators: [
+                ApiTags('admin'),
+                UseGuards(AdminGuard),
+                ApiBearerAuth(),
+                CrudJoin([
+                  {
+                    relation: USER_METADATA_MODULE_ENTITY_KEY,
+                    joinType: 'LEFT',
+                  },
+                ]),
+              ],
+            },
+            operations: [
+              {
+                operation: Operation.List,
+                query: CrudListQuery,
+                queryHandler: ListHandler,
+              },
+              {
+                operation: Operation.Read,
+                query: CrudReadQuery,
+                queryHandler: ReadHandler,
+              },
+              {
+                operation: Operation.Update,
+                request: { body: UpdateDto },
+                command: CrudUpdateCommand,
+                commandHandler: UpdateHandler,
+                api: {
+                  params: {
+                    name: 'id',
+                    required: true,
+                    description: 'User id',
+                  },
+                },
+              },
+              {
+                operation: Operation.Delete,
+                command: CrudDeleteCommand,
+                commandHandler: DeleteHandler,
+                api: {
+                  params: {
+                    name: 'id',
+                    required: true,
+                    description: 'User id',
+                  },
+                },
+              },
+            ],
           },
-        },
-        AdminUserCrudService,
-        {
-          provide: ADMIN_USER_CRUD_SERVICE_TOKEN,
-          useClass: AdminUserCrudService,
-        },
+        }),
       ],
-      exports: [AdminUserCrudService, admin.adapter],
+      providers: [
+        // Config
+        {
+          provide: AdminUserUpdateConfig,
+          useValue: new AdminUserUpdateConfig(admin.userMetadataConfig),
+        },
+        // Infrastructure: repositories
+        {
+          provide: USER_METADATA_REPOSITORY_TOKEN,
+          useClass: UserMetadataRepository,
+        },
+        // Application: query handlers
+        ListHandler,
+        ReadHandler,
+        // Application: command handlers
+        UpdateHandler,
+        DeleteHandler,
+        UpdateUserHandler,
+        SaveUserMetadataHandler,
+        GetUserMetadataHandler,
+      ],
+      exports: [],
     };
   }
 }

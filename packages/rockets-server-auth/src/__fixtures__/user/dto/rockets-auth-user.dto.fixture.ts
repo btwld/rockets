@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
-import { RocketsAuthUserDto } from '../../../domains/user/dto/rockets-auth-user.dto';
+import { RocketsAuthUserDto } from '../../../domains/user/infrastructure/dto/rockets-auth-user.dto';
 import { RocketsAuthUserMetadataFixtureDto } from './rockets-auth-user-metadata.dto.fixture';
 
 /**

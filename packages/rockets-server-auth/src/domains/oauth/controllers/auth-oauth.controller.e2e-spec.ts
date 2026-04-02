@@ -20,10 +20,9 @@ import { UserMetadataEntityFixture } from '../../../__fixtures__/user/user-metad
 import { FederatedEntityFixture } from '../../../__fixtures__/federated/federated.entity.fixture';
 import { RoleEntityFixture } from '../../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../../__fixtures__/role/user-role.entity.fixture';
-import { UserMetadataTypeOrmCrudAdapterFixture } from '../../../__fixtures__/services/user-metadata-typeorm-crud.adapter.fixture';
-import { RocketsAuthUserMetadataDto } from '../../user/dto/rockets-auth-user-metadata.dto';
-import { AdminUserTypeOrmCrudAdapter } from '../../../__fixtures__/admin/admin-user-crud.adapter';
+import { RocketsAuthUserMetadataDto } from '../../user/infrastructure/dto/rockets-auth-user-metadata.dto';
 import { RocketsAuthUserFixtureDto } from '../../../__fixtures__/user/dto/rockets-auth-user.dto.fixture';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../../../shared/constants/rockets-auth.constants';
 
 // Mock guard for testing
 class MockOAuthGuard implements CanActivate {
@@ -130,7 +129,6 @@ describe('AuthOAuthController (e2e)', () => {
                 userMetadata: { entity: UserMetadataEntityFixture },
               }),
             ],
-            adapter: AdminUserTypeOrmCrudAdapter,
             model: RocketsAuthUserFixtureDto,
             userMetadataConfig: {
               imports: [
@@ -139,7 +137,6 @@ describe('AuthOAuthController (e2e)', () => {
                   userMetadata: { entity: UserMetadataEntityFixture },
                 }),
               ],
-              adapter: UserMetadataTypeOrmCrudAdapterFixture,
               entity: UserMetadataEntityFixture,
               createDto: RocketsAuthUserMetadataDto,
               updateDto: RocketsAuthUserMetadataDto,
@@ -165,7 +162,7 @@ describe('AuthOAuthController (e2e)', () => {
               },
             },
             otp: {
-              assignment: 'userOtp' as const,
+              assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
               category: 'test',
               type: 'uuid',
               expiresIn: '1h',

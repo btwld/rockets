@@ -1,54 +1,34 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
+import { UpdateUserPasswordCommand } from '@concepta/nestjs-user';
 import { MePasswordController } from './me-password.controller';
-import { PasswordValidationService } from '@concepta/nestjs-password';
-import { UserPasswordService } from '@concepta/nestjs-user';
 import { RocketsAuthUserInterface } from '../../user/interfaces/rockets-auth-user.interface';
 import { RocketsAuthChangePasswordDto } from '../dto/rockets-auth-change-password.dto';
 
 describe(MePasswordController.name, () => {
   let controller: MePasswordController;
-  let mockUserPasswordService: jest.Mocked<UserPasswordService>;
-  let mockPasswordValidationService: jest.Mocked<PasswordValidationService>;
+  let mockCommandBus: jest.Mocked<Pick<CommandBus, 'execute'>>;
 
   const defaultMockUser: RocketsAuthUserInterface = {
     id: 'user-123',
     username: 'testuser',
     email: 'test@example.com',
     active: true,
-    dateCreated: new Date(),
-    dateUpdated: new Date(),
-    dateDeleted: null,
-    version: 2,
     userMetadata: {},
   };
 
-  const mockPasswordStore = {
-    id: 'user-123',
-    passwordHash: 'hashed-password',
-    passwordSalt: 'salt',
-  };
-
   beforeEach(async () => {
-    mockUserPasswordService = {
-      getPasswordStore: jest.fn(),
-      setPassword: jest.fn(),
-    } as unknown as jest.Mocked<UserPasswordService>;
-
-    mockPasswordValidationService = {
-      validate: jest.fn(),
-    } as unknown as jest.Mocked<PasswordValidationService>;
+    mockCommandBus = {
+      execute: jest.fn(),
+    } as jest.Mocked<Pick<CommandBus, 'execute'>>;
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MePasswordController],
       providers: [
         {
-          provide: UserPasswordService,
-          useValue: mockUserPasswordService,
-        },
-        {
-          provide: PasswordValidationService,
-          useValue: mockPasswordValidationService,
+          provide: CommandBus,
+          useValue: mockCommandBus,
         },
       ],
     }).compile();
@@ -78,109 +58,49 @@ describe(MePasswordController.name, () => {
     };
 
     it('should successfully change password when current password is valid', async () => {
-      mockUserPasswordService.getPasswordStore.mockResolvedValue(
-        mockPasswordStore,
-      );
-      mockPasswordValidationService.validate.mockResolvedValue(true);
-      mockUserPasswordService.setPassword.mockResolvedValue();
+      mockCommandBus.execute.mockResolvedValue(undefined);
 
       await expect(
         controller.changePassword(defaultMockUser, changePasswordDto),
       ).resolves.toBeUndefined();
 
-      expect(mockUserPasswordService.getPasswordStore).toHaveBeenCalledWith(
-        'user-123',
+      expect(mockCommandBus.execute).toHaveBeenCalledTimes(1);
+      expect(mockCommandBus.execute).toHaveBeenCalledWith(
+        expect.any(UpdateUserPasswordCommand),
       );
-      expect(mockPasswordValidationService.validate).toHaveBeenCalledWith({
-        password: 'CurrentP@ssw0rd',
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
+
+      const dispatched = mockCommandBus.execute.mock.calls[0][0] as {
+        userId: string;
+        passwordDto: { password: string; passwordCurrent: string };
+      };
+      expect(dispatched.userId).toBe('user-123');
+      expect(dispatched.passwordDto).toEqual({
+        password: 'NewSecureP@ssw0rd',
+        passwordCurrent: 'CurrentP@ssw0rd',
       });
-      expect(mockUserPasswordService.setPassword).toHaveBeenCalledWith(
-        {
-          password: 'NewSecureP@ssw0rd',
-          passwordCurrent: 'CurrentP@ssw0rd',
-        },
-        'user-123',
-        defaultMockUser,
-      );
     });
 
-    it('should throw UnauthorizedException when current password is invalid', async () => {
-      mockUserPasswordService.getPasswordStore.mockResolvedValue(
-        mockPasswordStore,
+    it('should throw UnauthorizedException when command bus throws it', async () => {
+      mockCommandBus.execute.mockRejectedValue(
+        new UnauthorizedException('Invalid current password'),
       );
-      mockPasswordValidationService.validate.mockResolvedValue(false);
 
       await expect(
         controller.changePassword(defaultMockUser, changePasswordDto),
       ).rejects.toThrow(UnauthorizedException);
 
-      expect(mockUserPasswordService.getPasswordStore).toHaveBeenCalledWith(
-        'user-123',
-      );
-      expect(mockPasswordValidationService.validate).toHaveBeenCalledWith({
-        password: 'CurrentP@ssw0rd',
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      });
-      expect(mockUserPasswordService.setPassword).not.toHaveBeenCalled();
+      expect(mockCommandBus.execute).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw error when getPasswordStore fails', async () => {
+    it('should throw error when command bus fails', async () => {
       const error = new Error('Database error');
-      mockUserPasswordService.getPasswordStore.mockRejectedValue(error);
+      mockCommandBus.execute.mockRejectedValue(error);
 
       await expect(
         controller.changePassword(defaultMockUser, changePasswordDto),
       ).rejects.toThrow('Database error');
 
-      expect(mockUserPasswordService.getPasswordStore).toHaveBeenCalledWith(
-        'user-123',
-      );
-      expect(mockPasswordValidationService.validate).not.toHaveBeenCalled();
-      expect(mockUserPasswordService.setPassword).not.toHaveBeenCalled();
-    });
-
-    it('should throw error when setPassword fails', async () => {
-      mockUserPasswordService.getPasswordStore.mockResolvedValue(
-        mockPasswordStore,
-      );
-      mockPasswordValidationService.validate.mockResolvedValue(true);
-      const error = new Error('Password update failed');
-      mockUserPasswordService.setPassword.mockRejectedValue(error);
-
-      await expect(
-        controller.changePassword(defaultMockUser, changePasswordDto),
-      ).rejects.toThrow('Password update failed');
-
-      expect(mockUserPasswordService.getPasswordStore).toHaveBeenCalled();
-      expect(mockPasswordValidationService.validate).toHaveBeenCalled();
-      expect(mockUserPasswordService.setPassword).toHaveBeenCalled();
-    });
-
-    it('should handle user with empty passwordSalt', async () => {
-      const passwordStoreWithEmptySalt = {
-        id: 'user-123',
-        passwordHash: 'hashed-password',
-        passwordSalt: '',
-      };
-
-      mockUserPasswordService.getPasswordStore.mockResolvedValue(
-        passwordStoreWithEmptySalt,
-      );
-      mockPasswordValidationService.validate.mockResolvedValue(true);
-      mockUserPasswordService.setPassword.mockResolvedValue();
-
-      await expect(
-        controller.changePassword(defaultMockUser, changePasswordDto),
-      ).resolves.toBeUndefined();
-
-      expect(mockPasswordValidationService.validate).toHaveBeenCalledWith({
-        password: 'CurrentP@ssw0rd',
-        passwordHash: 'hashed-password',
-        passwordSalt: '',
-      });
+      expect(mockCommandBus.execute).toHaveBeenCalledTimes(1);
     });
   });
 });

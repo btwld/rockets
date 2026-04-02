@@ -3,7 +3,10 @@ import { RocketsAuthNotificationService } from '../domains/otp/services/rockets-
 import { RocketsAuthSettingsInterface } from '../shared/interfaces/rockets-auth-settings.interface';
 import { EmailSendInterface } from '@concepta/nestjs-common';
 import { EmailService } from '@concepta/nestjs-email';
-import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../shared/constants/rockets-auth.constants';
+import {
+  ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+  ROCKETS_AUTH_OTP_ASSIGNMENT,
+} from '../shared/constants/rockets-auth.constants';
 
 describe(RocketsAuthNotificationService.name, () => {
   let service: RocketsAuthNotificationService;
@@ -40,7 +43,7 @@ describe(RocketsAuthNotificationService.name, () => {
         },
       },
       otp: {
-        assignment: 'userOtp',
+        assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
         category: 'login',
         type: 'uuid',
         expiresIn: '3600',
@@ -137,7 +140,7 @@ describe(RocketsAuthNotificationService.name, () => {
           },
         },
         otp: {
-          assignment: 'userOtp' as const,
+          assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
           category: 'login',
           type: 'uuid',
           expiresIn: '3600',

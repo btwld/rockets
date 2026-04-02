@@ -3,38 +3,21 @@ import {
   DynamicModule,
   Provider,
 } from '@nestjs/common';
-import { CrudService, CrudAdapter } from '@concepta/nestjs-crud';
 import {
   getDynamicRepositoryToken,
   RepositoryInterface,
-} from '@concepta/nestjs-common';
+} from '@concepta/nestjs-repository';
 import { UserMetadataConfigInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
-import { GenericUserMetadataModelService } from '../services/rockets-auth-user-metadata.model.service';
+import { GenericUserMetadataModelService } from '../infrastructure/services/rockets-auth-user-metadata.model.service';
 import {
   USER_METADATA_MODULE_ENTITY_KEY,
   UserMetadataModelService,
-} from '../constants/user-metadata.constants';
+} from '../infrastructure/config/user-metadata.constants';
 
 export const RAW_USER_METADATA_OPTIONS_TOKEN = Symbol(
   '__ROCKETS_USER_METADATA_MODULE_RAW_OPTIONS_TOKEN__',
 );
-
-// Adapter token - moved here for consistency
-export const ROCKETS_USER_METADATA_ADAPTER = 'ROCKETS_USER_METADATA_ADAPTER';
-
-/**
- * Centralized CRUD Service for UserMetadata
- * This class is exported and used directly by CrudRelations
- * Do NOT use injection token - CrudRelations needs the class itself
- */
-export class UserMetadataCrudService extends CrudService<RocketsAuthUserMetadataEntityInterface> {
-  constructor(
-    metadataAdapter: CrudAdapter<RocketsAuthUserMetadataEntityInterface>,
-  ) {
-    super(metadataAdapter);
-  }
-}
 
 type UserMetadataExtrasInterface = UserMetadataConfigInterface & {
   global?: boolean;
@@ -111,38 +94,11 @@ function createRocketsAuthUserMetadataProviders(options: {
   providers: DynamicModule['providers'];
   extras?: Partial<UserMetadataExtrasInterface>;
 }): Provider[] {
-  const { extras } = options;
-
   return [
     ...(options.providers || []),
 
-    // Adapter provider from config (with proper DI)
-    ...(extras?.adapter
-      ? [
-          {
-            provide: ROCKETS_USER_METADATA_ADAPTER,
-            useClass: extras.adapter,
-          },
-          // Repository provider - alias the adapter to the entity key
-          {
-            provide: USER_METADATA_MODULE_ENTITY_KEY,
-            useExisting: ROCKETS_USER_METADATA_ADAPTER,
-          },
-        ]
-      : []),
-
-    // CRUD service provider
-    {
-      provide: UserMetadataCrudService,
-      useFactory: (
-        adapter: CrudAdapter<RocketsAuthUserMetadataEntityInterface>,
-      ) => {
-        return new UserMetadataCrudService(adapter);
-      },
-      inject: [ROCKETS_USER_METADATA_ADAPTER],
-    },
-
-    // UserMetadataModelService - uses factory with repository and config
+    // TODO: Remove this token + GenericUserMetadataModelService once all callers use SaveUserMetadataCommand /
+    // UserMetadataRepository (keep userMetadataModelService override story via custom repository if still needed).
     {
       provide: UserMetadataModelService,
       inject: [
@@ -183,8 +139,6 @@ function createRocketsAuthUserMetadataExports(options: {
   return [
     ...(options.exports || []),
     RAW_USER_METADATA_OPTIONS_TOKEN,
-    UserMetadataCrudService,
     UserMetadataModelService,
-    ROCKETS_USER_METADATA_ADAPTER,
   ];
 }

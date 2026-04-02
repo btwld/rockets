@@ -122,5 +122,9 @@ dist
 .context/
 
 
+# Claude Code personal overrides (not committed)
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
 #Ignore cursor AI rules
 .cursor/rules/codacy.mdc

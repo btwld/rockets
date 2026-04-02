@@ -1,8 +1,8 @@
+import { createSettingsProvider } from '@concepta/nestjs-common';
 import {
-  createSettingsProvider,
   getDynamicRepositoryToken,
   RepositoryInterface,
-} from '@concepta/nestjs-common';
+} from '@concepta/nestjs-repository';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,
@@ -51,10 +51,6 @@ export type RocketsAsyncOptions = Omit<
   'global'
 >;
 
-/**
- * Transform the definition to include the combined modules.
- * Follows SDK patterns for module transformation.
- */
 function definitionTransform(
   definition: DynamicModule,
   extras: RocketsOptionsExtrasInterface,
@@ -79,11 +75,6 @@ function definitionTransform(
   };
 }
 
-/**
- * Create controllers for the combined module.
- * When explicit controllers are provided, use them directly.
- * Otherwise, build the default list based on disable flags.
- */
 export function createRocketsControllers(options: {
   controllers?: DynamicModule['controllers'];
   extras?: RocketsOptionsExtrasInterface;
@@ -102,9 +93,6 @@ export function createRocketsControllers(options: {
   return controllers;
 }
 
-/**
- * Create settings provider.
- */
 export function createRocketsSettingsProvider(
   optionsOverrides?: RocketsOptionsInterface,
 ): Provider {
@@ -119,9 +107,6 @@ export function createRocketsSettingsProvider(
   });
 }
 
-/**
- * Create imports for the combined module.
- */
 export function createRocketsImports(options: {
   imports?: DynamicModule['imports'];
 }): NonNullable<DynamicModule['imports']> {
@@ -139,9 +124,6 @@ export function createRocketsImports(options: {
   return [...(options.imports ?? []), ...baseImports];
 }
 
-/**
- * Create exports for the combined module.
- */
 export function createRocketsExports(options: {
   exports: DynamicModule['exports'];
 }): DynamicModule['exports'] {
@@ -154,9 +136,6 @@ export function createRocketsExports(options: {
   ];
 }
 
-/**
- * Create providers for the combined module.
- */
 export function createRocketsProviders(options: {
   providers?: Provider[];
   extras?: RocketsOptionsExtrasInterface;
