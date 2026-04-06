@@ -13,6 +13,7 @@ import { RocketsAuthRoleEntityInterface } from '../interfaces/rockets-auth-role-
 import { RocketsAuthRoleInterface } from '../interfaces/rockets-auth-role.interface';
 import { AdminUserRolesController } from '../controllers/admin-user-roles.controller';
 import { RocketsAuthRoleCreateDto } from '../dto/rockets-auth-role-create.dto';
+import { RoleRepositoryCrudAdapter } from '../infrastructure/adapters/role-repository-crud.adapter';
 
 @Module({})
 export class RocketsAuthRoleAdminModule {
@@ -42,7 +43,7 @@ export class RocketsAuthRoleAdminModule {
             controller: {
               path: admin.path || 'admin/roles',
               entity: ROLE_CRUD_ENTITY_KEY,
-              adapter: admin.adapter,
+              adapter: RoleRepositoryCrudAdapter,
               response: {
                 resource: ModelDto,
                 paginated: AdminRolesPaginatedDto,
@@ -97,6 +98,7 @@ export class RocketsAuthRoleAdminModule {
         }),
       ],
       controllers: [AdminUserRolesController],
+      providers: [RoleRepositoryCrudAdapter],
     };
   }
 }

@@ -1,3 +1,4 @@
+import { AuthJwtGuard } from '@concepta/nestjs-auth-jwt';
 import { AuthUser } from '@concepta/nestjs-authentication';
 import { UpdateUserPasswordCommand } from '@concepta/nestjs-user';
 import {
@@ -7,7 +8,9 @@ import {
   Logger,
   Patch,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
+import { UserPasswordCurrentInvalidException } from '@concepta/nestjs-user';
 import { CommandBus } from '@nestjs/cqrs';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -28,6 +31,7 @@ import { logAndGetErrorDetails } from '../../../shared/utils/error-logging.helpe
 @Controller('me')
 @ApiTags('Me')
 @ApiBearerAuth()
+@UseGuards(AuthJwtGuard)
 export class MePasswordController {
   private readonly logger = new Logger(MePasswordController.name);
 
@@ -83,6 +87,9 @@ export class MePasswordController {
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
+      }
+      if (error instanceof UserPasswordCurrentInvalidException) {
+        throw new UnauthorizedException();
       }
 
       logAndGetErrorDetails(error, this.logger, 'Failed to change password', {

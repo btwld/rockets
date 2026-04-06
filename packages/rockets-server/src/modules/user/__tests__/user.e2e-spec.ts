@@ -1,10 +1,4 @@
-import {
-  INestApplication,
-  Controller,
-  Get,
-  Module,
-  Global,
-} from '@nestjs/common';
+import { INestApplication, Controller, Get, Module } from '@nestjs/common';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -14,11 +8,9 @@ import { UserUpdateDto } from '../user.dto';
 import { IsString, IsOptional } from 'class-validator';
 
 import { ServerAuthProviderFixture } from '../../../__fixtures__/providers/server-auth.provider.fixture';
-import { UserMetadataRepositoryFixture } from '../../../__fixtures__/repositories/user-metadata.repository.fixture';
+import { RocketsServerE2eUserMetadataRepoModule } from '../../../__e2e__/helpers/rockets-server-e2e-app.factory';
 import { RocketsOptionsInterface } from '../../../interfaces/rockets-options.interface';
 import { RocketsModule } from '../../../rockets.module';
-import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { USER_METADATA_MODULE_ENTITY_KEY } from '../../user-metadata/constants/user-metadata.constants';
 
 // Custom DTOs for testing - extending base DTOs
 import {
@@ -105,29 +97,10 @@ class UserTestController {
   }
 }
 
-@Global()
 @Module({
   controllers: [UserTestController],
-  providers: [
-    {
-      provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      inject: [],
-      useFactory: () => {
-        return new UserMetadataRepositoryFixture();
-      },
-    },
-  ],
-  exports: [
-    {
-      provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      inject: [],
-      useFactory: () => {
-        return new UserMetadataRepositoryFixture();
-      },
-    },
-  ],
 })
-class UserTestModule {}
+class UserE2eControllersModule {}
 
 describe('RocketsModule - User Integration (e2e)', () => {
   let app: INestApplication;
@@ -148,7 +121,11 @@ describe('RocketsModule - User Integration (e2e)', () => {
   describe('User Functionality', () => {
     it('GET /user should return user data with userMetadata when userMetadata exists', async () => {
       const moduleRef = await Test.createTestingModule({
-        imports: [UserTestModule, RocketsModule.forRoot(baseOptions)],
+        imports: [
+          RocketsServerE2eUserMetadataRepoModule,
+          RocketsModule.forRoot(baseOptions),
+          UserE2eControllersModule,
+        ],
       }).compile();
 
       app = moduleRef.createNestApplication();
@@ -179,7 +156,11 @@ describe('RocketsModule - User Integration (e2e)', () => {
 
     it('PATCH /user should create new userMetadata for user', async () => {
       const moduleRef = await Test.createTestingModule({
-        imports: [UserTestModule, RocketsModule.forRoot(baseOptions)],
+        imports: [
+          RocketsServerE2eUserMetadataRepoModule,
+          RocketsModule.forRoot(baseOptions),
+          UserE2eControllersModule,
+        ],
       }).compile();
 
       app = moduleRef.createNestApplication();
@@ -219,6 +200,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
     it('should work with minimal user configuration', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot({
             settings: {},
             authProvider: new ServerAuthProviderFixture(),
@@ -227,7 +209,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
               updateDto: TestUserMetadataUpdateDto,
             },
           }),
-          UserTestModule,
+          UserE2eControllersModule,
         ],
       }).compile();
 

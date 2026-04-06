@@ -14,5 +14,24 @@
   },
   "setupFiles": [
     "<rootDir>/packages/rockets-server-auth/src/__fixtures__/stubs/patch-concepta-common.ts"
-  ]
+  ],
+  "coverageProvider": "v8",
+  "collectCoverageFrom": [
+    "packages/**/*.ts",
+    "!packages/**/*.d.ts",
+    "!packages/**/*.interface.ts",
+    "!packages/**/*.e2e-spec.ts",
+    "!packages/**/*.spec.ts",
+    "!packages/**/*.factory.ts",
+    "!packages/**/*.seeder.ts",
+    "!packages/**/*.seeding.ts",
+    "!packages/nestjs-samples/src/**/main.ts",
+    "!**/node_modules/**",
+    "!**/__mocks__/**",
+    "!**/__stubs__/**",
+    "!**/__fixtures__/**",
+    "!**/dist/**"
+  ],
+  "coverageDirectory": "coverage-e2e",
+  "coverageReporters": ["text", "text-summary", "lcov", "html"]
 }

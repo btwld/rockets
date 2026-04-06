@@ -5,7 +5,6 @@ import {
   Post,
   Module,
   HttpCode,
-  Global,
 } from '@nestjs/common';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
@@ -20,11 +19,9 @@ import {
 
 import { FirebaseAuthProviderFixture } from './__fixtures__/providers/firebase-auth.provider.fixture';
 import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
-import { UserMetadataRepositoryFixture } from './__fixtures__/repositories/user-metadata.repository.fixture';
+import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
 import { RocketsOptionsInterface } from './interfaces/rockets-options.interface';
 import { RocketsModule } from './rockets.module';
-import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { USER_METADATA_MODULE_ENTITY_KEY } from './modules/user-metadata/constants/user-metadata.constants';
 
 // Test controller for comprehensive AuthGuard testing
 @ApiTags('test')
@@ -87,30 +84,6 @@ class TestController {
 })
 class TestModule {}
 
-// Shared repository provider module for tests
-@Global()
-@Module({
-  providers: [
-    {
-      provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      inject: [],
-      useFactory: () => {
-        return new UserMetadataRepositoryFixture();
-      },
-    },
-  ],
-  exports: [
-    {
-      provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      inject: [],
-      useFactory: () => {
-        return new UserMetadataRepositoryFixture();
-      },
-    },
-  ],
-})
-class UserMetadataRepoTestModule {}
-
 describe('RocketsModule (e2e)', () => {
   let app: INestApplication;
 
@@ -165,7 +138,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /user with ServerAuth provider returns authorized user', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
         ],
       }).compile();
@@ -193,7 +166,7 @@ describe('RocketsModule (e2e)', () => {
             ...baseOptions,
             authProvider: new FirebaseAuthProviderFixture(),
           }),
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
         ],
       }).compile();
 
@@ -216,7 +189,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /user without token returns 401', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
         ],
       }).compile();
@@ -232,7 +205,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /test/protected with valid token should succeed', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -260,7 +233,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /test/protected without token should fail with 401', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -282,7 +255,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /test/protected with invalid token should fail with 401', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -305,7 +278,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /test/protected with malformed Authorization header should fail with 401', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -328,7 +301,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /test/public should work without authentication', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -349,7 +322,7 @@ describe('RocketsModule (e2e)', () => {
     it('POST /test/admin-only with valid token should succeed', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -377,7 +350,7 @@ describe('RocketsModule (e2e)', () => {
     it('GET /test/user-data should return properly formatted user data', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -406,7 +379,7 @@ describe('RocketsModule (e2e)', () => {
             ...baseOptions,
             authProvider: new FirebaseAuthProviderFixture(),
           }),
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           TestModule,
         ],
       }).compile();
@@ -432,7 +405,7 @@ describe('RocketsModule (e2e)', () => {
     it('should handle missing Authorization header', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -454,7 +427,7 @@ describe('RocketsModule (e2e)', () => {
     it('should handle empty Authorization header', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],
@@ -477,7 +450,7 @@ describe('RocketsModule (e2e)', () => {
     it('should handle Authorization header without Bearer prefix', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          UserMetadataRepoTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
           TestModule,
         ],

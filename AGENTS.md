@@ -45,6 +45,16 @@ Modular rules are in `.claude/rules/`:
 - `.context/notes.md`: concise findings, caveats, and decisions.
 - `.context/todos.md`: actionable follow-ups for parallel agents.
 
+## Testing Policy
+
+- **E2E / integration tests are the default.** New tests must be `*.e2e-spec.ts`
+  (real Nest app + supertest + SQLite) unless a unit test is specifically justified.
+- Coverage target: **≥ 80 % statements/lines** via `yarn test:e2e:cov`.
+- Barrel imports (`domains/*/index`) register CQRS metadata globally; they must
+  run **last** in the e2e suite (handled by `scripts/jest-e2e-barrel-last-sequencer.cjs`).
+  Never import a barrel inside an e2e file that also boots a Nest app.
+- See `.claude/rules/build-test-lint.md` for full details.
+
 ## Guide Index (Use As Needed)
 
 - **DDD architecture (read first for any structural work):** `packages/rockets-server-auth/DDD_REFERENCE.md`

@@ -14,5 +14,18 @@
   },
   "setupFiles": [
     "<rootDir>/src/__fixtures__/stubs/patch-concepta-common.ts"
-  ]
+  ],
+  "coverageProvider": "v8",
+  "collectCoverageFrom": [
+    "src/**/*.ts",
+    "!src/**/*.d.ts",
+    "!src/**/*.interface.ts",
+    "!src/**/*.e2e-spec.ts",
+    "!src/**/*.spec.ts",
+    "!src/**/__fixtures__/**",
+    "!src/**/__tests__/**",
+    "!src/**/__e2e__/**"
+  ],
+  "coverageDirectory": "coverage-e2e",
+  "coverageReporters": ["text", "text-summary", "lcov", "html"]
 }

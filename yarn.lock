@@ -463,7 +463,7 @@ __metadata:
 
 "@bitwild/rockets-auth@file:../../packages/rockets-server-auth::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
   version: 1.0.0-alpha.7
-  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=4bb685&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
+  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=915273&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
   dependencies:
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-auth-apple": "npm:7.0.0-alpha.10"
@@ -509,7 +509,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-auth-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/9c8aaad5df6fdba640ae1560a5f76b5b3edd25cffb5a2a6a79822262a78d8329733e705df91013cdca402be102b13c65c9cb40b9ab6fd5fd3aefe7da1c2382d3
+  checksum: 10c0/2992db98ae20168d5dbd8aac84d7691b602ad891f6437a7af5316bd6185ba5372146715a0d083eb59f9c67be12380dff7a925341adee1fa3268d093bb8ac5968
   languageName: node
   linkType: hard
 
@@ -580,7 +580,7 @@ __metadata:
 
 "@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server%40workspace%3Aexamples%2Fsample-server":
   version: 1.0.0-alpha.7
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=86bcea&locator=sample-server%40workspace%3Aexamples%2Fsample-server"
+  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=15e402&locator=sample-server%40workspace%3Aexamples%2Fsample-server"
   dependencies:
     "@concepta/nestjs-authentication": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-common": "npm:7.0.0-alpha.10"
@@ -596,13 +596,13 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/6e855eecd30aacd04a1faeb0845ef57c5c973596bd57989c4e6adb86fdcf4a50528958dfc3a57bd0532488e5a7e8e505b0232243de32611325a99e6d7938b390
+  checksum: 10c0/fca37cf487973f654db23366442454eab61450f31a97ede420f87375311f20e17784fb8bfcebe5161ff59f77ed655cfe9f108adee897105fb3725e2e6aeb46c0
   languageName: node
   linkType: hard
 
 "@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
   version: 1.0.0-alpha.7
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=86bcea&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
+  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=15e402&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
   dependencies:
     "@concepta/nestjs-authentication": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-common": "npm:7.0.0-alpha.10"
@@ -618,7 +618,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/6e855eecd30aacd04a1faeb0845ef57c5c973596bd57989c4e6adb86fdcf4a50528958dfc3a57bd0532488e5a7e8e505b0232243de32611325a99e6d7938b390
+  checksum: 10c0/fca37cf487973f654db23366442454eab61450f31a97ede420f87375311f20e17784fb8bfcebe5161ff59f77ed655cfe9f108adee897105fb3725e2e6aeb46c0
   languageName: node
   linkType: hard
 

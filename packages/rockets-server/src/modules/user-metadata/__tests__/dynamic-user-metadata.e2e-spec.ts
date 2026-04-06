@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Module,
-  Global,
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
@@ -14,11 +13,9 @@ import { AuthorizedUser } from '../../../interfaces/auth-user.interface';
 import { UserUpdateDto } from '../../user/user.dto';
 
 import { ServerAuthProviderFixture } from '../../../__fixtures__/providers/server-auth.provider.fixture';
-import { UserMetadataRepositoryFixture } from '../../../__fixtures__/repositories/user-metadata.repository.fixture';
+import { RocketsServerE2eUserMetadataRepoModule } from '../../../__e2e__/helpers/rockets-server-e2e-app.factory';
 import { RocketsOptionsInterface } from '../../../interfaces/rockets-options.interface';
 import { RocketsModule } from '../../../rockets.module';
-import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { USER_METADATA_MODULE_ENTITY_KEY } from '../constants/user-metadata.constants';
 import { UserMetadataModelUpdatableInterface } from '../interfaces/user-metadata.interface';
 
 // Custom DTOs for testing dynamic userMetadata service
@@ -108,30 +105,11 @@ class DynamicUserMetadataTestController {
   }
 }
 
-// TODO: review this, we should not need it global
-@Global()
+/** Controllers only — metadata repo via {@link RocketsServerE2eUserMetadataRepoModule}. */
 @Module({
   controllers: [DynamicUserMetadataTestController],
-  providers: [
-    {
-      provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      inject: [],
-      useFactory: () => {
-        return new UserMetadataRepositoryFixture();
-      },
-    },
-  ],
-  exports: [
-    {
-      provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      inject: [],
-      useFactory: () => {
-        return new UserMetadataRepositoryFixture();
-      },
-    },
-  ],
 })
-class DynamicUserMetadataTestModule {}
+class DynamicUserMetadataE2eControllersModule {}
 
 describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
   let app: INestApplication;
@@ -153,14 +131,9 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should create dynamic userMetadata service with custom DTOs', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
-          DynamicUserMetadataTestModule,
-        ],
-        providers: [
-          {
-            provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-            useValue: new UserMetadataRepositoryFixture(),
-          },
+          DynamicUserMetadataE2eControllersModule,
         ],
       }).compile();
 
@@ -202,7 +175,8 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should handle custom userMetadata structure with dynamic service', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          DynamicUserMetadataTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
+          DynamicUserMetadataE2eControllersModule,
           RocketsModule.forRoot(baseOptions),
         ],
       }).compile();
@@ -270,14 +244,9 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
 
       const moduleRef = await Test.createTestingModule({
         imports: [
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(differentOptions),
-          DynamicUserMetadataTestModule,
-        ],
-        providers: [
-          {
-            provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-            useValue: new UserMetadataRepositoryFixture(),
-          },
+          DynamicUserMetadataE2eControllersModule,
         ],
       }).compile();
 
@@ -311,7 +280,8 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should handle partial userMetadata updates', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          DynamicUserMetadataTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
+          DynamicUserMetadataE2eControllersModule,
           RocketsModule.forRoot(baseOptions),
         ],
       }).compile();
@@ -355,6 +325,7 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should work with minimal userMetadata configuration', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot({
             settings: {},
             authProvider: new ServerAuthProviderFixture(),
@@ -363,13 +334,7 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
               updateDto: CustomUserMetadataUpdateDto,
             },
           }),
-          DynamicUserMetadataTestModule,
-        ],
-        providers: [
-          {
-            provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-            useValue: new UserMetadataRepositoryFixture(),
-          },
+          DynamicUserMetadataE2eControllersModule,
         ],
       }).compile();
 
@@ -403,14 +368,9 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should handle complex nested userMetadata with dynamic service', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
+          RocketsServerE2eUserMetadataRepoModule,
           RocketsModule.forRoot(baseOptions),
-          DynamicUserMetadataTestModule,
-        ],
-        providers: [
-          {
-            provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-            useValue: new UserMetadataRepositoryFixture(),
-          },
+          DynamicUserMetadataE2eControllersModule,
         ],
       }).compile();
 
@@ -460,7 +420,8 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should validate userMetadata and expect errors from dtos with validations', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          DynamicUserMetadataTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
+          DynamicUserMetadataE2eControllersModule,
           RocketsModule.forRoot(baseOptions),
         ],
       }).compile();
@@ -503,7 +464,8 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should pass validation with valid username', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          DynamicUserMetadataTestModule,
+          RocketsServerE2eUserMetadataRepoModule,
+          DynamicUserMetadataE2eControllersModule,
           RocketsModule.forRoot(baseOptions),
         ],
       }).compile();

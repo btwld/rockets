@@ -17,13 +17,12 @@ describe('GenericUserMetadataModelService', () => {
   let mockRepository: jest.Mocked<
     RepositoryInterface<RocketsAuthUserMetadataEntityInterface>
   >;
-  interface ExtendedUserMetadataUpdatable
-    extends RocketsAuthUserMetadataUpdatableInterface {
+
+  const mockUserMetadata: RocketsAuthUserMetadataEntityInterface & {
     firstName?: string;
     lastName?: string;
-  }
-
-  const mockUserMetadata = {
+    bio?: string;
+  } = {
     id: 'metadata-123',
     userId: 'user-123',
     firstName: 'John',
@@ -92,216 +91,194 @@ describe('GenericUserMetadataModelService', () => {
     jest.clearAllMocks();
   });
 
-  describe('getUserMetadataById', () => {
-    it('should return user metadata when found', async () => {
-      // Arrange
-      jest.spyOn(service, 'byId').mockResolvedValue(mockUserMetadata);
-
-      // Act
-      const result = await service.getUserMetadataById('metadata-123');
-
-      // Assert
+  describe('byId', () => {
+    it('delegates to repo.findOne with Where.eq on id', async () => {
+      mockRepository.findOne.mockResolvedValue(mockUserMetadata);
+      const result = await service.byId('metadata-123');
       expect(result).toEqual(mockUserMetadata);
-      expect(service.byId).toHaveBeenCalledWith('metadata-123');
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { field: 'id', operator: 'eq', value: 'metadata-123' },
+      });
+    });
+  });
+
+  describe('create', () => {
+    it('delegates to repo.create', async () => {
+      const payload = { userId: 'u1', firstName: 'A' };
+      mockRepository.create.mockResolvedValue(mockUserMetadata);
+      const result = await service.create(payload);
+      expect(mockRepository.create).toHaveBeenCalledWith(payload);
+      expect(result).toEqual(mockUserMetadata);
+    });
+  });
+
+  describe('getUserMetadataById', () => {
+    it('returns metadata when found', async () => {
+      mockRepository.findOne.mockResolvedValue(mockUserMetadata);
+      const result = await service.getUserMetadataById('metadata-123');
+      expect(result).toEqual(mockUserMetadata);
     });
 
-    it('should throw UserMetadataNotFoundException when not found', async () => {
-      // Arrange
-      jest.spyOn(service, 'byId').mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.getUserMetadataById('non-existent')).rejects.toThrow(
+    it('throws UserMetadataNotFoundException when not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      await expect(service.getUserMetadataById('missing')).rejects.toThrow(
         UserMetadataNotFoundException,
       );
     });
   });
 
   describe('findByUserId', () => {
-    it('should return user metadata for existing user', async () => {
-      // Arrange
+    it('returns metadata for existing user', async () => {
       mockRepository.findOne.mockResolvedValue(mockUserMetadata);
-
-      // Act
       const result = await service.findByUserId('user-123');
-
-      // Assert
       expect(result).toEqual(mockUserMetadata);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { field: 'userId', operator: 'eq', value: 'user-123' },
       });
     });
 
-    it('should return null for non-existent user', async () => {
-      // Arrange
+    it('returns null when missing', async () => {
       mockRepository.findOne.mockResolvedValue(null);
-
-      // Act
-      const result = await service.findByUserId('non-existent');
-
-      // Assert
-      expect(result).toBeNull();
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { field: 'userId', operator: 'eq', value: 'non-existent' },
-      });
+      await expect(service.findByUserId('none')).resolves.toBeNull();
     });
   });
 
   describe('hasUserMetadata', () => {
-    it('should return true when user has metadata', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(mockUserMetadata);
-
-      // Act
-      const result = await service.hasUserMetadata('user-123');
-
-      // Assert
-      expect(result).toBe(true);
+    it('returns true when repo finds a row', async () => {
+      mockRepository.findOne.mockResolvedValue(mockUserMetadata);
+      await expect(service.hasUserMetadata('user-123')).resolves.toBe(true);
     });
 
-    it('should return false when user has no metadata', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
-
-      // Act
-      const result = await service.hasUserMetadata('user-123');
-
-      // Assert
-      expect(result).toBe(false);
+    it('returns false when repo returns null', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      await expect(service.hasUserMetadata('user-123')).resolves.toBe(false);
     });
   });
 
   describe('createOrUpdate', () => {
-    const newData: ExtendedUserMetadataUpdatable = {
-      firstName: 'Jane',
-      lastName: 'Smith',
-    };
+    it('creates when no existing metadata', async () => {
+      const data = { firstName: 'Jane' } as RocketsAuthUserMetadataUpdatableInterface;
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.create.mockResolvedValue({
+        ...mockUserMetadata,
+        firstName: 'Jane',
+      } as RocketsAuthUserMetadataEntityInterface);
 
-    it('should create new metadata when none exists', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
-      jest
-        .spyOn(service, 'create')
-        .mockResolvedValue({ ...mockUserMetadata, ...newData });
+      const result = await service.createOrUpdate('user-123', data);
 
-      // Act
-      const result = await service.createOrUpdate('user-123', newData);
-
-      // Assert
-      expect(service.findByUserId).toHaveBeenCalledWith('user-123');
-      expect(service.create).toHaveBeenCalledWith({
+      expect(mockRepository.create).toHaveBeenCalledWith({
         userId: 'user-123',
-        ...newData,
+        firstName: 'Jane',
       });
-      expect(result).toEqual({ ...mockUserMetadata, ...newData });
+      expect((result as typeof mockUserMetadata).firstName).toBe('Jane');
     });
 
-    it('should update existing metadata when it exists', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(mockUserMetadata);
-      jest
-        .spyOn(service, 'update')
-        .mockResolvedValue({ ...mockUserMetadata, ...newData });
-
-      // Act
-      const result = await service.createOrUpdate('user-123', newData);
-
-      // Assert
-      expect(service.findByUserId).toHaveBeenCalledWith('user-123');
-      expect(service.update).toHaveBeenCalledWith({
+    it('updates when metadata exists and strips undefined fields from payload', async () => {
+      const data = {
+        firstName: 'X',
+        bio: undefined,
+      } as RocketsAuthUserMetadataUpdatableInterface;
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockUserMetadata)
+        .mockResolvedValueOnce(mockUserMetadata);
+      const updated = {
         ...mockUserMetadata,
-        ...newData,
-      });
-      expect(result).toEqual({ ...mockUserMetadata, ...newData });
+        firstName: 'X',
+      } as RocketsAuthUserMetadataEntityInterface;
+      mockRepository.update.mockResolvedValue(updated);
+
+      const result = await service.createOrUpdate('user-123', data);
+
+      const [, updatePayload] = mockRepository.update.mock.calls[0] as [
+        RocketsAuthUserMetadataEntityInterface,
+        Record<string, unknown>,
+      ];
+      expect(updatePayload.firstName).toBe('X');
+      expect(updatePayload.bio).toBe('Software Developer');
+      expect((result as typeof mockUserMetadata).firstName).toBe('X');
     });
   });
 
   describe('getUserMetadataByUserId', () => {
-    it('should return metadata when user exists', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(mockUserMetadata);
-
-      // Act
-      const result = await service.getUserMetadataByUserId('user-123');
-
-      // Assert
-      expect(result).toEqual(mockUserMetadata);
+    it('returns row when found', async () => {
+      mockRepository.findOne.mockResolvedValue(mockUserMetadata);
+      await expect(service.getUserMetadataByUserId('user-123')).resolves.toEqual(
+        mockUserMetadata,
+      );
     });
 
-    it('should throw UserMetadataNotFoundException when user not found', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
-
-      // Act & Assert
+    it('throws when not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
       await expect(
-        service.getUserMetadataByUserId('non-existent'),
+        service.getUserMetadataByUserId('missing'),
       ).rejects.toThrow(UserMetadataNotFoundException);
     });
   });
 
   describe('updateUserMetadata', () => {
-    it('should update existing user metadata', async () => {
-      // Arrange
-      const updateData: ExtendedUserMetadataUpdatable = {
-        firstName: 'Updated Name',
-      };
-      jest
-        .spyOn(service, 'getUserMetadataByUserId')
-        .mockResolvedValue(mockUserMetadata);
-      jest
-        .spyOn(service, 'update')
-        .mockResolvedValue({ ...mockUserMetadata, ...updateData });
-
-      // Act
-      const result = await service.updateUserMetadata('user-123', updateData);
-
-      // Assert
-      expect(service.getUserMetadataByUserId).toHaveBeenCalledWith('user-123');
-      expect(service.update).toHaveBeenCalledWith({
+    it('loads by userId then updates merged entity', async () => {
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockUserMetadata)
+        .mockResolvedValueOnce(mockUserMetadata);
+      const merged = {
         ...mockUserMetadata,
-        ...updateData,
+        firstName: 'U',
+      } as RocketsAuthUserMetadataEntityInterface;
+      mockRepository.update.mockResolvedValue(merged);
+
+      const result = await service.updateUserMetadata(
+        'user-123',
+        { firstName: 'U' } as Parameters<
+          GenericUserMetadataModelService['updateUserMetadata']
+        >[1],
+      );
+
+      expect(mockRepository.findOne).toHaveBeenNthCalledWith(1, {
+        where: { field: 'userId', operator: 'eq', value: 'user-123' },
       });
-      expect(result).toEqual({ ...mockUserMetadata, ...updateData });
+      expect(mockRepository.update).toHaveBeenCalled();
+      expect((result as typeof mockUserMetadata).firstName).toBe('U');
     });
   });
 
   describe('update', () => {
-    it('should update metadata successfully', async () => {
-      // Arrange
-      const updateData = { ...mockUserMetadata, firstName: 'Updated' };
+    it('updates when entity exists', async () => {
+      const updateData = {
+        ...mockUserMetadata,
+        firstName: 'Updated',
+      } as RocketsAuthUserMetadataModelUpdatableInterface;
       mockRepository.findOne.mockResolvedValue(mockUserMetadata);
-      mockRepository.update.mockResolvedValue(updateData);
+      mockRepository.update.mockResolvedValue({
+        ...mockUserMetadata,
+        firstName: 'Updated',
+      } as RocketsAuthUserMetadataEntityInterface);
 
-      // Act
       const result = await service.update(updateData);
 
-      // Assert
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { field: 'id', operator: 'eq', value: 'metadata-123' },
       });
-      expect(result).toEqual(updateData);
+      expect((result as typeof mockUserMetadata).firstName).toBe('Updated');
     });
 
-    it('should throw UserMetadataException when ID is missing', async () => {
-      // Arrange - Create incomplete data that's missing the required 'id' field
-      const incompleteData: RocketsAuthUserMetadataModelUpdatableInterface = {
+    it('throws UserMetadataException when id missing', async () => {
+      const incomplete: RocketsAuthUserMetadataModelUpdatableInterface = {
         id: '',
       };
-
-      // Act & Assert
-      await expect(service.update(incompleteData)).rejects.toThrow(
+      await expect(service.update(incomplete)).rejects.toThrow(
         UserMetadataException,
       );
-      await expect(service.update(incompleteData)).rejects.toThrow(
+      await expect(service.update(incomplete)).rejects.toThrow(
         'ID is required for update operation',
       );
     });
 
-    it('should throw UserMetadataNotFoundException when entity not found', async () => {
-      // Arrange
-      const updateData = { ...mockUserMetadata, firstName: 'Updated' };
+    it('throws UserMetadataNotFoundException when row missing', async () => {
+      const updateData = {
+        ...mockUserMetadata,
+        firstName: 'N',
+      } as RocketsAuthUserMetadataModelUpdatableInterface;
       mockRepository.findOne.mockResolvedValue(null);
-
-      // Act & Assert
       await expect(service.update(updateData)).rejects.toThrow(
         UserMetadataNotFoundException,
       );

@@ -1,7 +1,6 @@
 import { AccessControlOptionsInterface } from '@concepta/nestjs-access-control';
 import type { CanAccess } from '@concepta/nestjs-access-control';
 import { AuthRouterOptionsExtrasInterface } from '@concepta/nestjs-auth-router';
-import { CrudAdapter } from '@concepta/nestjs-crud';
 import { RepositoryInterface } from '@concepta/nestjs-repository';
 import { RocketsAuthUserMetadataEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
@@ -131,7 +130,6 @@ export interface RoleCrudOptionsExtrasInterface {
   imports?: DynamicModule['imports'];
   path?: string;
   model: Type;
-  adapter: Type<CrudAdapter<RocketsAuthRoleEntityInterface>>;
   dto?: {
     createOne?: Type<RocketsAuthRoleCreatableInterface>;
     updateOne?: Type<RocketsAuthRoleUpdatableInterface>;

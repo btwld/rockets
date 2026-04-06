@@ -3,7 +3,15 @@ import {
   AuthPublic,
   IssueTokenServiceInterface,
 } from '@concepta/nestjs-authentication';
-import { Body, Controller, Inject, Patch, Post } from '@nestjs/common';
+import { OtpException } from '@concepta/nestjs-otp';
+import {
+  Body,
+  Controller,
+  Inject,
+  Patch,
+  Post,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
   ApiBadRequestResponse,
@@ -95,7 +103,14 @@ export class RocketsAuthOtpController {
   async confirmOtp(
     @Body() dto: RocketsAuthOtpConfirmDto,
   ): Promise<RocketsAuthAuthenticationResponseInterface> {
-    const user = await this.otpService.confirmOtp(dto.email, dto.passcode);
-    return this.issueTokenService.responsePayload(user.id);
+    try {
+      const user = await this.otpService.confirmOtp(dto.email, dto.passcode);
+      return this.issueTokenService.responsePayload(user.id);
+    } catch (error) {
+      if (error instanceof OtpException) {
+        throw new UnauthorizedException();
+      }
+      throw error;
+    }
   }
 }

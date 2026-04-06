@@ -1127,7 +1127,7 @@ describe('Invitation Flow (E2E)', () => {
     });
 
     it('should handle multiple invitations for same email correctly', async () => {
-      const email = 'multi-invite@example.com';
+      const email = `multi-invite-${Date.now()}@example.com`;
 
       // 1. Create first invitation
       const invite1 = await request(app.getHttpServer())

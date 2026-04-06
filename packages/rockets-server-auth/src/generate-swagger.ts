@@ -127,16 +127,6 @@ class UserMetadataEntity implements RocketsAuthUserMetadataEntityInterface {
   age?: number;
 }
 
-class AdminRoleTypeOrmCrudAdapter extends CrudAdapter<RocketsAuthRoleEntityInterface> {
-  constructor(
-    @InjectRepository(RoleEntity)
-    private readonly typeOrmRepo: Repository<RocketsAuthRoleEntityInterface>,
-  ) {
-    super(
-      new TypeOrmRepository(typeOrmRepo, { entityKey: ROLE_CRUD_ENTITY_KEY }),
-    );
-  }
-}
 
 /**
  * Extended User Metadata DTO
@@ -593,7 +583,6 @@ async function generateSwaggerJson() {
           },
           roleCrud: {
             imports: [TypeOrmModule.forFeature([RoleEntity, InvitationEntity])],
-            adapter: AdminRoleTypeOrmCrudAdapter,
             model: RocketsAuthRoleDto,
             dto: {
               createOne: RocketsAuthRoleCreateDto,

@@ -8,10 +8,22 @@
     "typeRoots": [
       "./node_modules/@types",
       "../../node_modules/@types"
-    ]
+    ],
+    "paths": {
+      "@concepta/nestjs-common/aggregate": [
+        "../../node_modules/@concepta/nestjs-common/dist/index-aggregate"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts"
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.spec.ts",
+    "src/**/*.e2e-spec.ts",
+    "src/**/__tests__/**",
+    "src/**/__fixtures__/**"
+  ]
 }

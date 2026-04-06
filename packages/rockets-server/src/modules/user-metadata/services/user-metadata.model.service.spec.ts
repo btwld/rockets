@@ -60,7 +60,7 @@ describe('GenericUserMetadataModelService - Exception Mapping', () => {
   });
 
   it('rethrows NotFoundException from getUserMetadataById', async () => {
-    jest.spyOn(service, 'byId').mockResolvedValue(null);
+    mockRepository.findOne.mockResolvedValue(null);
 
     await expect(service.getUserMetadataById('missing-id')).rejects.toThrow(
       NotFoundException,
@@ -69,7 +69,7 @@ describe('GenericUserMetadataModelService - Exception Mapping', () => {
   });
 
   it('maps unexpected errors to InternalServerErrorException in getUserMetadataById', async () => {
-    jest.spyOn(service, 'byId').mockRejectedValue(new Error('db failed'));
+    mockRepository.findOne.mockRejectedValue(new Error('db failed'));
 
     await expect(service.getUserMetadataById('broken-id')).rejects.toThrow(
       InternalServerErrorException,
@@ -78,7 +78,7 @@ describe('GenericUserMetadataModelService - Exception Mapping', () => {
   });
 
   it('returns null from getUserMetadataByUserId when user not found', async () => {
-    jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
+    mockRepository.findOne.mockResolvedValue(null);
 
     const result = await service.getUserMetadataByUserId('missing-user');
     expect(result).toBeNull();
@@ -86,9 +86,7 @@ describe('GenericUserMetadataModelService - Exception Mapping', () => {
   });
 
   it('maps unexpected errors to InternalServerErrorException in getUserMetadataByUserId', async () => {
-    jest
-      .spyOn(service, 'findByUserId')
-      .mockRejectedValue(new Error('query failed'));
+    mockRepository.findOne.mockRejectedValue(new Error('query failed'));
 
     await expect(
       service.getUserMetadataByUserId('broken-user'),
@@ -192,44 +190,37 @@ describe('GenericUserMetadataModelService', () => {
 
   describe('getUserMetadataById', () => {
     it('should return user metadata when found', async () => {
-      // Arrange
-      jest.spyOn(service, 'byId').mockResolvedValue(mockUserMetadata);
+      mockRepository.findOne.mockResolvedValue(mockUserMetadata);
 
-      // Act
       const result = await service.getUserMetadataById('metadata-123');
 
-      // Assert
       expect(result).toEqual(mockUserMetadata);
-      expect(service.byId).toHaveBeenCalledWith('metadata-123');
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { field: 'id', operator: 'eq', value: 'metadata-123' },
+      });
     });
 
     it('should throw NotFoundException when not found', async () => {
-      // Arrange
-      jest.spyOn(service, 'byId').mockResolvedValue(null);
+      mockRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.getUserMetadataById('non-existent')).rejects.toThrow(
         NotFoundException,
       );
     });
 
     it('should rethrow RuntimeException', async () => {
-      // Arrange
-      jest
-        .spyOn(service, 'byId')
-        .mockRejectedValue(new RuntimeException('runtime error'));
+      mockRepository.findOne.mockRejectedValue(
+        new RuntimeException('runtime error'),
+      );
 
-      // Act & Assert
       await expect(service.getUserMetadataById('metadata-123')).rejects.toThrow(
         RuntimeException,
       );
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
-      // Arrange
-      jest.spyOn(service, 'byId').mockRejectedValue(new Error('db error'));
+      mockRepository.findOne.mockRejectedValue(new Error('db error'));
 
-      // Act & Assert
       await expect(service.getUserMetadataById('metadata-123')).rejects.toThrow(
         InternalServerErrorException,
       );
@@ -265,54 +256,49 @@ describe('GenericUserMetadataModelService', () => {
 
   describe('hasUserMetadata', () => {
     it('should return true when user has metadata', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(mockUserMetadata);
+      mockRepository.findOne.mockResolvedValue(mockUserMetadata);
 
-      // Act
       const result = await service.hasUserMetadata('user-123');
 
-      // Assert
       expect(result).toBe(true);
     });
 
     it('should return false when user has no metadata', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
+      mockRepository.findOne.mockResolvedValue(null);
 
-      // Act
       const result = await service.hasUserMetadata('user-123');
 
-      // Assert
       expect(result).toBe(false);
     });
   });
 
   describe('updateUserMetadata', () => {
     it('should update existing user metadata', async () => {
-      // Arrange
       const updateData = { firstName: 'Updated' };
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(mockUserMetadata);
-      jest
-        .spyOn(service, 'update')
-        .mockResolvedValue({ ...mockUserMetadata, ...updateData });
+      const updated = { ...mockUserMetadata, ...updateData };
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockUserMetadata)
+        .mockResolvedValueOnce(mockUserMetadata);
+      mockRepository.update.mockResolvedValue(updated);
 
-      // Act
       const result = await service.updateUserMetadata('user-123', updateData);
 
-      // Assert
-      expect(service.findByUserId).toHaveBeenCalledWith('user-123');
-      expect(service.update).toHaveBeenCalledWith({
-        ...mockUserMetadata,
-        ...updateData,
+      expect(mockRepository.findOne).toHaveBeenNthCalledWith(1, {
+        where: { field: 'userId', operator: 'eq', value: 'user-123' },
       });
-      expect(result).toEqual(expect.objectContaining({ firstName: 'Updated' }));
+      expect(mockRepository.findOne).toHaveBeenNthCalledWith(2, {
+        where: { field: 'id', operator: 'eq', value: 'metadata-123' },
+      });
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        mockUserMetadata,
+        expect.objectContaining(updateData),
+      );
+      expect(result).toEqual(updated);
     });
 
     it('should throw NotFoundException when user metadata not found', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
+      mockRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.updateUserMetadata('non-existent', { firstName: 'Test' }),
       ).rejects.toThrow(NotFoundException);
@@ -323,86 +309,72 @@ describe('GenericUserMetadataModelService', () => {
     const newData = { firstName: 'Jane', lastName: 'Smith' };
 
     it('should create new metadata when none exists', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
-      jest
-        .spyOn(service, 'create')
-        .mockResolvedValue({ ...mockUserMetadata, ...newData });
+      const created = { ...mockUserMetadata, ...newData };
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.create.mockResolvedValue(created);
 
-      // Act
       const result = await service.createOrUpdate('user-123', newData);
 
-      // Assert
-      expect(service.findByUserId).toHaveBeenCalledWith('user-123');
-      expect(service.create).toHaveBeenCalledWith({
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { field: 'userId', operator: 'eq', value: 'user-123' },
+      });
+      expect(mockRepository.create).toHaveBeenCalledWith({
         userId: 'user-123',
         ...newData,
       });
-      expect(result).toEqual({ ...mockUserMetadata, ...newData });
+      expect(result).toEqual(created);
     });
 
     it('should update existing metadata when it exists', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(mockUserMetadata);
-      jest
-        .spyOn(service, 'update')
-        .mockResolvedValue({ ...mockUserMetadata, ...newData });
+      const merged = { ...mockUserMetadata, ...newData };
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockUserMetadata)
+        .mockResolvedValueOnce(mockUserMetadata);
+      mockRepository.update.mockResolvedValue(merged);
 
-      // Act
       const result = await service.createOrUpdate('user-123', newData);
 
-      // Assert
-      expect(service.findByUserId).toHaveBeenCalledWith('user-123');
-      expect(service.update).toHaveBeenCalledWith({
-        id: 'metadata-123',
-        ...newData,
+      expect(mockRepository.findOne).toHaveBeenNthCalledWith(1, {
+        where: { field: 'userId', operator: 'eq', value: 'user-123' },
       });
-      expect(result).toEqual({ ...mockUserMetadata, ...newData });
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        mockUserMetadata,
+        expect.objectContaining({ id: 'metadata-123', ...newData }),
+      );
+      expect(result).toEqual(merged);
     });
   });
 
   describe('getUserMetadataByUserId', () => {
     it('should return metadata when user exists', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(mockUserMetadata);
+      mockRepository.findOne.mockResolvedValue(mockUserMetadata);
 
-      // Act
       const result = await service.getUserMetadataByUserId('user-123');
 
-      // Assert
       expect(result).toEqual(mockUserMetadata);
     });
 
     it('should return null when user has no metadata', async () => {
-      // Arrange
-      jest.spyOn(service, 'findByUserId').mockResolvedValue(null);
+      mockRepository.findOne.mockResolvedValue(null);
 
-      // Act
       const result = await service.getUserMetadataByUserId('non-existent');
 
-      // Assert
       expect(result).toBeNull();
     });
 
     it('should rethrow RuntimeException', async () => {
-      // Arrange
-      jest
-        .spyOn(service, 'findByUserId')
-        .mockRejectedValue(new RuntimeException('runtime error'));
+      mockRepository.findOne.mockRejectedValue(
+        new RuntimeException('runtime error'),
+      );
 
-      // Act & Assert
       await expect(service.getUserMetadataByUserId('user-123')).rejects.toThrow(
         RuntimeException,
       );
     });
 
     it('should throw InternalServerErrorException on unexpected error', async () => {
-      // Arrange
-      jest
-        .spyOn(service, 'findByUserId')
-        .mockRejectedValue(new Error('db error'));
+      mockRepository.findOne.mockRejectedValue(new Error('db error'));
 
-      // Act & Assert
       await expect(service.getUserMetadataByUserId('user-123')).rejects.toThrow(
         InternalServerErrorException,
       );
