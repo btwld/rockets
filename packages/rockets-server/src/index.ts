@@ -1,19 +1,19 @@
 export type {
   RocketsOptionsInterface,
   UserMetadataConfigInterface,
-} from './interfaces/rockets-options.interface';
+} from './infrastructure/config/interfaces/rockets-options.interface';
 export type {
   RocketsOptionsExtrasInterface,
   DisableControllerOptionsInterface,
-} from './interfaces/rockets-options-extras.interface';
+} from './infrastructure/config/interfaces/rockets-options-extras.interface';
 
-export { AuthServerGuard } from './guards/auth-server.guard';
-export { AuthProviderInterface } from './interfaces/auth-provider.interface';
-export { AuthorizedUser } from './interfaces/auth-user.interface';
+export { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
+export { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
+export { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 
-export { ExceptionsFilter } from './filter/exceptions.filter';
+export { ExceptionsFilter } from './infrastructure/filters/exceptions.filter';
 
-export { UserUpdateDto, UserResponseDto } from './modules/user/user.dto';
+export { UserUpdateDto, UserResponseDto } from './infrastructure/dtos/user.dto';
 export {
   BaseUserEntityInterface,
   UserEntityInterface,
@@ -23,8 +23,8 @@ export {
   BaseUserDto,
   BaseUserCreateDto,
   BaseUserUpdateDto,
-} from './modules/user/interfaces/user.interface';
-export { UserModule } from './modules/user/user.module';
+} from './domain/interfaces/user.interface';
+export { UserModule } from './user.module';
 
 export {
   BaseUserMetadataEntityInterface,
@@ -32,15 +32,16 @@ export {
   UserMetadataCreatableInterface,
   UserMetadataUpdatableInterface,
   UserMetadataModelUpdatableInterface,
-  UserMetadataModelServiceInterface,
   BaseUserMetadataDto,
   BaseUserMetadataCreateDto,
   BaseUserMetadataUpdateDto,
-} from './modules/user-metadata/interfaces/user-metadata.interface';
-export {
-  UserMetadataModelService,
-  USER_METADATA_MODULE_ENTITY_KEY,
-} from './modules/user-metadata/constants/user-metadata.constants';
+} from './domain/interfaces/user-metadata.interface';
+export { USER_METADATA_MODULE_ENTITY_KEY } from './rockets.constants';
+
+export { AbstractUpsertUserMetadataHandler } from './application/commands/handlers/abstract-upsert-user-metadata.handler';
+export { AbstractGetUserMetadataHandler } from './application/queries/handlers/abstract-get-user-metadata.handler';
+export { UpsertUserMetadataCommand } from './application/commands/impl/upsert-user-metadata.command';
+export { GetUserMetadataQuery } from './application/queries/impl/get-user-metadata.query';
 
 export { RocketsModule } from './rockets.module';
 
@@ -48,4 +49,4 @@ export {
   logAndGetErrorDetails,
   getErrorDetails,
   ErrorDetails,
-} from './utils/error-logging.helper';
+} from './infrastructure/utils/error-logging.helper';

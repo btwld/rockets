@@ -1,33 +1,26 @@
 import { createSettingsProvider } from '@concepta/nestjs-common';
 import {
-  getDynamicRepositoryToken,
-  RepositoryInterface,
-} from '@concepta/nestjs-repository';
-import {
   ConfigurableModuleBuilder,
   DynamicModule,
   Provider,
 } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
+import { CqrsModule } from '@nestjs/cqrs';
 import { SwaggerUiModule } from '@concepta/nestjs-swagger-ui';
 import { ConfigModule } from '@nestjs/config';
 import {
   RocketsAuthProvider,
   ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
 } from './rockets.constants';
-import { MeController } from './modules/user/me.controller';
-import { AuthProviderInterface } from './interfaces/auth-provider.interface';
-import { RocketsOptionsInterface } from './interfaces/rockets-options.interface';
-import { RocketsOptionsExtrasInterface } from './interfaces/rockets-options-extras.interface';
-import { RocketsSettingsInterface } from './interfaces/rockets-settings.interface';
-import { rocketsOptionsDefaultConfig } from './config/rockets-options-default.config';
-import { AuthServerGuard } from './guards/auth-server.guard';
-import { GenericUserMetadataModelService } from './modules/user-metadata/services/user-metadata.model.service';
-import {
-  UserMetadataModelService,
-  USER_METADATA_MODULE_ENTITY_KEY,
-} from './modules/user-metadata/constants/user-metadata.constants';
-import { UserMetadataEntityInterface } from './modules/user-metadata/interfaces/user-metadata.interface';
+import { MeController } from './gateways/http/me.controller';
+import { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
+import { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
+import { RocketsOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-options-extras.interface';
+import { RocketsSettingsInterface } from './infrastructure/config/interfaces/rockets-settings.interface';
+import { rocketsOptionsDefaultConfig } from './infrastructure/config/rockets-options-default.config';
+import { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
+import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
+import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
 import { RAW_OPTIONS_TOKEN } from './rockets.tokens';
 
 export const {
@@ -111,6 +104,7 @@ export function createRocketsImports(options: {
   imports?: DynamicModule['imports'];
 }): NonNullable<DynamicModule['imports']> {
   const baseImports: NonNullable<DynamicModule['imports']> = [
+    CqrsModule.forRoot(),
     ConfigModule.forFeature(rocketsOptionsDefaultConfig),
     SwaggerUiModule.registerAsync({
       inject: [RAW_OPTIONS_TOKEN],
@@ -132,7 +126,6 @@ export function createRocketsExports(options: {
     ConfigModule,
     RAW_OPTIONS_TOKEN,
     ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-    UserMetadataModelService,
   ];
 }
 
@@ -140,6 +133,11 @@ export function createRocketsProviders(options: {
   providers?: Provider[];
   extras?: RocketsOptionsExtrasInterface;
 }): Provider[] {
+  const ResolvedUpsertHandler =
+    options.extras?.handlers?.upsertUserMetadata ?? UpsertUserMetadataHandler;
+  const ResolvedGetHandler =
+    options.extras?.handlers?.getUserMetadata ?? GetUserMetadataHandler;
+
   const providers: Provider[] = [
     ...(options.providers ?? []),
     createRocketsSettingsProvider(),
@@ -150,24 +148,8 @@ export function createRocketsProviders(options: {
       useFactory: (opts: RocketsOptionsInterface): AuthProviderInterface =>
         opts.authProvider,
     },
-    {
-      provide: UserMetadataModelService,
-      inject: [
-        RAW_OPTIONS_TOKEN,
-        getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      ],
-      useFactory: (
-        opts: RocketsOptionsInterface,
-        repository: RepositoryInterface<UserMetadataEntityInterface>,
-      ) => {
-        const { createDto, updateDto } = opts.userMetadata;
-        return new GenericUserMetadataModelService(
-          repository,
-          createDto,
-          updateDto,
-        );
-      },
-    },
+    ResolvedUpsertHandler,
+    ResolvedGetHandler,
   ];
 
   if (options.extras?.enableGlobalGuard !== false) {

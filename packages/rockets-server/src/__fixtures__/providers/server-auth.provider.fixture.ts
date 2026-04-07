@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { AuthProviderInterface } from '../../interfaces/auth-provider.interface';
-import { AuthorizedUser } from '../../interfaces/auth-user.interface';
+import { AuthProviderInterface } from '../../domain/interfaces/auth-provider.interface';
+import { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
 
 @Injectable()
 export class ServerAuthProviderFixture implements AuthProviderInterface {

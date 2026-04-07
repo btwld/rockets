@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BaseUserMetadataEntityInterface } from '../../modules/user-metadata/interfaces/user-metadata.interface';
+import { BaseUserMetadataEntityInterface } from '../../domain/interfaces/user-metadata.interface';
 import { UserMetadataEntityFixture } from '../entities/user-metadata.entity.fixture';
 
 @Injectable()

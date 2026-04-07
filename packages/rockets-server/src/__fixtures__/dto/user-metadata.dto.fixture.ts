@@ -12,7 +12,7 @@ import {
   BaseUserMetadataUpdateDto,
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
-} from '../../modules/user-metadata/interfaces/user-metadata.interface';
+} from '../../domain/interfaces/user-metadata.interface';
 
 /**
  * Example userMetadata create DTO

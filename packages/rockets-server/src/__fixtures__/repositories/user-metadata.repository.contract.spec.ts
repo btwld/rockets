@@ -1,33 +1,21 @@
 /**
- * Contrato entre {@link UserMetadataRepositoryFixture} e
- * {@link GenericUserMetadataModelService}: mesma forma de `where` que o stack
- * Concepta (`Where.eq`), e os métodos `findOne`, `create` e `update` usados em produção.
- *
- * Ao migrar o adapter (ex.: TypeORM v8), estes testes devem continuar a passar ou
- * falhar de forma explícita para forçar alinhamento do novo repositório.
+ * Contract between {@link UserMetadataRepositoryFixture} and
+ * {@link UpsertUserMetadataHandler} / {@link GetUserMetadataHandler}:
+ * same `where` shape as Concepta's `Where.eq`, and the `findOne`, `create`,
+ * `update` methods used by production handlers.
  */
 import { Where, type RepositoryInterface } from '@concepta/nestjs-repository';
-import { NotFoundException } from '@nestjs/common';
-import { GenericUserMetadataModelService } from '../../modules/user-metadata/services/user-metadata.model.service';
-import type {
-  UserMetadataEntityInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../../modules/user-metadata/interfaces/user-metadata.interface';
+import type { UserMetadataEntityInterface } from '../../domain/interfaces/user-metadata.interface';
 import { UserMetadataEntityFixture } from '../entities/user-metadata.entity.fixture';
 import { UserMetadataRepositoryFixture } from './user-metadata.repository.fixture';
+import { UpsertUserMetadataHandler } from '../../application/commands/handlers/upsert-user-metadata.handler';
+import { UpsertUserMetadataCommand } from '../../application/commands/impl/upsert-user-metadata.command';
+import { GetUserMetadataHandler } from '../../application/queries/handlers/get-user-metadata.handler';
+import { GetUserMetadataQuery } from '../../application/queries/impl/get-user-metadata.query';
 
-class ContractCreateDto {
-  userId!: string;
-}
-
-class ContractUpdateDto implements UserMetadataModelUpdatableInterface {
-  id!: string;
-  firstName?: string;
-  bio?: string;
-  email?: string;
-}
-
-function asWhereClause(where: ReturnType<typeof Where.eq>): Record<string, unknown> {
+function asWhereClause(
+  where: ReturnType<typeof Where.eq>,
+): Record<string, unknown> {
   return where as unknown as Record<string, unknown>;
 }
 
@@ -37,9 +25,9 @@ function asRepository(
   return fixture as unknown as RepositoryInterface<UserMetadataEntityInterface>;
 }
 
-describe('UserMetadataRepositoryFixture — contrato com o model service', () => {
-  describe('resolução de where (compatível com Where.eq do nestjs-repository)', () => {
-    it('findOne com Where.eq em id devolve o registo correcto', async () => {
+describe('UserMetadataRepositoryFixture — handler contract', () => {
+  describe('Where.eq resolution (nestjs-repository compat)', () => {
+    it('findOne with Where.eq on id returns the correct record', async () => {
       const repo = new UserMetadataRepositoryFixture();
       const row = await repo.findOne({
         where: asWhereClause(Where.eq('id', 'userMetadata-1')),
@@ -49,7 +37,7 @@ describe('UserMetadataRepositoryFixture — contrato com o model service', () =>
       expect(row?.userId).toBe('serverauth-user-1');
     });
 
-    it('findOne com Where.eq em userId devolve o registo correcto', async () => {
+    it('findOne with Where.eq on userId returns the correct record', async () => {
       const repo = new UserMetadataRepositoryFixture();
       const row = await repo.findOne({
         where: asWhereClause(Where.eq('userId', 'serverauth-user-1')),
@@ -58,7 +46,7 @@ describe('UserMetadataRepositoryFixture — contrato com o model service', () =>
       expect(row?.id).toBe('userMetadata-1');
     });
 
-    it('findOne devolve null quando não existe id', async () => {
+    it('findOne returns null when id does not exist', async () => {
       const repo = new UserMetadataRepositoryFixture();
       await expect(
         repo.findOne({
@@ -68,86 +56,60 @@ describe('UserMetadataRepositoryFixture — contrato com o model service', () =>
     });
   });
 
-  describe('GenericUserMetadataModelService com repositório real (sem mocks)', () => {
-    it('getUserMetadataById usa findOne por id', async () => {
-      const repo = new UserMetadataRepositoryFixture();
-      const service = new GenericUserMetadataModelService(
-        asRepository(repo),
-        ContractCreateDto,
-        ContractUpdateDto,
-      );
-      const row = await service.getUserMetadataById('userMetadata-1');
-      expect(row.userId).toBe('serverauth-user-1');
-    });
-
-    it('getUserMetadataById lança NotFound quando o repositório não encontra', async () => {
-      const repo = new UserMetadataRepositoryFixture();
-      const service = new GenericUserMetadataModelService(
-        asRepository(repo),
-        ContractCreateDto,
-        ContractUpdateDto,
-      );
-      await expect(service.getUserMetadataById('missing')).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('createOrUpdate em estado vazio cria via create e persiste no fixture', async () => {
+  describe('UpsertUserMetadataHandler with real fixture repository', () => {
+    it('upsert creates new metadata when none exists', async () => {
       const repo = new UserMetadataRepositoryFixture();
       await repo.clear();
-      const service = new GenericUserMetadataModelService(
-        asRepository(repo),
-        ContractCreateDto,
-        ContractUpdateDto,
+      const handler = new UpsertUserMetadataHandler(asRepository(repo));
+      const created = await handler.execute(
+        new UpsertUserMetadataCommand('new-user-99', { firstName: 'Novo' }),
       );
-      const created = await service.createOrUpdate('new-user-99', {
-        firstName: 'Novo',
-      });
       expect(created.userId).toBe('new-user-99');
       expect((created as UserMetadataEntityFixture).firstName).toBe('Novo');
-      const again = await service.findByUserId('new-user-99');
-      expect(again?.id).toBe(created.id);
     });
 
-    it('createOrUpdate com registo existente usa update (findOne id + repo.update)', async () => {
+    it('upsert updates existing metadata', async () => {
       const repo = new UserMetadataRepositoryFixture();
-      const service = new GenericUserMetadataModelService(
-        asRepository(repo),
-        ContractCreateDto,
-        ContractUpdateDto,
+      const handler = new UpsertUserMetadataHandler(asRepository(repo));
+      const updated = await handler.execute(
+        new UpsertUserMetadataCommand('serverauth-user-1', {
+          bio: 'Contract migration',
+        }),
       );
-      const updated = await service.createOrUpdate('serverauth-user-1', {
-        bio: 'Contrato migracao',
-      });
       expect(updated.userId).toBe('serverauth-user-1');
       expect((updated as UserMetadataEntityFixture).bio).toBe(
-        'Contrato migracao',
+        'Contract migration',
       );
       expect(updated.id).toBe('userMetadata-1');
     });
+  });
 
-    it('update aplica merge no registo devolvido por findOne', async () => {
+  describe('GetUserMetadataHandler with real fixture repository', () => {
+    it('get returns metadata for existing user', async () => {
       const repo = new UserMetadataRepositoryFixture();
-      const service = new GenericUserMetadataModelService(
-        asRepository(repo),
-        ContractCreateDto,
-        ContractUpdateDto,
+      const handler = new GetUserMetadataHandler(asRepository(repo));
+      const result = await handler.execute(
+        new GetUserMetadataQuery('serverauth-user-1'),
       );
-      const patch: ContractUpdateDto = {
-        id: 'userMetadata-1',
-        firstName: 'Migrado',
-      };
-      const result = await service.update(patch);
-      expect(result.id).toBe('userMetadata-1');
-      expect((result as UserMetadataEntityFixture).firstName).toBe('Migrado');
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe('userMetadata-1');
+    });
+
+    it('get returns null for non-existent user', async () => {
+      const repo = new UserMetadataRepositoryFixture();
+      const handler = new GetUserMetadataHandler(asRepository(repo));
+      const result = await handler.execute(
+        new GetUserMetadataQuery('no-such-user'),
+      );
+      expect(result).toBeNull();
     });
   });
 
-  describe('UserMetadataRepositoryFixture.update (integridade interna)', () => {
-    it('lança quando o id não existe no mapa', async () => {
+  describe('UserMetadataRepositoryFixture.update (internal integrity)', () => {
+    it('throws when id does not exist', async () => {
       const repo = new UserMetadataRepositoryFixture();
       await expect(
-        repo.update('inexistente', { version: 1 }),
+        repo.update('inexistent', { version: 1 }),
       ).rejects.toThrow(/not found/);
     });
   });

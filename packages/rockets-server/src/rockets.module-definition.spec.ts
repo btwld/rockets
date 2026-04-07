@@ -1,4 +1,4 @@
-import { MeController } from './modules/user/me.controller';
+import { MeController } from './gateways/http/me.controller';
 import { createRocketsControllers } from './rockets.module-definition';
 
 describe('RocketsModuleDefinition', () => {
@@ -73,7 +73,6 @@ describe('RocketsModuleDefinition', () => {
         extras: { disableController: { me: true } },
       });
 
-      // Should use custom controllers, ignoring disableController
       expect(result).toEqual([CustomController]);
     });
   });

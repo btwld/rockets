@@ -1,4 +1,4 @@
-import { BaseUserMetadataEntityInterface } from '../../modules/user-metadata/interfaces/user-metadata.interface';
+import { BaseUserMetadataEntityInterface } from '../../domain/interfaces/user-metadata.interface';
 
 /**
  * Example userMetadata entity fixture

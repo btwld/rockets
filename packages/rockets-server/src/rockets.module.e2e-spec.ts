@@ -10,20 +10,20 @@ import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AuthPublic, AuthUser } from '@concepta/nestjs-authentication';
-import { AuthorizedUser } from './interfaces/auth-user.interface';
+import { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
-} from './modules/user-metadata/interfaces/user-metadata.interface';
+} from './domain/interfaces/user-metadata.interface';
 
 import { FirebaseAuthProviderFixture } from './__fixtures__/providers/firebase-auth.provider.fixture';
 import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
+import { FailingAuthProviderFixture } from './__fixtures__/providers/failing-auth.provider.fixture';
 import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
-import { RocketsOptionsInterface } from './interfaces/rockets-options.interface';
+import { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
 import { RocketsModule } from './rockets.module';
 
-// Test controller for comprehensive AuthGuard testing
 @ApiTags('test')
 @Controller('test')
 class TestController {
@@ -78,7 +78,6 @@ class TestController {
   }
 }
 
-// Test module that includes our test controller
 @Module({
   controllers: [TestController],
 })
@@ -466,6 +465,55 @@ describe('RocketsModule (e2e)', () => {
 
       expect(res.body).toMatchObject({
         message: 'No authentication token provided',
+        statusCode: 401,
+      });
+    });
+
+    it('should return 401 when Authorization header uses Basic scheme instead of Bearer', async () => {
+      const moduleRef = await Test.createTestingModule({
+        imports: [
+          RocketsServerE2eUserMetadataRepoModule,
+          RocketsModule.forRoot(baseOptions),
+          TestModule,
+        ],
+      }).compile();
+
+      app = moduleRef.createNestApplication();
+      await app.init();
+
+      const res = await request(app.getHttpServer())
+        .get('/test/protected')
+        .set('Authorization', 'Basic abc123')
+        .expect(401);
+
+      expect(res.body).toMatchObject({
+        message: 'No authentication token provided',
+        statusCode: 401,
+      });
+    });
+
+    it('should wrap non-UnauthorizedException errors from auth provider as 401', async () => {
+      const moduleRef = await Test.createTestingModule({
+        imports: [
+          RocketsServerE2eUserMetadataRepoModule,
+          RocketsModule.forRoot({
+            ...baseOptions,
+            authProvider: new FailingAuthProviderFixture(),
+          }),
+          TestModule,
+        ],
+      }).compile();
+
+      app = moduleRef.createNestApplication();
+      await app.init();
+
+      const res = await request(app.getHttpServer())
+        .get('/test/protected')
+        .set('Authorization', 'Bearer any-token')
+        .expect(401);
+
+      expect(res.body).toMatchObject({
+        message: 'Invalid authentication token',
         statusCode: 401,
       });
     });

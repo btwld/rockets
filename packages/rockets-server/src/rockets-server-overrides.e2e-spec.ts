@@ -4,11 +4,11 @@ import request from 'supertest';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
 import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
-import type { RocketsOptionsInterface } from './interfaces/rockets-options.interface';
+import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
 import {
   type UserMetadataCreatableInterface,
   type UserMetadataModelUpdatableInterface,
-} from './modules/user-metadata/interfaces/user-metadata.interface';
+} from './domain/interfaces/user-metadata.interface';
 import { RocketsModule } from './rockets.module';
 
 class MinimalMetadataCreateDto implements UserMetadataCreatableInterface {

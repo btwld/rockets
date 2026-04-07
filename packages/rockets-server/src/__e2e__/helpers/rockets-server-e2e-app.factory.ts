@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { UserMetadataRepositoryFixture } from '../../__fixtures__/repositories/user-metadata.repository.fixture';
-import { USER_METADATA_MODULE_ENTITY_KEY } from '../../modules/user-metadata/constants/user-metadata.constants';
+import { USER_METADATA_MODULE_ENTITY_KEY } from '../../rockets.constants';
 
 const userMetadataRepositoryToken = getDynamicRepositoryToken(
   USER_METADATA_MODULE_ENTITY_KEY,
