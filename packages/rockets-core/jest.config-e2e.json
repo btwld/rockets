@@ -1,0 +1,15 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "testEnvironment": "node",
+  "testRegex": ".*\\.e2e-spec\\.ts$",
+  "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
+  "roots": ["<rootDir>/src"],
+  "testTimeout": 60000,
+  "maxWorkers": 2,
+  "transform": {
+    "^.+\\.ts$": [
+      "ts-jest",
+      { "tsconfig": "<rootDir>/../../tsconfig.jest.json" }
+    ]
+  }
+}

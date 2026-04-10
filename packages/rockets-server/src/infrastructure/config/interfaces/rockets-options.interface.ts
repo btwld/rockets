@@ -1,10 +1,10 @@
 import { RocketsSettingsInterface } from './rockets-settings.interface';
-import {
+import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
-} from '../../../domain/interfaces/user-metadata.interface';
-import { AuthProviderInterface } from '../../../domain/interfaces/auth-provider.interface';
-import { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui';
+} from '@bitwild/rockets-core';
+import type { AuthProviderInterface } from '@bitwild/rockets-core';
+import type { SwaggerUiOptionsInterface } from '@bitwild/rockets-common';
 
 /**
  * Generic userMetadata configuration interface.

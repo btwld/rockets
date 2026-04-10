@@ -18,10 +18,25 @@
   "files": [],
   "references": [
     {
-      "path": "packages/rockets-server-auth"
+      "path": "packages/rockets-common"
+    },
+    {
+      "path": "packages/rockets-repository"
+    },
+    {
+      "path": "packages/rockets-crud"
+    },
+    {
+      "path": "packages/rockets-access-control"
+    },
+    {
+      "path": "packages/rockets-core"
     },
     {
       "path": "packages/rockets-server"
+    },
+    {
+      "path": "packages/rockets-server-auth"
     }
   ]
 }

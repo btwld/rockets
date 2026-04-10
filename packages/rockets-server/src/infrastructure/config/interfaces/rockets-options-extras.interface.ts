@@ -1,6 +1,10 @@
 import { DynamicModule, Type } from '@nestjs/common';
-import { AbstractUpsertUserMetadataHandler } from '../../../application/commands/handlers/abstract-upsert-user-metadata.handler';
-import { AbstractGetUserMetadataHandler } from '../../../application/queries/handlers/abstract-get-user-metadata.handler';
+import type {
+  AbstractUpsertUserMetadataHandler,
+  AbstractGetUserMetadataHandler,
+  RepositoryPersistenceConfig,
+  RocketsResourceConfig,
+} from '@bitwild/rockets-core';
 
 export interface DisableControllerOptionsInterface {
   me?: boolean;
@@ -11,6 +15,9 @@ export interface RocketsOptionsExtrasInterface
   enableGlobalGuard?: boolean;
   disableController?: DisableControllerOptionsInterface;
 
+  /** Repository persistence — array of adapter configs, each registers entities */
+  repositoryPersistence?: ReadonlyArray<RepositoryPersistenceConfig>;
+
   /**
    * Optional custom handler overrides for user metadata operations.
    * Each must extend the corresponding abstract base class.
@@ -19,4 +26,7 @@ export interface RocketsOptionsExtrasInterface
     upsertUserMetadata?: Type<AbstractUpsertUserMetadataHandler>;
     getUserMetadata?: Type<AbstractGetUserMetadataHandler>;
   };
+
+  /** Declarative CRUD resources — passed through to RocketsCoreModule */
+  resources?: ReadonlyArray<RocketsResourceConfig>;
 }

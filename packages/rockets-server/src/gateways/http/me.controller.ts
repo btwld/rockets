@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { AuthUser } from '@concepta/nestjs-authentication';
+import { AuthUser } from '@bitwild/rockets-common';
 import {
   ApiTags,
   ApiOperation,
@@ -16,13 +16,16 @@ import {
 } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import type { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
+import type { AuthorizedUser } from '@bitwild/rockets-core';
+import {
+  UpsertUserMetadataCommand,
+  GetUserMetadataQuery,
+  UserUpdateDto,
+  UserResponseDto,
+} from '@bitwild/rockets-core';
+import type { UserMetadataEntityInterface } from '@bitwild/rockets-core';
 import { RocketsOptionsInterface } from '../../infrastructure/config/interfaces/rockets-options.interface';
 import { RAW_OPTIONS_TOKEN } from '../../rockets.tokens';
-import { UserUpdateDto, UserResponseDto } from '../../infrastructure/dtos/user.dto';
-import { UpsertUserMetadataCommand } from '../../application/commands/impl/upsert-user-metadata.command';
-import { GetUserMetadataQuery } from '../../application/queries/impl/get-user-metadata.query';
-import { UserMetadataEntityInterface } from '../../domain/interfaces/user-metadata.interface';
 
 @ApiTags('user')
 @ApiBearerAuth()

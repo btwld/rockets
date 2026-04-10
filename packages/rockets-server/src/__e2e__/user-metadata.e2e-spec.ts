@@ -4,7 +4,12 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { AuthUser } from '@concepta/nestjs-authentication';
-import { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
+import {
+  AuthorizedUser,
+  UpsertUserMetadataCommand,
+  GetUserMetadataQuery,
+  UserMetadataEntityInterface,
+} from '@bitwild/rockets-core';
 import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
 import { IsString, IsOptional } from 'class-validator';
 
@@ -18,10 +23,7 @@ import {
   BaseUserMetadataUpdateDto,
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
-  UserMetadataEntityInterface,
 } from '../domain/interfaces/user-metadata.interface';
-import { UpsertUserMetadataCommand } from '../application/commands/impl/upsert-user-metadata.command';
-import { GetUserMetadataQuery } from '../application/queries/impl/get-user-metadata.query';
 
 class TestUserMetadataCreateDto
   extends BaseUserMetadataCreateDto

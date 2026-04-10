@@ -21,7 +21,11 @@
     "!src/**/*.spec.ts",
     "!src/**/__fixtures__/**",
     "!src/**/__tests__/**",
-    "!src/**/__e2e__/**"
+    "!src/**/__e2e__/**",
+    "!src/index.ts",
+    "!src/domain/**",
+    "!src/application/**",
+    "!src/infrastructure/dtos/**"
   ],
   "coverageDirectory": "coverage-e2e",
   "coverageReporters": ["text", "text-summary", "lcov", "html"]

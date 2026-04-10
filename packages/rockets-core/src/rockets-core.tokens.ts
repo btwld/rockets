@@ -1,0 +1,3 @@
+export const RAW_OPTIONS_TOKEN = Symbol(
+  '__ROCKETS_CORE_MODULE_RAW_OPTIONS_TOKEN__',
+);

@@ -1,9 +1,9 @@
-export const ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN =
-  'ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN';
+// Re-export from rockets-core for backward compatibility
+export {
+  AUTH_PROVIDER_TOKEN as RocketsAuthProvider,
+  USER_METADATA_MODULE_ENTITY_KEY,
+  USER_MODULE_USER_ENTITY_KEY,
+  ROCKETS_CORE_SETTINGS_TOKEN as ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+} from '@bitwild/rockets-core';
 
-export const RocketsAuthProvider = Symbol('ROCKETS_AUTH_PROVIDER');
-
-export const USER_METADATA_MODULE_ENTITY_KEY = 'userMetadata';
-
-export const USER_MODULE_USER_ENTITY_KEY = 'user';
 export const UserModelService = 'USER_MODULE_USER_SERVICE_KEY';

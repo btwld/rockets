@@ -12,11 +12,13 @@ import {
   type UserMetadataModelUpdatableInterface,
   type UserMetadataUpdatableInterface,
 } from './domain/interfaces/user-metadata.interface';
+import {
+  AbstractGetUserMetadataHandler,
+  AbstractUpsertUserMetadataHandler,
+  GetUserMetadataQuery,
+  UpsertUserMetadataCommand,
+} from '@bitwild/rockets-core';
 import { RocketsModule } from './rockets.module';
-import { AbstractGetUserMetadataHandler } from './application/queries/handlers/abstract-get-user-metadata.handler';
-import { AbstractUpsertUserMetadataHandler } from './application/commands/handlers/abstract-upsert-user-metadata.handler';
-import { GetUserMetadataQuery } from './application/queries/impl/get-user-metadata.query';
-import { UpsertUserMetadataCommand } from './application/commands/impl/upsert-user-metadata.command';
 
 class OverrideMetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()

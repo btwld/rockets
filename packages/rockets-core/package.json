@@ -1,0 +1,58 @@
+{
+  "name": "@bitwild/rockets-core",
+  "version": "1.0.0-alpha.1",
+  "description": "Rockets Core - auth-provider-agnostic server infrastructure",
+  "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
+  "license": "BSD-3-Clause",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/btwld/rockets.git",
+    "directory": "packages/rockets-core"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "files": [
+    "dist/**/!(*.spec|*.e2e-spec|*.fixture).{js,d.ts}",
+    "README.md",
+    "LICENSE.txt",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
+    "test": "jest",
+    "test:e2e": "jest --config ./jest.config-e2e.json"
+  },
+  "dependencies": {
+    "@bitwild/rockets-access-control": "workspace:*",
+    "@bitwild/rockets-common": "workspace:*",
+    "@bitwild/rockets-crud": "workspace:*",
+    "@bitwild/rockets-repository": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/cqrs": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0"
+  },
+  "peerDependencies": {
+    "class-transformer": "*",
+    "class-validator": "*",
+    "rxjs": "^7.1.0"
+  }
+}

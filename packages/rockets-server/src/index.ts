@@ -1,3 +1,67 @@
+// ── Re-export core contracts & tokens ──
+export {
+  AUTH_PROVIDER_TOKEN,
+  ROCKETS_DISABLE_GUARDS_TOKEN,
+  AuthServerGuard,
+  AuthPublic,
+  RocketsCoreModule,
+  UpsertUserMetadataCommand,
+  AbstractUpsertUserMetadataHandler,
+  UpsertUserMetadataHandler,
+  GetUserMetadataQuery,
+  AbstractGetUserMetadataHandler,
+  GetUserMetadataHandler,
+  USER_METADATA_MODULE_ENTITY_KEY,
+  USER_MODULE_USER_ENTITY_KEY,
+  ROCKETS_CORE_SETTINGS_TOKEN,
+  RocketsCoreExceptionsFilter,
+  BaseUserDto,
+  BaseUserCreateDto,
+  BaseUserUpdateDto,
+  BaseUserMetadataDto,
+  BaseUserMetadataCreateDto,
+  BaseUserMetadataUpdateDto,
+  UserUpdateDto,
+  UserResponseDto,
+  RoleNameDto,
+  UserRoleItemDto,
+} from '@bitwild/rockets-core';
+
+export type {
+  AuthProviderInterface,
+  AuthorizedUser,
+  AuthorizeUserInterface,
+  ValidateTokenInterface,
+  RepositoryPersistenceConfig,
+  RocketsCoreOptionsInterface,
+  RocketsCoreOptionsExtrasInterface,
+  RocketsCoreSettingsInterface,
+  BaseUserEntityInterface,
+  UserEntityInterface,
+  UserCreatableInterface,
+  UserUpdatableInterface,
+  UserModelUpdatableInterface,
+  BaseUserMetadataEntityInterface,
+  UserMetadataEntityInterface,
+  UserMetadataCreatableInterface,
+  UserMetadataUpdatableInterface,
+  UserMetadataModelUpdatableInterface,
+} from '@bitwild/rockets-core';
+
+// ── Re-export common utilities ──
+export { logAndGetErrorDetails, getErrorDetails } from '@bitwild/rockets-common';
+export type { ErrorDetails } from '@bitwild/rockets-common';
+
+// ── Backward compatibility re-exports ──
+export {
+  RocketsAuthProvider,
+  ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
+  UserModelService,
+} from './rockets.constants';
+export { ExceptionsFilter } from './infrastructure/filters/exceptions.filter';
+
+// ── Server's own exports ──
+export { RocketsModule } from './rockets.module';
 export type {
   RocketsOptionsInterface,
   UserMetadataConfigInterface,
@@ -6,47 +70,5 @@ export type {
   RocketsOptionsExtrasInterface,
   DisableControllerOptionsInterface,
 } from './infrastructure/config/interfaces/rockets-options-extras.interface';
-
-export { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
-export { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
-export { AuthorizedUser } from './domain/interfaces/auth-user.interface';
-
-export { ExceptionsFilter } from './infrastructure/filters/exceptions.filter';
-
-export { UserUpdateDto, UserResponseDto } from './infrastructure/dtos/user.dto';
-export {
-  BaseUserEntityInterface,
-  UserEntityInterface,
-  UserCreatableInterface,
-  UserUpdatableInterface,
-  UserModelUpdatableInterface,
-  BaseUserDto,
-  BaseUserCreateDto,
-  BaseUserUpdateDto,
-} from './domain/interfaces/user.interface';
 export { UserModule } from './user.module';
-
-export {
-  BaseUserMetadataEntityInterface,
-  UserMetadataEntityInterface,
-  UserMetadataCreatableInterface,
-  UserMetadataUpdatableInterface,
-  UserMetadataModelUpdatableInterface,
-  BaseUserMetadataDto,
-  BaseUserMetadataCreateDto,
-  BaseUserMetadataUpdateDto,
-} from './domain/interfaces/user-metadata.interface';
-export { USER_METADATA_MODULE_ENTITY_KEY } from './rockets.constants';
-
-export { AbstractUpsertUserMetadataHandler } from './application/commands/handlers/abstract-upsert-user-metadata.handler';
-export { AbstractGetUserMetadataHandler } from './application/queries/handlers/abstract-get-user-metadata.handler';
-export { UpsertUserMetadataCommand } from './application/commands/impl/upsert-user-metadata.command';
-export { GetUserMetadataQuery } from './application/queries/impl/get-user-metadata.query';
-
-export { RocketsModule } from './rockets.module';
-
-export {
-  logAndGetErrorDetails,
-  getErrorDetails,
-  ErrorDetails,
-} from './infrastructure/utils/error-logging.helper';
+export { MeController } from './gateways/http/me.controller';

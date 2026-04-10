@@ -16,16 +16,19 @@ import request from 'supertest';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { IsOptional, IsString } from 'class-validator';
 
+import {
+  USER_METADATA_MODULE_ENTITY_KEY,
+  UpsertUserMetadataHandler,
+  GetUserMetadataHandler,
+} from '@bitwild/rockets-core';
 import { ServerAuthProviderFixture } from '../__fixtures__/providers/server-auth.provider.fixture';
 import { UserMetadataRepositoryFixture } from '../__fixtures__/repositories/user-metadata.repository.fixture';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import type { RocketsOptionsInterface } from '../infrastructure/config/interfaces/rockets-options.interface';
-import { RocketsAuthProvider, USER_METADATA_MODULE_ENTITY_KEY } from '../rockets.constants';
+import { RocketsAuthProvider } from '../rockets.constants';
 import { RAW_OPTIONS_TOKEN } from '../rockets.tokens';
 import { UserModule } from '../user.module';
 import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
-import { UpsertUserMetadataHandler } from '../application/commands/handlers/upsert-user-metadata.handler';
-import { GetUserMetadataHandler } from '../application/queries/handlers/get-user-metadata.handler';
 import {
   BaseUserMetadataCreateDto,
   BaseUserMetadataUpdateDto,

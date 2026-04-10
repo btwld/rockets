@@ -1,8 +1,8 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import {
-  RocketsAsyncOptions,
   RocketsModuleClass,
   RocketsOptions,
+  RocketsAsyncOptions,
 } from './rockets.module-definition';
 
 @Module({})
