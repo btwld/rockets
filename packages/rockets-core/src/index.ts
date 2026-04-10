@@ -3,25 +3,40 @@ export { RocketsCoreModule } from './rockets-core.module';
 
 // Auth contracts
 export type { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
-export type { AuthorizeUserInterface, ValidateTokenInterface } from './domain/interfaces/auth-provider.interface';
+export type {
+  AuthorizeUserInterface,
+  ValidateTokenInterface,
+} from './domain/interfaces/auth-provider.interface';
 export type { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 
 // Auth tokens & guard
-export { AUTH_PROVIDER_TOKEN, ROCKETS_DISABLE_GUARDS_TOKEN } from './rockets-core.constants';
+export {
+  AUTH_PROVIDER_TOKEN,
+  ROCKETS_DISABLE_GUARDS_TOKEN,
+} from './rockets-core.constants';
 export { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
 
 // Decorators
 export { AuthPublic } from './decorators/auth-public.decorator';
 
 // Authorized user overlay (context overlay for CRUD handlers)
-export { AuthorizedUserCtx, AuthorizedUserOverlay } from './infrastructure/interceptors/authorized-user.overlay';
+export {
+  AuthorizedUserCtx,
+  AuthorizedUserOverlay,
+} from './infrastructure/interceptors/authorized-user.overlay';
 export { getAuthorizedUserFromCrudContext } from './utils/authorized-user-from-crud-context.helper';
 
 // Reusable repository hooks
-export { OwnerScopeHook, DEFAULT_OWNER_COLUMN } from './infrastructure/hooks/owner-scope.hook';
+export {
+  OwnerScopeHook,
+  DEFAULT_OWNER_COLUMN,
+} from './infrastructure/hooks/owner-scope.hook';
 
 // Exceptions filter
-export { RocketsCoreExceptionsFilter, ERROR_MESSAGE_FALLBACK } from './infrastructure/filters/exceptions.filter';
+export {
+  RocketsCoreExceptionsFilter,
+  ERROR_MESSAGE_FALLBACK,
+} from './infrastructure/filters/exceptions.filter';
 
 // Repository persistence interfaces
 export type { RepositoryPersistenceConfig } from './domain/interfaces/repository-persistence.interface';
@@ -63,7 +78,12 @@ export {
 } from './domain/interfaces/user-metadata.interface';
 
 // DTOs
-export { UserUpdateDto, UserResponseDto, RoleNameDto, UserRoleItemDto } from './infrastructure/dtos/user.dto';
+export {
+  UserUpdateDto,
+  UserResponseDto,
+  RoleNameDto,
+  UserRoleItemDto,
+} from './infrastructure/dtos/user.dto';
 
 // CQRS commands
 export { UpsertUserMetadataCommand } from './application/commands/impl/upsert-user-metadata.command';

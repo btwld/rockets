@@ -152,6 +152,9 @@ export { SwaggerUiModule, SwaggerUiService } from '@concepta/nestjs-swagger-ui';
 export type { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui';
 
 // ── Shared Utilities ──
-export { logAndGetErrorDetails, getErrorDetails } from './utils/error-logging.helper';
+export {
+  logAndGetErrorDetails,
+  getErrorDetails,
+} from './utils/error-logging.helper';
 export type { ErrorDetails } from './utils/error-logging.helper';
 export { createRepositoryContext } from './utils/repository-context.helper';

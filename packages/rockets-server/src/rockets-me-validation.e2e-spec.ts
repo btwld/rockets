@@ -2,7 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { Validate, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import {
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 import { FailingAuthProviderFixture } from './__fixtures__/providers/failing-auth.provider.fixture';
 import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
 import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
@@ -45,6 +49,7 @@ class MetadataUpdateNullConstraintsDto
   @IsString()
   id!: string;
 
+  @IsOptional()
   @Validate(AlwaysFailsConstraint)
   badField?: string;
 }

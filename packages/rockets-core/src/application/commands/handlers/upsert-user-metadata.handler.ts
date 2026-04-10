@@ -38,9 +38,9 @@ export class UpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandler
     const existing = await this.repo.findOne({
       where: Where.eq<UserMetadataEntityInterface>('userId', userId),
     });
-    
+
     if (existing) {
-      //TODO: improve this code
+      // TODO: improve this code
       const definedData = Object.fromEntries(
         Object.entries(data).filter(([, v]) => v !== undefined),
       );

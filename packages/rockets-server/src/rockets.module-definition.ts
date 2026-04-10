@@ -1,4 +1,7 @@
-import { createSettingsProvider, SwaggerUiModule } from '@bitwild/rockets-common';
+import {
+  createSettingsProvider,
+  SwaggerUiModule,
+} from '@bitwild/rockets-common';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,

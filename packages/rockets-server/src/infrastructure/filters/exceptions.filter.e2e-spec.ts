@@ -1,10 +1,7 @@
-import {
-  Controller,
-  Get,
-  INestApplication,
-} from '@nestjs/common';
+import { Controller, Get, INestApplication } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { RuntimeException } from '@concepta/nestjs-common';
 import request from 'supertest';
 import { ExceptionsFilter, ERROR_MESSAGE_FALLBACK } from './exceptions.filter';
@@ -19,9 +16,11 @@ class TestRuntimeException extends RuntimeException {
   }
 }
 
+@ApiTags('test-errors')
 @Controller('test-errors')
 class TestErrorController {
   @Get('runtime-500-with-safe')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   runtimeSafe500(): never {
     throw new TestRuntimeException(
       {
@@ -34,6 +33,7 @@ class TestErrorController {
   }
 
   @Get('runtime-500-no-safe')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   runtimeNoSafe500(): never {
     throw new TestRuntimeException(
       {
@@ -45,6 +45,7 @@ class TestErrorController {
   }
 
   @Get('runtime-400-with-safe')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   runtime400Safe(): never {
     throw new TestRuntimeException(
       {
@@ -57,6 +58,7 @@ class TestErrorController {
   }
 
   @Get('runtime-400-no-safe')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   runtime400NoSafe(): never {
     throw new TestRuntimeException(
       {
@@ -68,6 +70,7 @@ class TestErrorController {
   }
 
   @Get('runtime-default-status')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   runtimeDefaultStatus(): never {
     throw new TestRuntimeException(
       { message: 'No explicit httpStatus set' },
@@ -76,6 +79,7 @@ class TestErrorController {
   }
 
   @Get('runtime-400-no-safe-no-message')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   runtime400NoSafeNoMessage(): never {
     throw new TestRuntimeException(
       { message: '', httpStatus: 400 },
@@ -84,6 +88,7 @@ class TestErrorController {
   }
 
   @Get('validation-errors')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   validationErrors(): never {
     const err = new TestRuntimeException(
       { message: 'Validation failed' },
@@ -102,6 +107,7 @@ class TestErrorController {
   }
 
   @Get('unknown-error')
+  @ApiOkResponse({ description: 'Always throws — test route' })
   unknownError(): never {
     // eslint-disable-next-line @typescript-eslint/no-throw-literal
     throw { message: 'plain object error' };

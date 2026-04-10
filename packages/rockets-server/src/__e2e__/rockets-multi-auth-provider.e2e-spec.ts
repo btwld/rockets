@@ -3,7 +3,10 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { IsOptional, IsString } from 'class-validator';
-import type { AuthProviderInterface, AuthorizedUser } from '@bitwild/rockets-core';
+import type {
+  AuthProviderInterface,
+  AuthorizedUser,
+} from '@bitwild/rockets-core';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
@@ -84,8 +87,7 @@ function createFirebaseToken(payload: {
   roles?: string[];
 }): string {
   return (
-    'firebase:' +
-    Buffer.from(JSON.stringify(payload)).toString('base64url')
+    'firebase:' + Buffer.from(JSON.stringify(payload)).toString('base64url')
   );
 }
 
@@ -217,9 +219,7 @@ describe('RocketsModule — Multi Auth Provider (e2e)', () => {
     });
 
     it('GET /me without Authorization header returns 401', async () => {
-      await request(app.getHttpServer())
-        .get('/me')
-        .expect(401);
+      await request(app.getHttpServer()).get('/me').expect(401);
     });
 
     it('GET /me with malformed Authorization header returns 401', async () => {

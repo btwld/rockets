@@ -1,12 +1,8 @@
-import {
-  Controller,
-  Get,
-  INestApplication,
-  Module,
-} from '@nestjs/common';
+import { Controller, Get, INestApplication, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import request from 'supertest';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
 import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
 import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
@@ -28,9 +24,11 @@ class GuardE2eMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
   id!: string;
 }
 
+@ApiTags('guard-e2e-open')
 @Controller('guard-e2e-open')
 class GuardE2eOpenController {
   @Get()
+  @ApiOkResponse({ description: 'Health ping' })
   ping(): { ok: boolean } {
     return { ok: true };
   }

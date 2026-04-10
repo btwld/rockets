@@ -49,7 +49,10 @@ export type {
 } from '@bitwild/rockets-core';
 
 // ── Re-export common utilities ──
-export { logAndGetErrorDetails, getErrorDetails } from '@bitwild/rockets-common';
+export {
+  logAndGetErrorDetails,
+  getErrorDetails,
+} from '@bitwild/rockets-common';
 export type { ErrorDetails } from '@bitwild/rockets-common';
 
 // ── Backward compatibility re-exports ──

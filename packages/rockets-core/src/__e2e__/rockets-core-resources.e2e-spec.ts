@@ -26,7 +26,10 @@ import request from 'supertest';
 import type { AuthProviderInterface } from '../domain/interfaces/auth-provider.interface';
 import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
 import { RocketsCoreModule } from '../rockets-core.module';
-import { AUTH_PROVIDER_TOKEN, USER_METADATA_MODULE_ENTITY_KEY } from '../rockets-core.constants';
+import {
+  AUTH_PROVIDER_TOKEN,
+  USER_METADATA_MODULE_ENTITY_KEY,
+} from '../rockets-core.constants';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 
@@ -61,14 +64,20 @@ class WidgetResponseDto {
 class WidgetPaginatedDto extends CrudResponsePaginatedDto<WidgetResponseDto> {
   @Expose()
   @Type(() => WidgetResponseDto)
-  @ApiProperty({ type: [WidgetResponseDto] })
+  @ApiProperty({ type: [WidgetResponseDto], isArray: true })
   declare data: WidgetResponseDto[];
 }
 
 class InMemoryMetadataRepo {
-  async findOne() { return null; }
-  async create(data: Record<string, unknown>) { return { id: '1', ...data }; }
-  async update(e: Record<string, unknown>, d: Record<string, unknown>) { return { ...e, ...d }; }
+  async findOne() {
+    return null;
+  }
+  async create(data: Record<string, unknown>) {
+    return { id: '1', ...data };
+  }
+  async update(e: Record<string, unknown>, d: Record<string, unknown>) {
+    return { ...e, ...d };
+  }
 }
 
 const metaToken = getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY);
@@ -133,9 +142,7 @@ describe('RocketsCoreModule — resources + repositoryPersistence (e2e)', () => 
           global: true,
         }),
       ],
-      providers: [
-        { provide: APP_GUARD, useClass: AuthServerGuard },
-      ],
+      providers: [{ provide: APP_GUARD, useClass: AuthServerGuard }],
     }).compile();
 
     app = moduleRef.createNestApplication();
@@ -190,9 +197,7 @@ describe('RocketsCoreModule.forRootAsync (e2e)', () => {
           global: true,
         }),
       ],
-      providers: [
-        { provide: APP_GUARD, useClass: AuthServerGuard },
-      ],
+      providers: [{ provide: APP_GUARD, useClass: AuthServerGuard }],
     }).compile();
 
     app = moduleRef.createNestApplication();

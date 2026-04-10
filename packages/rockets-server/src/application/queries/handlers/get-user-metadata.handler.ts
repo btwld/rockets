@@ -3,7 +3,7 @@ import {
   InjectDynamicRepository,
   RepositoryInterface,
   Where,
-} from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
 import { AbstractGetUserMetadataHandler } from './abstract-get-user-metadata.handler';
 import { GetUserMetadataQuery } from '../impl/get-user-metadata.query';
 import { UserMetadataEntityInterface } from '../../../domain/interfaces/user-metadata.interface';

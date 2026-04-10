@@ -50,6 +50,13 @@
     "@nestjs/cqrs": "^11.0.0",
     "@nestjs/swagger": "^11.0.0"
   },
+  "devDependencies": {
+    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.4",
+    "@nestjs/testing": "11.1.13",
+    "@nestjs/typeorm": "11.0.0",
+    "supertest": "^6.3.4",
+    "typeorm": "^0.3.20"
+  },
   "peerDependencies": {
     "class-transformer": "*",
     "class-validator": "*",

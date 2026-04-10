@@ -8,7 +8,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AuthProviderInterface } from '../../domain/interfaces/auth-provider.interface';
 import { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
-import { AUTH_PROVIDER_TOKEN, ROCKETS_DISABLE_GUARDS_TOKEN } from '../../rockets-core.constants';
+import {
+  AUTH_PROVIDER_TOKEN,
+  ROCKETS_DISABLE_GUARDS_TOKEN,
+} from '../../rockets-core.constants';
 
 @Injectable()
 export class AuthServerGuard implements CanActivate {

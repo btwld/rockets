@@ -134,7 +134,11 @@ describe('UserModule.register via standalone wiring (e2e)', () => {
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      }),
     );
     await app.init();
 
@@ -165,7 +169,11 @@ describe('UserModule.register via standalone wiring (e2e)', () => {
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        forbidUnknownValues: true,
+      }),
     );
     await app.init();
 

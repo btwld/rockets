@@ -78,6 +78,12 @@
     "@nestjs/swagger": "^11.0.0"
   },
   "devDependencies": {
+    "@bitwild/rockets-crud": "workspace:*",
+    "@bitwild/rockets-repository": "workspace:*",
+    "@concepta/nestjs-authentication": "7.0.0-alpha.10",
+    "@concepta/nestjs-common": "8.0.0-alpha.4",
+    "@concepta/nestjs-repository": "8.0.0-alpha.4",
+    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.4",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
     "@nestjs/typeorm": "^11.0.0",

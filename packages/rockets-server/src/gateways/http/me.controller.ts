@@ -53,10 +53,10 @@ export class MeController {
     description: 'Unauthorized - Invalid or missing token',
   })
   async me(@AuthUser() user: AuthorizedUser): Promise<UserResponseDto> {
-    const userMetadata =
-      await this.queryBus.execute<GetUserMetadataQuery, UserMetadataEntityInterface | null>(
-        new GetUserMetadataQuery(user.id),
-      );
+    const userMetadata = await this.queryBus.execute<
+      GetUserMetadataQuery,
+      UserMetadataEntityInterface | null
+    >(new GetUserMetadataQuery(user.id));
 
     return {
       ...user,
@@ -109,10 +109,10 @@ export class MeController {
       }
     }
 
-    const userMetadata =
-      await this.commandBus.execute<UpsertUserMetadataCommand, UserMetadataEntityInterface>(
-        new UpsertUserMetadataCommand(user.id, userMetadataData),
-      );
+    const userMetadata = await this.commandBus.execute<
+      UpsertUserMetadataCommand,
+      UserMetadataEntityInterface
+    >(new UpsertUserMetadataCommand(user.id, userMetadataData));
 
     return {
       ...user,

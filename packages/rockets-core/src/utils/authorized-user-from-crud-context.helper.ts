@@ -8,9 +8,9 @@ import { AuthorizedUserCtx } from '../infrastructure/interceptors/authorized-use
  * Reads the authenticated user from the request-scoped app context overlay
  * (`AuthorizedUserOverlay`), using the HTTP request carried on the CRUD context.
  */
-export function getAuthorizedUserFromCrudContext<
-  T extends PlainLiteralObject,
->(context: CrudContextInterface<T>): AuthorizedUser | undefined {
+export function getAuthorizedUserFromCrudContext<T extends PlainLiteralObject>(
+  context: CrudContextInterface<T>,
+): AuthorizedUser | undefined {
   const appCtx = getAppContext(context.httpRequest);
   return appCtx.supports(AuthorizedUserCtx)
     ? appCtx.with(AuthorizedUserCtx)

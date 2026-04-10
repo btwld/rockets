@@ -64,7 +64,10 @@ class E2eCustomUpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandl
       firstName?: string;
     };
     return new UserMetadataEntityFixture({
-      id: data && 'id' in data && typeof data.id === 'string' ? data.id : 'override-upsert',
+      id:
+        data && 'id' in data && typeof data.id === 'string'
+          ? data.id
+          : 'override-upsert',
       userId: command.userId,
       firstName: data.firstName ?? 'e2e-custom-upsert-handler',
     }) as UserMetadataEntityInterface;

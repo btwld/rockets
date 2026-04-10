@@ -21,7 +21,7 @@ import {
 } from '@bitwild/rockets-crud';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { IsOptional, IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import request from 'supertest';
 import type {
@@ -69,7 +69,7 @@ class ItemCreateDto {
   @Expose()
   @IsOptional()
   @IsString()
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   category?: string;
 }
 
@@ -78,26 +78,26 @@ class ItemUpdateDto {
   @Expose()
   @IsOptional()
   @IsString()
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   name?: string;
 
   @Expose()
   @IsOptional()
   @IsString()
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   category?: string;
 }
 
 class ItemResponseDto {
   @Expose() @ApiProperty() id!: string;
   @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty({ required: false }) category?: string;
+  @Expose() @ApiPropertyOptional() category?: string;
 }
 
 class ItemPaginatedDto extends CrudResponsePaginatedDto<ItemResponseDto> {
   @Expose()
   @Type(() => ItemResponseDto)
-  @ApiProperty({ type: [ItemResponseDto] })
+  @ApiProperty({ type: [ItemResponseDto], isArray: true })
   declare data: ItemResponseDto[];
 }
 
@@ -262,8 +262,6 @@ describe('RocketsModule — Resource Config (e2e)', () => {
   });
 
   it('GET /items — 401 without token', async () => {
-    await request(app.getHttpServer())
-      .get('/items')
-      .expect(401);
+    await request(app.getHttpServer()).get('/items').expect(401);
   });
 });

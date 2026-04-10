@@ -108,9 +108,9 @@ describe('UserMetadataRepositoryFixture — handler contract', () => {
   describe('UserMetadataRepositoryFixture.update (internal integrity)', () => {
     it('throws when id does not exist', async () => {
       const repo = new UserMetadataRepositoryFixture();
-      await expect(
-        repo.update('inexistent', { version: 1 }),
-      ).rejects.toThrow(/not found/);
+      await expect(repo.update('inexistent', { version: 1 })).rejects.toThrow(
+        /not found/,
+      );
     });
   });
 });
