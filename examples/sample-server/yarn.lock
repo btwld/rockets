@@ -6,8 +6,8 @@ __metadata:
   cacheKey: 10c0
 
 "@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server%40workspace%3A.":
-  version: 1.0.0-alpha.4
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=26512b&locator=sample-server%40workspace%3A."
+  version: 1.0.0-alpha.7
+  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=d1dbba&locator=sample-server%40workspace%3A."
   dependencies:
     "@concepta/nestjs-authentication": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-common": "npm:7.0.0-alpha.10"
@@ -22,7 +22,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/848d312b80561f65b7f4ecb673e2e324a3bfd81736223a10942eb6ce4f73c19b8d6f053bad8f1f76765e50803e539cd068343fffaa5e556a918b9bd5378d1f18
+  checksum: 10c0/943a66b6ffce65d2113d7ec342b843e33747417fc97c632fd1264ac0868eb9ad666a048d5e7a951fe015028ca7c05429c3d1c2d78a552a4d5f3a0b65a2ec45e7
   languageName: node
   linkType: hard
 

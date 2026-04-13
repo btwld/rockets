@@ -21,7 +21,11 @@ lib-cov
 # Coverage directory used by tools like istanbul
 coverage
 coverage-e2e
+coverage-rockets-*
 *.lcov
+
+# Generated reports
+CODE_SIMPLIFICATION_REPORT.md
 
 # nyc test coverage
 .nyc_output

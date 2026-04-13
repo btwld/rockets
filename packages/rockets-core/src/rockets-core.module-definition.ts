@@ -162,16 +162,19 @@ function extractResourceProviders(
 
   const providers: Provider[] = [];
 
-  // TODO: need to validade if it wont be registered duplicated
+  const seen = new Set<Type>();
+
   for (const resource of resources) {
     // Handlers from operations (operations exists on hybrid/generated crud configs)
     if ('operations' in resource.crud) {
       for (const op of resource.crud.operations) {
-        if ('queryHandler' in op && op.queryHandler) {
-          providers.push(op.queryHandler as Type);
+        if ('queryHandler' in op && op.queryHandler && !seen.has(op.queryHandler)) {
+          seen.add(op.queryHandler);
+          providers.push(op.queryHandler);
         }
-        if ('commandHandler' in op && op.commandHandler) {
-          providers.push(op.commandHandler as Type);
+        if ('commandHandler' in op && op.commandHandler && !seen.has(op.commandHandler)) {
+          seen.add(op.commandHandler);
+          providers.push(op.commandHandler);
         }
       }
     }

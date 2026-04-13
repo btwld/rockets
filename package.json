@@ -30,7 +30,7 @@
     "@concepta/nestjs-auth-verify": "7.0.0-alpha.10",
     "@concepta/nestjs-authentication": "7.0.0-alpha.10",
     "@concepta/nestjs-common": "8.0.0-alpha.4",
-    "@concepta/nestjs-crud": "file:../nestjs-modules/packages/nestjs-crud",
+    "@concepta/nestjs-crud": "8.0.0-alpha.4",
     "@concepta/nestjs-email": "7.0.0-alpha.10",
     "@concepta/nestjs-event": "7.0.0-alpha.10",
     "@concepta/nestjs-federated": "8.0.0-alpha.4",

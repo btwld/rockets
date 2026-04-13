@@ -482,7 +482,7 @@ __metadata:
 
 "@bitwild/rockets-auth@file:../../packages/rockets-server-auth::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
   version: 1.0.0-alpha.7
-  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=bfd8db&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
+  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=c2eaff&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
   dependencies:
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-auth-apple": "npm:7.0.0-alpha.10"
@@ -499,7 +499,7 @@ __metadata:
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-email": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-event": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-federated": "file:../../nestjs-modules/packages/nestjs-federated"
+    "@concepta/nestjs-federated": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-invitation": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-jwt": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-otp": "npm:8.0.0-alpha.4"
@@ -528,7 +528,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-auth-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/d73051eadfe3aa821dc85e81778cb482efb9fb74d14a4ef38decf2f63f37342819f8cec36fc3a143f5513018ca0cfe9ba0eee45c7ae977a0157d25f889fd6d54
+  checksum: 10c0/3c668cfabfd1cc16fb6782e9c6ccba23ee40ae5a53ccff7f4cf470c11cbeb0c35316bdecb7a2c869979ba3f6509621e0048ec081dd49b66a193afb656e672fc6
   languageName: node
   linkType: hard
 
@@ -551,7 +551,7 @@ __metadata:
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-email": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-event": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-federated": "file:../../nestjs-modules/packages/nestjs-federated"
+    "@concepta/nestjs-federated": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-invitation": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-jwt": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-otp": "npm:8.0.0-alpha.4"
@@ -599,10 +599,11 @@ __metadata:
 
 "@bitwild/rockets-common@file:../../packages/rockets-common::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
   version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-common@file:../../packages/rockets-common#../../packages/rockets-common::hash=3b21f1&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
+  resolution: "@bitwild/rockets-common@file:../../packages/rockets-common#../../packages/rockets-common::hash=21f6e0&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
   dependencies:
     "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
   peerDependencies:
     "@nestjs/common": ^11.0.0
@@ -611,7 +612,7 @@ __metadata:
     class-validator: "*"
     reflect-metadata: ^0.1.13 || ^0.2.0
     rxjs: ^7.1.0
-  checksum: 10c0/83b7ff37c33b8d033fd2f09a8b76a86e19e347e02b8d56e144607ca23125dfd0b89d89f21f2c51f28af6733865d2e8dc7553617ebe052ba81c94d357e2c158d5
+  checksum: 10c0/3db3021df92c75b1089390775a7ef51a062ae98f522d255c608e98b10a341fd156300157ab2b54aa9582e55bf0f2600f66d3f652f339b863a7cf0bd52cefa55c
   languageName: node
   linkType: hard
 
@@ -621,6 +622,7 @@ __metadata:
   dependencies:
     "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
   peerDependencies:
     "@nestjs/common": ^11.0.0
@@ -634,7 +636,7 @@ __metadata:
 
 "@bitwild/rockets-core@file:../../packages/rockets-core::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
   version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-core@file:../../packages/rockets-core#../../packages/rockets-core::hash=bfc13c&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
+  resolution: "@bitwild/rockets-core@file:../../packages/rockets-core#../../packages/rockets-core::hash=9785e8&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
   dependencies:
     "@bitwild/rockets-access-control": "workspace:*"
     "@bitwild/rockets-common": "workspace:*"
@@ -649,7 +651,7 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.1.0
-  checksum: 10c0/5c9a6b8a8878c7c6906b5d6da59f55cf58d50c3ba44bdd5751716c675a3385c3ac01cfc53e05a7a7312d2b7dd6e21d4f2455da470d67af171421ecf4a15581aa
+  checksum: 10c0/c92b91949d90333538de154be423b1bd68e39123c79872f3eb8e6abe3ffbb99a8254f2817660d5ac4fe4cfd467bba61ea28b82bd3273a81d3805d8e9514e75a2
   languageName: node
   linkType: hard
 
@@ -661,11 +663,16 @@ __metadata:
     "@bitwild/rockets-common": "workspace:*"
     "@bitwild/rockets-crud": "workspace:*"
     "@bitwild/rockets-repository": "workspace:*"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
     "@nestjs/common": "npm:^11.0.0"
     "@nestjs/config": "npm:^4.0.0"
     "@nestjs/core": "npm:^11.0.0"
     "@nestjs/cqrs": "npm:^11.0.0"
     "@nestjs/swagger": "npm:^11.0.0"
+    "@nestjs/testing": "npm:11.1.13"
+    "@nestjs/typeorm": "npm:11.0.0"
+    supertest: "npm:^6.3.4"
+    typeorm: "npm:^0.3.20"
   peerDependencies:
     class-transformer: "*"
     class-validator: "*"
@@ -675,12 +682,12 @@ __metadata:
 
 "@bitwild/rockets-crud@file:../../packages/rockets-crud::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
   version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-crud@file:../../packages/rockets-crud#../../packages/rockets-crud::hash=029ffa&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
+  resolution: "@bitwild/rockets-crud@file:../../packages/rockets-crud#../../packages/rockets-crud::hash=ae6f13&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
   dependencies:
     "@bitwild/rockets-common": "workspace:*"
     "@bitwild/rockets-repository": "workspace:*"
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.4"
-  checksum: 10c0/a5d84badf5008a74e989ce062816861c0685dd3df4c5ee2da3703e4caec227801b130642999686f60980fffd99203d6e39404cc429b1ee970640a6abe5f59268
+  checksum: 10c0/d3cae116b155ca6d49aa07764e572aba9317af4128c6878529042f3e168c78591afa0dd62f9ec8660035c039012db9386b15fe2ce2a6d7505cd095690c3ddd20
   languageName: node
   linkType: hard
 
@@ -715,7 +722,7 @@ __metadata:
 
 "@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
   version: 1.0.0-alpha.7
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=959877&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
+  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=2d6324&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
   dependencies:
     "@bitwild/rockets-common": "workspace:*"
     "@bitwild/rockets-core": "workspace:*"
@@ -730,7 +737,7 @@ __metadata:
     rxjs: ^7.1.0
   bin:
     rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/6f5535d03b37f330b638d4e42e24c3a8e32b5c463f6ed174d0491c813e6793b210821be8e243916e00c182182d6885cff11e0d0d4af897d4d102dafc40654979
+  checksum: 10c0/71eb603fc4b7cb419b625f0405f5d40b9dbe2d6e5abf19bf75291edc5fbff3a3dfb57bb5c1b40ec175c3defdd1880208894f4ca3978d92b523c4b06ef87be2a7
   languageName: node
   linkType: hard
 
@@ -740,6 +747,12 @@ __metadata:
   dependencies:
     "@bitwild/rockets-common": "workspace:*"
     "@bitwild/rockets-core": "workspace:*"
+    "@bitwild/rockets-crud": "workspace:*"
+    "@bitwild/rockets-repository": "workspace:*"
+    "@concepta/nestjs-authentication": "npm:7.0.0-alpha.10"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
     "@nestjs/common": "npm:^11.0.0"
     "@nestjs/config": "npm:^4.0.0"
     "@nestjs/core": "npm:^11.0.0"
@@ -1219,9 +1232,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-crud@file:../nestjs-modules/packages/nestjs-crud::locator=root%40workspace%3A.":
+"@concepta/nestjs-crud@npm:8.0.0-alpha.4":
   version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-crud@file:../nestjs-modules/packages/nestjs-crud#../nestjs-modules/packages/nestjs-crud::hash=d0c49a&locator=root%40workspace%3A."
+  resolution: "@concepta/nestjs-crud@npm:8.0.0-alpha.4"
   dependencies:
     "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
     "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
@@ -1243,7 +1256,7 @@ __metadata:
       optional: true
     "@nestjs/cqrs":
       optional: true
-  checksum: 10c0/b7ff15075a0f249103b7a7402d0f684ef663add3dab55ba2757616fd458e0c9a08abe0346d5eb6adf8a50ec91878cca6fe23f04cdec56ff563aa6c1ba304dac4
+  checksum: 10c0/6af256471b6b57269594f1142f1fca8226d794a6058f7f656f27e494bc3ac2d9ae1052f24fdbf79b4a61a78da9b794294fd1013eaa304c6d14c878ddfb1f64b1
   languageName: node
   linkType: hard
 
@@ -15070,18 +15083,30 @@ __metadata:
     "@bitwild/rockets-crud": "workspace:*"
     "@bitwild/rockets-repository": "workspace:*"
     "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
+    "@nestjs/cli": "npm:^11.0.0"
     "@nestjs/common": "npm:11.1.13"
     "@nestjs/core": "npm:11.1.13"
+    "@nestjs/cqrs": "npm:11.0.3"
     "@nestjs/platform-express": "npm:11.1.13"
+    "@nestjs/schematics": "npm:^11.0.0"
     "@nestjs/swagger": "npm:11.2.5"
+    "@nestjs/testing": "npm:11.1.13"
     "@nestjs/typeorm": "npm:11.0.0"
+    "@types/jest": "npm:^29.5.0"
+    "@types/jsonwebtoken": "npm:^9.0.3"
     "@types/node": "npm:^18.19.44"
+    "@types/supertest": "npm:^6.0.2"
     class-transformer: "npm:^0.5.1"
     class-validator: "npm:^0.14.1"
+    helmet: "npm:^8.0.0"
+    jest: "npm:^29.7.0"
     jsonwebtoken: "npm:^9.0.2"
     reflect-metadata: "npm:^0.1.14"
     rxjs: "npm:^7.8.1"
     sqlite3: "npm:^5.1.7"
+    supertest: "npm:^6.3.4"
+    ts-jest: "npm:^29.2.0"
+    ts-loader: "npm:^9.5.1"
     ts-node: "npm:^10.9.2"
     tsconfig-paths: "npm:^4.2.0"
     typeorm: "npm:^0.3.20"
