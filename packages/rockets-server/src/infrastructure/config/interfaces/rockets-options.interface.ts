@@ -3,8 +3,10 @@ import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
-import type { AuthProviderInterface } from '@bitwild/rockets-core';
-import type { SwaggerUiOptionsInterface } from '@bitwild/rockets-common';
+import type {
+  AuthProviderInterface,
+  SwaggerUiOptionsInterface,
+} from '@bitwild/rockets-core';
 
 /**
  * Generic userMetadata configuration interface.

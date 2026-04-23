@@ -1,49 +1,96 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import {
-  RocketsModule,
-  RocketsOptionsInterface,
-} from '@bitwild/rockets';
-import { DocumentBuilder } from '@nestjs/swagger';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { RocketsModule } from '@bitwild/rockets';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
-import { PetEntity } from './entities/pet.entity';
 import { UserMetadataCreateDto, UserMetadataUpdateDto } from './dto/user-metadata.dto';
-import { MockAuthProvider } from './providers/mock-auth.provider';
-import { PetsController } from './controllers/pets.controller';
-import { PetModule } from './modules/pet/pet.module';
-
-const options: RocketsOptionsInterface = {
-  settings: {},
-  authProvider: new MockAuthProvider(),
-  userMetadata: {
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
-  },
-};
+import {
+  UserEntity,
+  SampleAuthProvider,
+  AuthModule,
+  USER_ENTITY_KEY,
+} from './auth';
+import {
+  createPetResource,
+  PetEntity,
+  PetTagEntity,
+  PET_TAG_ENTITY_KEY,
+} from './resources/pet';
+import {
+  createPetVaccinationResource,
+  PetVaccinationEntity,
+} from './resources/pet-vaccination';
+import { createTagResource, TagEntity } from './resources/tag';
+import { PetShareEntity, PetShareModule } from './resources/pet-share';
+import { PET_SHARE_ENTITY_KEY } from './resources/pet-share/pet-share.constants';
+import { PetTransferModule } from './resources/pet-transfer';
+import { AdminModule } from './admin';
+import {
+  AppointmentEntity,
+  ReminderEntity,
+  createAppointmentResource,
+  createReminderResource,
+} from './resources/appointment';
+import { AuditLogEntity, AuditModule } from './audit';
+import { AUDIT_LOG_ENTITY_KEY } from './audit/audit-log.constants';
+import { EventsModule } from './events';
 
 @Module({
   imports: [
-    // TypeORM configuration with SQLite in-memory
-    TypeOrmExtModule.forRoot({
+    TypeOrmModule.forRoot({
       type: 'sqlite',
       database: ':memory:',
-      entities: [UserMetadataEntity, PetEntity],
+      entities: [
+        UserEntity,
+        UserMetadataEntity,
+        PetEntity,
+        PetVaccinationEntity,
+        TagEntity,
+        PetShareEntity,
+        PetTagEntity,
+        AppointmentEntity,
+        ReminderEntity,
+        AuditLogEntity,
+      ],
       synchronize: true,
       dropSchema: true,
     }),
-    // Import Pet module for proper dependency injection
-    PetModule,
-    TypeOrmExtModule.forFeature({
-      userMetadata: { entity: UserMetadataEntity },
+    AuthModule,
+    RocketsModule.forRootAsync({
+      imports: [AuthModule],
+      inject: [SampleAuthProvider],
+      useFactory: (authProvider: SampleAuthProvider) => ({
+        authProvider,
+        userMetadata: {
+          createDto: UserMetadataCreateDto,
+          updateDto: UserMetadataUpdateDto,
+        },
+      }),
+      repositories: {
+        module: TypeOrmRepositoryModule,
+        userMetadata: { entity: UserMetadataEntity },
+        entities: [
+          { key: USER_ENTITY_KEY, entity: UserEntity },
+          { key: PET_SHARE_ENTITY_KEY, entity: PetShareEntity },
+          { key: PET_TAG_ENTITY_KEY, entity: PetTagEntity },
+          { key: AUDIT_LOG_ENTITY_KEY, entity: AuditLogEntity },
+        ],
+      },
+      // pet and petVaccination entities are auto-contributed by their
+      // respective defineResource() bundles below.
+      resources: [
+        createPetResource(),
+        createPetVaccinationResource(),
+        createTagResource(),
+        createAppointmentResource(),
+        createReminderResource(),
+      ],
     }),
-    RocketsModule.forRoot(options),
-  ],
-  controllers: [PetsController],
-  providers: [
-    MockAuthProvider,
+    PetShareModule,
+    PetTransferModule,
+    AdminModule,
+    AuditModule,
+    EventsModule,
   ],
 })
 export class AppModule {}
-
-

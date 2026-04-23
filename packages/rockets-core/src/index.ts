@@ -40,9 +40,39 @@ export {
 
 // Repository persistence interfaces
 export type { RepositoryPersistenceConfig } from './domain/interfaces/repository-persistence.interface';
+export type {
+  RocketsRepositoriesConfig,
+  RepositoryRegisterEntry,
+} from './domain/interfaces/rockets-repositories.interface';
+export { flattenRepositories } from './infrastructure/utils/flatten-repositories';
 
-// Resource config
+// Resource config & definition API
 export type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';
+export { defineResource } from './infrastructure/resource/define-resource';
+export { createPaginatedDto } from './infrastructure/resource/paginated-dto.factory';
+export {
+  aggregateResources,
+  isRocketsResourceBundle,
+} from './infrastructure/resource/aggregate-resources';
+export type {
+  AggregatedResources,
+  RocketsResourceInput,
+} from './infrastructure/resource/aggregate-resources';
+export type {
+  RocketsResourceDefinition,
+  ResourceDtoConfig,
+  ResourceRelationEntry,
+  ResourcePersistenceConfig as ResourcePersistenceConfigDefinition,
+  ResourceHandlerOverrides,
+  ResourceOperationName,
+  ResourceOperationOverride,
+  ResourceOverrides,
+  ResourceControllerOverrides,
+} from './domain/interfaces/rockets-resource-definition.interface';
+export type { RocketsResourceBundle } from './domain/interfaces/rockets-resource-bundle.interface';
+
+// Swagger (re-exported so consumers don't need @bitwild/rockets-common directly)
+export type { SwaggerUiOptionsInterface } from '@bitwild/rockets-common';
 
 // Options interfaces
 export type { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';
@@ -101,4 +131,3 @@ export {
   USER_MODULE_USER_ENTITY_KEY,
   ROCKETS_CORE_SETTINGS_TOKEN,
 } from './rockets-core.constants';
-export { RAW_OPTIONS_TOKEN } from './rockets-core.tokens';

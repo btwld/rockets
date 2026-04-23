@@ -58,6 +58,23 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
       statusCode = 400;
     }
 
+    if (statusCode >= 500 && process.env.NODE_ENV !== 'production') {
+      const e = exception as {
+        stack?: string;
+        context?: { originalError?: unknown };
+      };
+      // eslint-disable-next-line no-console
+      console.error('[RocketsCoreExceptionsFilter] 5xx:', e.stack ?? exception);
+      const orig = e.context?.originalError;
+      if (orig) {
+        // eslint-disable-next-line no-console
+        console.error(
+          '[RocketsCoreExceptionsFilter] originalError:',
+          (orig as { stack?: string }).stack ?? orig,
+        );
+      }
+    }
+
     const responseBody = {
       statusCode,
       errorCode,

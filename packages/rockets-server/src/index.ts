@@ -59,7 +59,6 @@ export type { ErrorDetails } from '@bitwild/rockets-common';
 export {
   RocketsAuthProvider,
   ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-  UserModelService,
 } from './rockets.constants';
 export { ExceptionsFilter } from './infrastructure/filters/exceptions.filter';
 
@@ -75,3 +74,25 @@ export type {
 } from './infrastructure/config/interfaces/rockets-options-extras.interface';
 export { UserModule } from './user.module';
 export { MeController } from './gateways/http/me.controller';
+
+// ── Declarative resource definition (re-exported from core) ──
+export {
+  defineResource,
+  createPaginatedDto,
+  aggregateResources,
+  isRocketsResourceBundle,
+} from '@bitwild/rockets-core';
+export type {
+  AggregatedResources,
+  RocketsResourceInput,
+  RocketsResourceDefinition,
+  ResourceDtoConfig,
+  ResourceRelationEntry,
+  ResourcePersistenceConfigDefinition as ResourcePersistenceConfig,
+  ResourceHandlerOverrides,
+  ResourceOperationName,
+  ResourceOperationOverride,
+  ResourceOverrides,
+  ResourceControllerOverrides,
+  RocketsResourceBundle,
+} from '@bitwild/rockets-core';

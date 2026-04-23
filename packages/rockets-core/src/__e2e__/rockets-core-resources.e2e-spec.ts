@@ -8,16 +8,7 @@ import {
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
-import {
-  CrudOperationResolver,
-  CrudListQuery,
-  CrudReadQuery,
-  CrudCreateCommand,
-  CrudDeleteCommand,
-  CrudResponsePaginatedDto,
-  Operation,
-} from '@bitwild/rockets-crud';
+import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
 import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
 import { Expose, Type } from 'class-transformer';
 import { IsString } from 'class-validator';
@@ -32,6 +23,7 @@ import {
 } from '../rockets-core.constants';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
+import { defineResource } from '../infrastructure/resource/define-resource';
 
 // ── Fixtures ──
 
@@ -91,7 +83,7 @@ class MetaRepoModule {}
 
 // ── Tests ──
 
-describe('RocketsCoreModule — resources + repositoryPersistence (e2e)', () => {
+describe('RocketsCoreModule — resources + resourcePersistence (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -107,37 +99,19 @@ describe('RocketsCoreModule — resources + repositoryPersistence (e2e)', () => 
         MetaRepoModule,
         RocketsCoreModule.forRoot({
           authProvider: new SimpleAuthProvider(),
-          repositoryPersistence: [
-            {
-              module: TypeOrmRepositoryModule,
-              entities: [{ key: 'widget', entity: WidgetEntity }],
-            },
-          ],
           resources: [
-            {
-              crud: {
-                controller: {
-                  path: 'widgets',
-                  entity: 'widget',
-                  resolver: CrudOperationResolver,
-                  response: {
-                    resource: WidgetResponseDto,
-                    paginated: WidgetPaginatedDto,
-                  },
-                },
-                operations: [
-                  { operation: Operation.List, query: CrudListQuery },
-                  { operation: Operation.Read, query: CrudReadQuery },
-                  {
-                    operation: Operation.Create,
-                    request: { body: WidgetCreateDto },
-                    command: CrudCreateCommand,
-                  },
-                  { operation: Operation.Delete, command: CrudDeleteCommand },
-                ],
+            defineResource({
+              key: 'widget',
+              entity: WidgetEntity,
+              path: 'widgets',
+              tags: ['Widgets'],
+              dto: {
+                response: WidgetResponseDto,
+                create: WidgetCreateDto,
+                paginated: WidgetPaginatedDto,
               },
               providers: [SimpleAuthProvider],
-            },
+            }),
           ],
           global: true,
         }),

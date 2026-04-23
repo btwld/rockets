@@ -40,10 +40,7 @@ export class UpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandler
     });
 
     if (existing) {
-      // TODO: improve this code
-      const definedData = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== undefined),
-      );
+      const definedData = stripUndefined(data);
       return this.repo.update(
         existing,
         definedData as Partial<UserMetadataEntityInterface>,
@@ -55,4 +52,14 @@ export class UpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandler
       userId,
     } as Partial<UserMetadataEntityInterface>);
   }
+}
+
+/**
+ * Drop keys whose value is `undefined`. Used so a PATCH that only sets
+ * some fields does not wipe the others back to `undefined` on update.
+ */
+function stripUndefined<T extends object>(input: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(input).filter(([, v]) => v !== undefined),
+  ) as Partial<T>;
 }

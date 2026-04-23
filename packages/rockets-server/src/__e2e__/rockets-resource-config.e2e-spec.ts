@@ -24,6 +24,7 @@ import { IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import request from 'supertest';
+import { RepositoryModule } from '@bitwild/rockets-repository';
 import type {
   AuthProviderInterface,
   AuthorizedUser,
@@ -147,18 +148,18 @@ describe('RocketsModule — Resource Config (e2e)', () => {
           dropSchema: true,
         }),
         RocketsServerE2eUserMetadataRepoModule,
+        // Item entity repo registered via RepositoryModule directly —
+        // this test validates raw resource config without defineResource().
+        RepositoryModule.forFeature({
+          module: TypeOrmRepositoryModule,
+          entities: [{ key: 'item', entity: ItemEntity }],
+        }),
         RocketsModule.forRoot({
           authProvider: new TestAuthProvider(),
           userMetadata: {
             createDto: TestMetadataCreateDto,
             updateDto: TestMetadataUpdateDto,
           },
-          repositoryPersistence: [
-            {
-              module: TypeOrmRepositoryModule,
-              entities: [{ key: 'item', entity: ItemEntity }],
-            },
-          ],
           resources: [
             {
               crud: {

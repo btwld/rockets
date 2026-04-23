@@ -8,23 +8,22 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/btwld/rockets/ci-merge.yml?branch=main&label=CI)](https://github.com/btwld/rockets/actions/workflows/ci-merge.yml)
 [![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![GH Last Commit](https://img.shields.io/github/last-commit/btwld/rockets?logo=github)](https://github.com/btwld/rockets)
-[![GH Contrib](https://img.shields.io/github/contributors/btwld/rockets?logo=github)](https://github.com/btwld/rockets/graphs/contributors)
 [![License](https://img.shields.io/npm/l/@bitwild/rockets)](https://github.com/btwld/rockets/blob/main/LICENSE.txt)
 
 ## Table of Contents
 
 - [Introduction](#introduction)
-  - [Overview](#overview)
-  - [Key Features](#key-features)
+  - [When to use this package](#when-to-use-this-package)
+  - [When NOT to use this package](#when-not-to-use-this-package)
   - [Installation](#installation)
 - [Tutorial](#tutorial)
-  - [Quick Start](#quick-start)
   - [Basic Setup](#basic-setup)
   - [Testing the Setup](#testing-the-setup)
 - [Configuration](#configuration)
   - [Auth Provider](#auth-provider)
   - [User Metadata](#user-metadata)
+  - [Repositories](#repositories)
+  - [Resources](#resources)
 - [API Reference](#api-reference)
   - [Endpoints](#endpoints)
   - [Decorators](#decorators)
@@ -33,37 +32,30 @@
 
 ## Introduction
 
-### Overview
+**Rockets Server** is the composition layer for the Rockets ecosystem focused on
+**integrating external authentication systems**. You bring your own auth
+(Firebase, Auth0, Cognito, your company's JWT, anything) by implementing
+`AuthProviderInterface`, and Rockets Server wires up:
 
-Rockets Server is a minimal NestJS infrastructure module that makes it easy to integrate with any third-party authentication system. By implementing a simple interface, you can authenticate users from any external provider (like Auth0, Firebase, Cognito, etc.) while Rockets Server handles storing and managing additional user metadata.
+- A global `AuthServerGuard` that validates every request against your provider
+- A `/me` endpoint that combines your external user with local metadata
+- Swagger UI for API documentation (via `rockets-core`)
+- Declarative CRUD resources (via `rockets-core`)
 
-Simply implement the `AuthProviderInterface` for your authentication system:
+### When to use this package
 
-### Key Features
+- Your users live in an external system (Firebase, Auth0, another service).
+- You want a thin layer that validates tokens and stores local user metadata.
+- You want to build CRUD endpoints protected by that external auth.
 
-- **🔐 Global Authentication Guard**: Validates JWT tokens using configurable auth providers
-- **📋 User Metadata Management**: 2 endpoints for user metadata (`GET /me`, `PATCH /me`)
-- **🛡️ Protected Route Handling**: Optional route protection with `AuthServerGuard` based on configuration flag
-- **🔓 Public Route Support**: Opt-out authentication with `@AuthPublic()` decorator
-- **🔌 Provider Pattern**: Integration point for external authentication systems
-- **🛡️ Type Safety**: Full TypeScript support with interfaces
-- **🧪 Testing Support**: Basic testing utilities
+### When NOT to use this package
 
-### What This Package Does NOT Provide
-
-- ❌ No authentication endpoints (login, signup, password reset)
-- ❌ No user CRUD operations or user management
-- ❌ No OAuth, OTP, or advanced auth features
-- ❌ No admin functionality
-- ❌ No email services or notifications
-
-**For these features, use `@bitwild/rockets-server-auth`**
+- You need signup, login, password recovery, OAuth, OTP, or admin user CRUD.
+  → Use **[@bitwild/rockets-server-auth](https://www.npmjs.com/package/@bitwild/rockets-server-auth)**.
+- You don't want a `/me` endpoint or a global guard.
+  → Use **[@bitwild/rockets-core](../rockets-core)** directly.
 
 ### Installation
-
-**About this package**:
-
-> Rockets Server provides minimal authenticated user metadata functionality. It only includes 2 endpoints (`/me`) and a global auth guard. It does NOT include authentication endpoints, user management, or admin features. Use this package when you have an external authentication system and only need basic user metadata management.
 
 **Version Requirements**:
 
@@ -71,33 +63,21 @@ Simply implement the `AuthProviderInterface` for your authentication system:
 - Node.js: `>=18.0.0`
 - TypeScript: `>=5.0.0`
 
-Let's create a new NestJS project:
-
 ```bash
-npx @nestjs/cli@latest new my-app-with-rockets --package-manager yarn --language TypeScript --strict
-```
-
-Install Rockets Server and required dependencies:
-
-```bash
-yarn add @bitwild/rockets-server @concepta/nestjs-typeorm-ext \
-  @concepta/nestjs-common typeorm @nestjs/typeorm @nestjs/config \
-  class-transformer class-validator sqlite3
+yarn add @bitwild/rockets @bitwild/rockets-core \
+  @concepta/nestjs-repository-typeorm typeorm @nestjs/typeorm \
+  class-transformer class-validator
 ```
 
 ---
 
 ## Tutorial
 
-### Quick Start
-
-This tutorial shows you how to set up the minimal rockets-server package with user metadata functionality.
-
 ### Basic Setup
 
-#### Step 1: Create User Metadata Entity
+#### Step 1: Create a UserMetadata entity
 
-First, create a user metadata entity to support extensible user data:
+Stores local data (profile fields, preferences) for each external user:
 
 ```typescript
 // entities/user-metadata.entity.ts
@@ -109,19 +89,13 @@ export class UserMetadataEntity {
   id!: string;
 
   @Column()
-  userId!: string;
+  userId!: string;  // id of the user in the external system
 
   @Column({ nullable: true })
   firstName?: string;
 
   @Column({ nullable: true })
   lastName?: string;
-
-  @Column({ nullable: true })
-  bio?: string;
-
-  @Column({ nullable: true })
-  location?: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   dateCreated!: Date;
@@ -131,271 +105,205 @@ export class UserMetadataEntity {
 }
 ```
 
-#### Step 2: Create User Metadata DTOs
-
-Define DTOs for user metadata operations:
+#### Step 2: Create DTOs
 
 ```typescript
 // dto/user-metadata.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UserMetadataCreateDto {
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  firstName?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  lastName?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  bio?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  location?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() firstName?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() lastName?: string;
 }
 
-export class UserMetadataUpdateDto extends UserMetadataCreateDto {}
+export class UserMetadataUpdateDto extends UserMetadataCreateDto {
+  @ApiProperty() @IsString() id!: string;
+}
 ```
 
-#### Step 3: Create Authentication Provider
-
-Create a custom authentication provider or use an existing one:
+#### Step 3: Implement the auth provider
 
 ```typescript
-// providers/mock-auth.provider.ts
+// providers/firebase-auth.provider.ts
 import { Injectable } from '@nestjs/common';
-import { AuthProviderInterface, AuthUserInterface } from '@bitwild/rockets-server';
+import type { AuthProviderInterface, AuthorizedUser } from '@bitwild/rockets-core';
 
 @Injectable()
-export class MockAuthProvider implements AuthProviderInterface {
-  async validateToken(token: string): Promise<AuthUserInterface | null> {
-    // Implement your token validation logic
-    // This could integrate with Firebase, Auth0, or your custom auth system
-    if (token === 'valid-token') {
-      return {
-        id: 'user-123',
-        sub: 'user-123',
-        email: 'user@example.com',
-        userRoles: [{ role: { name: 'user' } }],
-        userMetadata: {
-          firstName: 'John',
-          lastName: 'Doe',
-        },
-      };
-    }
-    return null;
+export class FirebaseAuthProvider implements AuthProviderInterface {
+  async validateToken(token: string): Promise<AuthorizedUser> {
+    // Validate with your external auth system
+    // Return the user in Rockets shape
+    const decoded = await verifyWithFirebase(token);
+    return {
+      id: decoded.uid,
+      sub: decoded.uid,
+      email: decoded.email,
+      userRoles: decoded.roles?.map((name) => ({ role: { name } })) ?? [],
+    };
   }
 }
 ```
 
-#### Step 4: Configure Your Module
-
-Configure the base server module with your authentication provider and user metadata:
+#### Step 4: Configure the module
 
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { RocketsModule } from '@bitwild/rockets-server';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { RocketsModule } from '@bitwild/rockets';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
 import { UserMetadataCreateDto, UserMetadataUpdateDto } from './dto/user-metadata.dto';
-import { MockAuthProvider } from './providers/mock-auth.provider';
+import { FirebaseAuthProvider } from './providers/firebase-auth.provider';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
-    
-    // Database configuration - SQLite in-memory for easy testing
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: ':memory:',
-      synchronize: true,
-      dropSchema: true,
       entities: [UserMetadataEntity],
+      synchronize: true,
     }),
-
-    // Provide the dynamic repository for user metadata
-    TypeOrmExtModule.forFeature({
-      userMetadata: { entity: UserMetadataEntity },
-    }),
-
-    // Base server module with global guard
     RocketsModule.forRootAsync({
-      inject: [MockAuthProvider],
-      useFactory: (authProvider: MockAuthProvider) => ({
+      inject: [FirebaseAuthProvider],
+      useFactory: (authProvider: FirebaseAuthProvider) => ({
         authProvider,
-        settings: {},
-        // Enable global guard (default true); can be turned off per-route via decorator
-        enableGlobalGuard: true,
         userMetadata: {
           createDto: UserMetadataCreateDto,
           updateDto: UserMetadataUpdateDto,
         },
       }),
+      repositories: {
+        module: TypeOrmRepositoryModule,
+        userMetadata: { entity: UserMetadataEntity },
+      },
     }),
   ],
-  providers: [MockAuthProvider],
+  providers: [FirebaseAuthProvider],
 })
 export class AppModule {}
 ```
 
-#### Step 5: Create Your Main Application
+#### Step 5: Bootstrap
 
 ```typescript
 // main.ts
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
-  // Enable validation
   app.useGlobalPipes(new ValidationPipe());
-
-  // Setup Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('Rockets Server API')
-    .setDescription('Core server API with authentication')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
-
   await app.listen(3000);
-  console.log('Application is running on: http://localhost:3000');
-  console.log('API Documentation: http://localhost:3000/api');
-  console.log('Using SQLite in-memory database (data resets on restart)');
 }
 bootstrap();
 ```
 
 ### Testing the Setup
 
-#### 1. Start Your Application
-
 ```bash
-npm run start:dev
-```
-
-#### 2. Test the Only Available Endpoints
-
-With the basic setup complete, your application provides:
-
-- `GET /me` - Get the current authenticated user with metadata (only endpoint provided)
-- `PATCH /me` - Update the current user's metadata (only endpoint provided)
-- Any custom routes you create, automatically protected by the global `AuthServerGuard`
-- Basic user metadata management with validation
-
-**That's it!** This package only provides these 2 endpoints and a global guard.
-
-#### 3. Access Protected Endpoint
-
-```bash
+# Get your profile (external user + local metadata)
 curl -X GET http://localhost:3000/me \
-  -H "Authorization: Bearer valid-token"
-```
+  -H "Authorization: Bearer <your-firebase-token>"
 
-Expected response:
-
-```json
-{
-  "id": "user-123",
-  "sub": "user-123",
-  "email": "user@example.com",
-  "username": "testuser",
-  "userRoles": [{ "role": { "name": "user" } }],
-  "userMetadata": {
-    "firstName": "John",
-    "lastName": "Doe"
-  }
-}
-```
-
-#### 4. Update User Profile
-
-```bash
+# Update your local metadata
 curl -X PATCH http://localhost:3000/me \
-  -H "Authorization: Bearer valid-token" \
+  -H "Authorization: Bearer <your-firebase-token>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "userMetadata": {
-      "firstName": "Jane",
-      "bio": "Software developer",
-      "location": "San Francisco"
-    }
-  }'
+  -d '{"userMetadata": {"firstName": "Jane"}}'
 ```
-
-🎉 **Congratulations!** You now have a minimal authenticated server with user metadata management.
-
-**💡 Pro Tip**: This package only provides 2 endpoints and a global guard. For complete authentication features (login, signup, recovery, OAuth, admin), use `@bitwild/rockets-server-auth`.
-
-### Troubleshooting
-
-#### Common Issues
-
-#### No authentication token provided (401)
-
-If you receive 401 on protected routes, ensure you are passing a
-valid `Authorization: Bearer <token>` header and that your
-`authProvider.validateToken` returns an `AuthorizedUser`.
-
-#### Module Resolution Errors
-
-If you're getting dependency resolution errors:
-
-1. **NestJS Version**: Ensure you're using NestJS `^11.0.0`
-2. **Alpha Packages**: All `@concepta/*` packages should use the same alpha
-   version (e.g., `7.0.0-alpha.10`)
-3. **Clean Installation**: Try deleting `node_modules` and `package-lock.json`,
-   then run `yarn install`
 
 ---
 
 ## Configuration
 
-Rockets Server has minimal configuration options since it only provides basic user metadata functionality.
-
 ### Auth Provider
 
-The only required configuration is an authentication provider that implements `AuthProviderInterface`:
+Implement `AuthProviderInterface`:
 
 ```typescript
 interface AuthProviderInterface {
-  validateToken(token: string): Promise<AuthUserInterface | null>;
+  validateToken(token: string): Promise<AuthorizedUser>;
+}
+
+interface AuthorizedUser {
+  id: string;
+  sub: string;
+  email?: string;
+  userRoles?: { role: { name: string } }[];
+  claims?: Record<string, unknown>;
 }
 ```
 
 ### User Metadata
 
-Configure user metadata DTOs for validation:
+Configure DTOs used by the `/me` PATCH endpoint for validation:
 
 ```typescript
-RocketsModule.forRoot({
-  authProvider: yourAuthProvider,
+useFactory: () => ({
+  authProvider,
   userMetadata: {
     createDto: UserMetadataCreateDto,
     updateDto: UserMetadataUpdateDto,
+  },
+})
+```
+
+### Repositories
+
+Unified config for the userMetadata entity and additional standalone entities:
+
+```typescript
+repositories: {
+  module: TypeOrmRepositoryModule,         // default adapter
+  userMetadata: { entity: UserMetadataEntity },
+  entities: [                               // optional additional entities
+    { key: 'user', entity: UserEntity },
+    { key: 'log', entity: LogEntity, module: FirestoreModule },  // override
+  ],
+}
+```
+
+Omit `repositories` when an upstream module (e.g., `rockets-server-auth`)
+already registers the userMetadata repository.
+
+### Resources
+
+Declare CRUD resources alongside external auth:
+
+```typescript
+import { defineResource } from '@bitwild/rockets-core';
+
+resources: [
+  defineResource({
+    key: 'pet',
+    entity: PetEntity,
+    path: 'pets',
+    tags: ['Pets'],
+    dto: { response: PetDto, create: PetCreateDto, update: PetUpdateDto },
+  }),
+]
+```
+
+See **[@bitwild/rockets-core](../rockets-core)** for the full `defineResource`
+API and the `aggregateResources` pipeline.
+
+### Other options
+
+```typescript
+RocketsModule.forRootAsync({
+  useFactory: () => ({ authProvider, userMetadata: { ... } }),
+  repositories: { ... },
+  resources: [ ... ],
+  enableGlobalGuard: true,    // default: true. Register AuthServerGuard as APP_GUARD
+  disableController: {
+    me: false,                // default: false. Set true to remove the /me controller
+  },
+  handlers: {                 // optional handler overrides (pass-through to core)
+    upsertUserMetadata: MyCustomHandler,
+    getUserMetadata: MyCustomHandler,
   },
 })
 ```
@@ -406,101 +314,72 @@ RocketsModule.forRoot({
 
 ### Endpoints
 
-Rockets Server provides exactly **2 endpoints**:
+#### `GET /me`
 
-#### GET /me
-
-Get current authenticated user with metadata.
-
-**Headers:**
-
-- `Authorization: Bearer <token>` (required)
-
-**Response:**
+Returns the current external user + local metadata.
 
 ```json
 {
-  "id": "string",
-  "sub": "string", 
-  "email": "string",
-  "username": "string",
-  "userRoles": [{ "role": { "name": "string" } }],
+  "id": "firebase-uid-abc",
+  "sub": "firebase-uid-abc",
+  "email": "user@example.com",
+  "userRoles": [{ "role": { "name": "user" } }],
   "userMetadata": {
-    "firstName": "string",
-    "lastName": "string",
-    "bio": "string",
-    "location": "string"
+    "firstName": "Jane",
+    "lastName": "Doe"
   }
 }
 ```
 
-**Note:** The `userRoles` property uses a nested structure that matches the database schema. Extract role names using:
+#### `PATCH /me`
 
-```typescript
-const roleNames = user.userRoles?.map(ur => ur.role.name) || [];
-```
-
-#### PATCH /me
-
-Update current user's metadata.
-
-**Headers:**
-
-- `Authorization: Bearer <token>` (required)
-- `Content-Type: application/json`
-
-**Body:**
+Updates local metadata. The body is validated against
+`userMetadata.updateDto`.
 
 ```json
 {
   "userMetadata": {
-    "firstName": "string",
-    "lastName": "string", 
-    "bio": "string",
-    "location": "string"
+    "firstName": "Jane"
   }
 }
 ```
 
 ### Decorators
 
-#### @AuthUser()
+#### `@AuthUser()`
 
-Extract authenticated user from request:
+Inject the authorized user into a handler:
 
 ```typescript
-@Get('/custom-endpoint')
-getUser(@AuthUser() user: AuthUserInterface) {
+import { AuthUser } from '@bitwild/rockets-common';
+import type { AuthorizedUser } from '@bitwild/rockets-core';
+
+@Get('/profile')
+getProfile(@AuthUser() user: AuthorizedUser) {
   return user;
 }
 ```
 
-#### @AuthPublic()
+#### `@AuthPublic()`
 
-Opt-out of global authentication guard:
+Opt-out of the global guard:
 
 ```typescript
+import { AuthPublic } from '@bitwild/rockets-core';
+
 @Get('/public')
 @AuthPublic()
-getPublicData() {
-  return { message: 'This endpoint is public' };
+getPublicInfo() {
+  return { ok: true };
 }
 ```
 
 ---
 
-## Need More Features?
+## Related packages
 
-This package provides minimal functionality. For a complete authentication system, use:
-
-**[@bitwild/rockets-server-auth](https://www.npmjs.com/package/@bitwild/rockets-server-auth)**
-
-Which includes:
-
-- Login, signup, password recovery endpoints
-- OAuth integration (Google, GitHub, Apple)
-- OTP support
-- Role-based access control
-- Admin user management
-- Email notifications
-- And much more...
+- **[@bitwild/rockets-core](../rockets-core)** — infrastructure only (no `/me`,
+  no global guard opt-in). Use when you need the minimum.
+- **[@bitwild/rockets-server-auth](https://www.npmjs.com/package/@bitwild/rockets-server-auth)** —
+  full auth system (JWT, signup, login, OAuth, OTP, admin). Use when rockets is
+  your source of truth for users.

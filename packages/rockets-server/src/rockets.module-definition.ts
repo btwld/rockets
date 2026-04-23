@@ -1,7 +1,4 @@
-import {
-  createSettingsProvider,
-  SwaggerUiModule,
-} from '@bitwild/rockets-common';
+import { createSettingsProvider } from '@bitwild/rockets-common';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,
@@ -75,18 +72,12 @@ export function createRocketsImports(options: {
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (opts: RocketsOptionsInterface) => ({
         authProvider: opts.authProvider,
+        swagger: opts.swagger,
       }),
-      repositoryPersistence: options.extras?.repositoryPersistence,
-      resources: options.extras?.resources,
+      repositories: options.extras?.repositories,
+      resources: options.extras?.resources ?? [],
       handlers: options.extras?.handlers,
       global: true,
-    }),
-    SwaggerUiModule.registerAsync({
-      inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (opts: RocketsOptionsInterface) => ({
-        documentBuilder: opts.swagger?.documentBuilder,
-        settings: opts.swagger?.settings,
-      }),
     }),
   ];
 }

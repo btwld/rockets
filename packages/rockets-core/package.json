@@ -44,6 +44,8 @@
     "@bitwild/rockets-common": "workspace:*",
     "@bitwild/rockets-crud": "workspace:*",
     "@bitwild/rockets-repository": "workspace:*",
+    "@concepta/nestjs-common": "8.0.0-alpha.4",
+    "@concepta/nestjs-crud": "8.0.0-alpha.4",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
