@@ -36,12 +36,13 @@ export interface RocketsResourceBundle<
   };
   /**
    * Registration-time metadata used by `aggregateResources` for cross-
-   * resource validation (e.g. verifying every `relations[].target`
-   * string resolves to a registered bundle key).
+   * resource validation. The aggregator resolves each `relations[].target`
+   * class against the union of registered bundle entities and
+   * `repositories.entities` to look up the persistence key.
    */
   readonly meta: {
     readonly key: string;
     readonly entityClass: new () => E;
-    readonly relations: readonly ResourceRelationEntry[];
+    readonly relations: ReadonlyArray<ResourceRelationEntry<E>>;
   };
 }

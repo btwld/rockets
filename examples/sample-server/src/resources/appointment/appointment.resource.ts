@@ -2,15 +2,13 @@ import { Operation } from '@concepta/nestjs-common';
 import { defineResource } from '@bitwild/rockets';
 import { OwnerScopeHook } from '@bitwild/rockets-core';
 import { AppointmentEntity } from './appointment.entity';
+import { ReminderEntity } from './reminder.entity';
 import {
   AppointmentCreateDto,
   AppointmentResponseDto,
 } from './appointment.dto';
 import { AppointmentCreateHandler } from './appointment-create.handler';
-import {
-  APPOINTMENT_ENTITY_KEY,
-  REMINDER_ENTITY_KEY,
-} from './appointment.constants';
+import { APPOINTMENT_ENTITY_KEY } from './appointment.constants';
 
 /**
  * Create is handled by `AppointmentCreateHandler`, which wraps an
@@ -34,11 +32,7 @@ export const appointmentResource = defineResource({
     Operation.Create,
     Operation.Delete,
   ],
-  relations: [{ target: REMINDER_ENTITY_KEY, propertyName: 'reminders' }],
+  relations: (relation) => [relation(ReminderEntity, 'reminders')],
   hooks: [OwnerScopeHook],
   handlers: { create: AppointmentCreateHandler },
 });
-
-export function createAppointmentResource(): typeof appointmentResource {
-  return appointmentResource;
-}

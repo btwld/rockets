@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import type { RepositoryPersistenceConfig } from '../../domain/interfaces/repository-persistence.interface';
 import { defineResource } from './define-resource';
+import { relation } from './relation';
 import {
   aggregateResources,
   isRocketsResourceBundle,
@@ -14,6 +15,12 @@ class PetEntity {
 
   @Column({ type: 'varchar' })
   name!: string;
+
+  // Relation properties for the typed `relation()` calls below.
+  vaccinations?: VaccinationEntity[];
+  owner?: OwnerEntity;
+  parent?: PetEntity;
+  history?: AuditEntity[];
 }
 
 @Entity('vaccinations_t')
@@ -23,6 +30,19 @@ class VaccinationEntity {
 
   @Column({ type: 'varchar' })
   label!: string;
+}
+
+// Standalone classes used to exercise the entity index. They are NOT
+// declared as TypeORM entities so they can stand in for either a bundle
+// target, a `repositories.entities` entry, or a missing registration.
+class OwnerEntity {
+  id!: string;
+}
+class AuditEntity {
+  id!: string;
+}
+class UserMetadataEntity {
+  id!: string;
 }
 
 describe('isRocketsResourceBundle', () => {
@@ -111,7 +131,6 @@ describe('aggregateResources', () => {
       };
       const result = aggregateResources({ resources: [pet, raw] });
 
-      // Bundles come first, then raw
       expect(result.resources[0]).toBe(pet.core);
       expect(result.resources[1]).toBe(raw);
     });
@@ -161,23 +180,32 @@ describe('aggregateResources', () => {
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [{ target: 'owner', federated: true }],
+        relations: [relation(PetEntity, OwnerEntity, 'owner', { federated: true })],
       });
       const second = defineResource({
         key: 'pet',
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [{ target: 'owner', federated: false }],
+        relations: [relation(PetEntity, OwnerEntity, 'owner', { federated: false })],
       });
-      expect(() => aggregateResources({ resources: [first, second] })).toThrow(
-        /conflicting `relations`/,
-      );
+      expect(() =>
+        aggregateResources({
+          resources: [first, second],
+          // Owner must be registered for the relation target lookup not
+          // to short-circuit before we hit the conflicting-config path.
+          repositories: {
+            module: TypeOrmRepositoryModule,
+            userMetadata: { entity: UserMetadataEntity },
+            entities: [{ key: 'owner', entity: OwnerEntity }],
+          },
+        }),
+      ).toThrow(/conflicting `relations`/);
     });
   });
 
-  describe('relation target validation', () => {
-    it('accepts a relation whose `target` string matches a registered bundle key', () => {
+  describe('cross-resource relation resolution', () => {
+    it('resolves a relation target that points at another bundle', () => {
       const vac = defineResource({
         key: 'vaccination',
         entity: VaccinationEntity,
@@ -189,35 +217,110 @@ describe('aggregateResources', () => {
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [{ target: 'vaccination', propertyName: 'vaccinations' }],
+        relations: [relation(PetEntity, VaccinationEntity, 'vaccinations')],
       });
       expect(() => aggregateResources({ resources: [pet, vac] })).not.toThrow();
     });
 
-    it('throws when a relation `target` points at an unregistered key', () => {
+    it('resolves a relation target that lives in repositories.entities (no bundle for it)', () => {
       const pet = defineResource({
         key: 'pet',
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [{ target: 'vaccination', propertyName: 'vaccinations' }],
+        relations: [relation(PetEntity, OwnerEntity, 'owner')],
       });
-      expect(() => aggregateResources({ resources: [pet] })).toThrow(
-        /targets resource "vaccination" which is not registered/,
-      );
+      expect(() =>
+        aggregateResources({
+          resources: [pet],
+          repositories: {
+            module: TypeOrmRepositoryModule,
+            userMetadata: { entity: UserMetadataEntity },
+            entities: [{ key: 'owner', entity: OwnerEntity }],
+          },
+        }),
+      ).not.toThrow();
     });
 
-    it('includes the offending propertyName in the diagnostic', () => {
+    it('resolves a relation target supplied via a () => Class thunk', () => {
+      const vac = defineResource({
+        key: 'vaccination',
+        entity: VaccinationEntity,
+        path: 'vaccination',
+        tags: ['vaccination'],
+      });
       const pet = defineResource({
         key: 'pet',
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [{ target: 'audit', propertyName: 'history' }],
+        relations: [relation(PetEntity, () => VaccinationEntity, 'vaccinations')],
+      });
+      expect(() => aggregateResources({ resources: [pet, vac] })).not.toThrow();
+    });
+
+    it('resolves self-referential relations (parent: PetEntity)', () => {
+      const pet = defineResource({
+        key: 'pet',
+        entity: PetEntity,
+        path: 'pet',
+        tags: ['pet'],
+        relations: [relation(PetEntity, PetEntity, 'parent')],
+      });
+      expect(() => aggregateResources({ resources: [pet] })).not.toThrow();
+    });
+
+    it('throws with the entity name when the target is not registered anywhere', () => {
+      const pet = defineResource({
+        key: 'pet',
+        entity: PetEntity,
+        path: 'pet',
+        tags: ['pet'],
+        relations: [relation(PetEntity, AuditEntity, 'history')],
       });
       expect(() => aggregateResources({ resources: [pet] })).toThrow(
-        /relation "history"/,
+        /relation "history".*targets entity `AuditEntity` which is not registered/,
       );
+    });
+  });
+
+  describe('single-key invariant across bundles + repositories', () => {
+    it('throws when an entity is registered under one key in a bundle and another in repositories.entities', () => {
+      const pet = defineResource({
+        key: 'pet',
+        entity: PetEntity,
+        path: 'pet',
+        tags: ['pet'],
+      });
+      expect(() =>
+        aggregateResources({
+          resources: [pet],
+          repositories: {
+            module: TypeOrmRepositoryModule,
+            userMetadata: { entity: UserMetadataEntity },
+            entities: [{ key: 'animal', entity: PetEntity }],
+          },
+        }),
+      ).toThrow(/conflicting keys.*"pet" and "animal"/);
+    });
+
+    it('accepts identical key in both registrations (idempotent)', () => {
+      const pet = defineResource({
+        key: 'pet',
+        entity: PetEntity,
+        path: 'pet',
+        tags: ['pet'],
+      });
+      expect(() =>
+        aggregateResources({
+          resources: [pet],
+          repositories: {
+            module: TypeOrmRepositoryModule,
+            userMetadata: { entity: UserMetadataEntity },
+            entities: [{ key: 'pet', entity: PetEntity }],
+          },
+        }),
+      ).not.toThrow();
     });
   });
 });

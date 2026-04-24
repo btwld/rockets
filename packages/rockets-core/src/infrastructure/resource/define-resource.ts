@@ -38,6 +38,7 @@ import type {
 } from '../../domain/interfaces/rockets-resource-definition.interface';
 import type { RocketsResourceBundle } from '../../domain/interfaces/rockets-resource-bundle.interface';
 import { createPaginatedDto } from './paginated-dto.factory';
+import { createBoundRelation } from './relation';
 
 type CrudDecorator = ReturnType<typeof applyDecorators>;
 
@@ -82,7 +83,7 @@ const DEFAULT_PERSISTENCE_MODULE: RepositoryModuleInterface =
  *     create: PetCreateDto,
  *     update: PetUpdateDto,
  *   },
- *   relations: [{ target: 'petVaccination', propertyName: 'vaccinations' }],
+ *   relations: (relation) => [relation(PetVaccinationEntity, 'vaccinations')],
  *   hooks: [OwnerScopeHook],
  *   handlers: { create: PetCreateHandler },
  * });
@@ -123,7 +124,9 @@ const DEFAULT_PERSISTENCE_MODULE: RepositoryModuleInterface =
  *   meta: {
  *     key: 'pet',
  *     entityClass: PetEntity,
- *     relations: [{ target: 'petVaccination', propertyName: 'vaccinations' }],
+ *     relations: [
+ *       { source: PetEntity, target: PetVaccinationEntity, propertyName: 'vaccinations' },
+ *     ],
  *   },
  * }
  * ```
@@ -140,7 +143,7 @@ export function defineResource<E extends PlainLiteralObject>(
     tags,
     dto = {},
     operations = DEFAULT_OPERATIONS,
-    relations,
+    relations: relationsInput,
     persistence,
     hooks,
     handlers = {},
@@ -148,6 +151,13 @@ export function defineResource<E extends PlainLiteralObject>(
     autoRegisterHandlers = true,
     overrides = {},
   } = definition;
+
+  // Resolve `relations` once. The builder form receives a `BoundRelation<E>`
+  // closed over the resource entity, which makes the source impossible
+  // to mistype. The array form is preserved for advanced cases (junction
+  // tables, programmatic composition) where the source is intentionally
+  // not the resource entity.
+  const relations = resolveRelations(key, entity, relationsInput);
 
   const controllerOverrides = overrides.controller ?? {};
   const operationOverrides = overrides.operations ?? {};
@@ -249,22 +259,12 @@ function validateDefinition<E extends PlainLiteralObject>(
       `defineResource[${definition.key}]: \`entity\` must be a class constructor.`,
     );
   }
-  const pathValid =
-    typeof definition.path === 'string'
-      ? definition.path.length > 0
-      : Array.isArray(definition.path) &&
-        definition.path.length > 0 &&
-        definition.path.every((p) => typeof p === 'string' && p.length > 0);
-  if (!pathValid) {
+  if (!isNonEmptyStringOrStringArray(definition.path)) {
     throw new Error(
       `defineResource[${definition.key}]: \`path\` is required and must be a non-empty string or string array.`,
     );
   }
-  if (
-    !Array.isArray(definition.tags) ||
-    definition.tags.length === 0 ||
-    definition.tags.some((t) => typeof t !== 'string' || t.length === 0)
-  ) {
+  if (!isNonEmptyStringArray(definition.tags)) {
     throw new Error(
       `defineResource[${definition.key}]: \`tags\` is required and must be a non-empty array of non-empty strings.`,
     );
@@ -274,44 +274,93 @@ function validateDefinition<E extends PlainLiteralObject>(
       `defineResource[${definition.key}]: \`operations\` cannot be an empty array.`,
     );
   }
-  if (definition.relations) {
-    assertRelationsValid(definition.key, definition.relations);
-  }
+  // Relations validation is deferred to `resolveRelations` because the
+  // builder form (`relations: (relation) => […]`) produces the array
+  // lazily.
+}
+
+/**
+ * Normalise the `relations` field into a flat `ResourceRelationEntry[]`.
+ *
+ * Accepts both supported input shapes:
+ * - `undefined` → returns `undefined`.
+ * - Array of `ResourceRelationEntry` → returned verbatim after validation.
+ * - Builder `(relation) => […]` → invoked with a `BoundRelation<E>`
+ *   closed over the resource entity; the returned array is then
+ *   validated.
+ *
+ * Centralising the resolution here lets the rest of `defineResource`
+ * stay agnostic of which input shape the consumer chose.
+ */
+function resolveRelations<E extends PlainLiteralObject>(
+  key: string,
+  entity: RocketsResourceDefinition<E>['entity'],
+  input: RocketsResourceDefinition<E>['relations'],
+): ReadonlyArray<ResourceRelationEntry<E>> | undefined {
+  if (input === undefined) return undefined;
+  const resolved =
+    typeof input === 'function' ? input(createBoundRelation(entity)) : input;
+  assertRelationsValid(key, resolved);
+  return resolved;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isNonEmptyStringArray(value: unknown): value is readonly string[] {
+  return (
+    Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString)
+  );
+}
+
+function isNonEmptyStringOrStringArray(
+  value: unknown,
+): value is string | readonly string[] {
+  return isNonEmptyString(value) || isNonEmptyStringArray(value);
 }
 
 /**
  * Reject malformed relation entries early so downstream consumers get a
  * descriptive error at module-definition time instead of a cryptic failure
  * from the repository or CrudJoin machinery during bootstrap.
+ *
+ * Type-level checks (target is an `EntityConstructor`, propertyName is
+ * `keyof Source`) are enforced by the `relation()` helper signature. The
+ * runtime checks here exist for consumers that bypass `relation()` and
+ * produce a literal entry by hand — and for a single
+ * duplicate-propertyName diagnostic, since the type system cannot detect
+ * duplicates across an array.
  */
 function assertRelationsValid(
   resourceKey: string,
   relations: readonly ResourceRelationEntry[],
 ): void {
   const seen = new Set<string>();
-  for (const rel of relations) {
-    if (!rel.target || typeof rel.target !== 'string') {
+  for (const entry of relations) {
+    if (typeof entry.source !== 'function') {
       throw new Error(
-        `defineResource[${resourceKey}]: every relation must have a non-empty string \`target\`.`,
+        `defineResource[${resourceKey}]: every relation must declare a class \`source\` (use the \`relation()\` helper).`,
       );
     }
-    const propertyName = resolvePropertyName(rel);
-    if (seen.has(propertyName)) {
+    if (typeof entry.target !== 'function') {
       throw new Error(
-        `defineResource[${resourceKey}]: duplicate relation propertyName "${propertyName}". ` +
-          `Set \`propertyName\` explicitly to disambiguate multiple relations pointing at the same target.`,
+        `defineResource[${resourceKey}]: every relation must declare a class \`target\` or a \`() => Class\` thunk.`,
       );
     }
-    seen.add(propertyName);
+    if (!entry.propertyName || typeof entry.propertyName !== 'string') {
+      throw new Error(
+        `defineResource[${resourceKey}]: every relation must have a non-empty string \`propertyName\`.`,
+      );
+    }
+    if (seen.has(entry.propertyName)) {
+      throw new Error(
+        `defineResource[${resourceKey}]: duplicate relation propertyName "${entry.propertyName}". ` +
+          `Each property on the source entity may carry at most one relation declaration.`,
+      );
+    }
+    seen.add(entry.propertyName);
   }
-}
-
-/**
- * `propertyName` defaults to `target` — the common case where the owning
- * entity's relation column is named after the target resource key.
- */
-function resolvePropertyName(rel: ResourceRelationEntry): string {
-  return rel.propertyName ?? rel.target;
 }
 
 function buildResponse(
@@ -375,7 +424,7 @@ function buildControllerJoins(
   if (!relations?.length) return undefined;
   const clauses = relations
     .filter((r) => r.include !== 'never')
-    .map<JoinClause>((r) => ({ relation: resolvePropertyName(r) }));
+    .map<JoinClause>((r) => ({ relation: r.propertyName }));
   return clauses.length ? clauses : undefined;
 }
 
@@ -391,15 +440,15 @@ function buildPersistenceRelations(
 ): Record<string, RelationActionConfig> | undefined {
   if (!relations?.length) return undefined;
   const map: Record<string, RelationActionConfig> = {};
-  for (const rel of relations) {
-    const entry: RelationActionConfig = {};
-    if (rel.federated !== undefined) entry.federated = rel.federated;
-    if (rel.distinctFilter !== undefined)
-      entry.distinctFilter = rel.distinctFilter;
+  for (const entry of relations) {
+    const cfg: RelationActionConfig = {};
+    if (entry.federated !== undefined) cfg.federated = entry.federated;
+    if (entry.distinctFilter !== undefined)
+      cfg.distinctFilter = entry.distinctFilter;
     // Skip empty entries — we don't want to register a no-op relation
-    // that could shadow TypeORM metadata.
-    if (Object.keys(entry).length === 0) continue;
-    map[resolvePropertyName(rel)] = entry;
+    // that could shadow underlying ORM metadata.
+    if (Object.keys(cfg).length === 0) continue;
+    map[entry.propertyName] = cfg;
   }
   return Object.keys(map).length ? map : undefined;
 }

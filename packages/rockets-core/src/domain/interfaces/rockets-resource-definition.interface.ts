@@ -45,39 +45,67 @@ export interface ResourceDtoConfig {
 }
 
 /**
- * Unified cross-resource relation entry.
+ * Type-level reference to an entity class constructor.
  *
- * Drives two separate concerns with one declaration:
+ * `abstract new (...args: never[]) => T` keeps the type assignable
+ * from every concrete constructor (including those with required
+ * parameters and abstract classes) without leaking `any` into consumer
+ * APIs. Nest's `Type<X>` is assignable to `EntityConstructor<unknown>`
+ * thanks to function-parameter contravariance (`any[]` flows into
+ * `never[]`).
  *
- * 1. **Controller side (List/Read joins).** The `propertyName` (or `target`
- *    if `propertyName` is omitted) is fed into the upstream `@CrudJoin`
- *    decorator so the relation is eager-loaded on the generated endpoints.
- *    Skipped when `include === 'never'`.
+ * Intersected with `{ readonly name: string }` so callers can produce
+ * descriptive error messages (`entityConstructor.name`) without casting.
+ */
+export type EntityConstructor<T = unknown> = (abstract new (
+  ...args: never[]
+) => T) & {
+  readonly name: string;
+};
+
+/**
+ * Cross-resource relation entry, produced by the `rel()` helper.
+ *
+ * One declaration drives both:
+ *
+ * 1. **Controller side (List/Read joins).** `propertyName` is fed into the
+ *    upstream `@CrudJoin` decorator so the relation is eager-loaded on the
+ *    generated endpoints. Skipped when `include === 'never'`.
  *
  * 2. **Persistence side (repository relation config).** `federated` and
  *    `distinctFilter` flow into `RepositoryProviderOptions.relations`
- *    keyed by `propertyName ?? target`, enabling federation and the
- *    sort-safety distinct filter on the repository layer.
+ *    keyed by `propertyName`, enabling federation and the sort-safety
+ *    distinct filter on the repository layer.
  *
- * The `target` field is a **string resource key** referencing another
- * `defineResource()` bundle registered in the same module. Cross-resource
- * validation runs at `aggregateResources` time — a target that points at
- * an unknown key throws with a descriptive diagnostic rather than failing
- * silently downstream.
+ * `target` is a **class reference** (or a `() => Class` thunk for circular
+ * imports). At `aggregateResources` time the class is resolved to a
+ * registered persistence key — either from another `defineResource()`
+ * bundle or from `repositories.entities`. Class-as-target gives you
+ * compile-time errors if you typo the entity, and `propertyName` is
+ * narrowed to `keyof Source` so misspelled property names also fail at
+ * compile time.
+ *
+ * Cardinality (1:1 / 1:N / N:1 / M:N) and inverse-side wiring are inferred
+ * by the persistence adapter from the entity's own metadata — no
+ * adapter-specific fields leak into this interface.
  */
-export interface ResourceRelationEntry {
+export interface ResourceRelationEntry<
+  S extends object = object,
+  T extends EntityConstructor = EntityConstructor,
+  K extends string = string,
+> {
+  /** Owning entity class (the source of the relation). */
+  readonly source: EntityConstructor<S>;
   /**
-   * Key of the target resource (matches another resource's `key`).
-   * Used for cross-resource validation in `aggregateResources`.
+   * Target entity class, or a thunk returning it. Use the thunk form
+   * when source/target sit on opposite sides of a circular import.
    */
-  readonly target: string;
+  readonly target: T | (() => T);
   /**
-   * TypeORM relation property on the owning entity. Defaults to `target`
-   * when omitted — set explicitly when the column name differs from the
-   * target resource key (e.g. `propertyName: 'vaccinations'` targeting the
-   * `petVaccination` resource).
+   * Relation property on the owning entity. Constrained to `keyof Source`
+   * so a misspelled property fails at compile time.
    */
-  readonly propertyName?: string;
+  readonly propertyName: K;
   /**
    * When `true`, the relation is federated (read/filtered independently
    * via the target's repository rather than joined in SQL). Required for
@@ -100,6 +128,47 @@ export interface ResourceRelationEntry {
    */
   readonly include?: 'default' | 'never';
 }
+
+/**
+ * Optional fields accepted by `relation()` and `BoundRelation<S>`. Kept
+ * as a standalone type so the runtime helper signatures stay readable.
+ */
+export interface RelationOptions {
+  /**
+   * When `true`, the relation is federated (read/filtered independently
+   * via the target's repository rather than joined in SQL). Required for
+   * cross-database relations and OLTP/OLAP mixes.
+   */
+  readonly federated?: boolean;
+  /**
+   * Distinct filter applied on the target repository when sorting/paging
+   * across a federated one-to-many relation.
+   */
+  readonly distinctFilter?: WhereCondition<PlainLiteralObject>;
+  /**
+   * `default` — eager-load on list/read (default behavior).
+   * `never`   — keep the relation off the controller surface but still
+   *             registered for persistence / cross-resource validation.
+   */
+  readonly include?: 'default' | 'never';
+}
+
+/**
+ * Source-bound counterpart of the standalone `relation()` helper. The
+ * `source` argument is captured ahead of time, so callers only declare
+ * the target and the property name. `defineResource()` exposes a
+ * `BoundRelation<E>` to consumers via the
+ * `relations: (relation) => […]` builder form, locking the source to
+ * the resource's `entity` automatically.
+ */
+export type BoundRelation<S extends object> = <
+  T extends EntityConstructor,
+  K extends Extract<keyof S, string>,
+>(
+  target: T | (() => T),
+  propertyName: K,
+  options?: RelationOptions,
+) => ResourceRelationEntry<S, T, K>;
 
 /**
  * Persistence layer configuration for this resource.
@@ -240,12 +309,32 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
    */
   readonly operations?: readonly ResourceOperationName[];
   /**
-   * Unified cross-resource relations. Each entry feeds both the controller
-   * (`@CrudJoin`) and the persistence layer
-   * (`RepositoryProviderOptions.relations`). See `ResourceRelationEntry`
-   * for the field-by-field semantics.
+   * Unified cross-resource relations. Two equivalent forms are accepted:
+   *
+   * 1. **Builder (recommended).** A function that receives a source-bound
+   *    `relation()` and returns the entries:
+   *    ```ts
+   *    relations: (relation) => [relation(() => OwnerEntity, 'owner')]
+   *    ```
+   *    The bound `relation` captures the resource `entity` automatically,
+   *    so the source can never be mistyped — it is not even passed.
+   *
+   * 2. **Array (advanced).** Useful when the relation source is not the
+   *    resource entity (junction tables) or when entries are composed
+   *    from external lists. Each entry must come from the standalone
+   *    `relation()` helper:
+   *    ```ts
+   *    relations: [relation(SourceEntity, TargetEntity, 'prop')]
+   *    ```
+   *
+   * Either form yields the same `ResourceRelationEntry[]` after
+   * `defineResource()` resolves it.
    */
-  readonly relations?: readonly ResourceRelationEntry[];
+  readonly relations?:
+    | ReadonlyArray<ResourceRelationEntry<E>>
+    | ((
+        relation: BoundRelation<E>,
+      ) => ReadonlyArray<ResourceRelationEntry<E>>);
   /**
    * Persistence-layer truths about the entity. Currently just the
    * repository module selector; relation-level flags live on `relations`.

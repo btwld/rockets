@@ -11,16 +11,16 @@ import {
   USER_ENTITY_KEY,
 } from './auth';
 import {
-  createPetResource,
+  petResource,
   PetEntity,
   PetTagEntity,
   PET_TAG_ENTITY_KEY,
 } from './resources/pet';
 import {
-  createPetVaccinationResource,
+  petVaccinationResource,
   PetVaccinationEntity,
 } from './resources/pet-vaccination';
-import { createTagResource, TagEntity } from './resources/tag';
+import { tagResource, TagEntity } from './resources/tag';
 import { PetShareEntity, PetShareModule } from './resources/pet-share';
 import { PET_SHARE_ENTITY_KEY } from './resources/pet-share/pet-share.constants';
 import { PetTransferModule } from './resources/pet-transfer';
@@ -28,8 +28,8 @@ import { AdminModule } from './admin';
 import {
   AppointmentEntity,
   ReminderEntity,
-  createAppointmentResource,
-  createReminderResource,
+  appointmentResource,
+  reminderResource,
 } from './resources/appointment';
 import { AuditLogEntity, AuditModule } from './audit';
 import { AUDIT_LOG_ENTITY_KEY } from './audit/audit-log.constants';
@@ -79,11 +79,11 @@ import { EventsModule } from './events';
       // pet and petVaccination entities are auto-contributed by their
       // respective defineResource() bundles below.
       resources: [
-        createPetResource(),
-        createPetVaccinationResource(),
-        createTagResource(),
-        createAppointmentResource(),
-        createReminderResource(),
+        petResource,
+        petVaccinationResource,
+        tagResource,
+        appointmentResource,
+        reminderResource,
       ],
     }),
     PetShareModule,

@@ -81,6 +81,9 @@ export {
   createPaginatedDto,
   aggregateResources,
   isRocketsResourceBundle,
+  relation,
+  createBoundRelation,
+  resolveRelationTarget,
 } from '@bitwild/rockets-core';
 export type {
   AggregatedResources,
@@ -95,4 +98,7 @@ export type {
   ResourceOverrides,
   ResourceControllerOverrides,
   RocketsResourceBundle,
+  BoundRelation,
+  EntityConstructor,
+  RelationOptions,
 } from '@bitwild/rockets-core';

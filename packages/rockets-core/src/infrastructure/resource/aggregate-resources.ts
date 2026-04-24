@@ -3,9 +3,15 @@ import type {
   RepositoryModuleInterface,
   RepositoryProviderOptions,
 } from '@concepta/nestjs-repository';
+// `Type<PlainLiteralObject>` is the per-entity persistence map key (kept
+// for `byModule` because RepositoryProviderOptions stores `Type<E>`).
 import type { RepositoryPersistenceConfig } from '../../domain/interfaces/repository-persistence.interface';
 import type { RocketsResourceConfig } from '../../domain/interfaces/rockets-resource.interface';
 import type { RocketsResourceBundle } from '../../domain/interfaces/rockets-resource-bundle.interface';
+import type { RocketsRepositoriesConfig } from '../../domain/interfaces/rockets-repositories.interface';
+import type { EntityConstructor } from '../../domain/interfaces/rockets-resource-definition.interface';
+import { USER_METADATA_MODULE_ENTITY_KEY } from '../../rockets-core.constants';
+import { resolveRelationTarget } from './relation';
 
 /**
  * Result of aggregating one or more `RocketsResourceBundle` instances.
@@ -26,7 +32,7 @@ export interface AggregatedResources {
  * Accepting both shapes lets consumers mix hand-written `RocketsResourceConfig`
  * values with `defineResource()` bundles. Raw configs contribute nothing to
  * `repositoryPersistence` (the consumer must register entities via
- * `repositories.register` in the module options).
+ * `repositories.entities` in the module options).
  */
 export type RocketsResourceInput<
   E extends PlainLiteralObject = PlainLiteralObject,
@@ -54,74 +60,28 @@ export function isRocketsResourceBundle(
  * bundles and raw `RocketsResourceConfig` objects) into the flat structures
  * that `RocketsCoreModule.forRootAsync()` expects.
  *
- * ## Algorithm (4 steps)
+ * ## Algorithm
  *
- * 1. **Partition** — separate `RocketsResourceBundle` items (from
- *    `defineResource()`) from raw `RocketsResourceConfig` items. Only
- *    bundles carry persistence metadata; raw configs do not.
+ * 1. **Partition** bundles from raw configs.
+ * 2. **Index entity → key** across both bundles and `repositories.entities`,
+ *    enforcing the single-key invariant: an entity class cannot be registered
+ *    under two different keys.
+ * 3. **Derive persistence** from bundles, grouping by adapter module and
+ *    deduplicating identical entity registrations.
+ * 4. **Validate cross-resource relations** — every `relation.target` class
+ *    must resolve to a known entity in the index built in step 2. The target
+ *    may live in another bundle *or* in a `repositories.entities` entry,
+ *    making non-CRUD entities (junction tables, lookup tables) valid relation
+ *    targets without forcing a controller surface on them.
+ * 5. **Build output** — `{ resources, repositoryPersistence }`.
  *
- * 2. **Derive persistence from bundles** — group bundle entities by their
- *    persistence adapter module (e.g. `TypeOrmRepositoryModule`). Within
- *    each module group, deduplicate by entity class — two bundles backed
- *    by the same entity produce one `forFeature` entry. Throws if two
- *    bundles disagree on key or relations for the same entity class.
- *
- * 3. **Validate relations** — every `relation.target` string declared by a
- *    bundle must match the `key` of another registered bundle. Catches
- *    typos and missing resource imports at bootstrap.
- *
- * 4. **Build output** — return `{ resources, repositoryPersistence }` where
- *    `resources` is the flat array of CRUD configs and `repositoryPersistence`
- *    is the bundle-derived persistence array.
- *
- * @param args - Wrapper whose `resources` array contains bundles and/or raw
- * CRUD configs to flatten.
- *
- * @throws When a relation target references an unregistered resource key.
- * @throws When two bundles register the same entity class with conflicting config.
- *
- * @example
- * Input — a mix of one `defineResource()` bundle and one raw config:
- * ```ts
- * const petBundle = defineResource({
- *   key: 'pet',
- *   entity: PetEntity,
- *   persistence: { module: TypeOrmRepositoryModule },
- *   relations: [{ target: 'user', propertyName: 'owner' }],
- *   crud: { controller: { path: 'pets', ... }, operations: [...] },
- * });
- *
- * const rawReportConfig: RocketsResourceConfig = {
- *   crud: { controller: { path: 'reports', ... }, operations: [...] },
- * };
- *
- * aggregateResources({ resources: [petBundle, rawReportConfig] });
- * ```
- *
- * Output — flattened + grouped by persistence module:
- * ```ts
- * {
- *   resources: [
- *     petBundle.core,   // pulled out of the bundle
- *     rawReportConfig,  // passed through untouched
- *   ],
- *   repositoryPersistence: [
- *     {
- *       module: TypeOrmRepositoryModule,
- *       entities: [
- *         { key: 'pet', entity: PetEntity, relations: { ... } },
- *         // one entry per unique entity class under this module
- *       ],
- *     },
- *     // one outer entry per distinct persistence adapter module
- *   ],
- * }
- * ```
- * Raw configs contribute nothing to `repositoryPersistence` — their entities
- * must be registered via `repositories.register` in the module options.
+ * @throws When the same entity class is registered under conflicting keys.
+ * @throws When a relation target cannot be resolved to a registered entity.
+ * @throws When two bundles register the same entity with different relation config.
  */
 export function aggregateResources(args: {
   readonly resources: ReadonlyArray<RocketsResourceInput>;
+  readonly repositories?: RocketsRepositoriesConfig;
 }): AggregatedResources {
   // ── Step 1: Partition inputs ──────────────────────────────────────────
   const bundles: RocketsResourceBundle[] = [];
@@ -135,7 +95,14 @@ export function aggregateResources(args: {
     }
   }
 
-  // ── Step 2: Derive persistence from bundles ───────────────────────────
+  // ── Step 2: Index entity classes → resource keys ──────────────────────
+  // Bundles + repositories.entities (+ userMetadata) all contribute. The
+  // single-key invariant catches the case where the same entity class
+  // shows up under two different `key` strings — the resulting dynamic
+  // repository tokens would silently collide.
+  const entityIndex = buildEntityIndex(bundles, args.repositories);
+
+  // ── Step 3: Derive persistence from bundles ───────────────────────────
   const byModule = new Map<
     RepositoryModuleInterface,
     Map<Type<PlainLiteralObject>, RepositoryProviderOptions>
@@ -168,28 +135,22 @@ export function aggregateResources(args: {
     entities: Array.from(entityMap.values()),
   }));
 
-  // ── Step 3: Validate cross-resource relations ─────────────────────────
-  const bundlesByKey = new Map<string, RocketsResourceBundle>();
-  for (const bundle of bundles) {
-    bundlesByKey.set(bundle.meta.key, bundle);
-  }
-
+  // ── Step 4: Validate cross-resource relations ─────────────────────────
   for (const bundle of bundles) {
     for (const relation of bundle.meta.relations) {
-      if (!bundlesByKey.has(relation.target)) {
-        const propertyName = relation.propertyName ?? relation.target;
+      const targetClass = resolveRelationTarget(relation);
+      if (!entityIndex.has(targetClass)) {
         throw new Error(
-          `aggregateResources[${bundle.meta.key}]: relation "${propertyName}" ` +
-            `targets resource "${relation.target}" which is not registered ` +
-            `in this RocketsModule. Check the \`target\` string matches ` +
-            `another resource's \`key\`, and that the target resource is ` +
-            `included in the \`resources[]\` option.`,
+          `aggregateResources[${bundle.meta.key}]: relation "${relation.propertyName}" ` +
+            `targets entity \`${targetClass.name}\` which is not registered in this ` +
+            `RocketsModule. Either declare a \`defineResource()\` bundle for it, or ` +
+            `add it to \`repositories.entities\` so it carries a dynamic-repository key.`,
         );
       }
     }
   }
 
-  // ── Step 4: Build output ──────────────────────────────────────────────
+  // ── Step 5: Build output ──────────────────────────────────────────────
   const resources: RocketsResourceConfig[] = [
     ...bundles.map((b) => b.core),
     ...rawConfigs,
@@ -199,8 +160,66 @@ export function aggregateResources(args: {
 }
 
 /**
+ * Build a `class -> registered key` index across every entity the module
+ * knows about: `defineResource()` bundles plus `repositories.entities`
+ * (plus `userMetadata`). Throws on the single-key invariant violation
+ * (same class registered under two distinct keys).
+ */
+function buildEntityIndex(
+  bundles: ReadonlyArray<RocketsResourceBundle>,
+  repositories: RocketsRepositoriesConfig | undefined,
+): Map<EntityConstructor, string> {
+  // Keyed by `EntityConstructor` so both Nest's `Type<X>` (from bundle
+  // persistence and repositories.entities) and `EntityConstructor<unknown>`
+  // (returned by `resolveRelationTarget()`) flow through without variance
+  // casts. The map is used purely for identity comparison; we never
+  // instantiate keys.
+  const index = new Map<EntityConstructor, string>();
+
+  const register = (
+    entityClass: EntityConstructor,
+    key: string,
+    origin: string,
+  ): void => {
+    const existing = index.get(entityClass);
+    if (existing !== undefined && existing !== key) {
+      throw new Error(
+        `aggregateResources: entity \`${entityClass.name}\` is registered ` +
+          `under conflicting keys — "${existing}" and "${key}" (from ${origin}). ` +
+          `Each entity class must map to exactly one persistence key across ` +
+          `\`defineResource()\` bundles and \`repositories.entities\`.`,
+      );
+    }
+    index.set(entityClass, key);
+  };
+
+  for (const bundle of bundles) {
+    register(
+      bundle.persistence.entity.entity,
+      bundle.meta.key,
+      `defineResource[${bundle.meta.key}]`,
+    );
+  }
+
+  if (repositories) {
+    // userMetadata is registered with the conventional 'userMetadata' key by
+    // flattenRepositories(). We mirror that here so a relation may target it.
+    register(
+      repositories.userMetadata.entity,
+      USER_METADATA_MODULE_ENTITY_KEY,
+      `repositories.userMetadata`,
+    );
+    for (const entry of repositories.entities ?? []) {
+      register(entry.entity, entry.key, `repositories.entities[${entry.key}]`);
+    }
+  }
+
+  return index;
+}
+
+/**
  * Guard against a single entity class being registered twice with
- * conflicting persistence-layer config.
+ * conflicting persistence-layer config inside the bundle set.
  */
 function assertEntityConfigAgrees(
   existing: RepositoryProviderOptions,

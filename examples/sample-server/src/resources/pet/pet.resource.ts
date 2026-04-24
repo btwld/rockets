@@ -7,8 +7,8 @@ import { PetCreateHandler } from './pet-create.handler';
 import { PetUpdateHandler } from './pet-update.handler';
 import { PetOwnerOrSharedHook } from '../pet-share/pet-owner-or-shared.hook';
 import { AuditLogHook } from '../../audit/audit-log.hook';
-import { PET_VACCINATION_ENTITY_KEY } from '../pet-vaccination/pet-vaccination.constants';
-import { TAG_ENTITY_KEY } from '../tag/tag.constants';
+import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
+import { TagEntity } from '../tag/tag.entity';
 import { PetTagSyncer } from './pet-tag.syncer';
 
 /**
@@ -36,9 +36,9 @@ export const petResource = defineResource({
     Operation.SoftDelete,
     Operation.Restore,
   ],
-  relations: [
-    { target: PET_VACCINATION_ENTITY_KEY, propertyName: 'vaccinations' },
-    { target: TAG_ENTITY_KEY, propertyName: 'tags' },
+  relations: (relation) => [
+    relation(PetVaccinationEntity, 'vaccinations'),
+    relation(TagEntity, 'tags'),
   ],
   hooks: [PetOwnerOrSharedHook, AuditLogHook],
   handlers: { create: PetCreateHandler, update: PetUpdateHandler },
@@ -50,7 +50,3 @@ export const petResource = defineResource({
     },
   },
 });
-
-export function createPetResource(): typeof petResource {
-  return petResource;
-}

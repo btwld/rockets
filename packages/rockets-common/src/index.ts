@@ -158,3 +158,4 @@ export {
 } from './utils/error-logging.helper';
 export type { ErrorDetails } from './utils/error-logging.helper';
 export { createRepositoryContext } from './utils/repository-context.helper';
+export { stripUndefined } from './utils/strip-undefined.helper';

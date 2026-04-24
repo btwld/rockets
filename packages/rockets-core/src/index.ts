@@ -51,6 +51,15 @@ export type { RocketsResourceConfig } from './domain/interfaces/rockets-resource
 export { defineResource } from './infrastructure/resource/define-resource';
 export { createPaginatedDto } from './infrastructure/resource/paginated-dto.factory';
 export {
+  relation,
+  createBoundRelation,
+  resolveRelationTarget,
+} from './infrastructure/resource/relation';
+export type {
+  BoundRelation,
+  RelationOptions,
+} from './domain/interfaces/rockets-resource-definition.interface';
+export {
   aggregateResources,
   isRocketsResourceBundle,
 } from './infrastructure/resource/aggregate-resources';
@@ -68,6 +77,7 @@ export type {
   ResourceOperationOverride,
   ResourceOverrides,
   ResourceControllerOverrides,
+  EntityConstructor,
 } from './domain/interfaces/rockets-resource-definition.interface';
 export type { RocketsResourceBundle } from './domain/interfaces/rockets-resource-bundle.interface';
 

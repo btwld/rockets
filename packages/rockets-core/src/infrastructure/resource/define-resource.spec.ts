@@ -1,12 +1,14 @@
 import type { PlainLiteralObject } from '@nestjs/common';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { Operation } from '@concepta/nestjs-common';
+import { Where } from '@concepta/nestjs-repository';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   CrudOperationResolver,
   type ConfigurableCrudGeneratedOptions,
 } from '@bitwild/rockets-crud';
 import { defineResource } from './define-resource';
+import { relation } from './relation';
 import type { RocketsResourceBundle } from '../../domain/interfaces/rockets-resource-bundle.interface';
 
 /**
@@ -26,6 +28,18 @@ function narrow<E extends PlainLiteralObject>(
 // Fixtures — minimum plausible entity + DTOs to exercise defineResource.
 // ────────────────────────────────────────────────────────────────────
 
+// Forward-declared so WidgetEntity can reference part / parent / audit /
+// history entities below for type-safe `relation()` calls.
+class PartEntity {
+  id!: string;
+}
+class PartCatalogEntity {
+  id!: string;
+}
+class AuditEntity {
+  id!: string;
+}
+
 @Entity('widgets')
 class WidgetEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -33,6 +47,13 @@ class WidgetEntity {
 
   @Column({ type: 'varchar', length: 255 })
   name!: string;
+
+  // Relation properties — typed as plain arrays / scalars; `relation()` only
+  // requires `propertyName` to be a `keyof Source`. Cardinality and
+  // inverse-side wiring are inferred by the persistence adapter.
+  parent?: WidgetEntity;
+  parts?: PartEntity[];
+  history?: AuditEntity[];
 }
 
 class WidgetResponseDto {
@@ -162,25 +183,23 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        relations: [{ target: 'parent', federated: true }],
+        relations: [
+          relation(WidgetEntity, WidgetEntity, 'parent', { federated: true }),
+        ],
       });
       expect(bundle.persistence.entity.relations).toEqual({
         parent: { federated: true },
       });
     });
 
-    it('uses `propertyName` (not `target`) as the persistence relations map key when both differ', () => {
+    it('uses `propertyName` as the persistence relations map key', () => {
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
         relations: [
-          {
-            target: 'partCatalog',
-            propertyName: 'parts',
-            federated: true,
-          },
+          relation(WidgetEntity, PartCatalogEntity, 'parts', { federated: true }),
         ],
       });
       expect(bundle.persistence.entity.relations).toEqual({
@@ -194,7 +213,7 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        relations: [{ target: 'parent' }],
+        relations: [relation(WidgetEntity, WidgetEntity, 'parent')],
       });
       expect(bundle.persistence.entity.relations).toBeUndefined();
     });
@@ -243,21 +262,19 @@ describe('defineResource', () => {
 
   describe('relations', () => {
     it('preserves the full relation entry on meta.relations for aggregator validation', () => {
+      const entry = relation(WidgetEntity, PartEntity, 'parts', {
+        include: 'default',
+      });
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        relations: [
-          {
-            target: 'part',
-            propertyName: 'parts',
-            include: 'default',
-          },
-        ],
+        relations: [entry],
       });
       expect(bundle.meta.relations[0]).toEqual({
-        target: 'part',
+        source: WidgetEntity,
+        target: PartEntity,
         propertyName: 'parts',
         include: 'default',
       });
@@ -271,23 +288,251 @@ describe('defineResource', () => {
         tags: ['widget'],
         operations: [Operation.List],
         relations: [
-          { target: 'part', propertyName: 'parts' },
-          { target: 'audit', propertyName: 'history', include: 'never' },
+          relation(WidgetEntity, PartEntity, 'parts'),
+          relation(WidgetEntity, AuditEntity, 'history', { include: 'never' }),
         ],
       });
       expect(bundle.meta.relations).toHaveLength(2);
     });
 
-    it('rejects duplicate propertyNames (or duplicate targets used as default propertyName)', () => {
+    it('rejects duplicate propertyNames pointing at the same source property', () => {
       expect(() =>
         defineResource({
           key: 'widget',
           entity: WidgetEntity,
           path: 'widget',
           tags: ['widget'],
-          relations: [{ target: 'part' }, { target: 'part' }],
+          relations: [
+            relation(WidgetEntity, PartEntity, 'parts'),
+            relation(WidgetEntity, PartEntity, 'parts'),
+          ],
         }),
-      ).toThrow(/duplicate relation propertyName "part"/);
+      ).toThrow(/duplicate relation propertyName "parts"/);
+    });
+
+    it('accepts a `() => Class` thunk target for circular imports', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: [relation(WidgetEntity, () => PartEntity, 'parts')],
+      });
+      expect(bundle.meta.relations[0].propertyName).toBe('parts');
+      // Thunk is preserved verbatim — resolution happens in aggregator.
+      expect(typeof bundle.meta.relations[0].target).toBe('function');
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────
+  // Builder form — `relations: (relation) => […]` with a source-bound
+  // relation helper. The bound `relation` captures the resource entity,
+  // so the source can
+  // never be mistyped; it is not even an argument the consumer passes.
+  // ──────────────────────────────────────────────────────────────────
+  describe('relations builder form', () => {
+    it('invokes the builder with a source-bound relation helper and produces equivalent entries', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [relation(PartEntity, 'parts')],
+      });
+      expect(bundle.meta.relations).toHaveLength(1);
+      expect(bundle.meta.relations[0]).toEqual({
+        source: WidgetEntity,
+        target: PartEntity,
+        propertyName: 'parts',
+      });
+    });
+
+    it('binds the source to the resource entity automatically', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [
+          relation(PartEntity, 'parts'),
+          relation(AuditEntity, 'history', { include: 'never' }),
+        ],
+      });
+      // Every entry has WidgetEntity as the source — by construction.
+      for (const entry of bundle.meta.relations) {
+        expect(entry.source).toBe(WidgetEntity);
+      }
+    });
+
+    it('forwards options (federated, distinctFilter, include) verbatim', () => {
+      const filter = Where.eq('id', 'sentinel');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [
+          relation(PartEntity, 'parts', {
+            federated: true,
+            distinctFilter: filter,
+          }),
+          relation(AuditEntity, 'history', { include: 'never' }),
+        ],
+      });
+      const parts = bundle.meta.relations.find(
+        (r) => r.propertyName === 'parts',
+      );
+      const history = bundle.meta.relations.find(
+        (r) => r.propertyName === 'history',
+      );
+      expect(parts?.federated).toBe(true);
+      expect(parts?.distinctFilter).toBe(filter);
+      expect(history?.include).toBe('never');
+    });
+
+    it('supports self-references via thunk inside the builder', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [relation(() => WidgetEntity, 'parent')],
+      });
+      const entry = bundle.meta.relations[0];
+      expect(entry.source).toBe(WidgetEntity);
+      expect(entry.propertyName).toBe('parent');
+      expect(typeof entry.target).toBe('function');
+    });
+
+    it('feeds persistence relations from builder-produced entries', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [relation(PartEntity, 'parts', { federated: true })],
+      });
+      expect(bundle.persistence.entity.relations).toEqual({
+        parts: { federated: true },
+      });
+    });
+
+    it('feeds controller joins from builder-produced entries (skipping include=never)', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [
+          relation(PartEntity, 'parts'),
+          relation(AuditEntity, 'history', { include: 'never' }),
+        ],
+      });
+      // Hidden relations are excluded from controller joins, but kept on
+      // meta.relations for cross-resource validation.
+      expect(bundle.meta.relations).toHaveLength(2);
+      const list = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.List,
+      );
+      // The CrudJoin decorator stores its config on the joined function;
+      // counting decorators is the cleanest observable here.
+      expect(list?.extraDecorators?.length ?? 0).toBeGreaterThan(0);
+    });
+
+    it('rejects duplicate propertyNames inside the builder return', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          relations: (relation) => [
+            relation(PartEntity, 'parts'),
+            relation(PartEntity, 'parts'),
+          ],
+        }),
+      ).toThrow(/duplicate relation propertyName "parts"/);
+    });
+
+    it('treats an empty builder return as no relations', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: () => [],
+      });
+      expect(bundle.meta.relations).toEqual([]);
+      expect(bundle.persistence.entity.relations).toBeUndefined();
+    });
+
+    it('invokes the builder exactly once per defineResource call', () => {
+      let invocationCount = 0;
+      defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => {
+          invocationCount += 1;
+          return [relation(PartEntity, 'parts')];
+        },
+      });
+      expect(invocationCount).toBe(1);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────
+  // Builder + array form mixed/equivalence guarantees. The two input
+  // shapes must produce structurally equivalent bundles for the same
+  // logical relation set; downstream code (aggregator, controller
+  // joins, persistence) cannot care which form was used.
+  // ──────────────────────────────────────────────────────────────────
+  describe('relations: builder vs array equivalence', () => {
+    it('produces an equal meta.relations payload regardless of input form', () => {
+      const fromArray = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: [
+          relation(WidgetEntity, PartEntity, 'parts'),
+          relation(WidgetEntity, AuditEntity, 'history', { include: 'never' }),
+        ],
+      });
+      const fromBuilder = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [
+          relation(PartEntity, 'parts'),
+          relation(AuditEntity, 'history', { include: 'never' }),
+        ],
+      });
+      expect(fromBuilder.meta.relations).toEqual(fromArray.meta.relations);
+    });
+
+    it('produces an equal persistence.entity.relations payload regardless of input form', () => {
+      const fromArray = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: [
+          relation(WidgetEntity, PartEntity, 'parts', { federated: true }),
+        ],
+      });
+      const fromBuilder = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        relations: (relation) => [relation(PartEntity, 'parts', { federated: true })],
+      });
+      expect(fromBuilder.persistence.entity.relations).toEqual(
+        fromArray.persistence.entity.relations,
+      );
     });
   });
 

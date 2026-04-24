@@ -145,9 +145,13 @@ function definitionTransform(
     exports: defExports = [],
   } = definition;
 
-  // Aggregate resource inputs once — used by imports, providers, and exports
+  // Aggregate resource inputs once — used by imports, providers, and exports.
+  // `repositories` is forwarded so the aggregator can resolve relation targets
+  // against entities that live in `repositories.entities` without requiring a
+  // matching `defineResource()` bundle (junction tables, lookup tables, etc.).
   const aggregated = aggregateResources({
     resources: extras.resources ?? [],
+    repositories: extras.repositories,
   });
 
   return {
