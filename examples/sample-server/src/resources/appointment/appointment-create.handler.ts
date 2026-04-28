@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ForbiddenException,
+  HttpException,
   Injectable,
   NotFoundException,
   PlainLiteralObject,
@@ -8,6 +10,7 @@ import {
   CrudAdapter,
   CrudCommandHandler,
   CrudCreateCommand,
+  CrudQueryException,
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
 import {
@@ -16,6 +19,7 @@ import {
   TransactionScope,
   Where,
 } from '@bitwild/rockets-repository';
+import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.entity';
 import { PET_ENTITY_KEY } from '../pet/pet.constants';
 import { AppointmentEntity } from './appointment.entity';
@@ -24,7 +28,6 @@ import {
   APPOINTMENT_ENTITY_KEY,
   REMINDER_ENTITY_KEY,
 } from './appointment.constants';
-import { requireAuthUser, wrapCrudErrors } from '../shared';
 
 type AppointmentCreatePayload = PlainLiteralObject & {
   petId: string;
@@ -61,17 +64,22 @@ export class AppointmentCreateHandler extends CrudCommandHandler<PlainLiteralObj
   ): Promise<PlainLiteralObject> {
     const { context, dto } = command;
 
-    const authUser = requireAuthUser(context, 'create an appointment');
+    const actor = getActor(context);
+    if (!actor?.id) {
+      throw new ForbiddenException(
+        'Authenticated user is required to create an appointment',
+      );
+    }
 
     const appointmentDate = new Date(dto.date);
     const reminderDate = new Date(dto.reminderSendAt);
 
-    return wrapCrudErrors(this.crudAdapter, () =>
-      this.txScope.run(context, async () => {
+    try {
+      return await this.txScope.run(context, async () => {
         const pet = await this.petRepo.findOne({
           where: Where.and(
             Where.eq<PetEntity>('id', dto.petId),
-            Where.eq<PetEntity>('userId', authUser.id),
+            Where.eq<PetEntity>('userId', actor.id),
           ),
           ctx: context,
         });
@@ -82,7 +90,7 @@ export class AppointmentCreateHandler extends CrudCommandHandler<PlainLiteralObj
         const appointment = await this.apptRepo.create(
           {
             petId: dto.petId,
-            userId: authUser.id,
+            userId: actor.id,
             date: appointmentDate,
             notes: dto.notes,
           },
@@ -106,7 +114,12 @@ export class AppointmentCreateHandler extends CrudCommandHandler<PlainLiteralObj
         );
 
         return { ...appointment, reminders: [reminder] };
-      }),
-    );
+      });
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
+      throw new CrudQueryException(this.crudAdapter.entityName(), {
+        originalError: e,
+      });
+    }
   }
 }

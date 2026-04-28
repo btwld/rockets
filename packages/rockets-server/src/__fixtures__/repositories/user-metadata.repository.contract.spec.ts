@@ -5,13 +5,15 @@
  * `update` methods used by production handlers.
  */
 import { Where, type RepositoryInterface } from '@concepta/nestjs-repository';
-import type { UserMetadataEntityInterface } from '../../domain/interfaces/user-metadata.interface';
+import {
+  UpsertUserMetadataHandler,
+  UpsertUserMetadataCommand,
+  GetUserMetadataHandler,
+  GetUserMetadataQuery,
+  type UserMetadataEntityInterface,
+} from '@bitwild/rockets-core';
 import { UserMetadataEntityFixture } from '../entities/user-metadata.entity.fixture';
 import { UserMetadataRepositoryFixture } from './user-metadata.repository.fixture';
-import { UpsertUserMetadataHandler } from '../../application/commands/handlers/upsert-user-metadata.handler';
-import { UpsertUserMetadataCommand } from '../../application/commands/impl/upsert-user-metadata.command';
-import { GetUserMetadataHandler } from '../../application/queries/handlers/get-user-metadata.handler';
-import { GetUserMetadataQuery } from '../../application/queries/impl/get-user-metadata.query';
 
 function asWhereClause(
   where: ReturnType<typeof Where.eq>,

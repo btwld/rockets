@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-repository",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.7",
   "description": "Rockets Repository - abstract repository pattern abstraction",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
@@ -38,7 +38,7 @@
     "build:watch": "tsc -p tsconfig.json --watch"
   },
   "dependencies": {
-    "@bitwild/rockets-common": "workspace:*",
-    "@concepta/nestjs-repository": "8.0.0-alpha.4"
+    "@bitwild/rockets-common": "workspace:^",
+    "@concepta/nestjs-repository": "8.0.0-alpha.5"
   }
 }

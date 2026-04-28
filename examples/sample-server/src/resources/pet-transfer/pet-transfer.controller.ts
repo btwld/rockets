@@ -14,7 +14,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CommandBus } from '@nestjs/cqrs';
-import { AuthUser, Ctx, type AppContextInterface } from '@concepta/nestjs-common';
+import {
+  AuthUser,
+  Ctx,
+  type AppContextInterface,
+} from '@bitwild/rockets-common';
 import type { AuthorizedUser } from '@bitwild/rockets';
 import { PetEntity } from '../pet/pet.entity';
 import { TransferPetOwnershipDto } from './dto/transfer-pet-ownership.dto';

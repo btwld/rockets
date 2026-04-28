@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-core",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.7",
   "description": "Rockets Core - auth-provider-agnostic server infrastructure",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
@@ -40,12 +40,13 @@
     "test:e2e": "jest --config ./jest.config-e2e.json"
   },
   "dependencies": {
-    "@bitwild/rockets-access-control": "workspace:*",
-    "@bitwild/rockets-common": "workspace:*",
-    "@bitwild/rockets-crud": "workspace:*",
-    "@bitwild/rockets-repository": "workspace:*",
-    "@concepta/nestjs-common": "8.0.0-alpha.4",
-    "@concepta/nestjs-crud": "8.0.0-alpha.4",
+    "@bitwild/rockets-access-control": "workspace:^",
+    "@bitwild/rockets-common": "workspace:^",
+    "@bitwild/rockets-crud": "workspace:^",
+    "@bitwild/rockets-repository": "workspace:^",
+    "@concepta/nestjs-authentication": "8.0.0-alpha.5",
+    "@concepta/nestjs-common": "8.0.0-alpha.5",
+    "@concepta/nestjs-crud": "8.0.0-alpha.5",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
@@ -53,7 +54,8 @@
     "@nestjs/swagger": "^11.0.0"
   },
   "devDependencies": {
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.4",
+    "@concepta/nestjs-repository": "8.0.0-alpha.5",
+    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.5",
     "@nestjs/testing": "11.1.13",
     "@nestjs/typeorm": "11.0.0",
     "supertest": "^6.3.4",

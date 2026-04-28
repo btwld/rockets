@@ -1,22 +1,32 @@
 import { defineResource } from '@bitwild/rockets';
 import { Operation } from '@concepta/nestjs-common';
+import { OwnerStampHook } from '@bitwild/rockets-core';
 import { PetEntity } from './pet.entity';
 import { PET_ENTITY_KEY } from './pet.constants';
 import { PetCreateDto, PetUpdateDto, PetResponseDto } from './pet.dto';
-import { PetCreateHandler } from './pet-create.handler';
-import { PetUpdateHandler } from './pet-update.handler';
 import { PetOwnerOrSharedHook } from '../pet-share/pet-owner-or-shared.hook';
 import { AuditLogHook } from '../../audit/audit-log.hook';
 import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
-import { TagEntity } from '../tag/tag.entity';
-import { PetTagSyncer } from './pet-tag.syncer';
+import { PetTagEntity } from './pet-tag.entity';
+import { PetCreatedEventHook } from '../../events/pet-created-event.hook';
 
 /**
- * `PetOwnerOrSharedHook` applies two scopes depending on the CRUD op:
- * List/Read broaden to "owner OR shared" so recipients see pets shared
- * with them; Update/Delete/Replace stay strict-owner, so shared users
- * get 404 when they try to mutate. Create stamps `userId` via
- * `PetCreateHandler` (can't do it from a where-clause).
+ * Hook stack and what each one owns:
+ *
+ * - {@link OwnerStampHook} — `BeforeCreate`/`BeforeUpdate` stamp `userId`
+ *   from the actor and reject spoofing. Replaces the previous
+ *   `PetCreateHandler` whose only job was injecting `userId` from the
+ *   authenticated request.
+ * - {@link PetOwnerOrSharedHook} — `BeforeFindAndCount` / `BeforeFindOne`
+ *   broaden read scope to "owner OR shared user" while keeping writes
+ *   strict-owner.
+ * - {@link AuditLogHook} — `AfterCreate` / `AfterUpdate` / `AfterDelete`
+ *   write to the audit trail.
+ * - {@link PetCreatedEventHook} — `AfterCreate` publishes
+ *   `PetCreatedEvent` for downstream listeners (welcome email).
+ *
+ * Tag attachment lives on the dedicated junction resource at
+ * `/pets/:petId/tags`; this resource never touches the M:N pair.
  */
 export const petResource = defineResource({
   key: PET_ENTITY_KEY,
@@ -38,11 +48,14 @@ export const petResource = defineResource({
   ],
   relations: (relation) => [
     relation(PetVaccinationEntity, 'vaccinations'),
-    relation(TagEntity, 'tags'),
+    relation(PetTagEntity, 'petTags'),
   ],
-  hooks: [PetOwnerOrSharedHook, AuditLogHook],
-  handlers: { create: PetCreateHandler, update: PetUpdateHandler },
-  providers: [PetTagSyncer],
+  hooks: [
+    OwnerStampHook,
+    PetOwnerOrSharedHook,
+    AuditLogHook,
+    PetCreatedEventHook,
+  ],
   overrides: {
     operations: {
       [Operation.SoftDelete]: { response: { returnDeleted: true } },

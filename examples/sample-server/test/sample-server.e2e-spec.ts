@@ -45,11 +45,11 @@ describe('Sample Server (e2e)', () => {
       accessToken = res.body.accessToken;
     });
 
-    it('POST /auth/signup — rejects duplicate email', async () => {
+    it('POST /auth/signup — rejects duplicate email with 409', async () => {
       await request(app.getHttpServer())
         .post('/auth/signup')
         .send({ email: 'test@example.com', password: 'pass' })
-        .expect(500);
+        .expect(409);
     });
 
     it('POST /auth/login — returns JWT for valid credentials', async () => {
@@ -124,6 +124,26 @@ describe('Sample Server (e2e)', () => {
         lastName: 'User',
       });
     });
+
+    it('PATCH /me does not return unknown userMetadata keys', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          userMetadata: {
+            ussdserId: 'b9378e1f-4274-4315-8bf9-baa6ce9481',
+            firstName: 'Typos',
+            lastName: 'Gone',
+          },
+        })
+        .expect(200);
+
+      expect(res.body.userMetadata).toMatchObject({
+        firstName: 'Typos',
+        lastName: 'Gone',
+      });
+      expect('ussdserId' in (res.body.userMetadata as object)).toBe(false);
+    });
   });
 
   describe('Pets CRUD', () => {
@@ -164,22 +184,24 @@ describe('Sample Server (e2e)', () => {
       expect(res.body.userId).toBe(userId);
     });
 
-    it('POST /pets — 400 when userId is not a valid UUID v4', async () => {
-      await request(app.getHttpServer())
+    it('POST /pets — userId in body is not part of create DTO; bad value is ignored, owner from JWT', async () => {
+      const res = await request(app.getHttpServer())
         .post('/pets')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
-          name: 'BadUuid',
+          name: 'BadUuidBody',
           species: 'Dog',
           age: 1,
           status: 'active',
           userId: 'not-a-uuid',
         })
-        .expect(400);
+        .expect(201);
+
+      expect(res.body.userId).toBe(userId);
     });
 
-    it('POST /pets — 403 when userId UUID does not match authenticated user', async () => {
-      await request(app.getHttpServer())
+    it('POST /pets — actor-wins: client-supplied userId is overwritten with the authenticated user', async () => {
+      const res = await request(app.getHttpServer())
         .post('/pets')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -189,7 +211,13 @@ describe('Sample Server (e2e)', () => {
           status: 'active',
           userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         })
-        .expect(403);
+        .expect(201);
+
+      // The actor (token subject) is the source of truth; the client-supplied
+      // value is silently overwritten by `OwnerStampHook`. This prevents
+      // spoofing without depending on `HttpException` propagation through
+      // the upstream membrane (which currently collapses to 500).
+      expect(res.body.userId).toBe(userId);
     });
 
     it('GET /pets — lists pets', async () => {
@@ -473,8 +501,8 @@ describe('Sample Server (e2e)', () => {
       });
     });
 
-    describe('Pet ↔ Tag many-to-many', () => {
-      it('POST /pets — creates a pet with two tags attached', async () => {
+    describe('Pet ↔ Tag many-to-many (junction resource)', () => {
+      it('POST /pets — pet payload no longer accepts tagIds', async () => {
         const res = await request(app.getHttpServer())
           .post('/pets')
           .set('Authorization', `Bearer ${userToken}`)
@@ -483,33 +511,85 @@ describe('Sample Server (e2e)', () => {
             species: 'Dog',
             age: 3,
             status: 'active',
-            tagIds: [tagIdRed, tagIdBlue],
           })
           .expect(201);
 
-        expect(res.body.tags).toHaveLength(2);
-        const names = (res.body.tags as { name: string }[])
-          .map((t) => t.name)
-          .sort();
-        expect(names).toEqual(['Blue', 'Red']);
+        expect(res.body.tags).toEqual([]);
         taggedPetId = res.body.id as string;
       });
 
-      it('POST /pets — rejects non-UUID tagId', async () => {
-        await request(app.getHttpServer())
-          .post('/pets')
+      it('POST /pets/:petId/tags — attaches a tag via the junction', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/pets/${taggedPetId}/tags`)
           .set('Authorization', `Bearer ${userToken}`)
-          .send({
-            name: 'BadTag',
-            species: 'Cat',
-            age: 2,
-            status: 'active',
-            tagIds: ['not-a-uuid'],
-          })
+          .send({ tagId: tagIdRed })
+          .expect(201);
+
+        expect(res.body).toMatchObject({
+          petId: taggedPetId,
+          tagId: tagIdRed,
+        });
+        expect(res.body.tag).toMatchObject({ id: tagIdRed, name: 'Red' });
+      });
+
+      it('POST /pets/:petId/tags — attaches a second tag', async () => {
+        await request(app.getHttpServer())
+          .post(`/pets/${taggedPetId}/tags`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({ tagId: tagIdBlue })
+          .expect(201);
+      });
+
+      it('POST /pets/:petId/tags — rejects non-UUID tagId', async () => {
+        await request(app.getHttpServer())
+          .post(`/pets/${taggedPetId}/tags`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({ tagId: 'not-a-uuid' })
           .expect(400);
       });
 
-      it('GET /pets/:id — returns pet with both tags (eager load)', async () => {
+      it('POST /pets/:petId/tags — unknown tagId returns descriptive 400', async () => {
+        const unknownTagId = '00000000-0000-4000-8000-000000000000';
+        const res = await request(app.getHttpServer())
+          .post(`/pets/${taggedPetId}/tags`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({ tagId: unknownTagId })
+          .expect(400);
+
+        expect(res.body.message).toMatch(/Unknown tag id/);
+        expect(res.body.message).toContain(unknownTagId);
+      });
+
+      it('POST /pets/:petId/tags — strangers attempting to attach get 404', async () => {
+        const stranger = await request(app.getHttpServer())
+          .post('/auth/signup')
+          .send({
+            email: 'tag-stranger@example.com',
+            password: 'password123',
+            name: 'Stranger',
+          })
+          .expect(201);
+        const strangerToken = stranger.body.accessToken as string;
+
+        await request(app.getHttpServer())
+          .post(`/pets/${taggedPetId}/tags`)
+          .set('Authorization', `Bearer ${strangerToken}`)
+          .send({ tagId: tagIdRed })
+          .expect(404);
+      });
+
+      it('GET /pets/:petId/tags — lists junction rows for a pet', async () => {
+        const res = await request(app.getHttpServer())
+          .get(`/pets/${taggedPetId}/tags`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .expect(200);
+
+        const rows = res.body.data as Array<{ tagId: string }>;
+        const tagIds = rows.map((r) => r.tagId).sort();
+        expect(tagIds).toEqual([tagIdBlue, tagIdRed].sort());
+      });
+
+      it('GET /pets/:id — returns pet with both tags (projected from junction)', async () => {
         const res = await request(app.getHttpServer())
           .get(`/pets/${taggedPetId}`)
           .set('Authorization', `Bearer ${userToken}`)
@@ -530,36 +610,29 @@ describe('Sample Server (e2e)', () => {
         expect(pet?.tags).toHaveLength(2);
       });
 
-      it('PATCH /pets/:id — replaces tags (tagIds: [red] drops blue)', async () => {
-        const res = await request(app.getHttpServer())
-          .patch(`/pets/${taggedPetId}`)
+      it('DELETE /pets/:petId/tags/:id — detaches a tag', async () => {
+        const list = await request(app.getHttpServer())
+          .get(`/pets/${taggedPetId}/tags`)
           .set('Authorization', `Bearer ${userToken}`)
-          .send({ tagIds: [tagIdRed] })
           .expect(200);
+        const blueRow = (list.body.data as Array<{ id: string; tagId: string }>)
+          .find((r) => r.tagId === tagIdBlue);
+        expect(blueRow).toBeDefined();
 
-        expect(res.body.tags).toHaveLength(1);
-        expect((res.body.tags as { id: string }[])[0].id).toBe(tagIdRed);
-      });
-
-      it('PATCH /pets/:id — clears tags with tagIds: []', async () => {
-        const res = await request(app.getHttpServer())
-          .patch(`/pets/${taggedPetId}`)
-          .set('Authorization', `Bearer ${userToken}`)
-          .send({ tagIds: [] })
-          .expect(200);
-
-        expect(res.body.tags).toEqual([]);
-      });
-
-      it('PATCH /pets/:id — omitting tagIds leaves tags untouched', async () => {
-        // re-attach blue first
         await request(app.getHttpServer())
-          .patch(`/pets/${taggedPetId}`)
+          .delete(`/pets/${taggedPetId}/tags/${blueRow!.id}`)
           .set('Authorization', `Bearer ${userToken}`)
-          .send({ tagIds: [tagIdBlue] })
-          .expect(200);
+          .expect(204);
 
-        // update name only — tags should stay
+        const after = await request(app.getHttpServer())
+          .get(`/pets/${taggedPetId}`)
+          .set('Authorization', `Bearer ${userToken}`)
+          .expect(200);
+        expect(after.body.tags).toHaveLength(1);
+        expect((after.body.tags as { id: string }[])[0].id).toBe(tagIdRed);
+      });
+
+      it('PATCH /pets/:id — does not affect tags (junction is independent)', async () => {
         const res = await request(app.getHttpServer())
           .patch(`/pets/${taggedPetId}`)
           .set('Authorization', `Bearer ${userToken}`)
@@ -568,7 +641,7 @@ describe('Sample Server (e2e)', () => {
 
         expect(res.body.name).toBe('RenamedTaggy');
         expect(res.body.tags).toHaveLength(1);
-        expect((res.body.tags as { id: string }[])[0].id).toBe(tagIdBlue);
+        expect((res.body.tags as { id: string }[])[0].id).toBe(tagIdRed);
       });
     });
   });

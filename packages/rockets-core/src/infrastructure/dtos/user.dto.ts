@@ -23,14 +23,6 @@ export class UserUpdateDto {
   @ApiPropertyOptional({
     description:
       'UserMetadata data to update - structure is defined dynamically',
-    type: 'object',
-    additionalProperties: true,
-    example: {
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@example.com',
-      bio: 'Software Developer',
-    },
   })
   @IsOptional()
   @IsObject()
@@ -83,14 +75,6 @@ export class UserResponseDto {
 
   @ApiPropertyOptional({
     description: 'UserMetadata data - structure is defined dynamically',
-    type: 'object',
-    additionalProperties: true,
-    example: {
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@example.com',
-      bio: 'Software Developer',
-    },
   })
   @IsOptional()
   @IsObject()

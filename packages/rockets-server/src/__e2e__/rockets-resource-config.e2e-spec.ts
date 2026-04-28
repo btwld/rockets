@@ -149,7 +149,7 @@ describe('RocketsModule — Resource Config (e2e)', () => {
         }),
         RocketsServerE2eUserMetadataRepoModule,
         // Item entity repo registered via RepositoryModule directly —
-        // this test validates raw resource config without defineResource().
+        // this test validates a manual `RocketsResourceConfig` (no `defineResource()`).
         RepositoryModule.forFeature({
           module: TypeOrmRepositoryModule,
           entities: [{ key: 'item', entity: ItemEntity }],

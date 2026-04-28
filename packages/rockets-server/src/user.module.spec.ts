@@ -4,15 +4,17 @@ import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { CqrsModule } from '@nestjs/cqrs';
 import { UserModule } from './user.module';
 import { MeController } from './gateways/http/me.controller';
-import { USER_METADATA_MODULE_ENTITY_KEY } from './rockets.constants';
-import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
-import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
+import {
+  USER_METADATA_MODULE_ENTITY_KEY,
+  UpsertUserMetadataHandler,
+  GetUserMetadataHandler,
+} from '@bitwild/rockets-core';
 import { RAW_OPTIONS_TOKEN } from './rockets.tokens';
 import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
 import type { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
 import type { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 import type { RepositoryInterface } from '@concepta/nestjs-repository';
-import type { UserMetadataEntityInterface } from './domain/interfaces/user-metadata.interface';
+import type { UserMetadataEntityInterface } from '@bitwild/rockets-core';
 
 class MetadataCreateDto {
   userId!: string;

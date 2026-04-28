@@ -461,107 +461,36 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@bitwild/rockets-access-control@file:../../packages/rockets-access-control::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
-  version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-access-control@file:../../packages/rockets-access-control#../../packages/rockets-access-control::hash=2c71de&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
-  dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@concepta/nestjs-access-control": "npm:8.0.0-alpha.4"
-  checksum: 10c0/ae43513a75f4a9ce9e81a05186c88eb22cdf8ae9347580c6871073b9bdd0f7e5f35437de53f233641bd54df5423ae5ff59d603de37c686cb067b48182aa22489
-  languageName: node
-  linkType: hard
-
-"@bitwild/rockets-access-control@workspace:*, @bitwild/rockets-access-control@workspace:packages/rockets-access-control":
+"@bitwild/rockets-access-control@workspace:^, @bitwild/rockets-access-control@workspace:packages/rockets-access-control":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-access-control@workspace:packages/rockets-access-control"
   dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@concepta/nestjs-access-control": "npm:8.0.0-alpha.4"
+    "@bitwild/rockets-common": "workspace:^"
+    "@concepta/nestjs-access-control": "npm:7.0.0-alpha.10"
   languageName: unknown
   linkType: soft
 
-"@bitwild/rockets-auth@file:../../packages/rockets-server-auth::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
-  version: 1.0.0-alpha.7
-  resolution: "@bitwild/rockets-auth@file:../../packages/rockets-server-auth#../../packages/rockets-server-auth::hash=c2eaff&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
-  dependencies:
-    "@concepta/nestjs-access-control": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-apple": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-github": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-google": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-jwt": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-local": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-recovery": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-refresh": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-router": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-verify": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-authentication": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-crud": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-email": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-event": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-federated": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-invitation": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-jwt": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-otp": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-password": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-role": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-user": "npm:8.0.0-alpha.4"
-    "@nestjs/common": "npm:^11.0.0"
-    "@nestjs/config": "npm:^4.0.0"
-    "@nestjs/core": "npm:^11.0.0"
-    "@nestjs/cqrs": "npm:^11.0.0"
-    "@nestjs/jwt": "npm:^11.0.0"
-    "@nestjs/passport": "npm:^11.0.0"
-    "@nestjs/swagger": "npm:^11.0.0"
-    "@nestjs/throttler": "npm:^6.0.0"
-    accesscontrol: "npm:^2.2.1"
-    jsonwebtoken: "npm:^9.0.2"
-    passport: "npm:^0.7.0"
-    passport-jwt: "npm:^4.0.1"
-    passport-strategy: "npm:^1.0.0"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-  bin:
-    rockets-auth-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/3c668cfabfd1cc16fb6782e9c6ccba23ee40ae5a53ccff7f4cf470c11cbeb0c35316bdecb7a2c869979ba3f6509621e0048ec081dd49b66a193afb656e672fc6
-  languageName: node
-  linkType: hard
-
-"@bitwild/rockets-auth@workspace:packages/rockets-server-auth":
+"@bitwild/rockets-auth@workspace:^, @bitwild/rockets-auth@workspace:packages/rockets-server-auth":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-auth@workspace:packages/rockets-server-auth"
   dependencies:
+    "@bitwild/rockets-common": "workspace:^"
+    "@bitwild/rockets-core": "workspace:^"
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-apple": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-github": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-google": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-jwt": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-local": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-recovery": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-refresh": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-router": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-auth-verify": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-authentication": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-crud": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-authentication": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-crud": "npm:8.0.0-alpha.5"
     "@concepta/nestjs-email": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-event": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-federated": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-invitation": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-jwt": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-otp": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-password": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-role": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-federated": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-invitation": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-otp": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-password": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-role": "npm:8.0.0-alpha.5"
     "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-typeorm-ext": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-user": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-user": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.0.0"
     "@nestjs/config": "npm:^4.0.0"
     "@nestjs/core": "npm:^11.0.0"
@@ -597,32 +526,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@bitwild/rockets-common@file:../../packages/rockets-common::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
-  version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-common@file:../../packages/rockets-common#../../packages/rockets-common::hash=21f6e0&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
-  dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
-  peerDependencies:
-    "@nestjs/common": ^11.0.0
-    "@nestjs/core": ^11.0.0
-    class-transformer: "*"
-    class-validator: "*"
-    reflect-metadata: ^0.1.13 || ^0.2.0
-    rxjs: ^7.1.0
-  checksum: 10c0/3db3021df92c75b1089390775a7ef51a062ae98f522d255c608e98b10a341fd156300157ab2b54aa9582e55bf0f2600f66d3f652f339b863a7cf0bd52cefa55c
-  languageName: node
-  linkType: hard
-
-"@bitwild/rockets-common@workspace:*, @bitwild/rockets-common@workspace:packages/rockets-common":
+"@bitwild/rockets-common@workspace:^, @bitwild/rockets-common@workspace:packages/rockets-common":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-common@workspace:packages/rockets-common"
   dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-authentication": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-hook": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
   peerDependencies:
     "@nestjs/common": ^11.0.0
@@ -634,36 +545,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@bitwild/rockets-core@file:../../packages/rockets-core::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
-  version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-core@file:../../packages/rockets-core#../../packages/rockets-core::hash=9785e8&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
-  dependencies:
-    "@bitwild/rockets-access-control": "workspace:*"
-    "@bitwild/rockets-common": "workspace:*"
-    "@bitwild/rockets-crud": "workspace:*"
-    "@bitwild/rockets-repository": "workspace:*"
-    "@nestjs/common": "npm:^11.0.0"
-    "@nestjs/config": "npm:^4.0.0"
-    "@nestjs/core": "npm:^11.0.0"
-    "@nestjs/cqrs": "npm:^11.0.0"
-    "@nestjs/swagger": "npm:^11.0.0"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-  checksum: 10c0/c92b91949d90333538de154be423b1bd68e39123c79872f3eb8e6abe3ffbb99a8254f2817660d5ac4fe4cfd467bba61ea28b82bd3273a81d3805d8e9514e75a2
-  languageName: node
-  linkType: hard
-
-"@bitwild/rockets-core@workspace:*, @bitwild/rockets-core@workspace:packages/rockets-core":
+"@bitwild/rockets-core@workspace:^, @bitwild/rockets-core@workspace:packages/rockets-core":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-core@workspace:packages/rockets-core"
   dependencies:
-    "@bitwild/rockets-access-control": "workspace:*"
-    "@bitwild/rockets-common": "workspace:*"
-    "@bitwild/rockets-crud": "workspace:*"
-    "@bitwild/rockets-repository": "workspace:*"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
+    "@bitwild/rockets-access-control": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
+    "@bitwild/rockets-crud": "workspace:^"
+    "@bitwild/rockets-repository": "workspace:^"
+    "@concepta/nestjs-authentication": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-crud": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.0.0"
     "@nestjs/config": "npm:^4.0.0"
     "@nestjs/core": "npm:^11.0.0"
@@ -680,79 +574,37 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@bitwild/rockets-crud@file:../../packages/rockets-crud::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
-  version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-crud@file:../../packages/rockets-crud#../../packages/rockets-crud::hash=ae6f13&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
-  dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@bitwild/rockets-repository": "workspace:*"
-    "@concepta/nestjs-crud": "npm:8.0.0-alpha.4"
-  checksum: 10c0/d3cae116b155ca6d49aa07764e572aba9317af4128c6878529042f3e168c78591afa0dd62f9ec8660035c039012db9386b15fe2ce2a6d7505cd095690c3ddd20
-  languageName: node
-  linkType: hard
-
-"@bitwild/rockets-crud@workspace:*, @bitwild/rockets-crud@workspace:packages/rockets-crud":
+"@bitwild/rockets-crud@workspace:^, @bitwild/rockets-crud@workspace:packages/rockets-crud":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-crud@workspace:packages/rockets-crud"
   dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@bitwild/rockets-repository": "workspace:*"
-    "@concepta/nestjs-crud": "npm:8.0.0-alpha.4"
+    "@bitwild/rockets-common": "workspace:^"
+    "@bitwild/rockets-repository": "workspace:^"
+    "@concepta/nestjs-crud": "npm:8.0.0-alpha.5"
   languageName: unknown
   linkType: soft
 
-"@bitwild/rockets-repository@file:../../packages/rockets-repository::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
-  version: 1.0.0-alpha.1
-  resolution: "@bitwild/rockets-repository@file:../../packages/rockets-repository#../../packages/rockets-repository::hash=b01553&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
-  dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
-  checksum: 10c0/ad38e65bc1c64244b8fbf52fb3df7ead03e177ce4aee6ef8f188e9cdc2f941f6ffafc63fd6c4e57f47fb7ffce8209e2374d6edcb386a877bcb67695545f5e683
-  languageName: node
-  linkType: hard
-
-"@bitwild/rockets-repository@workspace:*, @bitwild/rockets-repository@workspace:packages/rockets-repository":
+"@bitwild/rockets-repository@workspace:^, @bitwild/rockets-repository@workspace:packages/rockets-repository":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-repository@workspace:packages/rockets-repository"
   dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@bitwild/rockets-common": "workspace:^"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
   languageName: unknown
   linkType: soft
 
-"@bitwild/rockets@file:../../packages/rockets-server::locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth":
-  version: 1.0.0-alpha.7
-  resolution: "@bitwild/rockets@file:../../packages/rockets-server#../../packages/rockets-server::hash=2d6324&locator=sample-server-auth%40workspace%3Aexamples%2Fsample-server-auth"
-  dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@bitwild/rockets-core": "workspace:*"
-    "@nestjs/common": "npm:^11.0.0"
-    "@nestjs/config": "npm:^4.0.0"
-    "@nestjs/core": "npm:^11.0.0"
-    "@nestjs/cqrs": "npm:^11.0.0"
-    "@nestjs/swagger": "npm:^11.0.0"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-  bin:
-    rockets-swagger: ./bin/generate-swagger.js
-  checksum: 10c0/71eb603fc4b7cb419b625f0405f5d40b9dbe2d6e5abf19bf75291edc5fbff3a3dfb57bb5c1b40ec175c3defdd1880208894f4ca3978d92b523c4b06ef87be2a7
-  languageName: node
-  linkType: hard
-
-"@bitwild/rockets@workspace:*, @bitwild/rockets@workspace:packages/rockets-server":
+"@bitwild/rockets@workspace:^, @bitwild/rockets@workspace:packages/rockets-server":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets@workspace:packages/rockets-server"
   dependencies:
-    "@bitwild/rockets-common": "workspace:*"
-    "@bitwild/rockets-core": "workspace:*"
-    "@bitwild/rockets-crud": "workspace:*"
-    "@bitwild/rockets-repository": "workspace:*"
-    "@concepta/nestjs-authentication": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
+    "@bitwild/rockets-common": "workspace:^"
+    "@bitwild/rockets-core": "workspace:^"
+    "@bitwild/rockets-crud": "workspace:^"
+    "@bitwild/rockets-repository": "workspace:^"
+    "@concepta/nestjs-authentication": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.0.0"
     "@nestjs/config": "npm:^4.0.0"
     "@nestjs/core": "npm:^11.0.0"
@@ -1013,209 +865,37 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-auth-apple@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-apple@npm:7.0.0-alpha.10"
+"@concepta/nestjs-authentication@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-authentication@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.10"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-password": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-user": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.9"
+    "@nestjs/cqrs": "npm:^11.0.0"
+    "@nestjs/jwt": "npm:^11.0.1"
     "@nestjs/passport": "npm:^11.0.5"
     "@nestjs/swagger": "npm:^11.2.2"
-    jwks-rsa: "npm:^3.1.0"
-    passport-apple: "npm:^2.0.2"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-    typeorm: ^0.3.0
-  checksum: 10c0/75c30300be2085b04a2e5025735f87a1f949654b6ef13613901329a85cc4bd8692344ce15fe4cb8db508ffb16ef6e4f0521cae8d2a10c0b279757c9d988024eb
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-github@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-github@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/passport": "npm:^11.0.5"
-    "@nestjs/swagger": "npm:^11.2.2"
-    passport-github: "npm:^1.1.0"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-    typeorm: ^0.3.0
-  checksum: 10c0/62e01c5468da22a566712fe33e7b7a5abe37c9d0c1498ede3d0d0be91c7411f92e9ebf5d32a911a0ec408669a6b1cc94070185d216f633557bde58bbc484a02f
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-google@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-google@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-federated": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/passport": "npm:^11.0.5"
-    "@nestjs/swagger": "npm:^11.2.2"
-    passport-google-oauth20: "npm:^2.0.0"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-    typeorm: ^0.3.0
-  checksum: 10c0/40f6f1fef603d65ef87580acf1597a5648cc9eb5f21cbbf3cab0e24a2c78a22b378a3b0ec007365d43732ea28b16b6f9b746ffc5794f8ed67e5ced4264b20894
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-jwt@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-jwt@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-  peerDependencies:
-    class-validator: "*"
-    rxjs: ^7.1.0
-    typeorm: ^0.3.0
-  checksum: 10c0/796d55e31b2e164ff4018d5ddca9df542e7114291203a053da55201d43076b3f5d58479a044985e5ef2b6e9b0a2a42167459f4b3d712bec1cc9d2433473fd96a
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-local@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-local@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-password": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/swagger": "npm:^11.2.2"
-    passport-local: "npm:^1.0.0"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-  checksum: 10c0/4dcba6b66137f273a2121c4179e77a37fbef4c57b5c9185dd4bdb6feabca1455e9015fb40691a5f530968680e7b5a71bad3480ec9aad5214d0a8546b0a06f05e
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-recovery@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-recovery@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/swagger": "npm:^11.2.2"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-    typeorm: ^0.3.0
-  checksum: 10c0/380f9ed8c9632aa3fcd77a50e5cffd7ec134cd8a75ccb02ceac7d88cfa19b8b71713f36e29bdd0f71646409b71c97290e661cbb45e07c1734d2ac142c87834d0
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-refresh@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-refresh@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-authentication": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/swagger": "npm:^11.2.2"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-  checksum: 10c0/e5fe8a1f6d28fb5ed677e0518b1e44f07e91a51120bf40477bdca649a8dad4830bdb0c21ace7d7f17a96aa32790ec2477c02cb8d8637eebdc74fcddcbaae8f11
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-router@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-router@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/swagger": "npm:^11.2.2"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.8.1
-    typeorm: ^0.3.0
-  checksum: 10c0/65c44cd3f44c79a793ebc4c2311bc9bb144f21bc5956c5d878416d28485f0bdccda8e5fa2ef47f786dfb6f107ad6b78b367e4cfc0db42fdfd664e4bad2e8ec04
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-auth-verify@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-auth-verify@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/swagger": "npm:^11.2.2"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    rxjs: ^7.1.0
-    typeorm: ^0.3.0
-  checksum: 10c0/cbff9195033ec211a242e322881645a52ea8b77847fed59538bf3ed3175939f17d2505c0174f5c0f65c5e13ecac63215e2bb1824c984456005a99bcc3721641e
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-authentication@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-authentication@npm:7.0.0-alpha.10"
-  dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-jwt": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/core": "npm:^11.1.9"
-    "@nestjs/passport": "npm:^11.0.5"
-    "@nestjs/swagger": "npm:^11.2.2"
+    jsonwebtoken: "npm:^9.0.0"
+    ms: "npm:^2.1.3"
     passport: "npm:^0.7.0"
+    passport-jwt: "npm:^4.0.1"
+    passport-local: "npm:^1.0.0"
     passport-strategy: "npm:^1.0.0"
   peerDependencies:
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.1.0
-  checksum: 10c0/6ec76ed82913956ebc2707a62b8d2534f1631d6542665baaf82d4495287329815966763cd4c0559737a8a1c35a34dd072b45868670e98e47c9e5cdf4fa1d4c81
+  checksum: 10c0/e6ab0dafaeea34d6d4c60b790a73c5c25f3f1bd979751ad084344e0a7b0db3ac97f6e24bd0ddb0362cee33e4b00d7232083dfbe75ffd05c6d82440a4476958a9
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-common@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-common@npm:8.0.0-alpha.4"
+"@concepta/nestjs-common@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-common@npm:8.0.0-alpha.5"
   dependencies:
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/swagger": "npm:^11.2.2"
@@ -1228,17 +908,17 @@ __metadata:
   peerDependenciesMeta:
     "@nestjs/cqrs":
       optional: true
-  checksum: 10c0/38eadda45a5d3b74dcc4e207e95d91e8584134733523a043156159bccd021426fa2de930ca03910d77907a6b29df21b997960e58a755ce108d0fe5c35dfcf6e5
+  checksum: 10c0/8ef98bb6e349d5319295f29acf71683140206f8ab69a80e953520aec9e9ca079fa5714c3205b20501640369766f3e8a10c3263c8ecab0729eb1e6f53e45b01d5
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-crud@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-crud@npm:8.0.0-alpha.4"
+"@concepta/nestjs-crud@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-crud@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-hook": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.9"
@@ -1246,7 +926,7 @@ __metadata:
     deepmerge: "npm:^3.2.0"
     qs: "npm:^6.14.0"
   peerDependencies:
-    "@concepta/nestjs-repository-typeorm": 8.0.0-alpha.4
+    "@concepta/nestjs-repository-typeorm": 8.0.0-alpha.5
     "@nestjs/cqrs": ^11.0.0
     class-transformer: "*"
     class-validator: "*"
@@ -1256,7 +936,7 @@ __metadata:
       optional: true
     "@nestjs/cqrs":
       optional: true
-  checksum: 10c0/6af256471b6b57269594f1142f1fca8226d794a6058f7f656f27e494bc3ac2d9ae1052f24fdbf79b4a61a78da9b794294fd1013eaa304c6d14c878ddfb1f64b1
+  checksum: 10c0/3fcae0fbb499c33369a400caa3118445609d4d14ab9079f5367e9868411fc9d3b961b1d7eb78e35421c4f7d91394ae929db20c7c9276cbebbd46baf340ee5375
   languageName: node
   linkType: hard
 
@@ -1285,18 +965,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-federated@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-federated@npm:8.0.0-alpha.4"
+"@concepta/nestjs-federated@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-federated@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/cqrs": "npm:^11.0.0"
     "@nestjs/swagger": "npm:^11.2.2"
   peerDependencies:
-    "@concepta/nestjs-repository-typeorm": 8.0.0-alpha.4
+    "@concepta/nestjs-repository-typeorm": 8.0.0-alpha.5
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.1.0
@@ -1306,51 +986,37 @@ __metadata:
       optional: true
     typeorm:
       optional: true
-  checksum: 10c0/3b1963faeeadda3a5c351d6ac6704c8c18c0d8cf1a060d315b433778f8e4296682ca1d9175ad7859e032b146602a15fce3a6c6842220cd492d91dc703e5703bb
+  checksum: 10c0/ea20cafa172d7ce98a96a65f0db787133d114519c89636f3edfa37185ee6f27fd719f7f9a5cb0eb364599a92ca9a6fc13c0f4b4140d66889f545b80e206cfe43
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-hook@npm:8.0.0-alpha.2":
-  version: 8.0.0-alpha.2
-  resolution: "@concepta/nestjs-hook@npm:8.0.0-alpha.2"
+"@concepta/nestjs-hook@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-hook@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:^8.0.0-alpha.2"
+    "@concepta/nestjs-common": "npm:^8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/core": "npm:^11.1.9"
     rxjs: "npm:^7.8.1"
   peerDependencies:
     rxjs: ^7.8.1
-  checksum: 10c0/f8fee2502650da444c7ca34790e45b05ff815ded5966b4c35cea90243c6726ea589136ed5651143b56579106f5cc7fe7d412a5a52c24791e43c7802f6c2292db
+  checksum: 10c0/9d3449aeef27575608c9d4f477777fefdb753455203c94246323509f5b1c1016611952ff3b61612cc0c4904a7bb14d6e0a318efae55de7d55dcc613956a78dbb
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-hook@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-hook@npm:8.0.0-alpha.4"
+"@concepta/nestjs-invitation@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-invitation@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:^8.0.0-alpha.4"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/core": "npm:^11.1.9"
-    rxjs: "npm:^7.8.1"
-  peerDependencies:
-    rxjs: ^7.8.1
-  checksum: 10c0/ecdce7a92d458031a97433ba16435bc975f917ba6857bac213cd695f4c1b719234166882d4c44aa77547f501983f7146e2c621a266dabaded1090a392c3d7717
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-invitation@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-invitation@npm:8.0.0-alpha.4"
-  dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.9"
     "@nestjs/cqrs": "npm:^11.0.0"
     "@nestjs/swagger": "npm:^11.2.2"
   peerDependencies:
-    "@concepta/nestjs-repository-typeorm": 8.0.0-alpha.4
+    "@concepta/nestjs-repository-typeorm": 8.0.0-alpha.5
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.1.0
@@ -1358,31 +1024,16 @@ __metadata:
   peerDependenciesMeta:
     "@concepta/nestjs-repository-typeorm":
       optional: true
-  checksum: 10c0/d009da3cd09f9bd5c782b3fedcfa1439b26d64f25598512932e2b3b9bb62d35d776eddb9d160a923021ab5bec3a87cbe47c2c4d45efbd32ffe84e30a28bce819
+  checksum: 10c0/c624e2d4a7b47786b243f0620cfa1d9ec189c006f629378af1776df7349cd9aca7e3ad74f548b5b1be1a2a57794efcd67508162a3bc3649ad5819b060bf3cf5a
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-jwt@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-jwt@npm:7.0.0-alpha.10"
+"@concepta/nestjs-otp@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-otp@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/config": "npm:^4.0.2"
-    "@nestjs/jwt": "npm:^11.0.1"
-    jsonwebtoken: "npm:^9.0.2"
-    passport-jwt: "npm:^4.0.1"
-    passport-strategy: "npm:^1.0.0"
-  checksum: 10c0/7051083a05350242283197a8ac8f8788e5aee9f74975c0cbfaea18c9c4804996d1c5ad880b3c4223913381e910c1d90c2b759e91b8ba287f2d5d18075792a61d
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-otp@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-otp@npm:8.0.0-alpha.4"
-  dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.9"
@@ -1401,15 +1052,15 @@ __metadata:
       optional: true
     typeorm:
       optional: true
-  checksum: 10c0/e9d1697af27e539e0c38d3cfbcb40bbb8fd1037edcd6f95b254172ffc89a9f4d0fefd11136c5f9f5fccf1ae3dd21967879694ca129f88e0f23d26cb89748ac30
+  checksum: 10c0/58121389d681cc1398ae8faa8fe4339693fa5849eafc1133acd4f8672a173bbdcd35879cafb1e0c6dd0ab7de47d9931fd4cd1da205f011714a8c70f838be44c3
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-password@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-password@npm:8.0.0-alpha.4"
+"@concepta/nestjs-password@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-password@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:^8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:^8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.9"
@@ -1417,17 +1068,17 @@ __metadata:
     "@types/zxcvbn": "npm:^4.4.4"
     bcrypt: "npm:^5.1.1"
     zxcvbn: "npm:^4.4.2"
-  checksum: 10c0/492f170e99b55a33d186a37603c421e62872c3ebdeb7c871b8240e5bfafe61e71f80cb1e7a4246642f7f78a9ffbecf38d15b30d0fec4ab7ca43e8630a602d5b2
+  checksum: 10c0/57340e25b3f81e557f2794985902a9448896343579691ad516fd23e87f895e3caefc612b1c9d33bf7292232388dff24e05fbfc80b871f167fe563b4ef989b533
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-repository-typeorm@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-repository-typeorm@npm:8.0.0-alpha.4"
+"@concepta/nestjs-repository-typeorm@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-repository-typeorm@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-hook": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/typeorm": "npm:^11.0.0"
     "@tsyche/membrane": "npm:^0.7.0"
@@ -1435,16 +1086,16 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     typeorm: ^0.3.0
-  checksum: 10c0/2f35e36ca958b9c3c5ed0fc3d2212cd66e57ee3327c90f0cb27ce70b669e5f0a4a13623a459e1cbfb9867e45f71865bf6145d4f29cef90ce286147a12e5ce9d2
+  checksum: 10c0/cf5a10c29c367bc56e81c7e4974783055f9cd682fbe6edf80c2d38ccf27000d4801d0f105ee6d3ed0a06e24ca7bb94db05e4b44988128a64941e61331c6b7937
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-repository@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-repository@npm:8.0.0-alpha.4"
+"@concepta/nestjs-repository@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-repository@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-hook": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-hook": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/core": "npm:^11.1.9"
     "@tsyche/membrane": "npm:^0.7.0"
@@ -1452,23 +1103,23 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     rxjs: ^7.8.1
-  checksum: 10c0/15df65b69d18ee00305841e1b5965c6315276ce461687b87723dfa0f7fb1d26b1720be8882bf00f09edc43d90d8cac8791d721dc1e5808e1fc705f533b893fe3
+  checksum: 10c0/a6709965c33f0593c82669cd9ff950802bdbd1ce70297633ac82018d6f5b4323e31e496723a4c0b492783161707124ad45dc5dc155b22da49f8d177fce887619
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-role@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-role@npm:8.0.0-alpha.4"
+"@concepta/nestjs-role@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-role@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.9"
     "@nestjs/cqrs": "npm:^11.0.0"
     "@nestjs/swagger": "npm:^11.2.2"
   peerDependencies:
-    "@concepta/nestjs-crud": 8.0.0-alpha.4
+    "@concepta/nestjs-crud": 8.0.0-alpha.5
     "@concepta/typeorm-seeding": ^4.0.0
     "@faker-js/faker": ^8.4.1
     class-transformer: "*"
@@ -1483,7 +1134,7 @@ __metadata:
       optional: true
     typeorm:
       optional: true
-  checksum: 10c0/49717f9ae8ada5ab360df79926a5d928b7eedf3a7abead53f116d26109559f701209d24012046815fb4bbaa9d8d17c81673c0e2202a29ea8c0a843967f189f58
+  checksum: 10c0/41579ec964c6bb245b5d04d507f38407cb57f6adac339e3d50835d533c7e1224957c7e90e344da4c838f01b967cd877155ac67022da25b3e0a38c1159a6ecee7
   languageName: node
   linkType: hard
 
@@ -1499,28 +1150,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@concepta/nestjs-typeorm-ext@npm:7.0.0-alpha.10":
-  version: 7.0.0-alpha.10
-  resolution: "@concepta/nestjs-typeorm-ext@npm:7.0.0-alpha.10"
+"@concepta/nestjs-user@npm:8.0.0-alpha.5":
+  version: 8.0.0-alpha.5
+  resolution: "@concepta/nestjs-user@npm:8.0.0-alpha.5"
   dependencies:
-    "@concepta/nestjs-common": "npm:^7.0.0-alpha.10"
-    "@nestjs/common": "npm:^11.1.9"
-    "@nestjs/typeorm": "npm:^11.0.0"
-  peerDependencies:
-    class-transformer: "*"
-    class-validator: "*"
-    typeorm: ^0.3.0
-  checksum: 10c0/7f0d32625d6d13826fbdc3bb75b14561ecf7a1d3e7babb6c2c3b1b5d2d9a2bf16c906586634ad3163a53d4f738cd33a9a60b49a2064a7e296f71af21b784b50e
-  languageName: node
-  linkType: hard
-
-"@concepta/nestjs-user@npm:8.0.0-alpha.4":
-  version: 8.0.0-alpha.4
-  resolution: "@concepta/nestjs-user@npm:8.0.0-alpha.4"
-  dependencies:
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-password": "npm:8.0.0-alpha.4"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.4"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-password": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:^11.1.9"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.9"
@@ -1530,7 +1166,7 @@ __metadata:
     class-transformer: "*"
     class-validator: "*"
     typeorm: ^0.3.0
-  checksum: 10c0/36ecfbb13d8082123cfda5369b1f68f92c4a3026301056a28b458cc90f3886552ff2ec92c53a531f1434ae2c5b4a9563e5cd74c7ef21512bd9343fa40eae4ef8
+  checksum: 10c0/4a5bce8c2e8f2b3fb433131326835f51730474ff09f883171fba78e243c9ecb370cb11b6b62dd01351a506f64a2195cde15ee8d7022332c1410b7be236fae43a
   languageName: node
   linkType: hard
 
@@ -4090,7 +3726,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/jsonwebtoken@npm:*, @types/jsonwebtoken@npm:9.0.10, @types/jsonwebtoken@npm:^9.0.3, @types/jsonwebtoken@npm:^9.0.4":
+"@types/jsonwebtoken@npm:*, @types/jsonwebtoken@npm:9.0.10, @types/jsonwebtoken@npm:^9.0.3":
   version: 9.0.10
   resolution: "@types/jsonwebtoken@npm:9.0.10"
   dependencies:
@@ -5620,13 +5256,6 @@ __metadata:
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
   checksum: 10c0/f23823513b63173a001030fae4f2dabe283b99a9d324ade3ad3d148e218134676f1ee8568c877cd79ec1c53158dcf2d2ba527a97c606618928ba99dd930102bf
-  languageName: node
-  linkType: hard
-
-"base64url@npm:3.x.x":
-  version: 3.0.1
-  resolution: "base64url@npm:3.0.1"
-  checksum: 10c0/5ca9d6064e9440a2a45749558dddd2549ca439a305793d4f14a900b7256b5f4438ef1b7a494e1addc66ced5d20f5c010716d353ed267e4b769e6c78074991241
   languageName: node
   linkType: hard
 
@@ -11180,13 +10809,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jose@npm:^4.15.4":
-  version: 4.15.9
-  resolution: "jose@npm:4.15.9"
-  checksum: 10c0/4ed4ddf4a029db04bd167f2215f65d7245e4dc5f36d7ac3c0126aab38d66309a9e692f52df88975d99429e357e5fd8bab340ff20baab544d17684dd1d940a0f4
-  languageName: node
-  linkType: hard
-
 "js-tokens@npm:^4.0.0":
   version: 4.0.0
   resolution: "js-tokens@npm:4.0.0"
@@ -11430,19 +11052,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jwks-rsa@npm:^3.1.0":
-  version: 3.2.2
-  resolution: "jwks-rsa@npm:3.2.2"
-  dependencies:
-    "@types/jsonwebtoken": "npm:^9.0.4"
-    debug: "npm:^4.3.4"
-    jose: "npm:^4.15.4"
-    limiter: "npm:^1.1.5"
-    lru-memoizer: "npm:^2.2.0"
-  checksum: 10c0/a619ee0c5b342e1c9edcd69086d7beb86e3ef1dcce5b8aeb3ac6d0c0014309c90f00e5e7b0ce8143832628244fec8cdff51ecc38a5c3a95a4fcd810d60e79b1a
-  languageName: node
-  linkType: hard
-
 "jws@npm:3.2.3":
   version: 3.2.3
   resolution: "jws@npm:3.2.3"
@@ -11552,13 +11161,6 @@ __metadata:
   version: 1.12.36
   resolution: "libphonenumber-js@npm:1.12.36"
   checksum: 10c0/1bf9e3f24aba0b4d9748642db52a698641c0746eb4e0706d13f9ae076ed18c0c9ff814323ebb130b1ad2b17d0894b7cd33463bea009fc5efac3feaeb1d17b865
-  languageName: node
-  linkType: hard
-
-"limiter@npm:^1.1.5":
-  version: 1.1.5
-  resolution: "limiter@npm:1.1.5"
-  checksum: 10c0/ebe2b20a820d1f67b8e1724051246434c419b2da041a7e9cd943f6daf113b8d17a52a1bd88fb79be5b624c10283ecb737f50edb5c1c88c71f4cd367108c97300
   languageName: node
   linkType: hard
 
@@ -11877,15 +11479,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lru-cache@npm:6.0.0, lru-cache@npm:^6.0.0":
-  version: 6.0.0
-  resolution: "lru-cache@npm:6.0.0"
-  dependencies:
-    yallist: "npm:^4.0.0"
-  checksum: 10c0/cb53e582785c48187d7a188d3379c181b5ca2a9c78d2bce3e7dee36f32761d1c42983da3fe12b55cb74e1779fa94cdc2e5367c028a9b35317184ede0c07a30a9
-  languageName: node
-  linkType: hard
-
 "lru-cache@npm:^10.2.0":
   version: 10.4.3
   resolution: "lru-cache@npm:10.4.3"
@@ -11909,13 +11502,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lru-memoizer@npm:^2.2.0":
-  version: 2.3.0
-  resolution: "lru-memoizer@npm:2.3.0"
+"lru-cache@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "lru-cache@npm:6.0.0"
   dependencies:
-    lodash.clonedeep: "npm:^4.5.0"
-    lru-cache: "npm:6.0.0"
-  checksum: 10c0/13cf6bc9ff74cdb167078dbb66d4cf43adc802495da8f56097e6f388b4d7ccb91668beb809bdbc55b62d016c138d7c19a18c5883a2fdbcc7f508ad8a23ec7c65
+    yallist: "npm:^4.0.0"
+  checksum: 10c0/cb53e582785c48187d7a188d3379c181b5ca2a9c78d2bce3e7dee36f32761d1c42983da3fe12b55cb74e1779fa94cdc2e5367c028a9b35317184ede0c07a30a9
   languageName: node
   linkType: hard
 
@@ -13158,13 +12750,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"oauth@npm:0.10.x":
-  version: 0.10.2
-  resolution: "oauth@npm:0.10.2"
-  checksum: 10c0/5660d652b31eb2a90509989955a75b02311591d2e3cfb04a3fb91deae0d22c259aa5c31a9e8845f760d749af901032e3cfd06d151bbda9a5ebb9b76268d3aef9
-  languageName: node
-  linkType: hard
-
 "object-assign@npm:^4, object-assign@npm:^4.0.1, object-assign@npm:^4.1.0, object-assign@npm:^4.1.1":
   version: 4.1.1
   resolution: "object-assign@npm:4.1.1"
@@ -13687,34 +13272,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"passport-apple@npm:^2.0.2":
-  version: 2.0.2
-  resolution: "passport-apple@npm:2.0.2"
-  dependencies:
-    jsonwebtoken: "npm:^9.0.0"
-    passport-oauth2: "npm:^1.6.1"
-  checksum: 10c0/823ebfa190f9b6fb0cbcc7bbf3f8055c4f32ae333bb7e82c0414badf53692bc0b7f7950b496545829f2b7cbe18b4b185c1e90a85d3b3e9c0c421359c4d340bfe
-  languageName: node
-  linkType: hard
-
-"passport-github@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "passport-github@npm:1.1.0"
-  dependencies:
-    passport-oauth2: "npm:1.x.x"
-  checksum: 10c0/2d63e28151f6d00a3ca3a2207ef013e407a111326369b1ca89389f6b5ca22db6483bde15d4989734dd9808b1f603e0dd47f3c9bfff854ded308cfb764e89ab01
-  languageName: node
-  linkType: hard
-
-"passport-google-oauth20@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "passport-google-oauth20@npm:2.0.0"
-  dependencies:
-    passport-oauth2: "npm:1.x.x"
-  checksum: 10c0/158930bb97a48431aa0dcff453c3b698742ed51e2d590c362cb5d4ae7715cfb4fb1feae31b007aef0bc8435edc8ff678853c044b139da827756f3b5f3b597c7f
-  languageName: node
-  linkType: hard
-
 "passport-jwt@npm:^4.0.1":
   version: 4.0.1
   resolution: "passport-jwt@npm:4.0.1"
@@ -13731,19 +13288,6 @@ __metadata:
   dependencies:
     passport-strategy: "npm:1.x.x"
   checksum: 10c0/59becb988014921a5d6056470d9373c41db452fcf113323064f39d53baa6f184e72151bf269ca6770511f7f0260e13632dacc7b6afdbf60ebf63e90327e186d4
-  languageName: node
-  linkType: hard
-
-"passport-oauth2@npm:1.x.x, passport-oauth2@npm:^1.6.1":
-  version: 1.8.0
-  resolution: "passport-oauth2@npm:1.8.0"
-  dependencies:
-    base64url: "npm:3.x.x"
-    oauth: "npm:0.10.x"
-    passport-strategy: "npm:1.x.x"
-    uid2: "npm:0.0.x"
-    utils-merge: "npm:1.x.x"
-  checksum: 10c0/16b431bd856b84dfe0c9c913dcbea6ff54875befac1035171b0dce1c77f79072dc5e26d785b13c2e62c034c8174a1a47571751d1066bdbcdb9108de217c0b19b
   languageName: node
   linkType: hard
 
@@ -15024,24 +14568,24 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "sample-server-auth@workspace:examples/sample-server-auth"
   dependencies:
-    "@bitwild/rockets": "file:../../packages/rockets-server"
-    "@bitwild/rockets-access-control": "file:../../packages/rockets-access-control"
-    "@bitwild/rockets-auth": "file:../../packages/rockets-server-auth"
-    "@bitwild/rockets-common": "file:../../packages/rockets-common"
-    "@bitwild/rockets-core": "file:../../packages/rockets-core"
-    "@bitwild/rockets-crud": "file:../../packages/rockets-crud"
-    "@bitwild/rockets-repository": "file:../../packages/rockets-repository"
+    "@bitwild/rockets": "workspace:^"
+    "@bitwild/rockets-access-control": "workspace:^"
+    "@bitwild/rockets-auth": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
+    "@bitwild/rockets-core": "workspace:^"
+    "@bitwild/rockets-crud": "workspace:^"
+    "@bitwild/rockets-repository": "workspace:^"
     "@concepta/nestjs-access-control": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-common": "npm:8.0.0-alpha.2"
-    "@concepta/nestjs-crud": "npm:8.0.0-alpha.2"
+    "@concepta/nestjs-authentication": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-crud": "npm:8.0.0-alpha.5"
     "@concepta/nestjs-event": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-hook": "npm:8.0.0-alpha.2"
-    "@concepta/nestjs-repository": "npm:8.0.0-alpha.2"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.2"
-    "@concepta/nestjs-role": "npm:8.0.0-alpha.2"
+    "@concepta/nestjs-hook": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.5"
+    "@concepta/nestjs-role": "npm:8.0.0-alpha.5"
     "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
-    "@concepta/nestjs-typeorm-ext": "npm:^7.0.0-alpha.10"
-    "@concepta/nestjs-user": "npm:8.0.0-alpha.2"
+    "@concepta/nestjs-user": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:11.1.13"
     "@nestjs/core": "npm:11.1.13"
     "@nestjs/cqrs": "npm:11.0.3"
@@ -15076,13 +14620,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "sample-server@workspace:examples/sample-server"
   dependencies:
-    "@bitwild/rockets": "workspace:*"
-    "@bitwild/rockets-access-control": "workspace:*"
-    "@bitwild/rockets-common": "workspace:*"
-    "@bitwild/rockets-core": "workspace:*"
-    "@bitwild/rockets-crud": "workspace:*"
-    "@bitwild/rockets-repository": "workspace:*"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.4"
+    "@bitwild/rockets": "workspace:^"
+    "@bitwild/rockets-access-control": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
+    "@bitwild/rockets-core": "workspace:^"
+    "@bitwild/rockets-crud": "workspace:^"
+    "@bitwild/rockets-repository": "workspace:^"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.5"
     "@nestjs/cli": "npm:^11.0.0"
     "@nestjs/common": "npm:11.1.13"
     "@nestjs/core": "npm:11.1.13"
@@ -17122,13 +16666,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uid2@npm:0.0.x":
-  version: 0.0.4
-  resolution: "uid2@npm:0.0.4"
-  checksum: 10c0/c3ed69da75d117214891f4743a1d8521db823d7a2f57644c1a9ae8b3bf25f0ba666d893264bf7e22be3dbbaa292d35a23d71d06ce7283458a65e8dd137c5c362
-  languageName: node
-  linkType: hard
-
 "uid@npm:2.0.2":
   version: 2.0.2
   resolution: "uid@npm:2.0.2"
@@ -17340,7 +16877,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"utils-merge@npm:1.x.x, utils-merge@npm:^1.0.1":
+"utils-merge@npm:^1.0.1":
   version: 1.0.1
   resolution: "utils-merge@npm:1.0.1"
   checksum: 10c0/02ba649de1b7ca8854bfe20a82f1dfbdda3fb57a22ab4a8972a63a34553cf7aa51bc9081cf7e001b035b88186d23689d69e71b510e610a09a4c66f68aa95b672

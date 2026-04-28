@@ -64,6 +64,10 @@ export class AuthController {
   @AuthPublic()
   @ApiOperation({ summary: 'Create a new account' })
   @ApiResponse({ status: 201, description: 'Account created, returns JWT' })
+  @ApiResponse({
+    status: 409,
+    description: 'Email is already registered',
+  })
   async signup(@Body() dto: SignupDto) {
     const { user, accessToken } = await this.authProvider.signup(
       dto.email,

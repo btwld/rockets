@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   InjectDynamicRepository,
   RepositoryInterface,
@@ -52,6 +56,13 @@ export class SampleAuthProvider implements AuthProviderInterface {
     name?: string,
     role?: UserRole,
   ): Promise<{ user: UserEntity; accessToken: string }> {
+    const taken = await this.userRepo.findOne({
+      where: Where.eq<UserEntity>('email', email),
+    });
+    if (taken) {
+      throw new ConflictException('An account with this email already exists');
+    }
+
     const user = await this.userRepo.create({
       email,
       password,

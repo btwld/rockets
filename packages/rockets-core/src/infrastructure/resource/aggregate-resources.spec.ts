@@ -4,8 +4,8 @@ import type { RepositoryPersistenceConfig } from '../../domain/interfaces/reposi
 import { defineResource } from './define-resource';
 import { relation } from './relation';
 import {
-  aggregateResources,
-  isRocketsResourceBundle,
+  prepareResourceRegistration,
+  isGeneratedResourceDefinition,
 } from './aggregate-resources';
 
 @Entity('pets_t')
@@ -33,8 +33,8 @@ class VaccinationEntity {
 }
 
 // Standalone classes used to exercise the entity index. They are NOT
-// declared as TypeORM entities so they can stand in for either a bundle
-// target, a `repositories.entities` entry, or a missing registration.
+// declared as TypeORM entities so they can stand in for either a generated
+// resource target, a `repositories.entities` entry, or a missing registration.
 class OwnerEntity {
   id!: string;
 }
@@ -45,7 +45,7 @@ class UserMetadataEntity {
   id!: string;
 }
 
-describe('isRocketsResourceBundle', () => {
+describe('isGeneratedResourceDefinition', () => {
   it('returns true for a defineResource() result', () => {
     const bundle = defineResource({
       key: 'pet',
@@ -53,33 +53,35 @@ describe('isRocketsResourceBundle', () => {
       tags: ['pet'],
       entity: PetEntity,
     });
-    expect(isRocketsResourceBundle(bundle)).toBe(true);
+    expect(isGeneratedResourceDefinition(bundle)).toBe(true);
   });
 
-  it('returns false for a raw RocketsResourceConfig', () => {
+  it('returns false for a manual RocketsResourceConfig', () => {
     const raw = {
       crud: { controller: { path: 'x', entity: 'x' }, operations: [] },
     };
-    expect(isRocketsResourceBundle(raw)).toBe(false);
+    expect(isGeneratedResourceDefinition(raw)).toBe(false);
   });
 });
 
-describe('aggregateResources', () => {
+describe('prepareResourceRegistration', () => {
   describe('basic wiring', () => {
     it('returns empty arrays when no resources are passed', () => {
-      const result = aggregateResources({ resources: [] });
+      const result = prepareResourceRegistration({ resourceDefinitions: [] });
       expect(result.resources).toEqual([]);
       expect(result.repositoryPersistence).toEqual([]);
     });
 
-    it('extracts bundle.core into resources', () => {
+    it('extracts generated resource core into resources', () => {
       const pet = defineResource({
         key: 'pet',
         path: 'pet',
         tags: ['pet'],
         entity: PetEntity,
       });
-      const result = aggregateResources({ resources: [pet] });
+      const result = prepareResourceRegistration({
+        resourceDefinitions: [pet],
+      });
       expect(result.resources).toHaveLength(1);
       expect(result.resources[0]).toBe(pet.core);
     });
@@ -97,7 +99,9 @@ describe('aggregateResources', () => {
         path: 'vaccination',
         tags: ['vaccination'],
       });
-      const result = aggregateResources({ resources: [pet, vac] });
+      const result = prepareResourceRegistration({
+        resourceDefinitions: [pet, vac],
+      });
 
       expect(result.repositoryPersistence).toHaveLength(1);
       const persistence = result
@@ -109,17 +113,19 @@ describe('aggregateResources', () => {
     });
   });
 
-  describe('raw config passthrough', () => {
-    it('passes raw configs into resources but does not contribute persistence', () => {
+  describe('manual config passthrough', () => {
+    it('passes manual configs into resources but does not contribute persistence', () => {
       const raw = {
         crud: { controller: { path: 'x', entity: 'x' }, operations: [] },
       };
-      const result = aggregateResources({ resources: [raw] });
+      const result = prepareResourceRegistration({
+        resourceDefinitions: [raw],
+      });
       expect(result.resources).toContain(raw);
       expect(result.repositoryPersistence).toEqual([]);
     });
 
-    it('mixes bundle + raw inputs correctly', () => {
+    it('mixes generated + manual resource definitions correctly', () => {
       const pet = defineResource({
         key: 'pet',
         path: 'pet',
@@ -129,7 +135,9 @@ describe('aggregateResources', () => {
       const raw = {
         crud: { controller: { path: 'x', entity: 'x' }, operations: [] },
       };
-      const result = aggregateResources({ resources: [pet, raw] });
+      const result = prepareResourceRegistration({
+        resourceDefinitions: [pet, raw],
+      });
 
       expect(result.resources[0]).toBe(pet.core);
       expect(result.resources[1]).toBe(raw);
@@ -137,7 +145,7 @@ describe('aggregateResources', () => {
   });
 
   describe('entity dedup', () => {
-    it('dedupes two bundles referencing the same entity class', () => {
+    it('dedupes two generated resources referencing the same entity class', () => {
       const first = defineResource({
         key: 'pet',
         path: 'pet',
@@ -150,7 +158,9 @@ describe('aggregateResources', () => {
         tags: ['pet'],
         entity: PetEntity,
       });
-      const result = aggregateResources({ resources: [first, second] });
+      const result = prepareResourceRegistration({
+        resourceDefinitions: [first, second],
+      });
       const persistence = result
         .repositoryPersistence[0] as RepositoryPersistenceConfig;
       expect(persistence.entities).toHaveLength(1);
@@ -169,29 +179,33 @@ describe('aggregateResources', () => {
         tags: ['animal'],
         entity: PetEntity,
       });
-      expect(() => aggregateResources({ resources: [first, second] })).toThrow(
-        /conflicting keys/,
-      );
+      expect(() =>
+        prepareResourceRegistration({ resourceDefinitions: [first, second] }),
+      ).toThrow(/conflicting keys/);
     });
 
-    it('throws when two bundles declare conflicting relations config', () => {
+    it('throws when two generated resources declare conflicting relations config', () => {
       const first = defineResource({
         key: 'pet',
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [relation(PetEntity, OwnerEntity, 'owner', { federated: true })],
+        relations: [
+          relation(PetEntity, OwnerEntity, 'owner', { federated: true }),
+        ],
       });
       const second = defineResource({
         key: 'pet',
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [relation(PetEntity, OwnerEntity, 'owner', { federated: false })],
+        relations: [
+          relation(PetEntity, OwnerEntity, 'owner', { federated: false }),
+        ],
       });
       expect(() =>
-        aggregateResources({
-          resources: [first, second],
+        prepareResourceRegistration({
+          resourceDefinitions: [first, second],
           // Owner must be registered for the relation target lookup not
           // to short-circuit before we hit the conflicting-config path.
           repositories: {
@@ -205,7 +219,7 @@ describe('aggregateResources', () => {
   });
 
   describe('cross-resource relation resolution', () => {
-    it('resolves a relation target that points at another bundle', () => {
+    it('resolves a relation target that points at another generated resource', () => {
       const vac = defineResource({
         key: 'vaccination',
         entity: VaccinationEntity,
@@ -219,10 +233,12 @@ describe('aggregateResources', () => {
         tags: ['pet'],
         relations: [relation(PetEntity, VaccinationEntity, 'vaccinations')],
       });
-      expect(() => aggregateResources({ resources: [pet, vac] })).not.toThrow();
+      expect(() =>
+        prepareResourceRegistration({ resourceDefinitions: [pet, vac] }),
+      ).not.toThrow();
     });
 
-    it('resolves a relation target that lives in repositories.entities (no bundle for it)', () => {
+    it('resolves a relation target that lives in repositories.entities (no generated resource for it)', () => {
       const pet = defineResource({
         key: 'pet',
         entity: PetEntity,
@@ -231,8 +247,8 @@ describe('aggregateResources', () => {
         relations: [relation(PetEntity, OwnerEntity, 'owner')],
       });
       expect(() =>
-        aggregateResources({
-          resources: [pet],
+        prepareResourceRegistration({
+          resourceDefinitions: [pet],
           repositories: {
             module: TypeOrmRepositoryModule,
             userMetadata: { entity: UserMetadataEntity },
@@ -254,9 +270,13 @@ describe('aggregateResources', () => {
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        relations: [relation(PetEntity, () => VaccinationEntity, 'vaccinations')],
+        relations: [
+          relation(PetEntity, () => VaccinationEntity, 'vaccinations'),
+        ],
       });
-      expect(() => aggregateResources({ resources: [pet, vac] })).not.toThrow();
+      expect(() =>
+        prepareResourceRegistration({ resourceDefinitions: [pet, vac] }),
+      ).not.toThrow();
     });
 
     it('resolves self-referential relations (parent: PetEntity)', () => {
@@ -267,7 +287,9 @@ describe('aggregateResources', () => {
         tags: ['pet'],
         relations: [relation(PetEntity, PetEntity, 'parent')],
       });
-      expect(() => aggregateResources({ resources: [pet] })).not.toThrow();
+      expect(() =>
+        prepareResourceRegistration({ resourceDefinitions: [pet] }),
+      ).not.toThrow();
     });
 
     it('throws with the entity name when the target is not registered anywhere', () => {
@@ -278,14 +300,16 @@ describe('aggregateResources', () => {
         tags: ['pet'],
         relations: [relation(PetEntity, AuditEntity, 'history')],
       });
-      expect(() => aggregateResources({ resources: [pet] })).toThrow(
+      expect(() =>
+        prepareResourceRegistration({ resourceDefinitions: [pet] }),
+      ).toThrow(
         /relation "history".*targets entity `AuditEntity` which is not registered/,
       );
     });
   });
 
-  describe('single-key invariant across bundles + repositories', () => {
-    it('throws when an entity is registered under one key in a bundle and another in repositories.entities', () => {
+  describe('single-key invariant across generated resources + repositories', () => {
+    it('throws when an entity is registered under one key in a generated resource and another in repositories.entities', () => {
       const pet = defineResource({
         key: 'pet',
         entity: PetEntity,
@@ -293,8 +317,8 @@ describe('aggregateResources', () => {
         tags: ['pet'],
       });
       expect(() =>
-        aggregateResources({
-          resources: [pet],
+        prepareResourceRegistration({
+          resourceDefinitions: [pet],
           repositories: {
             module: TypeOrmRepositoryModule,
             userMetadata: { entity: UserMetadataEntity },
@@ -312,8 +336,8 @@ describe('aggregateResources', () => {
         tags: ['pet'],
       });
       expect(() =>
-        aggregateResources({
-          resources: [pet],
+        prepareResourceRegistration({
+          resourceDefinitions: [pet],
           repositories: {
             module: TypeOrmRepositoryModule,
             userMetadata: { entity: UserMetadataEntity },

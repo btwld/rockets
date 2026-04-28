@@ -1,9 +1,28 @@
-import { Exclude, Expose, Type } from 'class-transformer';
-import { IsString, IsEnum, IsOptional, IsInt, IsArray, Min, Max, IsNotEmpty, MaxLength, MinLength, IsUUID } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional, PickType, PartialType, IntersectionType } from '@nestjs/swagger';
+import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsInt,
+  IsArray,
+  Min,
+  Max,
+  IsNotEmpty,
+  MaxLength,
+  MinLength,
+  IsUUID,
+} from 'class-validator';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  IntersectionType,
+  PartialType,
+  PickType,
+} from '@nestjs/swagger';
 import { PetStatus } from './pet.entity';
 import { PetVaccinationResponseDto } from '../pet-vaccination/pet-vaccination.dto';
 import { TagResponseDto } from '../tag/tag.dto';
+import type { PetTagEntity } from './pet-tag.entity';
 
 @Exclude()
 export class PetDto {
@@ -22,6 +41,11 @@ export class PetDto {
   @Expose() @ApiProperty() version!: number;
 }
 
+/**
+ * Tag attachment is no longer part of the pet payload — it lives on
+ * the explicit junction resource at `POST /pets/:petId/tags`. Same
+ * for `userId`, which is stamped from the actor by `OwnerStampHook`.
+ */
 export class PetCreateDto extends PickType(PetDto, [
   'name',
   'species',
@@ -31,52 +55,47 @@ export class PetCreateDto extends PickType(PetDto, [
   'description',
   'status',
 ] as const) {
-  @Expose()
-  @ApiPropertyOptional({
-    format: 'uuid',
-    description:
-      'Optional. If provided, must be a UUID v4 and must match the authenticated user.',
-  })
-  @IsOptional()
-  @IsUUID('4', { message: 'userId must be a valid UUID v4' })
-  userId?: string;
-
-  @Expose()
-  @ApiPropertyOptional({
-    type: [String],
-    format: 'uuid',
-    description: 'Tag IDs to attach to the pet (many-to-many).',
-  })
-  @IsOptional()
-  @IsArray()
-  @IsUUID('4', { each: true, message: 'tagIds must be an array of UUID v4' })
-  tagIds?: string[];
 }
 
 export class PetUpdateDto extends IntersectionType(
   PickType(PetDto, ['id'] as const),
-  PartialType(PickType(PetDto, ['name', 'species', 'breed', 'age', 'color', 'description', 'status'] as const)),
-) {
-  @Expose()
-  @ApiPropertyOptional({
-    type: [String],
-    format: 'uuid',
-    description:
-      'Replace tag set. Omit to leave tags untouched; pass [] to clear.',
-  })
-  @IsOptional()
-  @IsArray()
-  @IsUUID('4', { each: true, message: 'tagIds must be an array of UUID v4' })
-  tagIds?: string[];
-}
+  PartialType(
+    PickType(PetDto, [
+      'name',
+      'species',
+      'breed',
+      'age',
+      'color',
+      'description',
+      'status',
+    ] as const),
+  ),
+) {}
 
 export class PetResponseDto extends PetDto {
-  @Expose() @IsArray() @Type(() => PetVaccinationResponseDto)
+  @Expose()
+  @IsArray()
+  @Type(() => PetVaccinationResponseDto)
   @ApiProperty({ type: [PetVaccinationResponseDto], required: false })
   vaccinations?: PetVaccinationResponseDto[];
 
-  @Expose() @IsArray() @Type(() => TagResponseDto)
+  /**
+   * Flat tag projection derived from the eager-loaded `petTags`
+   * collection on the entity. Kept for response-shape compatibility
+   * with clients that consumed the previous M:N `@JoinTable` mapping.
+   */
+  @Expose()
+  @IsArray()
+  @Type(() => TagResponseDto)
+  @Transform(
+    ({ obj }: { obj: { petTags?: PetTagEntity[] } }) => {
+      const petTags = Array.isArray(obj?.petTags) ? obj.petTags : [];
+      return petTags
+        .map((pt) => pt.tag)
+        .filter((t): t is NonNullable<typeof t> => Boolean(t));
+    },
+    { toClassOnly: true },
+  )
   @ApiProperty({ type: [TagResponseDto], required: false })
   tags?: TagResponseDto[];
 }
-

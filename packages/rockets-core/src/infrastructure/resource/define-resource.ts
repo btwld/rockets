@@ -62,74 +62,16 @@ const DEFAULT_PERSISTENCE_MODULE: RepositoryModuleInterface =
   TypeOrmRepositoryModule;
 
 /**
- * Build a ready-to-consume `RocketsResourceBundle` from a minimal
- * `RocketsResourceDefinition`. Applies sensible defaults and merges in
- * every override field the consumer supplies.
+ * Turn a small resource definition into everything Rockets needs to register that resource.
  *
- * The returned bundle contains both the `core` config (forwarded into
- * `RocketsCoreModule.resources[]`) and the `persistence` entry (aggregated
- * into `repositoryPersistence` by `aggregateResources`). Consumers don't
- * touch either directly — `RocketsModule.forRoot` accepts bundles and
- * unpacks them internally.
+ * - You describe the intent (entity, DTOs, relations, hooks, handlers, …)
+ * - Rockets fills in defaults and generates the actual CRUD wiring
  *
- * @example
- * Input — minimal `RocketsResourceDefinition`:
- * ```ts
- * const petResource = defineResource({
- *   key: 'pet',
- *   entity: PetEntity,
- *   dto: {
- *     response: PetResponseDto,
- *     create: PetCreateDto,
- *     update: PetUpdateDto,
- *   },
- *   relations: (relation) => [relation(PetVaccinationEntity, 'vaccinations')],
- *   hooks: [OwnerScopeHook],
- *   handlers: { create: PetCreateHandler },
- * });
- * ```
- *
- * Output — a `RocketsResourceBundle` with three pre-wired parts:
- * ```ts
- * {
- *   // Forwarded into RocketsCoreModule.resources[]
- *   core: {
- *     crud: {
- *       controller: {
- *         path: 'pets',                // from definition.path
- *         entity: 'pet',
- *         resolver: CrudOperationResolver,
- *         extraDecorators: [ApiBearerAuth(), ApiTags('Pets'), UseHooks(OwnerScopeHook)],
- *         response: { resource: PetResponseDto, paginated: PetPaginatedDto },
- *       },
- *       operations: [
- *         { operation: 'list',   query:   CrudListQuery,  extraDecorators: [CrudJoin(...)] },
- *         { operation: 'read',   query:   CrudReadQuery,  extraDecorators: [CrudJoin(...)] },
- *         { operation: 'create', command: CrudCreateCommand, commandHandler: PetCreateHandler,
- *           request: { body: PetCreateDto } },
- *         { operation: 'update', command: CrudUpdateCommand, request: { body: PetUpdateDto } },
- *         { operation: 'delete', command: CrudDeleteCommand },
- *       ],
- *     },
- *     providers: [PetCreateHandler, OwnerScopeHook], // auto-extracted from handlers+hooks
- *   },
- *
- *   // Aggregated into repositoryPersistence by aggregateResources()
- *   persistence: {
- *     module: TypeOrmRepositoryModule,              // default
- *     entity: { key: 'pet', entity: PetEntity },
- *   },
- *
- *   // Consumed by aggregateResources() for cross-resource relation validation
- *   meta: {
- *     key: 'pet',
- *     entityClass: PetEntity,
- *     relations: [
- *       { source: PetEntity, target: PetVaccinationEntity, propertyName: 'vaccinations' },
- *     ],
- *   },
- * }
- * ```
+ * The return value is a `RocketsResourceBundle` with three friendlier buckets:
+ * - `core` → the CRUD config (`CrudModule` uses this to create routes)
+ * - `persistence` → how this entity is stored (used to build `RepositoryModule.forFeature(...)`)
+ * - `meta` → the extra facts Rockets needs to check relations on startup
+ *   (`prepareResourceRegistration`)
  */
 export function defineResource<E extends PlainLiteralObject>(
   definition: RocketsResourceDefinition<E>,
@@ -152,11 +94,9 @@ export function defineResource<E extends PlainLiteralObject>(
     overrides = {},
   } = definition;
 
-  // Resolve `relations` once. The builder form receives a `BoundRelation<E>`
-  // closed over the resource entity, which makes the source impossible
-  // to mistype. The array form is preserved for advanced cases (junction
-  // tables, programmatic composition) where the source is intentionally
-  // not the resource entity.
+  // Turn the user’s `relations` field into one concrete list.
+  // - `relations: (r) => [...]` is the typed builder form
+  // - `relations: [...]` is the advanced / escape-hatch form
   const relations = resolveRelations(key, entity, relationsInput);
 
   const controllerOverrides = overrides.controller ?? {};
@@ -193,10 +133,8 @@ export function defineResource<E extends PlainLiteralObject>(
     controller.request = controllerOverrides.request;
   }
 
-  // Controller-view joins: every relation with include !== 'never'
-  // contributes a single @CrudJoin entry on List/Read. Federated relations
-  // are still surfaced to the controller — the federation toggle only
-  // switches the repository execution strategy, not endpoint visibility.
+  // Add joins to List/Read for anything that should show up in API responses
+  // (`include: 'never'` stays server-side only).
   const controllerJoins = buildControllerJoins(relations);
 
   const ops: CrudOperationOptions<PlainLiteralObject>[] = operations.map((op) =>
@@ -274,23 +212,15 @@ function validateDefinition<E extends PlainLiteralObject>(
       `defineResource[${definition.key}]: \`operations\` cannot be an empty array.`,
     );
   }
-  // Relations validation is deferred to `resolveRelations` because the
-  // builder form (`relations: (relation) => […]`) produces the array
-  // lazily.
+  // Full relation checks happen in `resolveRelations` (the builder may build lazily).
 }
 
 /**
- * Normalise the `relations` field into a flat `ResourceRelationEntry[]`.
+ * Read the `relations` field, whether the user passed an array or a builder.
  *
- * Accepts both supported input shapes:
- * - `undefined` → returns `undefined`.
- * - Array of `ResourceRelationEntry` → returned verbatim after validation.
- * - Builder `(relation) => […]` → invoked with a `BoundRelation<E>`
- *   closed over the resource entity; the returned array is then
- *   validated.
- *
- * Centralising the resolution here lets the rest of `defineResource`
- * stay agnostic of which input shape the consumer chose.
+ * - `undefined` means “no relations”
+ * - an array is validated
+ * - a function is called to build the array (and then validated)
  */
 function resolveRelations<E extends PlainLiteralObject>(
   key: string,
@@ -321,16 +251,12 @@ function isNonEmptyStringOrStringArray(
 }
 
 /**
- * Reject malformed relation entries early so downstream consumers get a
- * descriptive error at module-definition time instead of a cryptic failure
- * from the repository or CrudJoin machinery during bootstrap.
+ * Basic sanity checks for the relations list.
  *
- * Type-level checks (target is an `EntityConstructor`, propertyName is
- * `keyof Source`) are enforced by the `relation()` helper signature. The
- * runtime checks here exist for consumers that bypass `relation()` and
- * produce a literal entry by hand — and for a single
- * duplicate-propertyName diagnostic, since the type system cannot detect
- * duplicates across an array.
+ * The `relation()` helper already prevents a lot of mistakes at compile time, but
+ * this still catches:
+ * - hand-built entries that forgot `source` / `target` / `propertyName`
+ * - duplicate `propertyName` values (TypeScript can’t see duplicates in an array)
  */
 function assertRelationsValid(
   resourceKey: string,
@@ -399,9 +325,7 @@ function buildControllerDecorators(args: {
   extra: readonly ClassDecorator[] | undefined;
 }): CrudDecorator[] {
   const decorators: CrudDecorator[] = [];
-  // Wrap each with `applyDecorators` so the result conforms to
-  // `CrudDecorator` (the upstream `extraDecorators` element type). This
-  // is a zero-cost passthrough at runtime.
+  // Nest’s decorator typing is picky; `applyDecorators` keeps the return type clean.
   if (args.bearerAuth) decorators.push(applyDecorators(ApiBearerAuth()));
   decorators.push(applyDecorators(ApiTags(...args.tags)));
   if (args.hooks?.length) {
@@ -414,9 +338,9 @@ function buildControllerDecorators(args: {
 }
 
 /**
- * Convert the resource-level `relations` array into the `JoinClause[]`
- * shape expected by the upstream `@CrudJoin` decorator. Entries flagged
- * `include: 'never'` are filtered out and never surfaced on the controller.
+ * Pick which relations should affect List/Read API responses.
+ *
+ * `include: 'never'` is intentionally excluded (server-only / persistence-only data).
  */
 function buildControllerJoins(
   relations: readonly ResourceRelationEntry[] | undefined,
@@ -429,11 +353,10 @@ function buildControllerJoins(
 }
 
 /**
- * Translate the resource-level `relations` array into the
- * `RepositoryProviderOptions.relations` map (keyed by propertyName). Only
- * entries carrying persistence-layer flags (`federated`, `distinctFilter`)
- * produce a map entry; bare relations are represented solely via the
- * controller-side `@CrudJoin`.
+ * Only the “extra” relation settings need to be stored for repository wiring.
+ *
+ * A plain relation (no `federated` / `distinctFilter`) is still exposed via
+ * List/Read joins, but it doesn’t need a repository config entry.
  */
 function buildPersistenceRelations(
   relations: readonly ResourceRelationEntry[] | undefined,
@@ -445,8 +368,7 @@ function buildPersistenceRelations(
     if (entry.federated !== undefined) cfg.federated = entry.federated;
     if (entry.distinctFilter !== undefined)
       cfg.distinctFilter = entry.distinctFilter;
-    // Skip empty entries — we don't want to register a no-op relation
-    // that could shadow underlying ORM metadata.
+    // Don’t add empty maps — that can hide the real ORM mapping.
     if (Object.keys(cfg).length === 0) continue;
     map[entry.propertyName] = cfg;
   }
@@ -460,6 +382,12 @@ interface BuildOperationArgs {
   readonly override: ResourceOperationOverride | undefined;
 }
 
+/**
+ * Build a single CRUD operation (List/Read/Create/…) with the right defaults.
+ *
+ * Lists/reads are “queries”, everything else is a “command”. The exact Nest/CQRS
+ * class used for each op is part of the upstream `nestjs-crud` contract.
+ */
 function buildOperation(
   op: ResourceOperationName,
   args: BuildOperationArgs,
@@ -467,10 +395,8 @@ function buildOperation(
   const { dto, joins, handlers, override = {} } = args;
   const extraDecorators = buildOperationDecorators({ op, joins, override });
 
-  // The shared envelope contains every property common to both the query
-  // and command branches of `CrudOperationOptions<E>`. Each case below
-  // then adds either `query/queryHandler` or `command/commandHandler` to
-  // satisfy exactly one branch of the discriminated union.
+  // Shared optional fields (overrides, swagger-ish decorators) — keep each
+  // `case` small and easy to read.
   switch (op) {
     case Operation.List:
       return {
@@ -548,10 +474,8 @@ function buildOperation(
 }
 
 /**
- * Builds the shared optional properties present on every operation
- * (path, methodName, transactional, request, response, extraDecorators).
- * Returned as a spreadable partial so we can compose each discriminated
- * branch cleanly.
+ * Small helper for the optional “extra fields” you can set on an operation
+ * (custom path, DTO, hooks, per-op decorators, …).
  */
 function optionalEnvelope(
   override: ResourceOperationOverride,
@@ -585,8 +509,7 @@ function buildOperationDecorators(args: {
 }): CrudDecorator[] {
   const decorators: CrudDecorator[] = [];
 
-  // Auto-apply @CrudJoin to List + Read when relations are declared at the
-  // resource level. Operation-level override can add more via extraDecorators.
+  // If the resource has joins, add them to List/Read (that’s when clients fetch graphs).
   if (
     args.joins?.length &&
     (args.op === Operation.List || args.op === Operation.Read)
@@ -607,6 +530,12 @@ function buildOperationDecorators(args: {
   return decorators;
 }
 
+/**
+ * Assemble the Nest `providers: [...]` list for a resource.
+ *
+ * If you passed custom command/query handler classes, we register them here. Hooks
+ * and any `providers: [...]` from the resource definition are included too.
+ */
 function mergeProviders(args: {
   handlers: ResourceHandlerOverrides;
   hooks: readonly Type[] | undefined;

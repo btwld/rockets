@@ -16,9 +16,11 @@ Swagger setup — everything `@bitwild/rockets` (external auth integration) and
 - **`AuthServerGuard`** — global guard that reads `Authorization: Bearer <token>`
   and calls `AuthProviderInterface.validateToken()`.
 - **`@AuthPublic()`** decorator — opt-out of the global guard per route.
-- **`AuthorizedUserOverlay`** — request-scoped context overlay that surfaces the
-  authorized user to CRUD handlers without parameter drilling.
-- **Declarative resources** — `defineResource()` + `aggregateResources()`:
+- **`AuthUserContextOverlay`** (re-registered from `@concepta/nestjs-authentication`)
+  — request-scoped overlay backing the v8 `@AuthUser()` decorator.
+- **`ActorOverlay`** — transport-agnostic "who is performing this op" overlay,
+  consumed by built-in hooks (`OwnerScopeHook`, `OwnerStampHook`).
+- **Declarative resources** — `defineResource()` + `prepareResourceRegistration()`:
   generate CRUD controllers from an entity + DTOs, with persistence and
   relations wiring.
 - **Unified `repositories` config** — one field declares `userMetadata` +
@@ -100,7 +102,7 @@ interface RocketsCoreOptionsInterface {
 interface RocketsCoreOptionsExtrasInterface {
   global?: boolean;                         // Default: true
   repositories?: RocketsRepositoriesConfig; // userMetadata + entities + module
-  resources?: RocketsResourceInput[];        // bundles or raw configs
+  resources?: ResourceDefinitionInput[];     // generated bundles or manual configs
   providers?: Provider[];
   handlers?: {
     upsertUserMetadata?: Type<AbstractUpsertUserMetadataHandler>;
@@ -133,7 +135,7 @@ rockets-access-control ACL/RBAC
 rockets-core          ◀── THIS PACKAGE
   • auth abstraction (AuthProviderInterface, AuthServerGuard)
   • CQRS handlers (userMetadata)
-  • declarative resources (defineResource, aggregateResources)
+  • declarative resources (defineResource, prepareResourceRegistration)
   • repositories config (flattenRepositories)
   • Swagger UI registration
     ▲

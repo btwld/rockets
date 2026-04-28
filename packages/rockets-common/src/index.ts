@@ -68,10 +68,10 @@ export {
 
   // Domain factory
   DomainFactory,
-
-  // Decorator
-  AuthUser,
 } from '@concepta/nestjs-common';
+
+// Decorator (relocated from @concepta/nestjs-common to @concepta/nestjs-authentication in v8)
+export { AuthUser } from '@concepta/nestjs-authentication';
 
 export type {
   // Module interfaces
@@ -157,5 +157,9 @@ export {
   getErrorDetails,
 } from './utils/error-logging.helper';
 export type { ErrorDetails } from './utils/error-logging.helper';
-export { createRepositoryContext } from './utils/repository-context.helper';
+export {
+  createRepositoryContext,
+  RepositoryContextInterface,
+} from './utils/repository-context.helper';
 export { stripUndefined } from './utils/strip-undefined.helper';
+export { whitelistedFromDto } from './utils/whitelisted-from-dto.util';

@@ -3,14 +3,12 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
-  JoinTable,
-  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
-import { TagEntity } from '../tag/tag.entity';
+import { PetTagEntity } from './pet-tag.entity';
 
 export enum PetStatus {
   ACTIVE = 'active',
@@ -67,14 +65,12 @@ export class PetEntity {
   @OneToMany(() => PetVaccinationEntity, (v) => v.pet, { eager: true })
   vaccinations!: PetVaccinationEntity[];
 
-  @ManyToMany(() => TagEntity, (tag) => tag.pets, {
-    eager: true,
-    cascade: ['insert', 'update'],
-  })
-  @JoinTable({
-    name: 'pet_tag',
-    joinColumn: { name: 'petId', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'tagId', referencedColumnName: 'id' },
-  })
-  tags!: TagEntity[];
+  /**
+   * Eager-loaded join rows. The flat `tags: TagEntity[]` shape used by
+   * {@link PetResponseDto} is projected from this collection in the DTO
+   * via `class-transformer`. Mutations go through the dedicated junction
+   * resource (`/pets/:petId/tags`), never the parent payload.
+   */
+  @OneToMany(() => PetTagEntity, (pt) => pt.pet, { eager: true })
+  petTags!: PetTagEntity[];
 }

@@ -19,7 +19,7 @@ import {
   AuthUser,
   Ctx,
   type AppContextInterface,
-} from '@concepta/nestjs-common';
+} from '@bitwild/rockets-common';
 import type { AuthorizedUser } from '@bitwild/rockets';
 import { PetShareEntity } from './pet-share.entity';
 import { PetShareCreateDto, PetShareResponseDto } from './pet-share.dto';

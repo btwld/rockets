@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-crud",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.7",
   "description": "Rockets CRUD - CRUD module abstraction",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
@@ -38,8 +38,8 @@
     "build:watch": "tsc -p tsconfig.json --watch"
   },
   "dependencies": {
-    "@bitwild/rockets-common": "workspace:*",
-    "@bitwild/rockets-repository": "workspace:*",
-    "@concepta/nestjs-crud": "8.0.0-alpha.4"
+    "@bitwild/rockets-common": "workspace:^",
+    "@bitwild/rockets-repository": "workspace:^",
+    "@concepta/nestjs-crud": "8.0.0-alpha.5"
   }
 }

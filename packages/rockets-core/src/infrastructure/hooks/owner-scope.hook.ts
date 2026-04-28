@@ -7,8 +7,7 @@ import {
   RepositoryFindOptions,
   Where,
 } from '@bitwild/rockets-repository';
-import type { CrudContextInterface } from '@bitwild/rockets-crud';
-import { getAuthorizedUserFromCrudContext } from '../../utils/authorized-user-from-crud-context.helper';
+import { getActor } from '../../utils/get-actor.helper';
 
 /**
  * Default owner column. Can be changed by subclassing and overriding
@@ -18,7 +17,7 @@ export const DEFAULT_OWNER_COLUMN = 'userId';
 
 /**
  * Reusable repository hook that scopes read/update/delete to rows owned by
- * the authenticated user.
+ * the current actor.
  *
  * Apply via `@UseHooks(OwnerScopeHook)` on any CRUD resource whose entity
  * has a `userId` column. Register the hook class in `resource.providers`
@@ -37,16 +36,18 @@ export const DEFAULT_OWNER_COLUMN = 'userId';
  * | Update    | `findOne` + update | `BeforeFindOne`       |
  * | Delete    | `findOne` + delete | `BeforeFindOne`       |
  *
- * Create is NOT scoped by this hook — inject `userId` from the
- * authenticated user via a custom command handler.
+ * Create is NOT scoped by this hook — pair with `OwnerStampHook` to stamp
+ * the owner column on writes.
  *
  * ## Requirements
  *
  * 1. `HookModule` must be registered (automatic via `RocketsCoreModule`).
  * 2. The entity must have a column matching `ownerColumn` (default
  *    `'userId'`).
- * 3. `AuthServerGuard` must have populated `request.user`, and
- *    `AuthorizedUserOverlay` must have attached it to the app context.
+ * 3. An overlay must have published an `Actor` to the context. Under HTTP
+ *    this happens automatically via `AuthServerGuard` + `ActorOverlay`.
+ *    Outside HTTP (jobs, CLI), the entry point is responsible for
+ *    publishing `ActorCtx` before invoking the adapter.
  *
  * ## Custom owner column
  *
@@ -63,11 +64,10 @@ export const DEFAULT_OWNER_COLUMN = 'userId';
  *
  * ## No-op semantics
  *
- * If the request is not authenticated (no auth user in overlay), the hook
- * returns options unchanged. The upstream `AuthServerGuard` should have
- * already rejected unauthenticated requests on protected routes, so
- * reaching the hook without an auth user implies a public route that
- * should not be owner-scoped.
+ * If the request has no actor, the hook returns options unchanged. The
+ * upstream `AuthServerGuard` should have rejected unauthenticated requests
+ * on protected routes, so reaching the hook without an actor implies a
+ * public route that should not be owner-scoped.
  */
 @Injectable()
 @RepoHook()
@@ -95,12 +95,12 @@ export class OwnerScopeHook {
       | RepositoryFindOptions<PlainLiteralObject>
       | RepositoryFindOneOptions<PlainLiteralObject>,
   >(options: T, ctx?: PlainLiteralObject): T {
-    const authUser = this.readAuthUser(ctx);
-    if (!authUser?.id) return options;
+    const actor = getActor(ctx);
+    if (!actor?.id) return options;
 
     const ownerClause = Where.eq<PlainLiteralObject>(
       this.ownerColumn,
-      authUser.id,
+      actor.id,
     );
     return {
       ...options,
@@ -108,15 +108,5 @@ export class OwnerScopeHook {
         ? Where.and(options.where, ownerClause)
         : ownerClause,
     };
-  }
-
-  private readAuthUser(ctx?: PlainLiteralObject) {
-    if (!ctx) return undefined;
-    // The ctx passed by the CRUD adapter is a CrudContextInterface extended
-    // with repository overlays. It still exposes `httpRequest`, which is
-    // what `getAuthorizedUserFromCrudContext` needs.
-    return getAuthorizedUserFromCrudContext(
-      ctx as CrudContextInterface<PlainLiteralObject>,
-    );
   }
 }

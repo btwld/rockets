@@ -1,6 +1,6 @@
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
 import type { RocketsRepositoriesConfig } from '../../../domain/interfaces/rockets-repositories.interface';
-import type { RocketsResourceInput } from '../../resource/aggregate-resources';
+import type { ResourceDefinitionInput } from '../../resource/aggregate-resources';
 import type { AbstractUpsertUserMetadataHandler } from '../../../application/commands/handlers/abstract-upsert-user-metadata.handler';
 import type { AbstractGetUserMetadataHandler } from '../../../application/queries/handlers/abstract-get-user-metadata.handler';
 
@@ -21,15 +21,13 @@ export interface RocketsCoreOptionsExtrasInterface
   readonly providers?: Provider[];
 
   /**
-   * Declarative CRUD resources. Accepts either:
-   * - `RocketsResourceBundle` values from `defineResource()` (auto-contribute
-   *   their entity to persistence), or
-   * - Raw `RocketsResourceConfig` objects (consumer registers entity via
-   *   `repositories.entities`).
+   * Your app’s CRUD “resources” list.
    *
-   * Core aggregates bundles internally — no pre-processing needed.
+   * - Prefer `defineResource()` when you want Rockets to wire the entity for you.
+   * - You can also pass a hand-built `RocketsResourceConfig`, but then you must
+   *   add that entity to `repositories` yourself (Rockets can’t infer it).
    */
-  readonly resources?: ReadonlyArray<RocketsResourceInput>;
+  readonly resources?: ReadonlyArray<ResourceDefinitionInput>;
 
   readonly handlers?: {
     readonly upsertUserMetadata?: Type<AbstractUpsertUserMetadataHandler>;

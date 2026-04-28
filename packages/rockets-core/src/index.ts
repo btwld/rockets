@@ -19,18 +19,25 @@ export { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
 // Decorators
 export { AuthPublic } from './decorators/auth-public.decorator';
 
-// Authorized user overlay (context overlay for CRUD handlers)
+// Actor overlay (transport-agnostic identity of "who" performed the op)
+export type {
+  Actor,
+  ActorType,
+  ActorContext,
+  WithActor,
+} from './domain/interfaces/actor.interface';
 export {
-  AuthorizedUserCtx,
-  AuthorizedUserOverlay,
-} from './infrastructure/interceptors/authorized-user.overlay';
-export { getAuthorizedUserFromCrudContext } from './utils/authorized-user-from-crud-context.helper';
+  ActorCtx,
+  ActorOverlay,
+} from './infrastructure/interceptors/actor.overlay';
+export { getActor } from './utils/get-actor.helper';
 
 // Reusable repository hooks
 export {
   OwnerScopeHook,
   DEFAULT_OWNER_COLUMN,
 } from './infrastructure/hooks/owner-scope.hook';
+export { OwnerStampHook } from './infrastructure/hooks/owner-stamp.hook';
 
 // Exceptions filter
 export {
@@ -60,12 +67,12 @@ export type {
   RelationOptions,
 } from './domain/interfaces/rockets-resource-definition.interface';
 export {
-  aggregateResources,
-  isRocketsResourceBundle,
+  prepareResourceRegistration,
+  isGeneratedResourceDefinition,
 } from './infrastructure/resource/aggregate-resources';
 export type {
-  AggregatedResources,
-  RocketsResourceInput,
+  ResourceRegistrationPlan,
+  ResourceDefinitionInput,
 } from './infrastructure/resource/aggregate-resources';
 export type {
   RocketsResourceDefinition,

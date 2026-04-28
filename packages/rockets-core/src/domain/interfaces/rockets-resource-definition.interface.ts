@@ -78,7 +78,7 @@ export type EntityConstructor<T = unknown> = (abstract new (
  *    distinct filter on the repository layer.
  *
  * `target` is a **class reference** (or a `() => Class` thunk for circular
- * imports). At `aggregateResources` time the class is resolved to a
+ * imports). At `prepareResourceRegistration` time the class is resolved to a
  * registered persistence key — either from another `defineResource()`
  * bundle or from `repositories.entities`. Class-as-target gives you
  * compile-time errors if you typo the entity, and `propertyName` is
@@ -181,8 +181,8 @@ export type BoundRelation<S extends object> = <
 export interface ResourcePersistenceConfig {
   /**
    * Repository module implementation (e.g. `TypeOrmRepositoryModule`).
-   * Defaults to the first module registered in the aggregator, or to a
-   * consumer-supplied default. Provide explicitly for multi-adapter apps.
+   * Defaults to the resource builder's default adapter (today: TypeORM) unless
+   * overridden. Provide explicitly for multi-adapter apps.
    */
   readonly module?: RepositoryModuleInterface;
 }
@@ -313,9 +313,11 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
    *
    * 1. **Builder (recommended).** A function that receives a source-bound
    *    `relation()` and returns the entries:
-   *    ```ts
-   *    relations: (relation) => [relation(() => OwnerEntity, 'owner')]
-   *    ```
+   *
+   * ```ts
+   * relations: (relation) => [relation(() => OwnerEntity, 'owner')]
+   * ```
+   *
    *    The bound `relation` captures the resource `entity` automatically,
    *    so the source can never be mistyped — it is not even passed.
    *
@@ -323,18 +325,17 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
    *    resource entity (junction tables) or when entries are composed
    *    from external lists. Each entry must come from the standalone
    *    `relation()` helper:
-   *    ```ts
-   *    relations: [relation(SourceEntity, TargetEntity, 'prop')]
-   *    ```
    *
-   * Either form yields the same `ResourceRelationEntry[]` after
+   * ```ts
+   * relations: [relation(SourceEntity, TargetEntity, 'prop')]
+   * ```
+   *
+   * Either form yields the same `ResourceRelationEntry\[\]` after
    * `defineResource()` resolves it.
    */
   readonly relations?:
     | ReadonlyArray<ResourceRelationEntry<E>>
-    | ((
-        relation: BoundRelation<E>,
-      ) => ReadonlyArray<ResourceRelationEntry<E>>);
+    | ((relation: BoundRelation<E>) => ReadonlyArray<ResourceRelationEntry<E>>);
   /**
    * Persistence-layer truths about the entity. Currently just the
    * repository module selector; relation-level flags live on `relations`.

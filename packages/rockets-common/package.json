@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-common",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.7",
   "description": "Shared hooks, utilities, and config providers for Rockets packages",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
@@ -35,12 +35,14 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "build:watch": "tsc -p tsconfig.json --watch"
+    "build:watch": "tsc -p tsconfig.json --watch",
+    "test": "cd ../.. && npx jest --config jest.config.json --testPathPattern=packages/rockets-common"
   },
   "dependencies": {
-    "@concepta/nestjs-common": "8.0.0-alpha.4",
-    "@concepta/nestjs-hook": "8.0.0-alpha.4",
-    "@concepta/nestjs-repository": "8.0.0-alpha.4",
+    "@concepta/nestjs-authentication": "8.0.0-alpha.5",
+    "@concepta/nestjs-common": "8.0.0-alpha.5",
+    "@concepta/nestjs-hook": "8.0.0-alpha.5",
+    "@concepta/nestjs-repository": "8.0.0-alpha.5",
     "@concepta/nestjs-swagger-ui": "7.0.0-alpha.10"
   },
   "peerDependencies": {

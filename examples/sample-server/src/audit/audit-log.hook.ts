@@ -9,7 +9,7 @@ import {
   RepositoryInterface,
 } from '@bitwild/rockets-repository';
 import type { CrudContextInterface } from '@bitwild/rockets-crud';
-import { getAuthorizedUserFromCrudContext } from '@bitwild/rockets-core';
+import { getActor } from '@bitwild/rockets-core';
 import { AuditAction, AuditLogEntity } from './audit-log.entity';
 import { AUDIT_LOG_ENTITY_KEY } from './audit-log.constants';
 
@@ -81,14 +81,10 @@ export class AuditLogHook {
     ctx?: PlainLiteralObject,
   ): Promise<void> {
     const crudCtx = ctx as CrudContextInterface | undefined;
-    const authUser = ctx
-      ? getAuthorizedUserFromCrudContext(
-          ctx as CrudContextInterface<PlainLiteralObject>,
-        )
-      : undefined;
+    const actor = getActor(ctx);
 
     await this.auditRepo.create({
-      actorId: authUser?.id ?? null,
+      actorId: actor?.id ?? null,
       action,
       resource: crudCtx?.entity ?? 'unknown',
       resourceId: (result?.id as string) ?? null,

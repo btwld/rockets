@@ -3,7 +3,7 @@ import type {
   AbstractUpsertUserMetadataHandler,
   AbstractGetUserMetadataHandler,
   RocketsRepositoriesConfig,
-  RocketsResourceInput,
+  ResourceDefinitionInput,
 } from '@bitwild/rockets-core';
 
 export interface DisableControllerOptionsInterface {
@@ -35,11 +35,10 @@ export interface RocketsOptionsExtrasInterface
   };
 
   /**
-   * Declarative CRUD resources. Accepts either:
-   * - `RocketsResourceBundle` values returned by `defineResource()`
-   *   (bundles auto-contribute their entity to repository persistence), or
-   * - Raw `RocketsResourceConfig` objects for hand-wired resources (the
-   *   consumer must register the entity via `repositories.entities`).
+   * The same `resources` option accepted by `RocketsCoreModule`.
+   *
+   * - `defineResource()` = generated wiring (includes entity + relation checks)
+   * - hand-built `RocketsResourceConfig` = you register the entity in `repositories`
    */
-  resources?: ReadonlyArray<RocketsResourceInput>;
+  resources?: ReadonlyArray<ResourceDefinitionInput>;
 }

@@ -12,9 +12,9 @@ import {
 } from './auth';
 import {
   petResource,
+  petTagResource,
   PetEntity,
   PetTagEntity,
-  PET_TAG_ENTITY_KEY,
 } from './resources/pet';
 import {
   petVaccinationResource,
@@ -72,14 +72,14 @@ import { EventsModule } from './events';
         entities: [
           { key: USER_ENTITY_KEY, entity: UserEntity },
           { key: PET_SHARE_ENTITY_KEY, entity: PetShareEntity },
-          { key: PET_TAG_ENTITY_KEY, entity: PetTagEntity },
           { key: AUDIT_LOG_ENTITY_KEY, entity: AuditLogEntity },
         ],
       },
-      // pet and petVaccination entities are auto-contributed by their
-      // respective defineResource() bundles below.
+      // pet, petTag, petVaccination and tag entities are auto-contributed
+      // by their respective defineResource() bundles below.
       resources: [
         petResource,
+        petTagResource,
         petVaccinationResource,
         tagResource,
         appointmentResource,

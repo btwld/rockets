@@ -74,7 +74,7 @@ export function createBoundRelation<S extends object>(
 
 /**
  * Resolve the target class of a relation entry, calling the lazy thunk
- * exactly once. Used internally by the aggregator and by
+ * exactly once. Used internally by `prepareResourceRegistration` and
  * `defineResource` when they need the concrete class without forcing
  * every caller to re-implement the class-vs-thunk discriminator.
  *
@@ -94,9 +94,7 @@ export function resolveRelationTarget(
   return (target as () => EntityConstructor)();
 }
 
-function isEntityClassConstructor(
-  value: unknown,
-): value is EntityConstructor {
+function isEntityClassConstructor(value: unknown): value is EntityConstructor {
   if (typeof value !== 'function') return false;
   // Arrow functions have `prototype === undefined`. Classes and regular
   // functions both expose a prototype object. Combined with the

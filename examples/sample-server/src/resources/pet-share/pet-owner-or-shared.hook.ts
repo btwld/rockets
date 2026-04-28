@@ -12,7 +12,7 @@ import {
 } from '@bitwild/rockets-repository';
 import type { CrudContextInterface } from '@bitwild/rockets-crud';
 import { Operation } from '@concepta/nestjs-common';
-import { getAuthorizedUserFromCrudContext } from '@bitwild/rockets-core';
+import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.entity';
 import { PetShareEntity } from './pet-share.entity';
 import { PET_SHARE_ENTITY_KEY } from './pet-share.constants';
@@ -29,8 +29,8 @@ import { PET_SHARE_ENTITY_KEY } from './pet-share.constants';
  *   `getOneOrFail`. A shared user reading a pet succeeds; the same user
  *   trying to update it gets a 404 at the repository layer.
  *
- * Create is untouched — the existing `PetCreateHandler` stamps
- * `userId = authUser.id` explicitly.
+ * Create is untouched — `OwnerStampHook` (paired on the resource) stamps
+ * `userId` from the actor on every write.
  */
 @Injectable()
 @RepoHook()
@@ -75,19 +75,15 @@ export class PetOwnerOrSharedHook {
     ctx: PlainLiteralObject | undefined,
     flags: { writeOnly: boolean },
   ): Promise<T> {
-    const authUser = ctx
-      ? getAuthorizedUserFromCrudContext(
-          ctx as CrudContextInterface<PlainLiteralObject>,
-        )
-      : undefined;
-    if (!authUser?.id) return options;
+    const actor = getActor(ctx);
+    if (!actor?.id) return options;
 
-    const ownerClause = Where.eq<PetEntity>('userId', authUser.id);
+    const ownerClause = Where.eq<PetEntity>('userId', actor.id);
     let clause: WhereClause = ownerClause;
 
     if (!flags.writeOnly) {
       const shares = await this.shareRepo.find({
-        where: Where.eq<PetShareEntity>('userId', authUser.id),
+        where: Where.eq<PetShareEntity>('userId', actor.id),
       });
       const sharedPetIds = shares.map((s) => s.petId);
       if (sharedPetIds.length > 0) {

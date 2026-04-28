@@ -7,38 +7,30 @@ import type { RocketsResourceConfig } from './rockets-resource.interface';
 import type { ResourceRelationEntry } from './rockets-resource-definition.interface';
 
 /**
- * Rich descriptor returned by `defineResource()`.
+ * The object returned by `defineResource()`.
  *
- * Combines:
- * - `core`: the `RocketsResourceConfig` fed into `RocketsCoreModule.forFeature`.
- * - `persistence`: the `RepositoryProviderOptions` + `module` pair that the
- *   server-side `aggregateResources` groups into `repositoryPersistence`.
- * - `meta`: registration-time metadata (the resource key, the entity class,
- *   and the unified relations list used for cross-resource validation at
- *   startup).
- *
- * The bundle is the single value consumers pass to `RocketsModule.forRoot`.
- * The server unpacks `core` + `persistence` internally — consumers do not
- * touch either directly.
+ * It’s intentionally split in three because Rockets does two different jobs for you:
+ * - `core`: the HTTP/CRUD surface (routes, DTOs, operation wiring)
+ * - `persistence`: the database table wiring (what repository token + adapter to use)
+ * - `meta`: extra info Rockets needs to check relations *before* the app boots
  */
 export interface RocketsResourceBundle<
   E extends PlainLiteralObject = PlainLiteralObject,
 > {
-  /** Configuration forwarded into `RocketsCoreModule.resources[]`. */
+  /** What `CrudModule` uses to build endpoints + CQRS operation wiring. */
   readonly core: RocketsResourceConfig;
   /**
-   * Persistence-layer registration. The aggregator groups entities by
-   * `module` into one `RepositoryFeatureOptions` entry per adapter.
+   * What `RepositoryModule` needs to make `InjectDynamicRepository(key)` work for this entity.
+   * If you use more than one storage adapter, `module` says which one.
    */
   readonly persistence: {
     readonly module: RepositoryModuleInterface;
     readonly entity: RepositoryProviderOptions<E>;
   };
   /**
-   * Registration-time metadata used by `aggregateResources` for cross-
-   * resource validation. The aggregator resolves each `relations[].target`
-   * class against the union of registered bundle entities and
-   * `repositories.entities` to look up the persistence key.
+   * The “Rockets-only” part: the resource `key`, the `entity` class, and the list of
+   * relations. Startup validation uses this to make sure you didn’t point a relation
+   * at a table/entity the module doesn’t know about.
    */
   readonly meta: {
     readonly key: string;

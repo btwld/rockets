@@ -288,7 +288,7 @@ resources: [
 ```
 
 See **[@bitwild/rockets-core](../rockets-core)** for the full `defineResource`
-API and the `aggregateResources` pipeline.
+API and the `prepareResourceRegistration` pipeline.
 
 ### Other options
 

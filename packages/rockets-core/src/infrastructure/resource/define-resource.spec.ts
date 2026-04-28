@@ -199,7 +199,9 @@ describe('defineResource', () => {
         path: 'widget',
         tags: ['widget'],
         relations: [
-          relation(WidgetEntity, PartCatalogEntity, 'parts', { federated: true }),
+          relation(WidgetEntity, PartCatalogEntity, 'parts', {
+            federated: true,
+          }),
         ],
       });
       expect(bundle.persistence.entity.relations).toEqual({
@@ -261,7 +263,7 @@ describe('defineResource', () => {
   });
 
   describe('relations', () => {
-    it('preserves the full relation entry on meta.relations for aggregator validation', () => {
+    it('preserves the full relation entry on meta.relations for prepareResourceRegistration validation', () => {
       const entry = relation(WidgetEntity, PartEntity, 'parts', {
         include: 'default',
       });
@@ -319,7 +321,7 @@ describe('defineResource', () => {
         relations: [relation(WidgetEntity, () => PartEntity, 'parts')],
       });
       expect(bundle.meta.relations[0].propertyName).toBe('parts');
-      // Thunk is preserved verbatim — resolution happens in aggregator.
+      // Thunk is preserved verbatim — resolution happens in prepareResourceRegistration.
       expect(typeof bundle.meta.relations[0].target).toBe('function');
     });
   });
@@ -410,7 +412,9 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        relations: (relation) => [relation(PartEntity, 'parts', { federated: true })],
+        relations: (relation) => [
+          relation(PartEntity, 'parts', { federated: true }),
+        ],
       });
       expect(bundle.persistence.entity.relations).toEqual({
         parts: { federated: true },
@@ -485,7 +489,7 @@ describe('defineResource', () => {
   // ──────────────────────────────────────────────────────────────────
   // Builder + array form mixed/equivalence guarantees. The two input
   // shapes must produce structurally equivalent bundles for the same
-  // logical relation set; downstream code (aggregator, controller
+  // logical relation set; downstream code (prepareResourceRegistration, controller
   // joins, persistence) cannot care which form was used.
   // ──────────────────────────────────────────────────────────────────
   describe('relations: builder vs array equivalence', () => {
@@ -528,7 +532,9 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        relations: (relation) => [relation(PartEntity, 'parts', { federated: true })],
+        relations: (relation) => [
+          relation(PartEntity, 'parts', { federated: true }),
+        ],
       });
       expect(fromBuilder.persistence.entity.relations).toEqual(
         fromArray.persistence.entity.relations,

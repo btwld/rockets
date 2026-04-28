@@ -14,12 +14,13 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@nestjs/config';
 import { RepositoryModule } from '@bitwild/rockets-repository';
 import { CrudModule, CrudContextOverlay } from '@bitwild/rockets-crud';
+import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
 import type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';
 import { SafeCrudContextInterceptor } from './infrastructure/interceptors/safe-crud-context.interceptor';
 import { flattenRepositories } from './infrastructure/utils/flatten-repositories';
 import {
-  aggregateResources,
-  type AggregatedResources,
+  prepareResourceRegistration,
+  type ResourceRegistrationPlan,
 } from './infrastructure/resource/aggregate-resources';
 import {
   AUTH_PROVIDER_TOKEN,
@@ -32,7 +33,7 @@ import { RocketsCoreOptionsExtrasInterface } from './infrastructure/config/inter
 import { RocketsCoreSettingsInterface } from './infrastructure/config/interfaces/rockets-core-settings.interface';
 import { rocketsCoreDefaultConfig } from './infrastructure/config/rockets-core-options-default.config';
 import { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
-import { AuthorizedUserOverlay } from './infrastructure/interceptors/authorized-user.overlay';
+import { ActorOverlay } from './infrastructure/interceptors/actor.overlay';
 import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
 import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
 
@@ -54,86 +55,21 @@ export type RocketsCoreOptions = typeof ROCKETS_CORE_OPTIONS_TYPE;
 export type RocketsCoreAsyncOptions = typeof ROCKETS_CORE_ASYNC_OPTIONS_TYPE;
 
 /**
- * Assembles the final `DynamicModule` for `RocketsCoreModule.forRoot(Async)`.
- * Invoked by the `ConfigurableModuleBuilder` after Nest has resolved the
- * async factory and produced the base `definition` (which carries
- * `defImports` for `RAW_OPTIONS_TOKEN` wiring — must be preserved).
+ * Where `RocketsCoreModule.forRoot(Async)(...)` turns options into a real Nest module.
  *
- * Pipeline:
- * 1. `aggregateResources()` flattens bundles + raw configs into
- *    `{ resources, repositoryPersistence }`.
- * 2. `createCoreImports()` appends CQRS, Config, Hook, Repository (root +
- *    forFeature per adapter), CrudModule (root + forFeature per resource),
- *    and SwaggerUI.
- * 3. `createCoreProviders()` adds the settings provider, auth provider
- *    factory, `AuthServerGuard`, `AuthorizedUserOverlay` interceptor,
- *    default CQRS handlers, plus every handler/provider auto-extracted
- *    from resources.
- * 4. `createCoreExports()` re-exports tokens + resource providers so
- *    consuming modules (server, auth) can inject them.
+ * Why this exists:
+ * - Nest’s config builder already gives us a `definition` (imports/exports) that
+ *   wires the async `RAW_OPTIONS_TOKEN` factory. **We must keep that first** —
+ *   otherwise options injection silently breaks.
+ * - On top of that, Rockets adds the “Rockets stack” (CQRS, hooks, repos, CRUD, swagger)
+ *   and a little startup validation for `resources` (`prepareResourceRegistration`).
  *
- * @example
- * Input — extras from the consumer:
- * ```ts
- * {
- *   authProvider: new RocketsJwtAuthProvider(...),
- *   repositories: {
- *     module: TypeOrmRepositoryModule,
- *     userMetadata: { entity: UserMetadataEntity },
- *     entities: [{ key: 'audit', entity: AuditLogEntity }],
- *   },
- *   resources: [petBundle, vaccinationBundle, rawReportConfig],
- *   swagger: { documentBuilder: ..., settings: ... },
- * }
- * ```
- *
- * Output — a fully-wired `DynamicModule`:
- * ```ts
- * {
- *   module: RocketsCoreModule,
- *   global: true,
- *   imports: [
- *     ...defImports,                 // RAW_OPTIONS_TOKEN wiring — do not lose
- *     CqrsModule.forRoot(),
- *     ConfigModule.forFeature(rocketsCoreDefaultConfig),
- *     HookModule.forRoot({}),        // BEFORE RepositoryModule
- *     RepositoryModule.forRoot({}),
- *     RepositoryModule.forFeature({  // from extras.repositories
- *       module: TypeOrmRepositoryModule,
- *       entities: [
- *         { key: 'userMetadata', entity: UserMetadataEntity },
- *         { key: 'audit',        entity: AuditLogEntity },
- *       ],
- *     }),
- *     RepositoryModule.forFeature({  // from aggregated bundles
- *       module: TypeOrmRepositoryModule,
- *       entities: [
- *         { key: 'pet',             entity: PetEntity },
- *         { key: 'petVaccination',  entity: PetVaccinationEntity },
- *       ],
- *     }),
- *     CrudModule.forRoot({}),
- *     CrudModule.forFeature(petBundle.core),
- *     CrudModule.forFeature(vaccinationBundle.core),
- *     CrudModule.forFeature(rawReportConfig),
- *     SwaggerUiModule.registerAsync({...}),
- *   ],
- *   controllers: [], // core NEVER declares controllers
- *   providers: [
- *     settingsProvider, Reflector,
- *     { provide: AUTH_PROVIDER_TOKEN, useFactory: opts => opts.authProvider },
- *     AuthServerGuard,
- *     { provide: APP_INTERCEPTOR, useClass: AuthorizedUserOverlay },
- *     UpsertUserMetadataHandler, GetUserMetadataHandler,
- *     PetCreateHandler, OwnerScopeHook, ... // auto-extracted from resources
- *   ],
- *   exports: [
- *     ConfigModule, RAW_OPTIONS_TOKEN, AUTH_PROVIDER_TOKEN,
- *     ROCKETS_CORE_SETTINGS_TOKEN, AuthServerGuard,
- *     PetCreateHandler, OwnerScopeHook, ... // resource providers re-exported
- *   ],
- * }
- * ```
+ * What it does, in order:
+ * 1) `prepareResourceRegistration` → figures out the CRUD configs to import and which
+ *    entity repos must exist for the generated resources.
+ * 2) `createCoreImports` → registers supporting modules + the CRUD + swagger wiring.
+ * 3) `createCoreProviders` → auth provider, global interceptors, core CQRS handlers, etc.
+ * 4) `createCoreExports` → re-exports tokens and anything resources need app-wide.
  */
 function definitionTransform(
   definition: DynamicModule,
@@ -145,41 +81,39 @@ function definitionTransform(
     exports: defExports = [],
   } = definition;
 
-  // Aggregate resource inputs once — used by imports, providers, and exports.
-  // `repositories` is forwarded so the aggregator can resolve relation targets
-  // against entities that live in `repositories.entities` without requiring a
-  // matching `defineResource()` bundle (junction tables, lookup tables, etc.).
-  const aggregated = aggregateResources({
-    resources: extras.resources ?? [],
+  // Figure out the CRUD configs to register + the repository wiring plan.
+  //
+  // We also pass `repositories` in so relations can point at “extra” entities
+  // that don’t have their own `defineResource()` (junction tables, lookup rows, etc.).
+  const resourcePlan = prepareResourceRegistration({
+    resourceDefinitions: extras.resources ?? [],
     repositories: extras.repositories,
   });
 
   return {
     ...definition,
     global: extras.global ?? true,
-    imports: [...defImports, ...createCoreImports(extras, aggregated)],
+    imports: [...defImports, ...createCoreImports(extras, resourcePlan)],
     controllers: [], // ⛔ NO controllers — ever
-    providers: createCoreProviders({ providers, extras, aggregated }),
-    exports: createCoreExports({ exports: defExports, aggregated }),
+    providers: createCoreProviders({ providers, extras, resourcePlan }),
+    exports: createCoreExports({ exports: defExports, resourcePlan }),
   };
 }
 
 function createCoreImports(
   extras: RocketsCoreOptionsExtrasInterface,
-  aggregated: AggregatedResources,
+  resourcePlan: ResourceRegistrationPlan,
 ): NonNullable<DynamicModule['imports']> {
   const imports: NonNullable<DynamicModule['imports']> = [
     CqrsModule.forRoot(),
     ConfigModule.forFeature(rocketsCoreDefaultConfig),
-    // HookModule must be registered BEFORE RepositoryModule so that
-    // HookResolverService is available when TypeORM repository factories
-    // optionally inject it. Without this, @RepoHook hooks silently no-op
-    // because the adapter's hookResolver is undefined.
+    // Register hooks *before* repositories, otherwise repository-level hooks
+    // won’t be wired and will quietly do nothing.
     HookModule.forRoot({}),
     RepositoryModule.forRoot({}),
   ];
 
-  // Flatten the unified repositories config into RepositoryModule.forFeature() calls
+  // `repositories` is the user’s “extra tables” list: userMetadata + more entities
   if (extras.repositories) {
     const persistence = flattenRepositories(extras.repositories);
     for (const entry of persistence) {
@@ -187,29 +121,21 @@ function createCoreImports(
     }
   }
 
-  // Register resource-derived entity repos (from defineResource bundles)
-  for (const entry of aggregated.repositoryPersistence) {
+  // Extra tables implied by `defineResource()` (only the generated path supplies this)
+  for (const entry of resourcePlan.repositoryPersistence) {
     imports.push(RepositoryModule.forFeature(entry));
   }
 
-  // Register CRUD resources.
-  //
-  // `CrudModule.forRoot({})` registers the upstream `CrudContextOverlay`
-  // as a global `APP_INTERCEPTOR` whose `resolve()` throws
-  // `CrudContextException` on any handler without `@CrudOperation` —
-  // breaking every hand-written controller in a mixed-controller app
-  // (auth, /me, bespoke endpoints). We import the upstream module for
-  // its infrastructure (CrudMetaview, CrudAdapterResolver, settings,
-  // etc.) but strip the unsafe APP_INTERCEPTOR and substitute
-  // `SafeCrudContextInterceptor`, which no-ops on non-CRUD handlers.
-  if (aggregated.resources.length) {
+  // CRUD routes. Upstream `CrudModule` ships a very strict request interceptor; we
+  // replace it with a safer one so non-CRUD controllers still work in the same app.
+  if (resourcePlan.resources.length) {
     imports.push(createSafeCrudRootModule());
-    for (const resource of aggregated.resources) {
+    for (const resource of resourcePlan.resources) {
       imports.push(CrudModule.forFeature(resource));
     }
   }
 
-  // Swagger UI — registered from core so both server and auth get it
+  // Swagger UI is registered here so all Rockets entrypoints share the same docs
   imports.push(
     SwaggerUiModule.registerAsync({
       inject: [RAW_OPTIONS_TOKEN],
@@ -237,7 +163,7 @@ function createCoreSettingsProvider(): Provider {
 function createCoreProviders(options: {
   providers?: Provider[];
   extras?: RocketsCoreOptionsExtrasInterface;
-  aggregated: AggregatedResources;
+  resourcePlan: ResourceRegistrationPlan;
 }): Provider[] {
   return [
     ...(options.providers ?? []),
@@ -250,18 +176,22 @@ function createCoreProviders(options: {
         opts.authProvider,
     },
     AuthServerGuard,
-    { provide: APP_INTERCEPTOR, useClass: AuthorizedUserOverlay },
-    // Default CQRS handlers — can be overridden by the caller via extras.handlers
+    // Makes the authenticated user available to the CRUD system (`@AuthUser()` in upstream v8).
+    // (When you use the full auth module, that module may register the same thing — don’t double up.)
+    { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay },
+    // Adds a simple “who did this?” id for repository hooks/audit (not the full user profile).
+    { provide: APP_INTERCEPTOR, useClass: ActorOverlay },
+    // Built-in user-metadata CQRS (override in `extras.handlers` if you need to customize storage)
     options.extras?.handlers?.upsertUserMetadata ?? UpsertUserMetadataHandler,
     options.extras?.handlers?.getUserMetadata ?? GetUserMetadataHandler,
     ...(options.extras?.providers ?? []),
-    ...extractResourceProviders(options.aggregated.resources),
+    ...extractResourceProviders(options.resourcePlan.resources),
   ];
 }
 
 function createCoreExports(options: {
   exports: DynamicModule['exports'];
-  aggregated: AggregatedResources;
+  resourcePlan: ResourceRegistrationPlan;
 }): DynamicModule['exports'] {
   const exports: NonNullable<DynamicModule['exports']> = [
     ...(options.exports ?? []),
@@ -272,8 +202,9 @@ function createCoreExports(options: {
     AuthServerGuard,
   ];
 
-  // Resource providers exported → available app-wide
-  for (const resource of options.aggregated.resources) {
+  // Re-export per-resource providers (custom handlers, hooks) so the rest of the
+  // app can inject them without importing every feature module twice.
+  for (const resource of options.resourcePlan.resources) {
     exports.push(...(resource.providers ?? []));
   }
 
@@ -281,8 +212,9 @@ function createCoreExports(options: {
 }
 
 /**
- * Auto-extract handlers declared in CRUD operations + resource-level providers.
- * The consumer doesn't need to repeat handlers in a separate providers array.
+ * Collect all Nest providers a resource needs:
+ * - CQRS handler classes referenced by CRUD operations
+ * - any extra `providers: [...]` attached to the resource
  */
 function extractResourceProviders(
   resources?: ReadonlyArray<RocketsResourceConfig>,
@@ -294,7 +226,7 @@ function extractResourceProviders(
   const seen = new Set<Type>();
 
   for (const resource of resources) {
-    // Handlers from operations (operations exists on hybrid/generated crud configs)
+    // Operation handlers (if present) — this is the normal `defineResource` path
     if ('operations' in resource.crud) {
       for (const op of resource.crud.operations) {
         if (
@@ -316,7 +248,7 @@ function extractResourceProviders(
       }
     }
 
-    // Declared providers
+    // Any extra classes the resource needs registered (hooks, side-effect services, …)
     providers.push(...(resource.providers ?? []));
   }
 
@@ -324,24 +256,16 @@ function extractResourceProviders(
 }
 
 /**
- * Builds a `DynamicModule` equivalent to `CrudModule.forRoot({})` but with
- * the unsafe global APP_INTERCEPTOR swapped for `SafeCrudContextInterceptor`.
+ * The upstream `CrudModule` installs a “strict” request interceptor.
  *
- * Every non-APP_INTERCEPTOR provider from upstream is preserved verbatim —
- * including `CrudMetaview`, `CrudAdapterResolver`, `CrudOperationResolver`,
- * the `CRUD_DEFAULT_RESOLVER_TOKEN`, the `CRUD_MODULE_SETTINGS_TOKEN`
- * settings provider, and `CrudContextOverlay` itself (which the safe
- * interceptor injects to delegate attachment on real CRUD routes).
- *
- * See `SafeCrudContextInterceptor` for the rationale behind the swap.
+ * That’s great for pure CRUD apps, but in Rockets you often also have other
+ * controllers (auth, `/me`, one-off routes). The strict interceptor can throw on
+ * those, so we swap in `SafeCrudContextInterceptor` which only activates for real
+ * CRUD routes.
  */
-// TODO(upstream: concepta/nestjs-crud) — this function reaches into the
-// DynamicModule returned by CrudModule.forRoot({}), filters its provider
-// list by identity, and rebuilds it. It exists ONLY because upstream
-// registers CrudContextOverlay as a global APP_INTERCEPTOR whose resolve()
-// throws on non-CRUD handlers. When upstream makes that interceptor no-op
-// on handlers without @CrudOperation metadata, delete this function and
-// its call site above — swap to the bare CrudModule.forRoot({}) import.
+// Workaround: upstream `CrudContextOverlay` is a global `APP_INTERCEPTOR` and can
+// break non-CRUD routes. We remove the provider and replace it with a safe one.
+// Remove this once the upstream default is safe in mixed apps.
 function createSafeCrudRootModule(): DynamicModule {
   const crudRoot = CrudModule.forRoot({}) as DynamicModule;
 

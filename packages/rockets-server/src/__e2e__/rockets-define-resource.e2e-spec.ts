@@ -92,7 +92,7 @@ class TestMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
 
 // defineResource() bundle — the full subject under test. Wired through
 // RocketsModule with NO explicit entity registration for the gadget
-// entity; the bundle must auto-contribute it via aggregateResources.
+// entity; the bundle must auto-contribute it via prepareResourceRegistration.
 const gadgetResource = defineResource({
   key: 'gadget',
   entity: GadgetEntity,
@@ -126,7 +126,7 @@ describe('RocketsModule — defineResource() bundle (e2e)', () => {
             updateDto: TestMetadataUpdateDto,
           },
           // NOTE: no `repositories` entry for 'gadget' — the bundle
-          // below supplies it automatically via aggregateResources.
+          // below supplies it automatically via prepareResourceRegistration.
           resources: [gadgetResource],
         }),
       ],

@@ -9,8 +9,7 @@ import {
   RepositoryInterface,
   Where,
 } from '@bitwild/rockets-repository';
-import type { CrudContextInterface } from '@bitwild/rockets-crud';
-import { getAuthorizedUserFromCrudContext } from '@bitwild/rockets-core';
+import { getActor } from '@bitwild/rockets-core';
 import { ReminderEntity } from './reminder.entity';
 import { AppointmentEntity } from './appointment.entity';
 import { APPOINTMENT_ENTITY_KEY } from './appointment.constants';
@@ -58,15 +57,11 @@ export class ReminderOwnerScopeHook {
       | RepositoryFindOptions<PlainLiteralObject>
       | RepositoryFindOneOptions<PlainLiteralObject>,
   >(options: T, ctx?: PlainLiteralObject): Promise<T> {
-    const authUser = ctx
-      ? getAuthorizedUserFromCrudContext(
-          ctx as CrudContextInterface<PlainLiteralObject>,
-        )
-      : undefined;
-    if (!authUser?.id) return options;
+    const actor = getActor(ctx);
+    if (!actor?.id) return options;
 
     const appointments = await this.apptRepo.find({
-      where: Where.eq<AppointmentEntity>('userId', authUser.id),
+      where: Where.eq<AppointmentEntity>('userId', actor.id),
     });
     const appointmentIds = appointments.map((a) => a.id);
 

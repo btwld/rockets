@@ -1,21 +1,12 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Body,
-  Inject,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Body, Inject } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser, whitelistedFromDto } from '@bitwild/rockets-common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 import type { AuthorizedUser } from '@bitwild/rockets-core';
 import {
   UpsertUserMetadataCommand,
@@ -23,7 +14,10 @@ import {
   UserUpdateDto,
   UserResponseDto,
 } from '@bitwild/rockets-core';
-import type { UserMetadataEntityInterface } from '@bitwild/rockets-core';
+import type {
+  UserMetadataEntityInterface,
+  UserMetadataUpdatableInterface,
+} from '@bitwild/rockets-core';
 import { RocketsOptionsInterface } from '../../infrastructure/config/interfaces/rockets-options.interface';
 import { RAW_OPTIONS_TOKEN } from '../../rockets.tokens';
 
@@ -86,33 +80,15 @@ export class MeController {
     @AuthUser() user: AuthorizedUser,
     @Body() updateData: UserUpdateDto,
   ): Promise<UserResponseDto> {
-    const userMetadataData = updateData.userMetadata ?? {};
-
-    const { updateDto } = this.opts.userMetadata;
-    if (updateDto) {
-      const dtoInstance = plainToInstance(updateDto, userMetadataData);
-      const errors = await validate(dtoInstance, {
-        whitelist: true,
-        forbidNonWhitelisted: false,
-        forbidUnknownValues: true,
-        skipMissingProperties: true,
-      });
-      if (errors.length > 0) {
-        const messages = errors.flatMap((err) =>
-          Object.values(err.constraints ?? {}),
-        );
-        throw new BadRequestException({
-          statusCode: 400,
-          message: messages,
-          error: 'Bad Request',
-        });
-      }
-    }
+    const payload = (await whitelistedFromDto(
+      this.opts.userMetadata.updateDto,
+      (updateData.userMetadata ?? {}) as object,
+    )) as UserMetadataUpdatableInterface;
 
     const userMetadata = await this.commandBus.execute<
       UpsertUserMetadataCommand,
       UserMetadataEntityInterface
-    >(new UpsertUserMetadataCommand(user.id, userMetadataData));
+    >(new UpsertUserMetadataCommand(user.id, payload));
 
     return {
       ...user,

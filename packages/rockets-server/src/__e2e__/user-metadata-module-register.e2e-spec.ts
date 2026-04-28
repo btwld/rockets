@@ -9,7 +9,13 @@ import {
   INestApplication,
   ValidationPipe,
 } from '@nestjs/common';
-import { APP_GUARD, HttpAdapterHost, Reflector } from '@nestjs/core';
+import {
+  APP_GUARD,
+  APP_INTERCEPTOR,
+  HttpAdapterHost,
+  Reflector,
+} from '@nestjs/core';
+import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
 import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -92,6 +98,7 @@ class UserMetadataModuleRegisterE2eHarnessModule {
         { provide: RocketsAuthProvider, useClass: ServerAuthProviderFixture },
         Reflector,
         { provide: APP_GUARD, useClass: AuthServerGuard },
+        { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay },
         UpsertUserMetadataHandler,
         GetUserMetadataHandler,
       ],

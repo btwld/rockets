@@ -2,11 +2,9 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { PetEntity } from '../pet/pet.entity';
 
 @Entity('tags')
 export class TagEntity {
@@ -24,7 +22,4 @@ export class TagEntity {
 
   @UpdateDateColumn()
   dateUpdated!: Date;
-
-  @ManyToMany(() => PetEntity, (pet) => pet.tags)
-  pets!: PetEntity[];
 }

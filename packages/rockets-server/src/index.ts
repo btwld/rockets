@@ -79,15 +79,15 @@ export { MeController } from './gateways/http/me.controller';
 export {
   defineResource,
   createPaginatedDto,
-  aggregateResources,
-  isRocketsResourceBundle,
+  prepareResourceRegistration,
+  isGeneratedResourceDefinition,
   relation,
   createBoundRelation,
   resolveRelationTarget,
 } from '@bitwild/rockets-core';
 export type {
-  AggregatedResources,
-  RocketsResourceInput,
+  ResourceRegistrationPlan,
+  ResourceDefinitionInput,
   RocketsResourceDefinition,
   ResourceDtoConfig,
   ResourceRelationEntry,
