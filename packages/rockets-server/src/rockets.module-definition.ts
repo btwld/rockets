@@ -9,13 +9,23 @@ import {
   RocketsCoreModule,
   AuthServerGuard,
   ROCKETS_CORE_SETTINGS_TOKEN,
+  isAuthFeatureBundle,
 } from '@bitwild/rockets-core';
+import type {
+  AuthAdapterInterface,
+  AuthFeatureBundle,
+  ResourceInput,
+} from '@bitwild/rockets-core';
+import type { Type } from '@nestjs/common';
 import { MeController } from './gateways/http/me.controller';
 import { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
 import { RocketsOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-options-extras.interface';
 import { RocketsSettingsInterface } from './infrastructure/config/interfaces/rockets-settings.interface';
 import { rocketsOptionsDefaultConfig } from './infrastructure/config/rockets-options-default.config';
-import { RAW_OPTIONS_TOKEN } from './rockets.tokens';
+import {
+  RAW_OPTIONS_TOKEN,
+  ROCKETS_USER_METADATA_DTO_TOKEN,
+} from './rockets.tokens';
 
 export const {
   ConfigurableModuleClass: RocketsModuleClass,
@@ -66,20 +76,40 @@ export function createRocketsImports(options: {
   imports: NonNullable<DynamicModule['imports']>;
   extras?: RocketsOptionsExtrasInterface;
 }): NonNullable<DynamicModule['imports']> {
+  // When `auth` is an `AuthFeatureBundle` (produced by `defineAuthFeature()`),
+  // unpack it into the two values core actually consumes: the adapter
+  // class (registered/aliased to `AUTH_ADAPTER_TOKEN`) and the
+  // `ModuleResource` that owns its entity / controllers / providers
+  // (prepended to `resources[]`).
+  const { auth, extraResources } = resolveAuthExtras(options.extras?.auth);
+
   return [
     ...options.imports,
     RocketsCoreModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (opts: RocketsOptionsInterface) => ({
-        authProvider: opts.authProvider,
         swagger: opts.swagger,
       }),
-      repositories: options.extras?.repositories,
-      resources: options.extras?.resources ?? [],
+      auth,
+      userMetadata: options.extras?.userMetadata,
+      repository: options.extras?.repository,
+      resources: [...extraResources, ...(options.extras?.resources ?? [])],
       handlers: options.extras?.handlers,
       global: true,
     }),
   ];
+}
+
+function resolveAuthExtras(
+  auth: Type<AuthAdapterInterface> | AuthFeatureBundle | undefined,
+): {
+  auth: Type<AuthAdapterInterface> | undefined;
+  extraResources: ReadonlyArray<ResourceInput>;
+} {
+  if (isAuthFeatureBundle(auth)) {
+    return { auth: auth.provider, extraResources: [auth.resource] };
+  }
+  return { auth, extraResources: [] };
 }
 
 export function createRocketsControllers(options: {
@@ -128,9 +158,25 @@ export function createRocketsProviders(options: {
   providers?: Provider[];
   extras?: RocketsOptionsExtrasInterface;
 }): Provider[] {
+  const extrasUserMetadata = options.extras?.userMetadata;
   const providers: Provider[] = [
     ...(options.providers ?? []),
     createRocketsSettingsProvider(),
+    {
+      provide: ROCKETS_USER_METADATA_DTO_TOKEN,
+      useFactory: () => {
+        if (extrasUserMetadata) {
+          return {
+            updateDto: extrasUserMetadata.updateDto,
+          };
+        }
+        throw new Error(
+          'RocketsModule: user-metadata config is required. Set ' +
+            '`extras.userMetadata` to a `RocketsUserMetadataConfig` with `entity`, ' +
+            '`createDto`, and `updateDto`.',
+        );
+      },
+    },
   ];
 
   if (options.extras?.enableGlobalGuard !== false) {

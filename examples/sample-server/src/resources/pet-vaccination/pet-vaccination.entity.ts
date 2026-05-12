@@ -26,7 +26,9 @@ export class PetVaccinationEntity {
   @Column({ type: 'varchar', length: 255, nullable: false })
   petId!: string;
 
-  @ManyToOne(() => PetEntity, (pet) => pet.vaccinations, { onDelete: 'CASCADE' })
+  @ManyToOne(() => PetEntity, (pet) => pet.vaccinations, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'petId' })
   pet!: PetEntity;
 

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
 import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
@@ -14,11 +15,11 @@ import { Expose, Type } from 'class-transformer';
 import { IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
-import type { AuthProviderInterface } from '../domain/interfaces/auth-provider.interface';
+import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
 import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
 import { RocketsCoreModule } from '../rockets-core.module';
 import {
-  AUTH_PROVIDER_TOKEN,
+  AUTH_ADAPTER_TOKEN,
   USER_METADATA_MODULE_ENTITY_KEY,
 } from '../rockets-core.constants';
 import { APP_GUARD } from '@nestjs/core';
@@ -28,7 +29,7 @@ import { defineResource } from '../infrastructure/resource/define-resource';
 // ── Fixtures ──
 
 @Injectable()
-class SimpleAuthProvider implements AuthProviderInterface {
+class SimpleAuthProvider implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
     if (token === 'ok') return { id: 'u1', sub: 'u1' };
     throw new UnauthorizedException();
@@ -98,7 +99,9 @@ describe('RocketsCoreModule — resources + resourcePersistence (e2e)', () => {
         }),
         MetaRepoModule,
         RocketsCoreModule.forRoot({
-          authProvider: new SimpleAuthProvider(),
+          auth: SimpleAuthProvider,
+          providers: [SimpleAuthProvider],
+          repository: TypeOrmRepositoryModule,
           resources: [
             defineResource({
               key: 'widget',
@@ -160,14 +163,15 @@ describe('RocketsCoreModule.forRootAsync (e2e)', () => {
     if (app) await app.close();
   });
 
-  it('resolves authProvider via forRootAsync', async () => {
+  it('resolves AUTH_ADAPTER_TOKEN via forRootAsync extras', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         MetaRepoModule,
         RocketsCoreModule.forRootAsync({
-          useFactory: () => ({
-            authProvider: new SimpleAuthProvider(),
-          }),
+          useFactory: () => ({}),
+          // `auth` + `providers` are sync extras (alongside useFactory).
+          auth: SimpleAuthProvider,
+          providers: [SimpleAuthProvider],
           global: true,
         }),
       ],
@@ -177,7 +181,7 @@ describe('RocketsCoreModule.forRootAsync (e2e)', () => {
     app = moduleRef.createNestApplication();
     await app.init();
 
-    const provider = app.get(AUTH_PROVIDER_TOKEN);
+    const provider = app.get(AUTH_ADAPTER_TOKEN);
     expect(provider).toBeDefined();
     expect(provider).toHaveProperty('validateToken');
   });

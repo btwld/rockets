@@ -20,6 +20,14 @@ export class PetEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  /**
+   * Optional external reference, globally unique when set (SQLite allows
+   * multiple NULLs on a UNIQUE column). Checked in `PetCreateHandler`
+   * before insert; the column still enforces uniqueness at persistence time.
+   */
+  @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
+  uniqueRef?: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: false })
   name!: string;
 
@@ -38,7 +46,12 @@ export class PetEntity {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'varchar', length: 20, default: PetStatus.ACTIVE, nullable: false })
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: PetStatus.ACTIVE,
+    nullable: false,
+  })
   status!: PetStatus;
 
   @Column({ type: 'varchar', length: 255, nullable: false })

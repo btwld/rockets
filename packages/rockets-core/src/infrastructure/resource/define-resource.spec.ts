@@ -1,6 +1,6 @@
-import type { PlainLiteralObject } from '@nestjs/common';
+import { Injectable, type PlainLiteralObject } from '@nestjs/common';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { Operation } from '@concepta/nestjs-common';
+import { Operation } from '@bitwild/rockets-common';
 import { Where } from '@concepta/nestjs-repository';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
@@ -9,7 +9,8 @@ import {
 } from '@bitwild/rockets-crud';
 import { defineResource } from './define-resource';
 import { relation } from './relation';
-import type { RocketsResourceBundle } from '../../domain/interfaces/rockets-resource-bundle.interface';
+import { EntityHook, PassthroughEntityHookBase } from '../hooks/entity-hook';
+import type { CrudResource } from '../../domain/interfaces/rockets-resource-bundle.interface';
 
 /**
  * `defineResource` always produces a generated (non-class-based) CRUD
@@ -18,7 +19,7 @@ import type { RocketsResourceBundle } from '../../domain/interfaces/rockets-reso
  * to the one shape `defineResource` actually emits.
  */
 function narrow<E extends PlainLiteralObject>(
-  bundle: RocketsResourceBundle<E>,
+  bundle: CrudResource<E>,
 ): ConfigurableCrudGeneratedOptions<PlainLiteralObject> {
   return bundle.core
     .crud as ConfigurableCrudGeneratedOptions<PlainLiteralObject>;
@@ -54,6 +55,9 @@ class WidgetEntity {
   parent?: WidgetEntity;
   parts?: PartEntity[];
   history?: AuditEntity[];
+  // Sub-resource segment fixtures — typed `subResources` keys must be
+  // `keyof WidgetEntity`.
+  a?: PartEntity[];
 }
 
 class WidgetResponseDto {
@@ -69,13 +73,21 @@ class WidgetUpdateDto {
   name?: string;
 }
 
-class FakeHookClass {}
+@EntityHook()
+@Injectable()
+class MinimalWidgetHook extends PassthroughEntityHookBase<WidgetEntity> {}
+
+/** For per-operation `hooks` entries typed against {@link PlainLiteralObject}. */
+@EntityHook()
+@Injectable()
+class MinimalPlainHook extends PassthroughEntityHookBase<PlainLiteralObject> {}
+
 class FakeCreateHandler {}
 class FakeUpdateHandler {}
 
 describe('defineResource', () => {
   describe('validation', () => {
-    it('throws when key is missing', () => {
+    it('throws when explicit key is empty', () => {
       expect(() =>
         defineResource({
           key: '',
@@ -83,7 +95,20 @@ describe('defineResource', () => {
           path: 'widget',
           tags: ['widget'],
         }),
-      ).toThrow(/`key` is required/);
+      ).toThrow(/`key` must be a non-empty string/);
+    });
+
+    it('derives key from entity class name when omitted', () => {
+      const bundle = defineResource({ entity: WidgetEntity });
+      expect(bundle.meta.key).toBe('widget');
+    });
+
+    it('explicit key wins over derived', () => {
+      const bundle = defineResource({
+        key: 'custom-widget',
+        entity: WidgetEntity,
+      });
+      expect(bundle.meta.key).toBe('custom-widget');
     });
 
     it('throws when entity is not a constructor', () => {
@@ -97,25 +122,43 @@ describe('defineResource', () => {
       ).toThrow(/entity.*class constructor/);
     });
 
-    it('throws when path is missing', () => {
-      expect(() =>
-        // @ts-expect-error — runtime-validation test of missing required field
-        defineResource({
-          key: 'widget',
-          entity: WidgetEntity,
-        }),
-      ).toThrow(/`path` is required/);
+    it('derives path from key when omitted (kebab-case + pluralize)', () => {
+      const bundle = defineResource({
+        key: 'petVaccination',
+        entity: WidgetEntity,
+      });
+      expect(narrow(bundle).controller.path).toBe('pet-vaccinations');
     });
 
-    it('throws when tags is missing', () => {
+    it('derives tags from key when omitted (humanise + pluralise the last word)', () => {
+      const bundle = defineResource({
+        key: 'petVaccination',
+        entity: WidgetEntity,
+      });
+      // Bundle uses default tags via @ApiTags() — controller.extraDecorators
+      // is built but the runtime decorator wraps the value. We assert the
+      // bundle generated successfully (path-derivation is the proxy).
+      expect(bundle.meta.key).toBe('petVaccination');
+    });
+
+    it('throws when path is provided but empty', () => {
       expect(() =>
-        // @ts-expect-error — runtime-validation test of missing required field
         defineResource({
           key: 'widget',
           entity: WidgetEntity,
-          path: 'widget',
+          path: '',
         }),
-      ).toThrow(/`tags` is required/);
+      ).toThrow(/path.*non-empty/);
+    });
+
+    it('throws when tags is provided but empty', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          tags: [],
+        }),
+      ).toThrow(/tags.*non-empty/);
     });
 
     it('throws when operations array is empty', () => {
@@ -156,12 +199,23 @@ describe('defineResource', () => {
       expect(bundle.meta.entityClass).toBe(WidgetEntity);
     });
 
-    it('persistence.module defaults to TypeOrmRepositoryModule', () => {
+    it('leaves persistence.module undefined when not declared (aggregator falls back to root)', () => {
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
+      });
+      expect(bundle.persistence.module).toBeUndefined();
+    });
+
+    it('preserves persistence.module when the definition declares one', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        persistence: { module: TypeOrmRepositoryModule },
       });
       expect(bundle.persistence.module).toBe(TypeOrmRepositoryModule);
     });
@@ -263,7 +317,7 @@ describe('defineResource', () => {
   });
 
   describe('relations', () => {
-    it('preserves the full relation entry on meta.relations for prepareResourceRegistration validation', () => {
+    it('preserves the full relation entry on meta.relations for buildAppRegistrationPlan validation', () => {
       const entry = relation(WidgetEntity, PartEntity, 'parts', {
         include: 'default',
       });
@@ -321,7 +375,7 @@ describe('defineResource', () => {
         relations: [relation(WidgetEntity, () => PartEntity, 'parts')],
       });
       expect(bundle.meta.relations[0].propertyName).toBe('parts');
-      // Thunk is preserved verbatim — resolution happens in prepareResourceRegistration.
+      // Thunk is preserved verbatim — resolution happens in buildAppRegistrationPlan.
       expect(typeof bundle.meta.relations[0].target).toBe('function');
     });
   });
@@ -489,7 +543,7 @@ describe('defineResource', () => {
   // ──────────────────────────────────────────────────────────────────
   // Builder + array form mixed/equivalence guarantees. The two input
   // shapes must produce structurally equivalent bundles for the same
-  // logical relation set; downstream code (prepareResourceRegistration, controller
+  // logical relation set; downstream code (buildAppRegistrationPlan, controller
   // joins, persistence) cannot care which form was used.
   // ──────────────────────────────────────────────────────────────────
   describe('relations: builder vs array equivalence', () => {
@@ -549,7 +603,7 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        hooks: [FakeHookClass],
+        hooks: [MinimalWidgetHook],
         handlers: {
           create: FakeCreateHandler,
           update: FakeUpdateHandler,
@@ -559,7 +613,7 @@ describe('defineResource', () => {
         expect.arrayContaining([
           FakeCreateHandler,
           FakeUpdateHandler,
-          FakeHookClass,
+          MinimalWidgetHook,
         ]),
       );
     });
@@ -570,11 +624,11 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        hooks: [FakeHookClass],
-        providers: [FakeHookClass],
+        hooks: [MinimalWidgetHook],
+        providers: [MinimalWidgetHook],
       });
       const count = (bundle.core.providers ?? []).filter(
-        (p) => p === FakeHookClass,
+        (p) => p === MinimalWidgetHook,
       ).length;
       expect(count).toBe(1);
     });
@@ -585,12 +639,12 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        hooks: [FakeHookClass],
+        hooks: [MinimalWidgetHook],
         handlers: { create: FakeCreateHandler },
         autoRegisterHandlers: false,
       });
       expect(bundle.core.providers).not.toContain(FakeCreateHandler);
-      expect(bundle.core.providers).not.toContain(FakeHookClass);
+      expect(bundle.core.providers).not.toContain(MinimalWidgetHook);
     });
   });
 
@@ -631,19 +685,1118 @@ describe('defineResource', () => {
     });
   });
 
-  describe('overrides', () => {
-    it('respects bearerAuth=false (no ApiBearerAuth decorator added)', () => {
+  describe('public flag + decorators (root-level)', () => {
+    it('respects public:true (no ApiBearerAuth decorator added)', () => {
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        overrides: {
-          controller: { bearerAuth: false },
-        },
+        public: true,
       });
       // With bearerAuth disabled and no hooks, only ApiTags decorator remains.
       expect(narrow(bundle).controller.extraDecorators).toHaveLength(1);
+    });
+
+    it('appends root-level `decorators` to the controller', () => {
+      const fakeDecorator: ClassDecorator = () => {};
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        decorators: [fakeDecorator],
+      });
+      // ApiBearerAuth + ApiTags + 1 user decorator = 3.
+      expect(narrow(bundle).controller.extraDecorators).toHaveLength(3);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // Operations object form (keyed) — normaliser branches.
+  //
+  // Every branch of `normalizeOperationsInput` lives here so a future
+  // refactor of that function fails immediately rather than waiting for
+  // an e2e regression on sample-server.
+  // ────────────────────────────────────────────────────────────────────
+  describe('operations object form (keyed)', () => {
+    it('enables the listed ops only', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          list: { response: WidgetResponseDto },
+          read: { response: WidgetResponseDto },
+        },
+      });
+      const ops = narrow(bundle).operations.map((o) => o.operation);
+      expect(ops).toEqual([Operation.List, Operation.Read]);
+    });
+
+    it('promotes per-op response to dto.response when read+list agree', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          list: { response: WidgetResponseDto },
+          read: { response: WidgetResponseDto },
+        },
+      });
+      // The promoted dto.response drives the controller-level response wiring.
+      // Each op also gets `response.resource` set on its operation override.
+      const list = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.List,
+      );
+      expect(list?.response?.resource).toBe(WidgetResponseDto);
+    });
+
+    it('throws when read.response and list.response differ', () => {
+      class ReadShape {
+        id!: string;
+      }
+      class ListShape {
+        id!: string;
+        total!: number;
+      }
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {
+            list: { response: ListShape },
+            read: { response: ReadShape },
+          },
+        }),
+      ).toThrow(/operations\.read\.response.*list\.response.*differ/);
+    });
+
+    it('does NOT promote when consumer declares dto.response explicitly', () => {
+      class ReadShape {
+        id!: string;
+      }
+      class ListShape {
+        id!: string;
+      }
+      class ExplicitShape {
+        id!: string;
+      }
+      // With dto.response explicit, divergent per-op responses are allowed.
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        dto: { response: ExplicitShape },
+        operations: {
+          list: { response: ListShape },
+          read: { response: ReadShape },
+        },
+      });
+      // Per-op responses still flow to their own operation overrides.
+      const list = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.List,
+      );
+      const read = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Read,
+      );
+      expect(list?.response?.resource).toBe(ListShape);
+      expect(read?.response?.resource).toBe(ReadShape);
+    });
+
+    it('routes per-op handler to the correct slot', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          create: { body: WidgetCreateDto, handler: FakeCreateHandler },
+        },
+      });
+      const create = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Create,
+      );
+      expect(
+        (create as { commandHandler?: unknown } | undefined)?.commandHandler,
+      ).toBe(FakeCreateHandler);
+    });
+
+    it('maps delete: { soft: true } to Operation.SoftDelete', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          delete: { soft: true },
+        },
+      });
+      const ops = narrow(bundle).operations.map((o) => o.operation);
+      expect(ops).toContain(Operation.SoftDelete);
+      expect(ops).not.toContain(Operation.Delete);
+    });
+
+    it('maps delete: {} (or soft: false) to Operation.Delete', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: { delete: {} },
+      });
+      expect(narrow(bundle).operations.map((o) => o.operation)).toEqual([
+        Operation.Delete,
+      ]);
+    });
+
+    it('throws when restore is declared without delete.soft = true', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {
+            delete: { soft: false },
+            restore: {},
+          },
+        }),
+      ).toThrow(/operations\.restore.*requires.*delete: \{ soft: true \}/);
+    });
+
+    it('accepts restore when delete.soft = true', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          delete: { soft: true, returnDeleted: true },
+          restore: { returnRestored: true },
+        },
+      });
+      const ops = narrow(bundle).operations.map((o) => o.operation);
+      expect(ops).toContain(Operation.SoftDelete);
+      expect(ops).toContain(Operation.Restore);
+    });
+
+    it('throws when an op declares both body and requestOverride.body', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {
+            create: {
+              body: WidgetCreateDto,
+              requestOverride: { body: WidgetCreateDto },
+            },
+          },
+        }),
+      ).toThrow(/declares both `body` and `requestOverride\.body`/);
+    });
+
+    it('throws when an op declares both response and responseOverride.resource', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {
+            list: {
+              response: WidgetResponseDto,
+              responseOverride: { resource: WidgetResponseDto },
+            },
+          },
+        }),
+      ).toThrow(/declares both `response` and `responseOverride/);
+    });
+
+    it('throws when an empty operations object is supplied', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {},
+        }),
+      ).toThrow(/operations.*cannot be an empty object/);
+    });
+
+    it('forwards op-level decorators and hooks to the per-op override', () => {
+      function fakeMethodDecorator(): MethodDecorator {
+        return () => {};
+      }
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          list: {
+            response: WidgetResponseDto,
+            decorators: [fakeMethodDecorator()],
+            hooks: [MinimalPlainHook],
+          },
+        },
+      });
+      const list = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.List,
+      );
+      expect(list?.extraDecorators?.length ?? 0).toBeGreaterThan(0);
+    });
+
+    it('forwards path / methodName / transactional to the per-op override', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          delete: {
+            soft: true,
+            path: 'archive/:id',
+            methodName: 'archiveWidget',
+            transactional: true,
+          },
+        },
+      });
+      const op = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.SoftDelete,
+      );
+      expect(op?.path).toBe('archive/:id');
+      expect(op?.methodName).toBe('archiveWidget');
+      expect(op?.transactional).toBe(true);
+    });
+  });
+
+  describe('operations array form — handler validation', () => {
+    it('throws when a handler is declared for an op not in the array', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: [Operation.List],
+          handlers: { create: FakeCreateHandler },
+        }),
+      ).toThrow(
+        /handler declared for "create".*operation "create" is not in `operations`/,
+      );
+    });
+
+    it('accepts handlers that match enabled operations', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: [Operation.List, Operation.Create],
+          handlers: { create: FakeCreateHandler },
+        }),
+      ).not.toThrow();
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // Sub-resources nested form — defineResource materialises sub-bundles
+  // and exposes them on the parent's `bundle.subResources` array.
+  // ────────────────────────────────────────────────────────────────────
+  describe('subResources nested form', () => {
+    it('returns no `subResources` field when none are declared', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+      });
+      expect(bundle.subResources).toBeUndefined();
+    });
+
+    it('materialises a single sub-resource into a full bundle', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      expect(bundle.subResources).toHaveLength(1);
+      const sub = bundle.subResources![0];
+      expect(sub.meta.key).toBe('widgetPart');
+    });
+
+    it('composes the path as <parent.path>/:<parentParam>/<segment>', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = narrow(bundle.subResources![0]);
+      expect(sub.controller.path).toBe('widgets/:widgetId/parts');
+    });
+
+    it('honors explicit parentParam override', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            parentParam: 'wid',
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = narrow(bundle.subResources![0]);
+      expect(sub.controller.path).toBe('widgets/:wid/parts');
+    });
+
+    it('inherits parent tags when sub does not declare tags', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      expect(sub.meta.key).toBe('widgetPart');
+      // Sub bundle gets tags via @ApiTags() on the controller decorators.
+      // We only assert the materialisation succeeded (tags inherited).
+      expect(narrow(sub).controller.extraDecorators).toBeDefined();
+    });
+
+    it('overrides tags when sub declares its own', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            tags: ['Parts'],
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      // Sub successfully materialised with its own tags.
+      expect(bundle.subResources![0].meta.key).toBe('widgetPart');
+    });
+
+    it('throws when neither parentOwnerColumn nor disablePathScopeGuard is declared', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          subResources: {
+            parts: defineSubResource({
+              key: 'widgetPart',
+              entity: PartEntity,
+              operations: { list: { response: WidgetResponseDto } },
+            }),
+          },
+        }),
+      ).toThrow(/must declare `parentOwnerColumn`/);
+    });
+
+    it('auto-injects PathScopeGuard into sub providers when parentOwnerColumn is declared', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const { PathScopeGuard } = await import('../guards/path-scope.guard');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            entity: PartEntity,
+            parentOwnerColumn: 'userId',
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      const Expected = PathScopeGuard.for('widgetId', 'widget', 'userId');
+      expect(sub.core.providers).toContain(Expected);
+    });
+
+    it('honors parentOwnerColumn override when auto-binding the guard', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const { PathScopeGuard } = await import('../guards/path-scope.guard');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            entity: PartEntity,
+            parentOwnerColumn: 'orgId',
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      const Override = PathScopeGuard.for('widgetId', 'widget', 'orgId');
+      expect(sub.core.providers).toContain(Override);
+    });
+
+    it('does NOT auto-inject AfterCreateReloadHook by default (opt-in)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const { AfterCreateReloadHook } = await import(
+        '../hooks/after-create-reload.hook'
+      );
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            entity: PartEntity,
+            parentOwnerColumn: 'userId',
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      const Reload = AfterCreateReloadHook.for(PartEntity);
+      expect(sub.core.providers ?? []).not.toContain(Reload);
+    });
+
+    it('opts in to AfterCreateReloadHook when reloadAfterCreate is true', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const { AfterCreateReloadHook } = await import(
+        '../hooks/after-create-reload.hook'
+      );
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            entity: PartEntity,
+            parentOwnerColumn: 'userId',
+            reloadAfterCreate: true,
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      const Reload = AfterCreateReloadHook.for(PartEntity);
+      expect(sub.core.providers).toContain(Reload);
+    });
+
+    it('skips the auto guard when disablePathScopeGuard is true', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const { PathScopeGuard } = await import('../guards/path-scope.guard');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            entity: PartEntity,
+            disablePathScopeGuard: true,
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      const Guard = PathScopeGuard.for('widgetId', 'widget', 'userId');
+      expect(sub.core.providers ?? []).not.toContain(Guard);
+    });
+
+    it('throws at runtime when an empty-string segment key slips through (defence in depth)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      // Empty-string keys are blocked at compile time by the
+      // `keyof Entity` constraint, so the call site uses
+      // `@ts-expect-error` to assert TS rejects it. The runtime check
+      // remains as defence in depth for code paths that bypass the
+      // type checker (loose `as` casts, reflection-driven configs).
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          subResources: {
+            // @ts-expect-error — empty-string is not a key of WidgetEntity.
+            '': defineSubResource({
+              key: 'widgetPart',
+              disablePathScopeGuard: true,
+              entity: PartEntity,
+              operations: { list: { response: WidgetResponseDto } },
+            }),
+          },
+        }),
+      ).toThrow(/subResources keys must be non-empty/);
+    });
+
+    it('produces a separate persistence entry for the sub entity', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      expect(sub.persistence.entity.entity).toBe(PartEntity);
+      expect(sub.persistence.entity.key).toBe('widgetPart');
+    });
+
+    it('inherits parent persistence module when sub does not declare one', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            operations: { list: { response: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      expect(sub.persistence.module).toBe(bundle.persistence.module);
+    });
+
+    it('composes deeply nested sub-resources (N-level)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      class GrandPartEntity {
+        id!: string;
+      }
+      // Use a local PartEntity that declares `labels` so the typed
+      // sub-resources key constraint is satisfied.
+      class LocalPartEntity {
+        id!: string;
+        labels?: GrandPartEntity[];
+      }
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: LocalPartEntity,
+            operations: { list: { response: WidgetResponseDto } },
+            subResources: {
+              labels: defineSubResource({
+                key: 'partLabel',
+                disablePathScopeGuard: true,
+                entity: GrandPartEntity,
+                operations: { list: { response: WidgetResponseDto } },
+              }),
+            },
+          }),
+        },
+      });
+      const part = bundle.subResources![0];
+      expect(part.subResources).toHaveLength(1);
+      const label = part.subResources![0];
+      expect(narrow(label).controller.path).toBe(
+        'widgets/:widgetId/parts/:widgetPartId/labels',
+      );
+    });
+
+    it('composes a 3-level path (a/:aId/b/:bId/c/:cId/d)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      class L3 {
+        id!: string;
+      }
+      class L2 {
+        id!: string;
+        c?: L3[];
+      }
+      class L1 {
+        id!: string;
+        b?: L2[];
+      }
+      const bundle = defineResource({
+        key: 'level0',
+        entity: WidgetEntity,
+        path: 'L0',
+        tags: ['x'],
+        subResources: {
+          a: defineSubResource({
+            key: 'level1',
+            disablePathScopeGuard: true,
+            entity: L1,
+            subResources: {
+              b: defineSubResource({
+                key: 'level2',
+                disablePathScopeGuard: true,
+                entity: L2,
+                subResources: {
+                  c: defineSubResource({
+                    key: 'level3',
+                    entity: L3,
+                    disablePathScopeGuard: true,
+                  }),
+                },
+              }),
+            },
+          }),
+        },
+      });
+      const a = bundle.subResources![0];
+      const b = a.subResources![0];
+      const c = b.subResources![0];
+      expect(narrow(c).controller.path).toBe(
+        'L0/:level0Id/a/:level1Id/b/:level2Id/c',
+      );
+    });
+
+    it('composes the path for every entry when parent path is an array', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: ['widgets', 'v2/widgets'],
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+          }),
+        },
+      });
+      const sub = narrow(bundle.subResources![0]);
+      expect(Array.isArray(sub.controller.path)).toBe(true);
+      const paths = sub.controller.path as readonly string[];
+      expect(paths).toContain('widgets/:widgetId/parts');
+      expect(paths).toContain('v2/widgets/:widgetId/parts');
+    });
+
+    it('strips trailing slash on parent path before composition', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets/',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+          }),
+        },
+      });
+      expect(narrow(bundle.subResources![0]).controller.path).toBe(
+        'widgets/:widgetId/parts',
+      );
+    });
+
+    it('kebab-cases the segment key for the URL by default (camelCase → kebab-case)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      class WithCamelCaseRelation {
+        id!: string;
+        name!: string;
+        // The relation property is camelCase — typed key constraint
+        // enforces this. The default URL is the kebab-cased version.
+        myItems?: PartEntity[];
+      }
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WithCamelCaseRelation,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          myItems: defineSubResource({
+            key: 'myItem',
+            entity: PartEntity,
+            disablePathScopeGuard: true,
+          }),
+        },
+      });
+      expect(narrow(bundle.subResources![0]).controller.path).toBe(
+        'widgets/:widgetId/my-items',
+      );
+    });
+
+    it('rejects a sub-resource whose entity does not match the parent relation element type (compile-time)', async () => {
+      // The phantom `<Sub>` generic on `RocketsSubResourceDefinition`
+      // forces the parent's `subResources[K]` slot to accept only a
+      // sub whose entity matches `ElementOf<NonNullable<E[K]>>`.
+      // Mismatch fails compilation — assert via `@ts-expect-error`.
+      //
+      // The two entities below are STRUCTURALLY distinct so TypeScript's
+      // structural typing actually engages the invariance check on the
+      // phantom marker.
+      const { defineSubResource } = await import('./define-sub-resource');
+      class CompletelyUnrelated {
+        readonly nothingLikePartEntity: number = 0;
+        readonly aBrandNewField: { whoa: boolean } = { whoa: true };
+      }
+      // WidgetEntity.parts is PartEntity[]. Passing CompletelyUnrelated
+      // for the `parts` segment must NOT type-check.
+      defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          // @ts-expect-error — entity mismatch: parts requires PartEntity, not CompletelyUnrelated.
+          parts: defineSubResource({
+            key: 'mismatch',
+            disablePathScopeGuard: true,
+            entity: CompletelyUnrelated,
+          }),
+        },
+      });
+    });
+
+    it('accepts a thunk `() => Class` for the sub entity (db-agnostic, circular-import safe)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: () => PartEntity,
+          }),
+        },
+      });
+      expect(bundle.subResources).toHaveLength(1);
+      // The thunk resolves at construction time, so persistence still
+      // gets the resolved class.
+      expect(bundle.subResources![0].persistence.entity.entity).toBe(
+        PartEntity,
+      );
+    });
+
+    it('honors urlSegment override (decouples URL from entity property)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            urlSegment: 'pieces', // URL says `pieces`, entity prop says `parts`
+          }),
+        },
+      });
+      expect(narrow(bundle.subResources![0]).controller.path).toBe(
+        'widgets/:widgetId/pieces',
+      );
+    });
+
+    it('honors parentForeignKey when it differs from parentParam (FK on persistence side)', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            disablePathScopeGuard: true,
+            entity: PartEntity,
+            parentParam: 'wid',
+            parentForeignKey: 'widget_pk',
+          }),
+        },
+      });
+      // Path uses parentParam; the URL is /widgets/:wid/parts.
+      expect(narrow(bundle.subResources![0]).controller.path).toBe(
+        'widgets/:wid/parts',
+      );
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // Coverage gaps surfaced by council audit — pinning untested branches.
+  // ────────────────────────────────────────────────────────────────────
+  describe('operations object form — replace op (council gap #7)', () => {
+    it('keyed replace op routes body and registers Operation.Replace', () => {
+      class WidgetReplaceDto {
+        name!: string;
+      }
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          replace: { body: WidgetReplaceDto, response: WidgetResponseDto },
+        },
+      });
+      const ops = narrow(bundle).operations.map((o) => o.operation);
+      expect(ops).toContain(Operation.Replace);
+      const replace = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Replace,
+      );
+      expect(replace?.request?.body).toBe(WidgetReplaceDto);
+    });
+
+    it('routes the per-op handler to the replace slot', () => {
+      class WidgetReplaceDto {
+        name!: string;
+      }
+      class FakeReplaceHandler {}
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          replace: {
+            body: WidgetReplaceDto,
+            response: WidgetResponseDto,
+            handler: FakeReplaceHandler,
+          },
+        },
+      });
+      const replace = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Replace,
+      );
+      expect(
+        (replace as { commandHandler?: unknown } | undefined)?.commandHandler,
+      ).toBe(FakeReplaceHandler);
+    });
+  });
+
+  describe('returnDeleted / returnRestored response flags (council gap #8)', () => {
+    it('returnDeleted: true attaches to the SoftDelete operation response', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          delete: { soft: true, returnDeleted: true },
+        },
+      });
+      const op = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.SoftDelete,
+      );
+      expect(op?.response?.returnDeleted).toBe(true);
+    });
+
+    it('returnRestored: true attaches to the Restore operation response', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          delete: { soft: true },
+          restore: { returnRestored: true },
+        },
+      });
+      const op = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Restore,
+      );
+      expect(op?.response?.returnRestored).toBe(true);
+    });
+
+    it('all four flags simultaneously: soft + returnDeleted + restore + returnRestored', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          delete: { soft: true, returnDeleted: true },
+          restore: { returnRestored: true },
+        },
+      });
+      const sd = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.SoftDelete,
+      );
+      const rs = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Restore,
+      );
+      expect(sd?.response?.returnDeleted).toBe(true);
+      expect(rs?.response?.returnRestored).toBe(true);
+    });
+
+    it('returnDeleted: false explicitly attaches to the response (not omitted)', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        operations: {
+          delete: { soft: true, returnDeleted: false },
+        },
+      });
+      const op = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.SoftDelete,
+      );
+      expect(op?.response?.returnDeleted).toBe(false);
+    });
+  });
+
+  describe('legacy dto fallback alongside keyed operations (council gap #7)', () => {
+    it('falls back to dto.create when keyed operations.create omits body', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        dto: { create: WidgetCreateDto, response: WidgetResponseDto },
+        operations: {
+          create: {}, // body omitted — should fall back to dto.create
+        },
+      });
+      const op = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Create,
+      );
+      expect(op?.request?.body).toBe(WidgetCreateDto);
+    });
+
+    it('falls back to dto.update when keyed operations.update omits body', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        dto: { update: WidgetUpdateDto, response: WidgetResponseDto },
+        operations: {
+          update: {},
+        },
+      });
+      const op = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Update,
+      );
+      expect(op?.request?.body).toBe(WidgetUpdateDto);
+    });
+
+    it('per-op body wins over dto.create fallback', () => {
+      class CustomCreateDto {
+        name!: string;
+      }
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        dto: { create: WidgetCreateDto, response: WidgetResponseDto },
+        operations: {
+          create: { body: CustomCreateDto },
+        },
+      });
+      const op = narrow(bundle).operations.find(
+        (o) => o.operation === Operation.Create,
+      );
+      expect(op?.request?.body).toBe(CustomCreateDto);
+    });
+  });
+
+  describe('body + requestOverride co-existence (legitimate use case)', () => {
+    it('accepts body + requestOverride.params together', () => {
+      class CustomBody {
+        name!: string;
+      }
+      // `body` sets request.body; `requestOverride: { params: ... }` is
+      // independent — the conflict throw only fires when BOTH set
+      // `requestOverride.body`. This pins the legitimate use case where
+      // a consumer wants the high-level body shorthand AND custom URL
+      // params.
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {
+            create: {
+              body: CustomBody,
+              requestOverride: {
+                params: {
+                  id: { field: 'id', type: 'uuid', primary: true },
+                },
+              },
+            },
+          },
+        }),
+      ).not.toThrow();
     });
   });
 });

@@ -3,15 +3,19 @@ import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
 /**
- * When input is a loose `object` (or the DTO class is chosen at runtime), map with `Dto`,
- * run `class-validator` with whitelist, return a **plain** object. Drops unknown keys;
- * validation failures throw `BadRequestException`.
+ * When input is a loose `object` (or the DTO class is chosen at runtime),
+ * map with `dtoClass`, run `class-validator` with whitelist, and return a
+ * plain object. Drops unknown keys; validation failures throw
+ * `BadRequestException`.
+ *
+ * `T` defaults to `Record<string, unknown>` for back-compat. Pass an explicit
+ * type at the call site to skip a downstream cast (e.g.
+ * `whitelistedFromDto<RocketsAuthUserMetadataUpdatableInterface>(...)`).
  */
-export async function whitelistedFromDto(
-  Dto: Type<unknown>,
-  data: object,
-): Promise<Record<string, unknown>> {
-  const instance = plainToInstance(Dto, data, {
+export async function whitelistedFromDto<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(dtoClass: Type<unknown>, data: object): Promise<T> {
+  const instance = plainToInstance(dtoClass, data, {
     enableImplicitConversion: true,
   });
   const errors = await validate(instance as object, {
@@ -27,5 +31,5 @@ export async function whitelistedFromDto(
       error: 'Bad Request',
     });
   }
-  return instanceToPlain(instance as object) as Record<string, unknown>;
+  return instanceToPlain(instance as object) as T;
 }

@@ -6,18 +6,18 @@ import {
   Inject,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthProviderInterface } from '../../domain/interfaces/auth-provider.interface';
+import { AuthAdapterInterface } from '../../domain/interfaces/auth-adapter.interface';
 import { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
 import {
-  AUTH_PROVIDER_TOKEN,
+  AUTH_ADAPTER_TOKEN,
   ROCKETS_DISABLE_GUARDS_TOKEN,
 } from '../../rockets-core.constants';
 
 @Injectable()
 export class AuthServerGuard implements CanActivate {
   constructor(
-    @Inject(AUTH_PROVIDER_TOKEN)
-    private readonly authProvider: AuthProviderInterface,
+    @Inject(AUTH_ADAPTER_TOKEN)
+    private readonly authAdapter: AuthAdapterInterface,
     private readonly reflector: Reflector,
   ) {}
 
@@ -39,7 +39,7 @@ export class AuthServerGuard implements CanActivate {
     }
 
     try {
-      const user: AuthorizedUser = await this.authProvider.validateToken(token);
+      const user: AuthorizedUser = await this.authAdapter.validateToken(token);
       request.user = user;
       return true;
     } catch (error) {

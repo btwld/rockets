@@ -17,14 +17,16 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 import request from 'supertest';
 import type {
-  AuthProviderInterface,
+  AuthAdapterInterface,
   AuthorizedUser,
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
 import { RocketsModule } from '../rockets.module';
+import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { defineResource } from '@bitwild/rockets-core';
-import { RocketsServerE2eUserMetadataRepoModule } from './helpers/rockets-server-e2e-app.factory';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 
 // ────────────────────────────────────────────────────────────────────
 // Test Entity — a stand-alone "gadget" resource for this suite.
@@ -67,7 +69,7 @@ class GadgetResponseDto {
 }
 
 @Injectable()
-class TestAuthProvider implements AuthProviderInterface {
+class TestAuthAdapter implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
     if (token === 'valid-token') {
       return {
@@ -92,7 +94,7 @@ class TestMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
 
 // defineResource() bundle — the full subject under test. Wired through
 // RocketsModule with NO explicit entity registration for the gadget
-// entity; the bundle must auto-contribute it via prepareResourceRegistration.
+// entity; the bundle must auto-contribute it via buildAppRegistrationPlan.
 const gadgetResource = defineResource({
   key: 'gadget',
   entity: GadgetEntity,
@@ -118,15 +120,20 @@ describe('RocketsModule — defineResource() bundle (e2e)', () => {
           synchronize: true,
           dropSchema: true,
         }),
-        RocketsServerE2eUserMetadataRepoModule,
         RocketsModule.forRoot({
-          authProvider: new TestAuthProvider(),
+          auth: TestAuthAdapter,
           userMetadata: {
+            entity: StubUserMetadataEntity,
             createDto: TestMetadataCreateDto,
             updateDto: TestMetadataUpdateDto,
+            // Per-entity override — user-metadata uses the in-memory fake
+            // so this suite doesn't need to wire StubUserMetadataEntity into
+            // TypeOrmModule.forRoot.
+            repository: E2eFakeRepositoryModule,
           },
+          repository: TypeOrmRepositoryModule,
           // NOTE: no `repositories` entry for 'gadget' — the bundle
-          // below supplies it automatically via prepareResourceRegistration.
+          // below supplies it automatically via buildAppRegistrationPlan.
           resources: [gadgetResource],
         }),
       ],

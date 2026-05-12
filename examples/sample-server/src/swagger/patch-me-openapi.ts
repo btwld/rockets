@@ -34,7 +34,9 @@ export function patchMePatchOpenApi<T>(
   if (typeof rb !== 'object' || !('content' in rb) || !rb.content) return;
 
   const content = rb.content as Record<string, unknown>;
-  const json = content['application/json'] as Record<string, unknown> | undefined;
+  const json = content['application/json'] as
+    | Record<string, unknown>
+    | undefined;
   if (!json || typeof json !== 'object') return;
 
   json.schema = {

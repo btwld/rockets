@@ -18,7 +18,7 @@ import { UserRole } from '../auth/user.entity';
  * 401 in that case rather than a misleading 403.
  *
  * Admin detection reads from `userRoles[].role.name`, the shape the
- * `SampleAuthProvider.validateToken()` returns. Keep this guard aligned
+ * `SampleAuthAdapter.validateToken()` returns. Keep this guard aligned
  * with the provider if the role wiring changes.
  */
 @Injectable()
@@ -33,9 +33,7 @@ export class AdminGuard implements CanActivate {
     }
 
     const roles = user.userRoles ?? [];
-    const isAdmin = roles.some(
-      (entry) => entry?.role?.name === UserRole.ADMIN,
-    );
+    const isAdmin = roles.some((entry) => entry?.role?.name === UserRole.ADMIN);
     if (!isAdmin) {
       throw new ForbiddenException('Admin role required');
     }

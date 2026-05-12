@@ -44,7 +44,9 @@ export class PetTransferController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Transfer pet ownership to another user (owner only)' })
+  @ApiOperation({
+    summary: 'Transfer pet ownership to another user (owner only)',
+  })
   @ApiNotFoundResponse({
     description:
       'Pet not found, not owned by you, or target user does not exist',

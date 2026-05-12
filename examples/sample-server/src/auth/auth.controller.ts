@@ -14,7 +14,7 @@ import {
   IsString,
 } from 'class-validator';
 import { AuthPublic } from '@bitwild/rockets-core';
-import { SampleAuthProvider } from './auth.provider';
+import { SampleAuthAdapter } from './auth.adapter';
 import { UserRole } from './user.entity';
 
 class SignupDto {
@@ -58,7 +58,7 @@ class LoginDto {
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authProvider: SampleAuthProvider) {}
+  constructor(private readonly authAdapter: SampleAuthAdapter) {}
 
   @Post('signup')
   @AuthPublic()
@@ -69,7 +69,7 @@ export class AuthController {
     description: 'Email is already registered',
   })
   async signup(@Body() dto: SignupDto) {
-    const { user, accessToken } = await this.authProvider.signup(
+    const { user, accessToken } = await this.authAdapter.signup(
       dto.email,
       dto.password,
       dto.name,
@@ -91,6 +91,6 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Returns JWT' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() dto: LoginDto) {
-    return this.authProvider.login(dto.email, dto.password);
+    return this.authAdapter.login(dto.email, dto.password);
   }
 }

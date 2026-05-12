@@ -1,10 +1,8 @@
-import { Operation } from '@concepta/nestjs-common';
 import { defineResource } from '@bitwild/rockets';
 import { ReminderEntity } from './reminder.entity';
 import { AppointmentEntity } from './appointment.entity';
 import { ReminderResponseDto } from './appointment.dto';
 import { ReminderOwnerScopeHook } from './reminder-owner-scope.hook';
-import { REMINDER_ENTITY_KEY } from './appointment.constants';
 
 /**
  * Read-only — reminder lifecycle is owned by `AppointmentCreateHandler`
@@ -16,12 +14,13 @@ import { REMINDER_ENTITY_KEY } from './appointment.constants';
  * `reminder.entity.ts`.
  */
 export const reminderResource = defineResource({
-  key: REMINDER_ENTITY_KEY,
   entity: ReminderEntity,
-  path: 'reminders',
-  tags: ['Reminders'],
-  dto: { response: ReminderResponseDto },
-  operations: [Operation.List, Operation.Read],
+  // key / path / tags omitted — derived from `ReminderEntity` →
+  // `'reminder'` → `reminders` / `['Reminders']`.
   relations: (relation) => [relation(() => AppointmentEntity, 'appointment')],
   hooks: [ReminderOwnerScopeHook],
+  operations: {
+    list: { response: ReminderResponseDto },
+    read: { response: ReminderResponseDto },
+  },
 });

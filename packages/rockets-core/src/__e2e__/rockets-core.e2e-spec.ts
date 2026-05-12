@@ -12,13 +12,13 @@ import { APP_GUARD } from '@nestjs/core';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import request from 'supertest';
 import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
-import type { AuthProviderInterface } from '../domain/interfaces/auth-provider.interface';
+import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
 import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { AuthPublic } from '../decorators/auth-public.decorator';
 import {
-  AUTH_PROVIDER_TOKEN,
+  AUTH_ADAPTER_TOKEN,
   USER_METADATA_MODULE_ENTITY_KEY,
 } from '../rockets-core.constants';
 import { UpsertUserMetadataCommand } from '../application/commands/impl/upsert-user-metadata.command';
@@ -31,7 +31,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 // ────────────────────────────────────────────────────────────────────
 
 @Injectable()
-class MockAuthProvider implements AuthProviderInterface {
+class MockAuthAdapter implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
     if (token === 'valid') {
       return {
@@ -156,7 +156,8 @@ describe('RocketsCoreModule (e2e)', () => {
       imports: [
         TestMetadataRepoModule,
         RocketsCoreModule.forRoot({
-          authProvider: new MockAuthProvider(),
+          auth: MockAuthAdapter,
+          providers: [MockAuthAdapter],
           global: true,
         }),
       ],
@@ -271,8 +272,8 @@ describe('RocketsCoreModule (e2e)', () => {
   });
 
   describe('Module exports', () => {
-    it('AUTH_PROVIDER_TOKEN is resolvable', () => {
-      const provider = app.get(AUTH_PROVIDER_TOKEN);
+    it('AUTH_ADAPTER_TOKEN is resolvable', () => {
+      const provider = app.get(AUTH_ADAPTER_TOKEN);
       expect(provider).toBeDefined();
       expect(provider).toHaveProperty('validateToken');
     });

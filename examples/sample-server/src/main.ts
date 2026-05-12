@@ -36,9 +36,10 @@ async function bootstrap() {
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
 
-  await app.listen(3001);
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log('Sample server listening on http://localhost:3000');
+  console.log(`Sample server listening on http://localhost:${port}`);
 }
 
 bootstrap();

@@ -19,7 +19,7 @@ export const ERROR_MESSAGE_FALLBACK = 'Internal Server Error';
 export class RocketsCoreExceptionsFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
-  catch(exception: ExceptionInterface, host: ArgumentsHost): void {
+  catch(rawException: ExceptionInterface, host: ArgumentsHost): void {
     const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
 
@@ -37,10 +37,9 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
     // pre-handler validation that must surface as 4xx, prefer a NestJS
     // Guard or Pipe over a `Before*` repo hook so the `HttpException`
     // never enters the wrapping pipeline in the first place.
-    const unwrapped = this.unwrapToHttpException(exception);
-    if (unwrapped) {
-      exception = unwrapped as unknown as ExceptionInterface;
-    }
+    const unwrapped = this.unwrapToHttpException(rawException);
+    const exception: ExceptionInterface | HttpException =
+      unwrapped ?? rawException;
 
     let errorCode = 'ERROR_CODE_UNKNOWN';
     let statusCode = 500;
@@ -69,7 +68,10 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    if (exception.context?.validationErrors) {
+    if (
+      !(exception instanceof HttpException) &&
+      exception.context?.validationErrors
+    ) {
       const nestValidationPipe = new ValidationPipe();
       message = nestValidationPipe['flattenValidationErrors'](
         exception.context.validationErrors as [],

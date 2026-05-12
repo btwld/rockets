@@ -7,7 +7,6 @@ import {
   type WhereClause,
 } from '@bitwild/rockets-repository';
 import { AuditAction, AuditLogEntity } from './audit-log.entity';
-import { AUDIT_LOG_ENTITY_KEY } from './audit-log.constants';
 
 export interface AuditQueryFilter {
   readonly resource?: string;
@@ -28,7 +27,7 @@ export interface AuditListResult {
 @Injectable()
 export class AuditLogService {
   constructor(
-    @InjectDynamicRepository(AUDIT_LOG_ENTITY_KEY)
+    @InjectDynamicRepository(AuditLogEntity)
     private readonly auditRepo: RepositoryInterface<AuditLogEntity>,
   ) {}
 
@@ -50,8 +49,7 @@ export class AuditLogService {
     const rows = await this.auditRepo.find({
       ...(clauses.length
         ? {
-            where:
-              clauses.length === 1 ? clauses[0] : Where.and(...clauses),
+            where: clauses.length === 1 ? clauses[0] : Where.and(...clauses),
           }
         : {}),
       ctx,

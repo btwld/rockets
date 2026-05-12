@@ -7,9 +7,10 @@ import { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
 import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
 import { IsString, IsOptional } from 'class-validator';
 
-import { ServerAuthProviderFixture } from '../__fixtures__/providers/server-auth.provider.fixture';
-import { RocketsServerE2eUserMetadataRepoModule } from './helpers/rockets-server-e2e-app.factory';
-import { RocketsOptionsInterface } from '../infrastructure/config/interfaces/rockets-options.interface';
+import { ServerAuthAdapterFixture } from '../__fixtures__/providers/server-auth.adapter.fixture';
+import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
+import type { RocketsOptions } from '../rockets.module-definition';
+import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { RocketsModule } from '../rockets.module';
 
 import {
@@ -103,13 +104,15 @@ class UserE2eControllersModule {}
 describe('RocketsModule - User Integration (e2e)', () => {
   let app: INestApplication;
 
-  const baseOptions: RocketsOptionsInterface = {
+  const baseOptions: RocketsOptions = {
     settings: {},
-    authProvider: new ServerAuthProviderFixture(),
+    auth: ServerAuthAdapterFixture,
     userMetadata: {
+      entity: StubUserMetadataEntity,
       createDto: TestUserMetadataCreateDto,
       updateDto: TestUserMetadataUpdateDto,
     },
+    repository: E2eFakeRepositoryModule,
   };
 
   afterEach(async () => {
@@ -119,11 +122,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
   describe('User Functionality', () => {
     it('GET /user should return user data with userMetadata when userMetadata exists', async () => {
       const moduleRef = await Test.createTestingModule({
-        imports: [
-          RocketsServerE2eUserMetadataRepoModule,
-          RocketsModule.forRoot(baseOptions),
-          UserE2eControllersModule,
-        ],
+        imports: [UserE2eControllersModule, RocketsModule.forRoot(baseOptions)],
       }).compile();
 
       app = moduleRef.createNestApplication();
@@ -154,11 +153,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
 
     it('PATCH /user should create new userMetadata for user', async () => {
       const moduleRef = await Test.createTestingModule({
-        imports: [
-          RocketsServerE2eUserMetadataRepoModule,
-          RocketsModule.forRoot(baseOptions),
-          UserE2eControllersModule,
-        ],
+        imports: [UserE2eControllersModule, RocketsModule.forRoot(baseOptions)],
       }).compile();
 
       app = moduleRef.createNestApplication();
@@ -198,16 +193,17 @@ describe('RocketsModule - User Integration (e2e)', () => {
     it('should work with minimal user configuration', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          RocketsServerE2eUserMetadataRepoModule,
+          UserE2eControllersModule,
           RocketsModule.forRoot({
             settings: {},
-            authProvider: new ServerAuthProviderFixture(),
+            auth: ServerAuthAdapterFixture,
             userMetadata: {
+              entity: StubUserMetadataEntity,
               createDto: TestUserMetadataCreateDto,
               updateDto: TestUserMetadataUpdateDto,
             },
+            repository: E2eFakeRepositoryModule,
           }),
-          UserE2eControllersModule,
         ],
       }).compile();
 

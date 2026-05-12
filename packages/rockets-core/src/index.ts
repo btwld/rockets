@@ -2,19 +2,20 @@
 export { RocketsCoreModule } from './rockets-core.module';
 
 // Auth contracts
-export type { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
+export type { AuthAdapterInterface } from './domain/interfaces/auth-adapter.interface';
 export type {
   AuthorizeUserInterface,
   ValidateTokenInterface,
-} from './domain/interfaces/auth-provider.interface';
+} from './domain/interfaces/auth-adapter.interface';
 export type { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 
 // Auth tokens & guard
 export {
-  AUTH_PROVIDER_TOKEN,
+  AUTH_ADAPTER_TOKEN,
   ROCKETS_DISABLE_GUARDS_TOKEN,
 } from './rockets-core.constants';
 export { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
+export { PathScopeGuard } from './infrastructure/guards/path-scope.guard';
 
 // Decorators
 export { AuthPublic } from './decorators/auth-public.decorator';
@@ -30,7 +31,19 @@ export {
   ActorCtx,
   ActorOverlay,
 } from './infrastructure/interceptors/actor.overlay';
-export { getActor } from './utils/get-actor.helper';
+export { getActor, getCrudContext } from './utils/get-actor.helper';
+
+// Entity hook base + class decorator (typed lifecycle for repo hooks)
+export {
+  EntityHook,
+  EntityHookBase,
+  PassthroughEntityHookBase,
+  type EntityHookContext,
+  type EntityHookLifecycleKey,
+  type OwnedEntity,
+  type RocketsEntityHookForResource,
+} from './infrastructure/hooks/entity-hook';
+export type { RocketsCrudContext } from './domain/interfaces/rockets-crud-context.interface';
 
 // Reusable repository hooks
 export {
@@ -38,6 +51,7 @@ export {
   DEFAULT_OWNER_COLUMN,
 } from './infrastructure/hooks/owner-scope.hook';
 export { OwnerStampHook } from './infrastructure/hooks/owner-stamp.hook';
+export { AfterCreateReloadHook } from './infrastructure/hooks/after-create-reload.hook';
 
 // Exceptions filter
 export {
@@ -45,17 +59,47 @@ export {
   ERROR_MESSAGE_FALLBACK,
 } from './infrastructure/filters/exceptions.filter';
 
+/** Safe global substitute for upstream `CrudContextOverlay` on mixed CRUD + bespoke routes. */
+export { SafeCrudContextInterceptor } from './infrastructure/interceptors/safe-crud-context.interceptor';
+
 // Repository persistence interfaces
 export type { RepositoryPersistenceConfig } from './domain/interfaces/repository-persistence.interface';
+export type { RepositoryBootstrap } from './domain/interfaces/repository-bootstrap.interface';
+export { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.interface';
+
+// Module resource (non-CRUD persistence + Nest module slice)
 export type {
-  RocketsRepositoriesConfig,
-  RepositoryRegisterEntry,
-} from './domain/interfaces/rockets-repositories.interface';
-export { flattenRepositories } from './infrastructure/utils/flatten-repositories';
+  ModuleResource,
+  ModuleResourceEntityEntry,
+} from './domain/interfaces/module-resource.interface';
+export { ResourceKind } from './domain/interfaces/resource-kind.enum';
+export {
+  defineModuleResource,
+  isModuleResource,
+} from './infrastructure/resource/define-module-resource';
+export type { DefineModuleResourceInput } from './infrastructure/resource/define-module-resource';
+
+// Auth feature bundle (provider + module resource colocated)
+export {
+  defineAuthFeature,
+  isAuthFeatureBundle,
+} from './infrastructure/resource/define-auth-feature';
+export type {
+  AuthFeatureConfig,
+  AuthFeatureBundle,
+} from './infrastructure/resource/define-auth-feature';
 
 // Resource config & definition API
 export type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';
 export { defineResource } from './infrastructure/resource/define-resource';
+export {
+  defineSubResource,
+  isSubResourceDefinition,
+  defaultParentParam,
+  type RocketsSubResourceInput,
+} from './infrastructure/resource/define-sub-resource';
+export { PathScopeHook } from './infrastructure/hooks/path-scope.hook';
+export type { RocketsUserMetadataConfig } from './domain/interfaces/rockets-user-metadata-config.interface';
 export { createPaginatedDto } from './infrastructure/resource/paginated-dto.factory';
 export {
   relation,
@@ -67,12 +111,12 @@ export type {
   RelationOptions,
 } from './domain/interfaces/rockets-resource-definition.interface';
 export {
-  prepareResourceRegistration,
-  isGeneratedResourceDefinition,
+  buildAppRegistrationPlan,
+  isCrudResource,
 } from './infrastructure/resource/aggregate-resources';
 export type {
-  ResourceRegistrationPlan,
-  ResourceDefinitionInput,
+  AppRegistrationPlan,
+  ResourceInput,
 } from './infrastructure/resource/aggregate-resources';
 export type {
   RocketsResourceDefinition,
@@ -81,12 +125,14 @@ export type {
   ResourcePersistenceConfig as ResourcePersistenceConfigDefinition,
   ResourceHandlerOverrides,
   ResourceOperationName,
-  ResourceOperationOverride,
-  ResourceOverrides,
-  ResourceControllerOverrides,
+  ResourceOperationConfig,
+  ResourceDeleteOperationConfig,
+  ResourceRestoreOperationConfig,
+  ResourceOperationsObject,
   EntityConstructor,
+  RocketsSubResourceDefinition,
 } from './domain/interfaces/rockets-resource-definition.interface';
-export type { RocketsResourceBundle } from './domain/interfaces/rockets-resource-bundle.interface';
+export type { CrudResource } from './domain/interfaces/rockets-resource-bundle.interface';
 
 // Swagger (re-exported so consumers don't need @bitwild/rockets-common directly)
 export type { SwaggerUiOptionsInterface } from '@bitwild/rockets-common';

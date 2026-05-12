@@ -1,29 +1,30 @@
-import { Injectable, PlainLiteralObject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
-  BeforeFindAndCount,
-  BeforeFindOne,
   InjectDynamicRepository,
-  RepoHook,
-  RepositoryFindOneOptions,
-  RepositoryFindOptions,
-  RepositoryInterface,
+  type RepositoryFindOneOptions,
+  type RepositoryFindOptions,
+  type RepositoryInterface,
   Where,
   type WhereClause,
 } from '@bitwild/rockets-repository';
-import type { CrudContextInterface } from '@bitwild/rockets-crud';
 import { Operation } from '@concepta/nestjs-common';
-import { getActor } from '@bitwild/rockets-core';
+import {
+  EntityHook,
+  type EntityHookContext,
+  PassthroughEntityHookBase,
+  getActor,
+  getCrudContext,
+} from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.entity';
 import { PetShareEntity } from './pet-share.entity';
-import { PET_SHARE_ENTITY_KEY } from './pet-share.constants';
 
 /**
  * Broadens pet visibility from strict "owner-only" to "owner OR shared
  * user" for read-side operations, while keeping write-side scoping
  * (update, delete) locked to the owner.
  *
- * - `BeforeFindAndCount` (list) → owner ids ∪ pet ids shared with me.
- * - `BeforeFindOne` → same broader scope when the CRUD op is `Read`;
+ * - `beforeFindAndCount` (list) → owner ids ∪ pet ids shared with me.
+ * - `beforeFindOne` → same broader scope when the CRUD op is `Read`;
  *   narrows back to `userId = me` when the op is `Update`/`Delete`, since
  *   those route the findOne through the adapter's pre-mutation
  *   `getOneOrFail`. A shared user reading a pet succeeds; the same user
@@ -32,28 +33,28 @@ import { PET_SHARE_ENTITY_KEY } from './pet-share.constants';
  * Create is untouched — `OwnerStampHook` (paired on the resource) stamps
  * `userId` from the actor on every write.
  */
+@EntityHook({ entity: PetEntity })
 @Injectable()
-@RepoHook()
-export class PetOwnerOrSharedHook {
+export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PetEntity> {
   constructor(
-    @InjectDynamicRepository(PET_SHARE_ENTITY_KEY)
+    @InjectDynamicRepository(PetShareEntity)
     private readonly shareRepo: RepositoryInterface<PetShareEntity>,
-  ) {}
+  ) {
+    super();
+  }
 
-  @BeforeFindAndCount()
-  async scopeList(
-    options: RepositoryFindOptions<PlainLiteralObject>,
-    ctx?: PlainLiteralObject,
-  ): Promise<RepositoryFindOptions<PlainLiteralObject>> {
+  override async beforeFindAndCount(
+    options: RepositoryFindOptions<PetEntity>,
+    ctx?: EntityHookContext,
+  ): Promise<RepositoryFindOptions<PetEntity>> {
     return this.applyScope(options, ctx, { writeOnly: false });
   }
 
-  @BeforeFindOne()
-  async scopeOne(
-    options: RepositoryFindOneOptions<PlainLiteralObject>,
-    ctx?: PlainLiteralObject,
-  ): Promise<RepositoryFindOneOptions<PlainLiteralObject>> {
-    const crudCtx = ctx as CrudContextInterface | undefined;
+  override async beforeFindOne(
+    options: RepositoryFindOneOptions<PetEntity>,
+    ctx?: EntityHookContext,
+  ): Promise<RepositoryFindOneOptions<PetEntity>> {
+    const crudCtx = getCrudContext(ctx);
     const writeOps = new Set<string>([
       Operation.Update,
       Operation.Replace,
@@ -68,11 +69,11 @@ export class PetOwnerOrSharedHook {
 
   private async applyScope<
     T extends
-      | RepositoryFindOptions<PlainLiteralObject>
-      | RepositoryFindOneOptions<PlainLiteralObject>,
+      | RepositoryFindOptions<PetEntity>
+      | RepositoryFindOneOptions<PetEntity>,
   >(
     options: T,
-    ctx: PlainLiteralObject | undefined,
+    ctx: EntityHookContext | undefined,
     flags: { writeOnly: boolean },
   ): Promise<T> {
     const actor = getActor(ctx);
@@ -87,10 +88,7 @@ export class PetOwnerOrSharedHook {
       });
       const sharedPetIds = shares.map((s) => s.petId);
       if (sharedPetIds.length > 0) {
-        clause = Where.or(
-          ownerClause,
-          Where.in<PetEntity>('id', sharedPetIds),
-        );
+        clause = Where.or(ownerClause, Where.in<PetEntity>('id', sharedPetIds));
       }
     }
 

@@ -1,10 +1,10 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { IsOptional, IsString } from 'class-validator';
 import type {
-  AuthProviderInterface,
+  AuthAdapterInterface,
   AuthorizedUser,
 } from '@bitwild/rockets-core';
 import type {
@@ -12,7 +12,8 @@ import type {
   UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
 import { RocketsModule } from '../rockets.module';
-import { RocketsServerE2eUserMetadataRepoModule } from './helpers/rockets-server-e2e-app.factory';
+import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 
 // ────────────────────────────────────────────────────────────────────
 // DTO Fixtures
@@ -37,7 +38,7 @@ class UserMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
  * Validates base64-encoded JSON tokens.
  */
 @Injectable()
-class FirebaseAuthProviderFixture implements AuthProviderInterface {
+class FirebaseAuthAdapterFixture implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
     if (token.startsWith('firebase:')) {
       const payload = token.substring('firebase:'.length);
@@ -62,7 +63,7 @@ class FirebaseAuthProviderFixture implements AuthProviderInterface {
  * Validates simple "apikey:<key>" tokens.
  */
 @Injectable()
-class ApiKeyAuthProviderFixture implements AuthProviderInterface {
+class ApiKeyAuthProviderFixture implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
     if (token === 'apikey:service-account-123') {
       return {
@@ -91,16 +92,17 @@ function createFirebaseToken(payload: {
   );
 }
 
-function buildApp(authProvider: AuthProviderInterface) {
+function buildApp(adapter: Type<AuthAdapterInterface>) {
   return Test.createTestingModule({
     imports: [
-      RocketsServerE2eUserMetadataRepoModule,
       RocketsModule.forRoot({
-        authProvider,
+        auth: adapter,
         userMetadata: {
+          entity: StubUserMetadataEntity,
           createDto: UserMetadataCreateDto,
           updateDto: UserMetadataUpdateDto,
         },
+        repository: E2eFakeRepositoryModule,
       }),
     ],
   }).compile();
@@ -115,7 +117,7 @@ describe('RocketsModule — Multi Auth Provider (e2e)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-      const moduleRef = await buildApp(new FirebaseAuthProviderFixture());
+      const moduleRef = await buildApp(FirebaseAuthAdapterFixture);
       app = moduleRef.createNestApplication();
       await app.init();
     });
@@ -188,7 +190,7 @@ describe('RocketsModule — Multi Auth Provider (e2e)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-      const moduleRef = await buildApp(new ApiKeyAuthProviderFixture());
+      const moduleRef = await buildApp(ApiKeyAuthProviderFixture);
       app = moduleRef.createNestApplication();
       await app.init();
     });
@@ -236,8 +238,8 @@ describe('RocketsModule — Multi Auth Provider (e2e)', () => {
 
     beforeAll(async () => {
       const [fbModule, akModule] = await Promise.all([
-        buildApp(new FirebaseAuthProviderFixture()),
-        buildApp(new ApiKeyAuthProviderFixture()),
+        buildApp(FirebaseAuthAdapterFixture),
+        buildApp(ApiKeyAuthProviderFixture),
       ]);
       firebaseApp = fbModule.createNestApplication();
       apiKeyApp = akModule.createNestApplication();

@@ -13,9 +13,10 @@ import {
 import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
 import { IsString, IsOptional } from 'class-validator';
 
-import { ServerAuthProviderFixture } from '../__fixtures__/providers/server-auth.provider.fixture';
-import { RocketsServerE2eUserMetadataRepoModule } from './helpers/rockets-server-e2e-app.factory';
-import { RocketsOptionsInterface } from '../infrastructure/config/interfaces/rockets-options.interface';
+import { ServerAuthAdapterFixture } from '../__fixtures__/providers/server-auth.adapter.fixture';
+import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
+import type { RocketsOptions } from '../rockets.module-definition';
+import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { RocketsModule } from '../rockets.module';
 
 import {
@@ -109,13 +110,15 @@ class UserMetadataE2eControllersModule {}
 describe('RocketsModule - UserMetadata Integration (e2e)', () => {
   let app: INestApplication;
 
-  const baseOptions: RocketsOptionsInterface = {
+  const baseOptions: RocketsOptions = {
     settings: {},
-    authProvider: new ServerAuthProviderFixture(),
+    auth: ServerAuthAdapterFixture,
     userMetadata: {
+      entity: StubUserMetadataEntity,
       createDto: TestUserMetadataCreateDto,
       updateDto: TestUserMetadataUpdateDto,
     },
+    repository: E2eFakeRepositoryModule,
   };
 
   afterEach(async () => {
@@ -126,9 +129,8 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
     it('GET /me should return user data with userMetadata when userMetadata exists', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          RocketsServerE2eUserMetadataRepoModule,
-          RocketsModule.forRoot(baseOptions),
           UserMetadataE2eControllersModule,
+          RocketsModule.forRoot(baseOptions),
         ],
       }).compile();
 
@@ -161,9 +163,8 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
     it('PATCH /me should create new userMetadata for user', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          RocketsServerE2eUserMetadataRepoModule,
-          RocketsModule.forRoot(baseOptions),
           UserMetadataE2eControllersModule,
+          RocketsModule.forRoot(baseOptions),
         ],
       }).compile();
 
@@ -204,16 +205,17 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
     it('should work with minimal userMetadata configuration', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [
-          RocketsServerE2eUserMetadataRepoModule,
+          UserMetadataE2eControllersModule,
           RocketsModule.forRoot({
             settings: {},
-            authProvider: new ServerAuthProviderFixture(),
+            auth: ServerAuthAdapterFixture,
             userMetadata: {
+              entity: StubUserMetadataEntity,
               createDto: TestUserMetadataCreateDto,
               updateDto: TestUserMetadataUpdateDto,
             },
+            repository: E2eFakeRepositoryModule,
           }),
-          UserMetadataE2eControllersModule,
         ],
       }).compile();
 
@@ -237,10 +239,7 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
   describe('CQRS dispatch via CommandBus/QueryBus', () => {
     it('CommandBus should dispatch UpsertUserMetadataCommand to the registered handler', async () => {
       const moduleRef = await Test.createTestingModule({
-        imports: [
-          RocketsServerE2eUserMetadataRepoModule,
-          RocketsModule.forRoot(baseOptions),
-        ],
+        imports: [RocketsModule.forRoot(baseOptions)],
       }).compile();
 
       app = moduleRef.createNestApplication();
@@ -263,10 +262,7 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
 
     it('QueryBus should dispatch GetUserMetadataQuery to the registered handler', async () => {
       const moduleRef = await Test.createTestingModule({
-        imports: [
-          RocketsServerE2eUserMetadataRepoModule,
-          RocketsModule.forRoot(baseOptions),
-        ],
+        imports: [RocketsModule.forRoot(baseOptions)],
       }).compile();
 
       app = moduleRef.createNestApplication();

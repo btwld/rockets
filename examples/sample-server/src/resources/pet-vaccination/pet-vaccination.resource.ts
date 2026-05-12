@@ -1,4 +1,3 @@
-import { Operation } from '@concepta/nestjs-common';
 import { defineResource } from '@bitwild/rockets';
 import { PetVaccinationEntity } from './pet-vaccination.entity';
 import { PetEntity } from '../pet/pet.entity';
@@ -6,7 +5,6 @@ import {
   PetVaccinationCreateDto,
   PetVaccinationResponseDto,
 } from './pet-vaccination.dto';
-import { PET_VACCINATION_ENTITY_KEY } from './pet-vaccination.constants';
 
 /**
  * Pet vaccination resource.
@@ -21,19 +19,18 @@ import { PET_VACCINATION_ENTITY_KEY } from './pet-vaccination.constants';
  * `pet-vaccination.entity.ts`.
  */
 export const petVaccinationResource = defineResource({
-  key: PET_VACCINATION_ENTITY_KEY,
   entity: PetVaccinationEntity,
-  path: 'pet-vaccinations',
-  tags: ['Pet Vaccinations'],
-  dto: {
-    response: PetVaccinationResponseDto,
-    create: PetVaccinationCreateDto,
-  },
-  operations: [
-    Operation.List,
-    Operation.Read,
-    Operation.Create,
-    Operation.Delete,
-  ],
+  // key / path / tags omitted — derived from the entity class name:
+  // `PetVaccinationEntity` → `petVaccination` → `pet-vaccinations` /
+  // `['Pet Vaccinations']` (kebab-case + pluralize).
   relations: (relation) => [relation(() => PetEntity, 'pet')],
+  operations: {
+    list: { response: PetVaccinationResponseDto },
+    read: { response: PetVaccinationResponseDto },
+    create: {
+      body: PetVaccinationCreateDto,
+      response: PetVaccinationResponseDto,
+    },
+    delete: {},
+  },
 });

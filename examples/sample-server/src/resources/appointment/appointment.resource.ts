@@ -1,14 +1,14 @@
-import { Operation } from '@concepta/nestjs-common';
 import { defineResource } from '@bitwild/rockets';
 import { OwnerScopeHook } from '@bitwild/rockets-core';
 import { AppointmentEntity } from './appointment.entity';
+
+const AppointmentOwnerScope = OwnerScopeHook.for(AppointmentEntity);
 import { ReminderEntity } from './reminder.entity';
 import {
   AppointmentCreateDto,
   AppointmentResponseDto,
 } from './appointment.dto';
 import { AppointmentCreateHandler } from './appointment-create.handler';
-import { APPOINTMENT_ENTITY_KEY } from './appointment.constants';
 
 /**
  * Create is handled by `AppointmentCreateHandler`, which wraps an
@@ -18,21 +18,19 @@ import { APPOINTMENT_ENTITY_KEY } from './appointment.constants';
  * a single PATCH.
  */
 export const appointmentResource = defineResource({
-  key: APPOINTMENT_ENTITY_KEY,
   entity: AppointmentEntity,
-  path: 'appointments',
-  tags: ['Appointments'],
-  dto: {
-    response: AppointmentResponseDto,
-    create: AppointmentCreateDto,
-  },
-  operations: [
-    Operation.List,
-    Operation.Read,
-    Operation.Create,
-    Operation.Delete,
-  ],
+  // key / path / tags omitted — derived from `AppointmentEntity` →
+  // `'appointment'` → `appointments` / `['Appointments']`.
   relations: (relation) => [relation(ReminderEntity, 'reminders')],
-  hooks: [OwnerScopeHook],
-  handlers: { create: AppointmentCreateHandler },
+  hooks: [AppointmentOwnerScope],
+  operations: {
+    list: { response: AppointmentResponseDto },
+    read: { response: AppointmentResponseDto },
+    create: {
+      body: AppointmentCreateDto,
+      response: AppointmentResponseDto,
+      handler: AppointmentCreateHandler,
+    },
+    delete: {},
+  },
 });

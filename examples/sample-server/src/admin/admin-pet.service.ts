@@ -7,7 +7,6 @@ import {
   Where,
 } from '@bitwild/rockets-repository';
 import { PetEntity } from '../resources/pet/pet.entity';
-import { PET_ENTITY_KEY } from '../resources/pet/pet.constants';
 
 export interface ListParams {
   readonly withDeleted: boolean;
@@ -31,7 +30,7 @@ export interface ListResult {
 @Injectable()
 export class AdminPetService {
   constructor(
-    @InjectDynamicRepository(PET_ENTITY_KEY)
+    @InjectDynamicRepository(PetEntity)
     private readonly petRepo: RepositoryInterface<PetEntity>,
     private readonly txScope: TransactionScope,
   ) {}
@@ -63,10 +62,7 @@ export class AdminPetService {
     return pet;
   }
 
-  async forceRestore(
-    ctx: AppContextInterface,
-    id: string,
-  ): Promise<PetEntity> {
+  async forceRestore(ctx: AppContextInterface, id: string): Promise<PetEntity> {
     return this.txScope.run(ctx, async () => {
       const pet = await this.petRepo.findOne({
         where: Where.eq<PetEntity>('id', id),

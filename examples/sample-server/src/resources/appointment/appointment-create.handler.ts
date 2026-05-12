@@ -21,13 +21,8 @@ import {
 } from '@bitwild/rockets-repository';
 import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.entity';
-import { PET_ENTITY_KEY } from '../pet/pet.constants';
 import { AppointmentEntity } from './appointment.entity';
 import { ReminderEntity } from './reminder.entity';
-import {
-  APPOINTMENT_ENTITY_KEY,
-  REMINDER_ENTITY_KEY,
-} from './appointment.constants';
 
 type AppointmentCreatePayload = PlainLiteralObject & {
   petId: string;
@@ -46,13 +41,13 @@ type AppointmentCreatePayload = PlainLiteralObject & {
 @Injectable()
 export class AppointmentCreateHandler extends CrudCommandHandler<PlainLiteralObject> {
   constructor(
-    @InjectCrudAdapter(APPOINTMENT_ENTITY_KEY)
+    @InjectCrudAdapter(AppointmentEntity)
     readonly crudAdapter: CrudAdapter<PlainLiteralObject>,
-    @InjectDynamicRepository(APPOINTMENT_ENTITY_KEY)
+    @InjectDynamicRepository(AppointmentEntity)
     private readonly apptRepo: RepositoryInterface<AppointmentEntity>,
-    @InjectDynamicRepository(REMINDER_ENTITY_KEY)
+    @InjectDynamicRepository(ReminderEntity)
     private readonly reminderRepo: RepositoryInterface<ReminderEntity>,
-    @InjectDynamicRepository(PET_ENTITY_KEY)
+    @InjectDynamicRepository(PetEntity)
     private readonly petRepo: RepositoryInterface<PetEntity>,
     private readonly txScope: TransactionScope,
   ) {

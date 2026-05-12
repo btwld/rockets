@@ -74,7 +74,7 @@ export function createBoundRelation<S extends object>(
 
 /**
  * Resolve the target class of a relation entry, calling the lazy thunk
- * exactly once. Used internally by `prepareResourceRegistration` and
+ * exactly once. Used internally by `buildAppRegistrationPlan` and
  * `defineResource` when they need the concrete class without forcing
  * every caller to re-implement the class-vs-thunk discriminator.
  *

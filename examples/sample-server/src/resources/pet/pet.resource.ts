@@ -1,65 +1,99 @@
-import { defineResource } from '@bitwild/rockets';
-import { Operation } from '@concepta/nestjs-common';
+import { defineResource, defineSubResource } from '@bitwild/rockets';
 import { OwnerStampHook } from '@bitwild/rockets-core';
 import { PetEntity } from './pet.entity';
-import { PET_ENTITY_KEY } from './pet.constants';
 import { PetCreateDto, PetUpdateDto, PetResponseDto } from './pet.dto';
 import { PetOwnerOrSharedHook } from '../pet-share/pet-owner-or-shared.hook';
 import { AuditLogHook } from '../../audit/audit-log.hook';
 import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
 import { PetTagEntity } from './pet-tag.entity';
+import { TagEntity } from '../tag/tag.entity';
+import { PetTagCreateDto, PetTagResponseDto } from './pet-tag.dto';
 import { PetCreatedEventHook } from '../../events/pet-created-event.hook';
+import { PetCreateHandler } from './pet-create.handler';
+import { PetTagCreateHandler } from './pet-tag-create.handler';
+
+const PetOwnerStamp = OwnerStampHook.for(PetEntity);
+const PetAuditLogHook = AuditLogHook.for(PetEntity);
 
 /**
  * Hook stack and what each one owns:
  *
- * - {@link OwnerStampHook} — `BeforeCreate`/`BeforeUpdate` stamp `userId`
- *   from the actor and reject spoofing. Replaces the previous
- *   `PetCreateHandler` whose only job was injecting `userId` from the
- *   authenticated request.
- * - {@link PetOwnerOrSharedHook} — `BeforeFindAndCount` / `BeforeFindOne`
+ * - {@link OwnerStampHook} — `beforeCreate`/`beforeUpdate` stamp `userId`
+ *   from the actor and reject spoofing.
+ * - {@link PetOwnerOrSharedHook} — `beforeFindAndCount` / `beforeFindOne`
  *   broaden read scope to "owner OR shared user" while keeping writes
  *   strict-owner.
- * - {@link AuditLogHook} — `AfterCreate` / `AfterUpdate` / `AfterDelete`
+ * - {@link AuditLogHook} — `afterCreate` / `afterUpdate` / `afterSoftDelete`
  *   write to the audit trail.
- * - {@link PetCreatedEventHook} — `AfterCreate` publishes
+ * - {@link PetCreatedEventHook} — `afterCreate` publishes
  *   `PetCreatedEvent` for downstream listeners (welcome email).
  *
- * Tag attachment lives on the dedicated junction resource at
- * `/pets/:petId/tags`; this resource never touches the M:N pair.
+ * Pet ↔ Tag many-to-many is exposed as a nested sub-resource at
+ * `/pets/:petId/tags`. `defineSubResource` composes the path, declares
+ * `request.params: { id, petId }`, applies `@ApiParam(:petId)` on every
+ * op, and auto-injects a `PathScopeHook` that filters reads by `petId`
+ * and stamps the FK on creates — eliminating the per-junction
+ * boilerplate that previously lived in a separate `pet-tag.resource.ts`.
  */
 export const petResource = defineResource({
-  key: PET_ENTITY_KEY,
   entity: PetEntity,
-  path: 'pets',
-  tags: ['Pets'],
-  dto: {
-    response: PetResponseDto,
-    create: PetCreateDto,
-    update: PetUpdateDto,
-  },
-  operations: [
-    Operation.List,
-    Operation.Read,
-    Operation.Create,
-    Operation.Update,
-    Operation.SoftDelete,
-    Operation.Restore,
-  ],
+  // path / tags omitted — derived as `pets` / `['Pets']` from the key.
   relations: (relation) => [
     relation(PetVaccinationEntity, 'vaccinations'),
     relation(PetTagEntity, 'petTags'),
   ],
   hooks: [
-    OwnerStampHook,
+    PetOwnerStamp,
     PetOwnerOrSharedHook,
-    AuditLogHook,
+    PetAuditLogHook,
     PetCreatedEventHook,
   ],
-  overrides: {
-    operations: {
-      [Operation.SoftDelete]: { response: { returnDeleted: true } },
-      [Operation.Restore]: { response: { returnRestored: true } },
+  operations: {
+    list: { response: PetResponseDto },
+    read: { response: PetResponseDto },
+    create: {
+      body: PetCreateDto,
+      response: PetResponseDto,
+      handler: PetCreateHandler,
     },
+    update: { body: PetUpdateDto, response: PetResponseDto },
+    delete: { soft: true, returnDeleted: true },
+    restore: { returnRestored: true },
+  },
+  subResources: {
+    // The key MUST be a property of `PetEntity` — `petTags` is the
+    // junction relation declared on the entity. The URL segment is
+    // overridden to `tags` for a friendlier route (default would be
+    // kebab-cased `pet-tags`). The sub's entity type is inferred from
+    // the `entity` field — no need to repeat it as a generic.
+    petTags: defineSubResource({
+      entity: PetTagEntity,
+      tags: ['Pet Tags'],
+      urlSegment: 'tags',
+      // `parentOwnerColumn` is required: the auto guard checks that
+      // the actor owns the parent pet. `userId` matches PetEntity's
+      // ownership column.
+      parentOwnerColumn: 'userId',
+      // Eager `tag` relation needs reloading because TypeORM `save()`
+      // omits eager loads. Opt-in to keep the cost explicit.
+      reloadAfterCreate: true,
+      relations: (relation) => [
+        relation(() => PetEntity, 'pet'),
+        relation(() => TagEntity, 'tag'),
+      ],
+      // PathScopeHook (filter by :petId, stamp petId on create) and
+      // PathScopeGuard (authenticated actor + parent owner check) are
+      // auto-injected by defineSubResource.
+      operations: {
+        list: { response: PetTagResponseDto },
+        read: { response: PetTagResponseDto },
+        create: {
+          body: PetTagCreateDto,
+          response: PetTagResponseDto,
+          handler: PetTagCreateHandler,
+        },
+        delete: {},
+      },
+    }),
   },
 });

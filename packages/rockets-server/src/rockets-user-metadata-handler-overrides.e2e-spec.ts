@@ -2,10 +2,10 @@ import { INestApplication, Injectable } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
-import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
+import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
+import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
 import { UserMetadataEntityFixture } from './__fixtures__/entities/user-metadata.entity.fixture';
-import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
+import type { RocketsOptions } from './rockets.module-definition';
 import {
   type UserMetadataCreatableInterface,
   type UserMetadataEntityInterface,
@@ -77,13 +77,15 @@ class E2eCustomUpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandl
 describe('RocketsModule user metadata handler overrides (e2e)', () => {
   let app: INestApplication;
 
-  const baseOptions: RocketsOptionsInterface = {
+  const baseOptions: RocketsOptions = {
     settings: {},
-    authProvider: new ServerAuthProviderFixture(),
+    auth: ServerAuthAdapterFixture,
     userMetadata: {
+      entity: UserMetadataEntityFixture,
       createDto: OverrideMetadataCreateDto,
       updateDto: OverrideMetadataUpdateDto,
     },
+    repository: E2eFakeRepositoryModule,
   };
 
   afterEach(async () => {
@@ -95,7 +97,6 @@ describe('RocketsModule user metadata handler overrides (e2e)', () => {
   it('uses custom GetUserMetadataHandler for GET /me', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        RocketsServerE2eUserMetadataRepoModule,
         RocketsModule.forRoot({
           ...baseOptions,
           handlers: {
@@ -122,7 +123,6 @@ describe('RocketsModule user metadata handler overrides (e2e)', () => {
   it('uses custom UpsertUserMetadataHandler for PATCH /me', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        RocketsServerE2eUserMetadataRepoModule,
         RocketsModule.forRoot({
           ...baseOptions,
           handlers: {
@@ -156,10 +156,7 @@ describe('RocketsModule user metadata handler overrides (e2e)', () => {
 
   it('default handlers still run when handlers option is omitted', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [
-        RocketsServerE2eUserMetadataRepoModule,
-        RocketsModule.forRoot(baseOptions),
-      ],
+      imports: [RocketsModule.forRoot(baseOptions)],
     }).compile();
 
     app = moduleRef.createNestApplication();

@@ -1,8 +1,8 @@
 import type { PlainLiteralObject, Provider, Type } from '@nestjs/common';
-import type { Operation } from '@concepta/nestjs-common';
+import type { RocketsEntityHookForResource } from '../../infrastructure/hooks/entity-hook';
+import type { Operation } from '@bitwild/rockets-common';
+import type { ResourceKind } from './resource-kind.enum';
 import type {
-  CrudResolverInterface,
-  CrudAdapterProvider,
   CrudRequestConfig,
   CrudResponseConfig,
 } from '@bitwild/rockets-crud';
@@ -78,12 +78,12 @@ export type EntityConstructor<T = unknown> = (abstract new (
  *    distinct filter on the repository layer.
  *
  * `target` is a **class reference** (or a `() => Class` thunk for circular
- * imports). At `prepareResourceRegistration` time the class is resolved to a
+ * imports). At `buildAppRegistrationPlan` time the class is resolved to a
  * registered persistence key — either from another `defineResource()`
- * bundle or from `repositories.entities`. Class-as-target gives you
- * compile-time errors if you typo the entity, and `propertyName` is
- * narrowed to `keyof Source` so misspelled property names also fail at
- * compile time.
+ * bundle, from a `defineModuleResource({ entities: [...] })` row, or from
+ * `userMetadata.entity`. Class-as-target gives you compile-time errors if
+ * you typo the entity, and `propertyName` is narrowed to `keyof Source`
+ * so misspelled property names also fail at compile time.
  *
  * Cardinality (1:1 / 1:N / N:1 / M:N) and inverse-side wiring are inferred
  * by the persistence adapter from the entity's own metadata — no
@@ -203,111 +203,234 @@ export interface ResourceHandlerOverrides {
 }
 
 /**
- * Per-operation override. Lets the consumer change anything we
- * auto-select: command/query class, request/response config, extra
- * decorators, transactional behavior, route path, method name.
+ * Per-operation configuration for the keyed `operations` form.
  *
- * `request` and `response` are typed directly against the upstream
- * `@bitwild/rockets-crud` shapes — no local mirror.
+ * Co-locates everything the consumer can override for a single operation:
+ * request body DTO, response DTO, custom command/query handler, op-specific
+ * hooks, route path/method-name, transactional behavior, and any extra
+ * decorators. Keeping it in one block per operation is the AI-friendly,
+ * grep-friendly shape — no need to cross-reference `dto`, `handlers`, and
+ * `overrides.operations` to understand "what does POST do".
  *
- * The interface is intentionally **not** generic in the entity type.
- * `CrudRequestConfig<T>` carries `T` in an invariant position (via
- * `CrudParamsOptionsInterface<T>`), which would force consumers to type
- * every downstream utility with the same entity. The practical typing
- * wins — `request.body: Type<CreateDto>` — still flow through without
- * the interface-level generic.
+ * Every field is optional. Missing values fall back to the resource-level
+ * `dto` (for `body` / `response` / `paginated`) and to the framework's
+ * default command/query class.
  */
-export interface ResourceOperationOverride {
-  readonly query?: Type;
-  readonly command?: Type;
-  readonly request?: CrudRequestConfig<PlainLiteralObject>;
-  readonly response?: CrudResponseConfig;
-  readonly extraDecorators?: readonly (MethodDecorator | ClassDecorator)[];
-  readonly transactional?: boolean;
-  readonly path?: string | string[];
-  readonly methodName?: string;
+export interface ResourceOperationConfig {
+  /** Request body DTO. Falls back to `definition.dto.{create,update,replace}`. */
+  readonly body?: Type;
+  /** Single-item response DTO. Falls back to `definition.dto.response`. */
+  readonly response?: Type;
+  /** Paginated response DTO (auto-generated if omitted when needed). */
+  readonly paginated?: Type;
+  /** Custom command/query handler class. */
+  readonly handler?: Type;
   /** Hook classes applied to this operation only (via `@UseHooks`). */
-  readonly hooks?: readonly Type[];
-}
-
-/**
- * Controller-level escape hatches. Use these when the generated defaults
- * don't fit — every field here overrides the auto-derived value.
- *
- * `adapter`, `request`, and `response` are typed against
- * `PlainLiteralObject` to match the non-generic storage shape of
- * `RocketsResourceConfig`. Upstream's own `CrudAdapterProvider<T>` is
- * invariant in T, so narrowing the override to the consumer's entity
- * and then widening to the storage shape is not expressible without a
- * cast. Keeping the overrides at `PlainLiteralObject` mirrors what the
- * framework does internally and avoids the invariance cascade.
- */
-export interface ResourceControllerOverrides {
-  /** Set `false` to remove the default `@ApiBearerAuth()` decorator */
-  readonly bearerAuth?: boolean;
-  /** Override the operation resolver (default: CrudOperationResolver) */
-  readonly resolver?: Type<CrudResolverInterface>;
-  /** Override the repository adapter at the controller level */
-  readonly adapter?: CrudAdapterProvider<PlainLiteralObject>;
-  /** Toggle transactional wrapping for all mutating operations */
+  readonly hooks?: readonly RocketsEntityHookForResource<PlainLiteralObject>[];
+  /** Extra method-level decorators applied to this operation route. */
+  readonly decorators?: readonly (MethodDecorator | ClassDecorator)[];
+  /** Override the route path for this operation (e.g. `restore/:id`). */
+  readonly path?: string | string[];
+  /** Override the controller method name. */
+  readonly methodName?: string;
+  /** Wrap this operation in a transaction. */
   readonly transactional?: boolean;
-  /** Extra class-level decorators applied after the generated ones */
-  readonly extraDecorators?: readonly ClassDecorator[];
-  /** Full-response override (merged over auto-derived response) */
-  readonly response?: CrudResponseConfig;
-  /** Full-request override (merged over auto-derived request) */
-  readonly request?: CrudRequestConfig<PlainLiteralObject>;
+  /**
+   * Low-level request override. Use when the auto-derived request shape
+   * (body from `body`, params from URL) doesn't fit and you need full
+   * control over `params` / `query` shapes.
+   */
+  readonly requestOverride?: CrudRequestConfig<PlainLiteralObject>;
+  /**
+   * Low-level response override. Use only when something other than
+   * `response` / `paginated` needs to change (e.g. `serialization`,
+   * `collection`).
+   */
+  readonly responseOverride?: CrudResponseConfig;
 }
 
 /**
- * Top-level overrides passed to `defineResource()`. Each field is an
- * escape hatch — provide it to override or merge with the auto-generated
- * configuration.
+ * `delete` operation configuration.
+ *
+ * | Field            | Behaviour                                              |
+ * | ---------------- | ------------------------------------------------------ |
+ * | `soft: false` (default) | Hard delete — `Operation.Delete`. Row is removed permanently. Response: 204 No Content. |
+ * | `soft: true`     | Soft delete — `Operation.SoftDelete`. Row is marked deleted via the `@DeleteDateColumn` (TypeORM) or equivalent adapter mechanism. Default response: 204 No Content. |
+ * | `returnDeleted: true` (with `soft: true`) | Response: 200 OK with the soft-deleted entity body. Useful for clients that need the timestamp. |
+ *
+ * `restore` lives in its own top-level key — it is only valid when
+ * paired with `delete: { soft: true }`.
  */
-export interface ResourceOverrides {
-  /** Controller-level overrides (path, tags, bearer, resolver, …) */
-  readonly controller?: ResourceControllerOverrides;
-  /** Per-operation overrides */
-  readonly operations?: Partial<
-    Record<ResourceOperationName, ResourceOperationOverride>
-  >;
+export interface ResourceDeleteOperationConfig extends ResourceOperationConfig {
+  /** Soft delete vs hard delete. Default: `false` (hard). */
+  readonly soft?: boolean;
+  /**
+   * When `true`, the response is `200 OK` with the soft-deleted entity body
+   * (including the `dateDeleted` timestamp). Default: `false`, which keeps
+   * the response at `204 No Content`. Only meaningful when `soft: true`.
+   */
+  readonly returnDeleted?: boolean;
 }
+
+/**
+ * `restore` operation configuration. Only valid when the resource also
+ * declares `delete: { soft: true }` — `defineResource()` throws otherwise.
+ *
+ * | Field             | Behaviour                                              |
+ * | ----------------- | ------------------------------------------------------ |
+ * | `returnRestored: true` | Response: 200 OK with the restored entity body. |
+ * | `returnRestored: false` (default) | Response: 204 No Content. |
+ */
+export interface ResourceRestoreOperationConfig
+  extends ResourceOperationConfig {
+  /**
+   * When `true`, the response is `200 OK` with the restored entity body.
+   * Default: `false` → `204 No Content`.
+   */
+  readonly returnRestored?: boolean;
+}
+
+/**
+ * Keyed operations form — the recommended shape for `defineResource`.
+ *
+ * Every field is optional; declaring a key opts the operation in. Order
+ * of declaration is preserved (used to control route order in upstream
+ * NestJS-CRUD).
+ *
+ * | Key       | Generated CRUD operation                 |
+ * | --------- | ---------------------------------------- |
+ * | `list`    | `Operation.List`                         |
+ * | `read`    | `Operation.Read`                         |
+ * | `create`  | `Operation.Create`                       |
+ * | `update`  | `Operation.Update`                       |
+ * | `replace` | `Operation.Replace`                      |
+ * | `delete`  | `Operation.Delete` (or SoftDelete if `soft: true`) |
+ * | `restore` | `Operation.Restore` (requires `delete.soft: true`) |
+ *
+ * @example
+ * ```ts
+ * defineResource<PetEntity>({
+ *   // ...
+ *   operations: {
+ *     list:   { response: PetDto },
+ *     read:   { response: PetDto },
+ *     create: { body: PetCreateDto, response: PetDto, handler: PetCreateHandler },
+ *     update: { body: PetUpdateDto, response: PetDto },
+ *     delete: { soft: true, returnDeleted: true },
+ *     restore: { returnRestored: true },
+ *   },
+ * });
+ * ```
+ */
+export interface ResourceOperationsObject {
+  readonly list?: ResourceOperationConfig;
+  readonly read?: ResourceOperationConfig;
+  readonly create?: ResourceOperationConfig;
+  readonly update?: ResourceOperationConfig;
+  readonly replace?: ResourceOperationConfig;
+  readonly delete?: ResourceDeleteOperationConfig;
+  readonly restore?: ResourceRestoreOperationConfig;
+}
+
+// ResourceOverrides / ResourceControllerOverrides / ResourceOperationOverride
+// were intentionally removed. Their fields collapse cleanly:
+//
+//   - Per-op `body` / `response` / `handler` / `hooks` / `decorators` /
+//     `path` / `methodName` / `transactional` / `request` /
+//     `responseOverride` live on `ResourceOperationConfig` (keyed
+//     operations form).
+//   - Controller-level `extraDecorators` (the only field with real
+//     consumer usage) became the root-level `decorators` field on
+//     `RocketsResourceDefinition`.
+//   - The bearer-auth toggle moved to root-level `public?: boolean`
+//     (default `false` — bearer required).
+//
+// The other rarely-used fields (resolver / adapter / response / request
+// / transactional at the controller level) were dropped from the public
+// API. They were speculative complexity with zero consumers in the
+// monorepo. If a real case appears we add a single dedicated field
+// rather than an open-ended `overrides` bag.
 
 /**
  * Declarative resource definition. Pass this to `defineResource()` to
- * receive a ready-to-consume `RocketsResourceBundle`.
+ * receive a ready-to-consume `CrudResource`.
  *
  * Required fields: `key`, `entity`, `path`, `tags`. Everything else is
  * either derived from supplied DTOs (request/response shapes) or
  * configured via `overrides`.
  */
 export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
-  /** Repository key. Used for dynamic-repository lookup and relation targets. */
-  readonly key: string;
+  /**
+   * Repository key. Used for dynamic-repository lookup and relation
+   * targets.
+   *
+   * **Optional.** Derived from `entity` via `deriveEntityKey()` when
+   * omitted — strip trailing `Entity`, lowercase first char (e.g.
+   * `PetTagEntity` → `'petTag'`). Declare explicitly when:
+   *  - the derived key would collide with another resource
+   *  - you want a namespaced key (e.g. `'billing/invoice'`)
+   *  - the class name is awkward (`URLEntity` → `'uRL'`)
+   */
+  readonly key?: string;
   /** Entity class — drives type safety and auto-registration. */
   readonly entity: Type<E>;
   /**
-   * HTTP route path(s) for the generated controller. Required — consumers
-   * must declare the path explicitly so there is no hidden mapping between
-   * a camelCase entity key and a pluralized URL.
+   * HTTP route path(s) for the generated controller.
    *
-   * Example: `path: 'pet-vaccinations'` for key `petVaccination`.
+   * **Optional.** Defaults to `pluralize(kebab-case(key))` — e.g.
+   * `petVaccination` → `pet-vaccinations`. Declare explicitly when:
+   * - you want a non-conventional URL (legacy mounts, versioned paths)
+   * - the entity needs multiple aliased paths (`path: ['v1/pets', 'pets']`)
+   *
+   * The default uses the `pluralize` library so irregular plurals
+   * (`person → people`, `category → categories`) work out of the box.
    */
-  readonly path: string | string[];
+  readonly path?: string | string[];
   /**
-   * Swagger tag(s) applied to the generated controller. Required — no
-   * automatic humanisation/pluralisation.
+   * Swagger tag(s) applied to the generated controller.
    *
-   * Example: `tags: ['Pet Vaccinations']` for key `petVaccination`.
+   * **Optional.** Defaults to a humanised + pluralised version of `key`
+   * — e.g. `petVaccination` → `Pet Vaccinations`. Declare explicitly
+   * when you want non-conventional Swagger grouping.
    */
-  readonly tags: readonly string[];
+  readonly tags?: readonly string[];
   /** DTOs for request/response. Paginated DTO auto-generated if omitted. */
   readonly dto?: ResourceDtoConfig;
   /**
-   * Operations to expose. Defaults to
-   * `[List, Read, Create, Update, Delete]` when omitted.
+   * Operations to expose.
+   *
+   * Two equivalent shapes:
+   *
+   * 1. **Keyed object (recommended).** One block per operation, holding
+   *    body/response/handler/hooks/decorators inline. AI-friendly and
+   *    grep-friendly:
+   *
+   * ```ts
+   * operations: {
+   *   list: { response: PetDto },
+   *   create: {
+   *     body: PetCreateDto,
+   *     response: PetDto,
+   *     handler: PetCreateHandler,
+   *   },
+   *   delete: { soft: true, returnDeleted: true },
+   *   restore: { returnRestored: true },
+   * }
+   * ```
+   *
+   * 2. **Operation array (low-level escape hatch).** Lists which operations
+   *    to enable; per-op DTO/handler/decorator config must come from
+   *    `dto`, `handlers`, and `overrides.operations` separately.
+   *
+   * ```ts
+   * operations: [Operation.List, Operation.Read, Operation.Create]
+   * ```
+   *
+   * Defaults to `[List, Read, Create, Update, Delete]` when omitted.
    */
-  readonly operations?: readonly ResourceOperationName[];
+  readonly operations?:
+    | readonly ResourceOperationName[]
+    | ResourceOperationsObject;
   /**
    * Unified cross-resource relations. Two equivalent forms are accepted:
    *
@@ -342,7 +465,7 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
    */
   readonly persistence?: ResourcePersistenceConfig;
   /** Repository hook classes applied via `@UseHooks` at the controller level. */
-  readonly hooks?: readonly Type[];
+  readonly hooks?: readonly RocketsEntityHookForResource<E>[];
   /** Custom handler class per operation (overrides the defaults). */
   readonly handlers?: ResourceHandlerOverrides;
   /**
@@ -361,6 +484,202 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
    * via `providers`. Defaults to `true`.
    */
   readonly autoRegisterHandlers?: boolean;
-  /** Full override escape hatch. */
-  readonly overrides?: ResourceOverrides;
+  /**
+   * Class-level decorators applied to the auto-generated controller
+   * AFTER the framework's default ones (`@ApiBearerAuth`, `@ApiTags`,
+   * `@UseHooks`).
+   *
+   * Use this for controller-wide concerns: extra `@UseGuards()`,
+   * `@UseInterceptors()`, custom Swagger decorators, throttle, etc.
+   *
+   * For per-operation (method-level) decorators use
+   * `operations.X.decorators` instead.
+   *
+   * @example
+   * ```ts
+   * defineResource({
+   *   key: 'pet',
+   *   entity: PetEntity,
+   *   path: 'pets',
+   *   tags: ['Pets'],
+   *   decorators: [UseGuards(MyGuard), UseInterceptors(MyInterceptor)],
+   * });
+   * ```
+   */
+  readonly decorators?: readonly ClassDecorator[];
+  /**
+   * Controller-level CRUD request config. Sets the URL `params` shape
+   * that upstream `@concepta/nestjs-crud` validates against the route's
+   * `:tokens`. Default:
+   *
+   * ```ts
+   * { params: { id: { field: 'id', type: 'uuid', primary: true } } }
+   * ```
+   *
+   * Set this explicitly when:
+   *
+   * - the resource path carries extra `:tokens` beyond the conventional
+   *   `:id` (sub-resources auto-compose this for you).
+   * - the primary key is not `id` or not a uuid.
+   *
+   * Per-operation `operations.X.request` (escape hatch on
+   * {@link ResourceOperationConfig.request}) takes precedence over this
+   * controller-level default.
+   */
+  readonly request?: CrudRequestConfig<PlainLiteralObject>;
+  /**
+   * When `true`, removes the default `@ApiBearerAuth()` decorator from
+   * the generated controller — the routes still pass through whatever
+   * global `AuthServerGuard` policy applies, but the OpenAPI spec stops
+   * advertising bearer-auth requirements. Default: `false` (bearer auth
+   * documented).
+   *
+   * Combine with `@AuthPublic()` on individual operations (or via
+   * `operations.X.decorators`) for routes that genuinely allow
+   * unauthenticated access.
+   */
+  readonly public?: boolean;
+  /**
+   * Sub-resources nested under this resource's URL.
+   *
+   * **Keys are constrained to relation properties on the parent entity
+   * `E`.** A typo in the segment key fails compilation: only string-typed
+   * properties of `E` are accepted. This guarantees the URL segment
+   * matches a real relation field on the entity (e.g. `petTags`, `tags`).
+   *
+   * Each value is the result of {@link defineSubResource}. The parent's
+   * primary-key param (`:petId` for a `pet` parent) is auto-prepended:
+   *
+   * ```ts
+   * subResources: { tags: defineSubResource({ ... }) }
+   * // -> /pets/:petId/tags (parent.path + ':petId' + 'tags')
+   * ```
+   *
+   * `defineResource()` materialises each sub spec into a full bundle
+   * with composed `path`, `request.params`, and `@ApiParam` decorators
+   * for the parent param. Sub-resources can themselves nest sub-resources.
+   *
+   * The parent param name defaults to `${parent.key}Id` (camelCase
+   * entity key + "Id"). Override per-sub via
+   * {@link RocketsSubResourceDefinition.parentParam}.
+   */
+  readonly subResources?: Readonly<{
+    readonly [K in Extract<keyof E, string>]?: SubResourceForKey<E, K>;
+  }>;
 }
+
+/**
+ * The opaque value returned by `defineSubResource()`. Carries the full
+ * sub-definition plus the parent-param override, but defers path
+ * composition to the parent's `defineResource()` call.
+ *
+ * Consumers do not construct this directly — use `defineSubResource()`.
+ *
+ * The interface is intentionally **non-generic in the entity type** at
+ * the storage level. `defineSubResource<E>()` accepts and validates
+ * `<E>` at construction time; once stored in a parent's `subResources`
+ * map, the entity generic is erased so a single map can hold sub specs
+ * for many distinct entity types without forcing the parent to thread
+ * each child's type through. Hook tokens on the inner definition still
+ * follow {@link RocketsEntityHookForResource} at authoring time; the
+ * stored shape widens to `PlainLiteralObject` here so one map can hold
+ * many child entity kinds. Runtime validation (relation targets, key
+ * collisions) runs at startup.
+ */
+export interface RocketsSubResourceDefinition<
+  Sub extends PlainLiteralObject = PlainLiteralObject,
+> {
+  readonly kind: ResourceKind.Sub;
+  /**
+   * Phantom type marker. `Sub` appears in both contravariant
+   * (`in: (x: Sub) => void`) and covariant (`out: () => Sub`) positions.
+   * With `strictFunctionTypes`, the combination forces **invariance** —
+   * two sub-resource definitions are only type-compatible when their
+   * entity types match exactly. The field is non-optional at the type
+   * level so TS actually engages the variance check; the runtime value
+   * is never set (`defineSubResource()` casts past it).
+   *
+   * Never read at runtime.
+   */
+  readonly __sub: {
+    readonly in: (x: Sub) => void;
+    readonly out: () => Sub;
+  };
+  /**
+   * Override the parent-param name appended to the URL. Defaults to
+   * `${parent.key}Id` (e.g. parent key `pet` → `:petId`).
+   */
+  readonly parentParam?: string;
+  /**
+   * Foreign-key column on the sub-entity that joins back to the parent.
+   * Defaults to the same name as `parentParam` (most junction/child
+   * tables follow `<parent>Id` for both URL param and FK column).
+   */
+  readonly parentForeignKey?: string;
+  /**
+   * URL segment override. The `subResources` object key (constrained to
+   * `keyof Parent`) drives type-safety; this field decouples the URL
+   * shape from that name when they need to differ.
+   *
+   * Default: `kebab-case(subResourcesKey)` — e.g. parent key `petTags`
+   * → URL segment `pet-tags`. Override when the URL should be
+   * different (e.g. `tags` while the entity property is `petTags`).
+   */
+  readonly urlSegment?: string;
+  /**
+   * Parent owner column for the auto-injected `PathScopeGuard`.
+   * Default: `userId`.
+   */
+  readonly parentOwnerColumn?: string;
+  /**
+   * Disable the auto-injected `PathScopeGuard`.
+   */
+  readonly disablePathScopeGuard?: boolean;
+  /**
+   * Enable the auto-injected `AfterCreateReloadHook` (off by default).
+   */
+  readonly reloadAfterCreate?: boolean;
+  /**
+   * The full resource definition minus `path` (composed by the parent).
+   * Erased to `PlainLiteralObject` at the storage layer; the original
+   * `<Sub>` is recovered by the phantom `__sub` marker for
+   * compile-time matching against the parent's relation property type.
+   */
+  readonly definition: Omit<
+    RocketsResourceDefinition<PlainLiteralObject>,
+    'path' | 'tags'
+  > & {
+    readonly tags?: readonly string[];
+  };
+}
+
+/**
+ * Element type extractor used to narrow the parent property `E[K]` to
+ * its element type for sub-resource entity matching.
+ *
+ * Examples:
+ * - `ElementOf<TagEntity[]>` = `TagEntity`
+ * - `ElementOf<TagEntity>` = `TagEntity`
+ * - `ElementOf<TagEntity | undefined>` = `TagEntity` (unwraps undefined)
+ */
+export type ElementOf<T> = T extends ReadonlyArray<infer U>
+  ? U
+  : NonNullable<T>;
+
+/**
+ * Constraint applied to each entry in a parent resource's
+ * `subResources[K]` map. Forces the sub's entity to match the element
+ * type of the relation property `K` on the parent entity `E`.
+ *
+ * If `E[K]` is not a `PlainLiteralObject`-compatible shape, the
+ * constraint widens to `RocketsSubResourceDefinition<PlainLiteralObject>`
+ * so the call site still type-checks (e.g. when the property is a
+ * primitive — though using such a key as a sub-resource segment is
+ * always a programming error).
+ */
+export type SubResourceForKey<
+  E extends PlainLiteralObject,
+  K extends keyof E,
+> = ElementOf<NonNullable<E[K]>> extends PlainLiteralObject
+  ? RocketsSubResourceDefinition<ElementOf<NonNullable<E[K]>>>
+  : RocketsSubResourceDefinition<PlainLiteralObject>;

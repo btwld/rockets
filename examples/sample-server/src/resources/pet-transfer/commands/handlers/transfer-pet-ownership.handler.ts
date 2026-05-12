@@ -11,11 +11,8 @@ import {
   Where,
 } from '@bitwild/rockets-repository';
 import { PetEntity } from '../../../pet/pet.entity';
-import { PET_ENTITY_KEY } from '../../../pet/pet.constants';
 import { PetShareEntity } from '../../../pet-share/pet-share.entity';
-import { PET_SHARE_ENTITY_KEY } from '../../../pet-share/pet-share.constants';
 import { UserEntity } from '../../../../auth/user.entity';
-import { USER_ENTITY_KEY } from '../../../../auth/auth.constants';
 import { TransferPetOwnershipCommand } from '../impl/transfer-pet-ownership.command';
 import { PetTransferredEvent } from '../../events/pet-transferred.event';
 
@@ -46,11 +43,11 @@ export class TransferPetOwnershipHandler
   implements ICommandHandler<TransferPetOwnershipCommand, PetEntity>
 {
   constructor(
-    @InjectDynamicRepository(PET_ENTITY_KEY)
+    @InjectDynamicRepository(PetEntity)
     private readonly petRepo: RepositoryInterface<PetEntity>,
-    @InjectDynamicRepository(PET_SHARE_ENTITY_KEY)
+    @InjectDynamicRepository(PetShareEntity)
     private readonly shareRepo: RepositoryInterface<PetShareEntity>,
-    @InjectDynamicRepository(USER_ENTITY_KEY)
+    @InjectDynamicRepository(UserEntity)
     private readonly userRepo: RepositoryInterface<UserEntity>,
     private readonly txScope: TransactionScope,
     private readonly eventBus: EventBus,

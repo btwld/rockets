@@ -21,7 +21,10 @@ export class PetVaccinationDto {
   dateAdministered!: string;
 
   @Expose()
-  @ApiPropertyOptional({ description: 'Expiration date', example: '2025-01-15' })
+  @ApiPropertyOptional({
+    description: 'Expiration date',
+    example: '2025-01-15',
+  })
   @IsString()
   @IsOptional()
   dateExpires?: string;

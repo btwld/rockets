@@ -16,18 +16,17 @@ import { RepositoryModule } from '@bitwild/rockets-repository';
 import { CrudModule, CrudContextOverlay } from '@bitwild/rockets-crud';
 import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
 import type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';
+import { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.interface';
 import { SafeCrudContextInterceptor } from './infrastructure/interceptors/safe-crud-context.interceptor';
-import { flattenRepositories } from './infrastructure/utils/flatten-repositories';
 import {
-  prepareResourceRegistration,
-  type ResourceRegistrationPlan,
+  buildAppRegistrationPlan,
+  type AppRegistrationPlan,
 } from './infrastructure/resource/aggregate-resources';
 import {
-  AUTH_PROVIDER_TOKEN,
+  AUTH_ADAPTER_TOKEN,
   ROCKETS_CORE_SETTINGS_TOKEN,
 } from './rockets-core.constants';
 import { RAW_OPTIONS_TOKEN } from './rockets-core.tokens';
-import { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
 import { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';
 import { RocketsCoreOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-core-options-extras.interface';
 import { RocketsCoreSettingsInterface } from './infrastructure/config/interfaces/rockets-core-settings.interface';
@@ -62,10 +61,10 @@ export type RocketsCoreAsyncOptions = typeof ROCKETS_CORE_ASYNC_OPTIONS_TYPE;
  *   wires the async `RAW_OPTIONS_TOKEN` factory. **We must keep that first** —
  *   otherwise options injection silently breaks.
  * - On top of that, Rockets adds the “Rockets stack” (CQRS, hooks, repos, CRUD, swagger)
- *   and a little startup validation for `resources` (`prepareResourceRegistration`).
+ *   and a little startup validation for `resources` (`buildAppRegistrationPlan`).
  *
  * What it does, in order:
- * 1) `prepareResourceRegistration` → figures out the CRUD configs to import and which
+ * 1) `buildAppRegistrationPlan` → figures out the CRUD configs to import and which
  *    entity repos must exist for the generated resources.
  * 2) `createCoreImports` → registers supporting modules + the CRUD + swagger wiring.
  * 3) `createCoreProviders` → auth provider, global interceptors, core CQRS handlers, etc.
@@ -81,28 +80,31 @@ function definitionTransform(
     exports: defExports = [],
   } = definition;
 
-  // Figure out the CRUD configs to register + the repository wiring plan.
-  //
-  // We also pass `repositories` in so relations can point at “extra” entities
-  // that don’t have their own `defineResource()` (junction tables, lookup rows, etc.).
-  const resourcePlan = prepareResourceRegistration({
-    resourceDefinitions: extras.resources ?? [],
-    repositories: extras.repositories,
+  // Figure out the CRUD configs to register + the repository wiring plan +
+  // any Nest module slices contributed by `defineModuleResource()` bundles.
+  // Relation targets resolve through the entity index built from every
+  // bundle's entities + `userMetadata.entity`, so junction tables and
+  // lookup rows declared via `defineModuleResource({ entities: [...] })`
+  // are first-class targets.
+  const plan = buildAppRegistrationPlan({
+    resources: extras.resources ?? [],
+    repository: extras.repository,
+    userMetadata: extras.userMetadata,
   });
 
   return {
     ...definition,
     global: extras.global ?? true,
-    imports: [...defImports, ...createCoreImports(extras, resourcePlan)],
-    controllers: [], // ⛔ NO controllers — ever
-    providers: createCoreProviders({ providers, extras, resourcePlan }),
-    exports: createCoreExports({ exports: defExports, resourcePlan }),
+    imports: [...defImports, ...createCoreImports(extras, plan)],
+    controllers: [],
+    providers: createCoreProviders({ providers, extras, plan }),
+    exports: createCoreExports({ exports: defExports, plan }),
   };
 }
 
 function createCoreImports(
   extras: RocketsCoreOptionsExtrasInterface,
-  resourcePlan: ResourceRegistrationPlan,
+  plan: AppRegistrationPlan,
 ): NonNullable<DynamicModule['imports']> {
   const imports: NonNullable<DynamicModule['imports']> = [
     CqrsModule.forRoot(),
@@ -113,24 +115,40 @@ function createCoreImports(
     RepositoryModule.forRoot({}),
   ];
 
-  // `repositories` is the user’s “extra tables” list: userMetadata + more entities
-  if (extras.repositories) {
-    const persistence = flattenRepositories(extras.repositories);
-    for (const entry of persistence) {
-      imports.push(RepositoryModule.forFeature(entry));
-    }
+  // Bootstrap-aware adapter: when the root `repository` knows how to
+  // create its own connection (e.g. wraps `TypeOrmModule.forRoot`), pull
+  // every entity it owns from the registration plan and forward them.
+  // Per-entity adapter overrides on bundles are filtered out, so a
+  // mixed-store app only bootstraps the entities that actually live
+  // under the root adapter.
+  if (isRepositoryBootstrap(extras.repository)) {
+    const rootEntities = plan.entityRegistrations
+      .filter((entry) => entry.module === extras.repository)
+      .flatMap((entry) => entry.entities.map((row) => row.entity));
+    imports.push(extras.repository.forRoot(rootEntities));
   }
 
-  // Extra tables implied by `defineResource()` (only the generated path supplies this)
-  for (const entry of resourcePlan.repositoryPersistence) {
+  // Single registration pipeline: every dynamic-repository row (from
+  // `defineResource()` bundles, `defineModuleResource()` bundles, and
+  // `extras.userMetadata.entity`) was already grouped per adapter inside
+  // `buildAppRegistrationPlan`. One `RepositoryModule.forFeature`
+  // import per adapter group.
+  for (const entry of plan.entityRegistrations) {
     imports.push(RepositoryModule.forFeature(entry));
+  }
+
+  // Nest module slices contributed by `defineModuleResource()`. Each is an
+  // inline DynamicModule so the consumer composes the feature at the
+  // call site instead of writing a `@Module` class just to host metadata.
+  for (const featureModule of plan.nestModules) {
+    imports.push(featureModule);
   }
 
   // CRUD routes. Upstream `CrudModule` ships a very strict request interceptor; we
   // replace it with a safer one so non-CRUD controllers still work in the same app.
-  if (resourcePlan.resources.length) {
+  if (plan.crudResources.length) {
     imports.push(createSafeCrudRootModule());
-    for (const resource of resourcePlan.resources) {
+    for (const resource of plan.crudResources) {
       imports.push(CrudModule.forFeature(resource));
     }
   }
@@ -163,18 +181,26 @@ function createCoreSettingsProvider(): Provider {
 function createCoreProviders(options: {
   providers?: Provider[];
   extras?: RocketsCoreOptionsExtrasInterface;
-  resourcePlan: ResourceRegistrationPlan;
+  plan: AppRegistrationPlan;
 }): Provider[] {
-  return [
+  const providers: Provider[] = [
     ...(options.providers ?? []),
     createCoreSettingsProvider(),
     Reflector,
-    {
-      provide: AUTH_PROVIDER_TOKEN,
-      inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (opts: RocketsCoreOptionsInterface): AuthProviderInterface =>
-        opts.authProvider,
-    },
+  ];
+
+  if (options.extras?.auth) {
+    // Auto-register the adapter as a provider AND alias the public
+    // token to it via `useExisting`, so consumers do not need a manual
+    // `providers: [...]` step.
+    providers.push(options.extras.auth, {
+      provide: AUTH_ADAPTER_TOKEN,
+      useExisting: options.extras.auth,
+    });
+  }
+
+  return [
+    ...providers,
     AuthServerGuard,
     // Makes the authenticated user available to the CRUD system (`@AuthUser()` in upstream v8).
     // (When you use the full auth module, that module may register the same thing — don’t double up.)
@@ -185,27 +211,38 @@ function createCoreProviders(options: {
     options.extras?.handlers?.upsertUserMetadata ?? UpsertUserMetadataHandler,
     options.extras?.handlers?.getUserMetadata ?? GetUserMetadataHandler,
     ...(options.extras?.providers ?? []),
-    ...extractResourceProviders(options.resourcePlan.resources),
+    ...extractResourceProviders(options.plan.crudResources),
   ];
 }
 
 function createCoreExports(options: {
   exports: DynamicModule['exports'];
-  resourcePlan: ResourceRegistrationPlan;
+  plan: AppRegistrationPlan;
 }): DynamicModule['exports'] {
   const exports: NonNullable<DynamicModule['exports']> = [
     ...(options.exports ?? []),
     ConfigModule,
     RAW_OPTIONS_TOKEN,
-    AUTH_PROVIDER_TOKEN,
+    AUTH_ADAPTER_TOKEN,
     ROCKETS_CORE_SETTINGS_TOKEN,
     AuthServerGuard,
   ];
 
   // Re-export per-resource providers (custom handlers, hooks) so the rest of the
   // app can inject them without importing every feature module twice.
-  for (const resource of options.resourcePlan.resources) {
+  for (const resource of options.plan.crudResources) {
     exports.push(...(resource.providers ?? []));
+  }
+
+  // Re-export each `defineModuleResource()` slice as a whole module so its
+  // own `exports` propagate outward. Nest does not allow re-exporting a
+  // provider from a transitively-imported module by class reference — it
+  // does allow re-exporting the imported module, which carries its
+  // exported providers along. Without this, a provider exported by a
+  // module resource would be invisible to the `inject: [...]` factory of
+  // `RocketsModule.forRootAsync`.
+  for (const featureModule of options.plan.nestModules) {
+    exports.push(featureModule);
   }
 
   return exports;

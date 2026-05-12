@@ -25,7 +25,17 @@ export * from '@concepta/nestjs-crud';
 export { CrudQueryHandler } from '@concepta/nestjs-crud/dist/application/queries/handlers/crud-query.handler';
 export { CrudCommandHandler } from '@concepta/nestjs-crud/dist/application/commands/handlers/crud-command.handler';
 export { CrudWithBodyCommandHandler } from '@concepta/nestjs-crud/dist/application/commands/handlers/crud-with-body-command.handler';
+export { CrudMetaview } from '@concepta/nestjs-crud/dist/infrastructure/services/crud-metaview.service';
 
 /** Request/response config shapes consumed by `defineResource` overrides (not on upstream barrel). */
 export type { CrudRequestConfig } from '@concepta/nestjs-crud/dist/infrastructure/request/interfaces/crud-request-config.interface';
 export type { CrudResponseConfig } from '@concepta/nestjs-crud/dist/infrastructure/request/interfaces/crud-response-config.interface';
+export type { CrudParamOptionInterface } from '@concepta/nestjs-crud/dist/infrastructure/interfaces/crud-param-option.interface';
+export type { CrudParamsOptionsInterface } from '@concepta/nestjs-crud/dist/infrastructure/interfaces/crud-params-options.interface';
+
+/**
+ * Shadow upstream `InjectCrudAdapter` with a class-aware variant.
+ * String form remains identical to upstream; class form derives the key
+ * via `deriveEntityKey()`.
+ */
+export { InjectCrudAdapter } from './decorators/inject-crud-adapter.decorator';

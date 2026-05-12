@@ -7,16 +7,17 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import { FailingAuthProviderFixture } from './__fixtures__/providers/failing-auth.provider.fixture';
-import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
-import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
-import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
+import { FailingAuthAdapterFixture } from './__fixtures__/providers/failing-auth.adapter.fixture';
+import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
+import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
+import type { RocketsOptions } from './rockets.module-definition';
+import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
 import {
   type UserMetadataCreatableInterface,
   type UserMetadataModelUpdatableInterface,
 } from './domain/interfaces/user-metadata.interface';
 import { RocketsModule } from './rockets.module';
-import { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
+import { AuthAdapterInterface } from './domain/interfaces/auth-adapter.interface';
 import { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 
 class MetadataCreateDto implements UserMetadataCreatableInterface {
@@ -54,7 +55,7 @@ class MetadataUpdateNullConstraintsDto
   badField?: string;
 }
 
-class NoMetadataAuthProvider implements AuthProviderInterface {
+class NoMetadataAuthProvider implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
     if (token === 'no-metadata-token') {
       return {
@@ -73,13 +74,15 @@ class NoMetadataAuthProvider implements AuthProviderInterface {
   }
 }
 
-const baseOptions: RocketsOptionsInterface = {
+const baseOptions: RocketsOptions = {
   settings: {},
-  authProvider: new ServerAuthProviderFixture(),
+  auth: ServerAuthAdapterFixture,
   userMetadata: {
+    entity: StubUserMetadataEntity,
     createDto: MetadataCreateDto,
     updateDto: MetadataUpdateDto,
   },
+  repository: E2eFakeRepositoryModule,
 };
 
 describe('MeController contract (e2e)', () => {
@@ -93,10 +96,7 @@ describe('MeController contract (e2e)', () => {
 
   it('PATCH /me returns 400 when dynamic userMetadata fails class-validator', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [
-        RocketsServerE2eUserMetadataRepoModule,
-        RocketsModule.forRoot(baseOptions),
-      ],
+      imports: [RocketsModule.forRoot(baseOptions)],
     }).compile();
 
     app = moduleRef.createNestApplication();
@@ -121,10 +121,9 @@ describe('MeController contract (e2e)', () => {
   it('GET /me returns 401 when auth provider rejects token', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        RocketsServerE2eUserMetadataRepoModule,
         RocketsModule.forRoot({
           ...baseOptions,
-          authProvider: new FailingAuthProviderFixture(),
+          auth: FailingAuthAdapterFixture,
         }),
       ],
     }).compile();
@@ -141,10 +140,9 @@ describe('MeController contract (e2e)', () => {
   it('GET /me returns empty userMetadata object when user has no metadata', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        RocketsServerE2eUserMetadataRepoModule,
         RocketsModule.forRoot({
           ...baseOptions,
-          authProvider: new NoMetadataAuthProvider(),
+          auth: NoMetadataAuthProvider,
         }),
       ],
     }).compile();
@@ -168,10 +166,10 @@ describe('MeController contract (e2e)', () => {
   it('PATCH /me returns 400 with empty messages array when validation error has null constraints', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        RocketsServerE2eUserMetadataRepoModule,
         RocketsModule.forRoot({
           ...baseOptions,
           userMetadata: {
+            entity: StubUserMetadataEntity,
             createDto: MetadataCreateDto,
             updateDto: MetadataUpdateNullConstraintsDto,
           },

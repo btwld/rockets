@@ -6,7 +6,6 @@ import {
   Where,
 } from '@bitwild/rockets-repository';
 import { UserEntity } from '../auth/user.entity';
-import { USER_ENTITY_KEY } from '../auth/auth.constants';
 import { FakeEmailGateway } from './email.gateway';
 import { PetCreatedEvent } from './pet-created.event';
 
@@ -28,7 +27,7 @@ export class NotifyOnPetCreatedListener
   implements IEventHandler<PetCreatedEvent>
 {
   constructor(
-    @InjectDynamicRepository(USER_ENTITY_KEY)
+    @InjectDynamicRepository(UserEntity)
     private readonly userRepo: RepositoryInterface<UserEntity>,
     private readonly email: FakeEmailGateway,
   ) {}

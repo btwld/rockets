@@ -25,15 +25,53 @@ import { TagResponseDto } from '../tag/tag.dto';
 import type { PetTagEntity } from './pet-tag.entity';
 
 @Exclude()
+class PetCreateUniqueRefFields {
+  @Expose()
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(64)
+  uniqueRef?: string;
+}
+
+@Exclude()
 export class PetDto {
   @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() @IsString() @IsNotEmpty() @MinLength(1) @MaxLength(255) name!: string;
-  @Expose() @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(100) species!: string;
-  @Expose() @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(255) breed?: string;
+  @Expose()
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(1)
+  @MaxLength(255)
+  name!: string;
+  @Expose()
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  species!: string;
+  @Expose()
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  breed?: string;
   @Expose() @ApiProperty() @IsInt() @Min(0) @Max(50) age!: number;
-  @Expose() @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(100) color?: string;
-  @Expose() @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @Expose() @ApiProperty({ enum: PetStatus }) @IsEnum(PetStatus) status!: PetStatus;
+  @Expose()
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  color?: string;
+  @Expose()
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  description?: string;
+  @Expose()
+  @ApiProperty({ enum: PetStatus })
+  @IsEnum(PetStatus)
+  status!: PetStatus;
   @Expose() @ApiProperty() @IsString() @IsNotEmpty() userId!: string;
   @Expose() @ApiProperty() dateCreated!: Date;
   @Expose() @ApiProperty() dateUpdated!: Date;
@@ -46,16 +84,18 @@ export class PetDto {
  * the explicit junction resource at `POST /pets/:petId/tags`. Same
  * for `userId`, which is stamped from the actor by `OwnerStampHook`.
  */
-export class PetCreateDto extends PickType(PetDto, [
-  'name',
-  'species',
-  'age',
-  'breed',
-  'color',
-  'description',
-  'status',
-] as const) {
-}
+export class PetCreateDto extends IntersectionType(
+  PickType(PetDto, [
+    'name',
+    'species',
+    'age',
+    'breed',
+    'color',
+    'description',
+    'status',
+  ] as const),
+  PetCreateUniqueRefFields,
+) {}
 
 export class PetUpdateDto extends IntersectionType(
   PickType(PetDto, ['id'] as const),
@@ -73,6 +113,13 @@ export class PetUpdateDto extends IntersectionType(
 ) {}
 
 export class PetResponseDto extends PetDto {
+  @Expose()
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(64)
+  uniqueRef?: string | null;
+
   @Expose()
   @IsArray()
   @Type(() => PetVaccinationResponseDto)

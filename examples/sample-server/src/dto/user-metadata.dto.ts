@@ -6,11 +6,16 @@ import {
   MinLength,
   IsNotEmpty,
 } from 'class-validator';
-import { ApiProperty, PickType, PartialType, IntersectionType } from '@nestjs/swagger';
-import { 
-  BaseUserMetadataDto, 
-  UserMetadataCreatableInterface, 
-  UserMetadataModelUpdatableInterface 
+import {
+  ApiProperty,
+  PickType,
+  PartialType,
+  IntersectionType,
+} from '@nestjs/swagger';
+import {
+  BaseUserMetadataDto,
+  UserMetadataCreatableInterface,
+  UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets';
 import { UserMetadataEntity } from '../entities/user-metadata.entity';
 
@@ -67,9 +72,15 @@ export class UserMetadataDto extends BaseUserMetadataDto {
   bio?: string;
 }
 
-export class UserMetadataCreateDto 
-  extends PickType(UserMetadataDto, ['firstName', 'lastName', 'username', 'bio'] as const) 
-  implements UserMetadataCreatableInterface {
+export class UserMetadataCreateDto
+  extends PickType(UserMetadataDto, [
+    'firstName',
+    'lastName',
+    'username',
+    'bio',
+  ] as const)
+  implements UserMetadataCreatableInterface
+{
   @ApiProperty({
     description: 'User ID',
     example: 'user-123',
@@ -79,7 +90,17 @@ export class UserMetadataCreateDto
   userId!: string;
 }
 
-export class UserMetadataUpdateDto extends PartialType(PickType(UserMetadataDto, ['firstName', 'lastName', 'username', 'bio'] as const)) implements UserMetadataModelUpdatableInterface {
+export class UserMetadataUpdateDto
+  extends PartialType(
+    PickType(UserMetadataDto, [
+      'firstName',
+      'lastName',
+      'username',
+      'bio',
+    ] as const),
+  )
+  implements UserMetadataModelUpdatableInterface
+{
   @ApiProperty({
     description: 'UserMetadata ID',
     example: 'userMetadata-123',

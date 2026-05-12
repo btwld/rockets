@@ -40,5 +40,9 @@
   "dependencies": {
     "@bitwild/rockets-common": "workspace:^",
     "@concepta/nestjs-repository": "8.0.0-alpha.5"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "reflect-metadata": "^0.1.13 || ^0.2.0"
   }
 }

@@ -75,4 +75,3 @@ export class AppointmentResponseDto extends AppointmentDto {
   @ApiProperty({ type: [ReminderResponseDto], required: false })
   reminders?: ReminderResponseDto[];
 }
-

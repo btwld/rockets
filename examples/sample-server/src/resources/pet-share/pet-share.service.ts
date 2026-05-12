@@ -11,9 +11,7 @@ import {
   Where,
 } from '@bitwild/rockets-repository';
 import { PetEntity } from '../pet/pet.entity';
-import { PET_ENTITY_KEY } from '../pet/pet.constants';
 import { PetShareEntity, PetSharePermission } from './pet-share.entity';
-import { PET_SHARE_ENTITY_KEY } from './pet-share.constants';
 
 export interface ShareCreateInput {
   readonly petId: string;
@@ -39,9 +37,9 @@ export interface ShareCreateInput {
 @Injectable()
 export class PetShareService {
   constructor(
-    @InjectDynamicRepository(PET_ENTITY_KEY)
+    @InjectDynamicRepository(PetEntity)
     private readonly petRepo: RepositoryInterface<PetEntity>,
-    @InjectDynamicRepository(PET_SHARE_ENTITY_KEY)
+    @InjectDynamicRepository(PetShareEntity)
     private readonly shareRepo: RepositoryInterface<PetShareEntity>,
     private readonly txScope: TransactionScope,
   ) {}

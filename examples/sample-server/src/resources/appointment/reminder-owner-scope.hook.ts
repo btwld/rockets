@@ -1,18 +1,19 @@
-import { Injectable, PlainLiteralObject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
-  BeforeFindAndCount,
-  BeforeFindOne,
   InjectDynamicRepository,
-  RepoHook,
-  RepositoryFindOneOptions,
-  RepositoryFindOptions,
-  RepositoryInterface,
+  type RepositoryFindOneOptions,
+  type RepositoryFindOptions,
+  type RepositoryInterface,
   Where,
 } from '@bitwild/rockets-repository';
-import { getActor } from '@bitwild/rockets-core';
+import {
+  EntityHook,
+  type EntityHookContext,
+  PassthroughEntityHookBase,
+  getActor,
+} from '@bitwild/rockets-core';
 import { ReminderEntity } from './reminder.entity';
 import { AppointmentEntity } from './appointment.entity';
-import { APPOINTMENT_ENTITY_KEY } from './appointment.constants';
 
 /**
  * Scopes reminders to the authenticated user's own appointments.
@@ -28,35 +29,35 @@ import { APPOINTMENT_ENTITY_KEY } from './appointment.constants';
  * bounded. For very large users, denormalize `userId` onto the reminder
  * row and switch back to `OwnerScopeHook`.
  */
+@EntityHook({ entity: ReminderEntity })
 @Injectable()
-@RepoHook()
-export class ReminderOwnerScopeHook {
+export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<ReminderEntity> {
   constructor(
-    @InjectDynamicRepository(APPOINTMENT_ENTITY_KEY)
+    @InjectDynamicRepository(AppointmentEntity)
     private readonly apptRepo: RepositoryInterface<AppointmentEntity>,
-  ) {}
+  ) {
+    super();
+  }
 
-  @BeforeFindAndCount()
-  async scopeList(
-    options: RepositoryFindOptions<PlainLiteralObject>,
-    ctx?: PlainLiteralObject,
-  ): Promise<RepositoryFindOptions<PlainLiteralObject>> {
+  override async beforeFindAndCount(
+    options: RepositoryFindOptions<ReminderEntity>,
+    ctx?: EntityHookContext,
+  ): Promise<RepositoryFindOptions<ReminderEntity>> {
     return this.applyScope(options, ctx);
   }
 
-  @BeforeFindOne()
-  async scopeOne(
-    options: RepositoryFindOneOptions<PlainLiteralObject>,
-    ctx?: PlainLiteralObject,
-  ): Promise<RepositoryFindOneOptions<PlainLiteralObject>> {
+  override async beforeFindOne(
+    options: RepositoryFindOneOptions<ReminderEntity>,
+    ctx?: EntityHookContext,
+  ): Promise<RepositoryFindOneOptions<ReminderEntity>> {
     return this.applyScope(options, ctx);
   }
 
   private async applyScope<
     T extends
-      | RepositoryFindOptions<PlainLiteralObject>
-      | RepositoryFindOneOptions<PlainLiteralObject>,
-  >(options: T, ctx?: PlainLiteralObject): Promise<T> {
+      | RepositoryFindOptions<ReminderEntity>
+      | RepositoryFindOneOptions<ReminderEntity>,
+  >(options: T, ctx?: EntityHookContext): Promise<T> {
     const actor = getActor(ctx);
     if (!actor?.id) return options;
 

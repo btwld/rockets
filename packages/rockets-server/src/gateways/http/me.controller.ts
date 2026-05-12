@@ -18,8 +18,8 @@ import type {
   UserMetadataEntityInterface,
   UserMetadataUpdatableInterface,
 } from '@bitwild/rockets-core';
-import { RocketsOptionsInterface } from '../../infrastructure/config/interfaces/rockets-options.interface';
-import { RAW_OPTIONS_TOKEN } from '../../rockets.tokens';
+import type { RocketsUserMetadataDtoConfig } from '../../rockets.tokens';
+import { ROCKETS_USER_METADATA_DTO_TOKEN } from '../../rockets.tokens';
 
 @ApiTags('user')
 @ApiBearerAuth()
@@ -28,8 +28,8 @@ export class MeController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-    @Inject(RAW_OPTIONS_TOKEN)
-    private readonly opts: RocketsOptionsInterface,
+    @Inject(ROCKETS_USER_METADATA_DTO_TOKEN)
+    private readonly userMetadataConfig: RocketsUserMetadataDtoConfig,
   ) {}
 
   @Get()
@@ -81,7 +81,7 @@ export class MeController {
     @Body() updateData: UserUpdateDto,
   ): Promise<UserResponseDto> {
     const payload = (await whitelistedFromDto(
-      this.opts.userMetadata.updateDto,
+      this.userMetadataConfig.updateDto,
       (updateData.userMetadata ?? {}) as object,
     )) as UserMetadataUpdatableInterface;
 

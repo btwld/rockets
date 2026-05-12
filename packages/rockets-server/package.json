@@ -88,9 +88,11 @@
     "@nestjs/testing": "^11.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@types/supertest": "^6.0.2",
+    "jest": "^29.7.0",
     "jest-mock-extended": "^4.0.0",
     "sqlite3": "^5.1.6",
     "supertest": "^6.3.4",
+    "ts-jest": "^29.2.0",
     "ts-node": "^10.9.2",
     "typeorm": "^0.3.20"
   },

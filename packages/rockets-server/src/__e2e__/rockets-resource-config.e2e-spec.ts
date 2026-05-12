@@ -26,13 +26,14 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import request from 'supertest';
 import { RepositoryModule } from '@bitwild/rockets-repository';
 import type {
-  AuthProviderInterface,
+  AuthAdapterInterface,
   AuthorizedUser,
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
 import { RocketsModule } from '../rockets.module';
-import { RocketsServerE2eUserMetadataRepoModule } from './helpers/rockets-server-e2e-app.factory';
+import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 
 // ────────────────────────────────────────────────────────────────────
 // Test Entity
@@ -107,7 +108,7 @@ class ItemPaginatedDto extends CrudResponsePaginatedDto<ItemResponseDto> {
 // ────────────────────────────────────────────────────────────────────
 
 @Injectable()
-class TestAuthProvider implements AuthProviderInterface {
+class TestAuthAdapter implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
     if (token === 'valid-token') {
       return {
@@ -147,7 +148,6 @@ describe('RocketsModule — Resource Config (e2e)', () => {
           synchronize: true,
           dropSchema: true,
         }),
-        RocketsServerE2eUserMetadataRepoModule,
         // Item entity repo registered via RepositoryModule directly —
         // this test validates a manual `RocketsResourceConfig` (no `defineResource()`).
         RepositoryModule.forFeature({
@@ -155,11 +155,13 @@ describe('RocketsModule — Resource Config (e2e)', () => {
           entities: [{ key: 'item', entity: ItemEntity }],
         }),
         RocketsModule.forRoot({
-          authProvider: new TestAuthProvider(),
+          auth: TestAuthAdapter,
           userMetadata: {
+            entity: StubUserMetadataEntity,
             createDto: TestMetadataCreateDto,
             updateDto: TestMetadataUpdateDto,
           },
+          repository: E2eFakeRepositoryModule,
           resources: [
             {
               crud: {

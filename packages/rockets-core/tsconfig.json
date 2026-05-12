@@ -17,6 +17,7 @@
     "node_modules",
     "dist",
     "src/**/*.spec.ts",
+    "src/**/*.typetest.ts",
     "src/**/*.e2e-spec.ts",
     "src/**/__tests__/**",
     "src/**/__fixtures__/**",

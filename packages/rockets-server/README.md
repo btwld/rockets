@@ -1,67 +1,63 @@
-<!-- markdownlint-disable MD013 -->
-# Rockets Server
-
-## Project
+# `@bitwild/rockets`
 
 [![NPM Latest](https://img.shields.io/npm/v/@bitwild/rockets)](https://www.npmjs.com/package/@bitwild/rockets)
 [![NPM Downloads](https://img.shields.io/npm/dw/@bitwild/rockets)](https://www.npmjs.com/package/@bitwild/rockets)
 [![CI](https://img.shields.io/github/actions/workflow/status/btwld/rockets/ci-merge.yml?branch=main&label=CI)](https://github.com/btwld/rockets/actions/workflows/ci-merge.yml)
 [![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/npm/l/@bitwild/rockets)](https://github.com/btwld/rockets/blob/main/LICENSE.txt)
 
-## Table of Contents
+> **Bring your own auth.** Plug in Firebase, Auth0, Cognito, your
+> company's IdP, or a custom JWT issuer — Rockets validates the
+> tokens, stores local metadata alongside, and gives you declarative
+> CRUD on top.
+
+---
+
+## Table of contents
 
 - [Introduction](#introduction)
-  - [When to use this package](#when-to-use-this-package)
-  - [When NOT to use this package](#when-not-to-use-this-package)
-  - [Installation](#installation)
-- [Tutorial](#tutorial)
-  - [Basic Setup](#basic-setup)
-  - [Testing the Setup](#testing-the-setup)
-- [Configuration](#configuration)
-  - [Auth Provider](#auth-provider)
-  - [User Metadata](#user-metadata)
-  - [Repositories](#repositories)
-  - [Resources](#resources)
-- [API Reference](#api-reference)
-  - [Endpoints](#endpoints)
-  - [Decorators](#decorators)
+- [Tutorial — Your first external-auth server](#tutorial--your-first-external-auth-server)
+- [How-to guides](#how-to-guides)
+- [Reference](#reference)
+- [Explanation](#explanation)
+- [License](#license)
 
 ---
 
 ## Introduction
 
-**Rockets Server** is the composition layer for the Rockets ecosystem focused on
-**integrating external authentication systems**. You bring your own auth
-(Firebase, Auth0, Cognito, your company's JWT, anything) by implementing
-`AuthProviderInterface`, and Rockets Server wires up:
+`@bitwild/rockets` is the composition layer for **external
+authentication systems**. You implement one interface
+(`AuthAdapterInterface`), and the module wires up:
 
-- A global `AuthServerGuard` that validates every request against your provider
-- A `/me` endpoint that combines your external user with local metadata
-- Swagger UI for API documentation (via `rockets-core`)
-- Declarative CRUD resources (via `rockets-core`)
+- A global `AuthServerGuard` that validates every request via your provider.
+- A `/me` endpoint combining your external user with local metadata.
+- Swagger UI for API documentation.
+- Declarative CRUD resources via `defineResource()` and
+  `defineModuleResource()`.
+
+The contract is simple: your provider returns an `AuthorizedUser` from
+a bearer token. Rockets makes that user available everywhere — in
+controllers via `@AuthUser()`, in CRUD handlers via
+`getAuthorizedUserFromCrudContext()`, in repository hooks for
+per-request scoping.
 
 ### When to use this package
 
-- Your users live in an external system (Firebase, Auth0, another service).
-- You want a thin layer that validates tokens and stores local user metadata.
-- You want to build CRUD endpoints protected by that external auth.
+| Use this when… | Use a different package when… |
+|---|---|
+| Users live in an external IdP (Firebase, Auth0, Cognito, …) | You need signup/login/OAuth/OTP/admin user CRUD → [`@bitwild/rockets-auth`](../rockets-server-auth/) |
+| You want token validation + local metadata + CRUD | You don't want `/me` or a global guard → [`@bitwild/rockets-core`](../rockets-core/) |
+| You want one composition surface and minimal boilerplate | You're building a custom composition root from scratch |
 
-### When NOT to use this package
+---
 
-- You need signup, login, password recovery, OAuth, OTP, or admin user CRUD.
-  → Use **[@bitwild/rockets-server-auth](https://www.npmjs.com/package/@bitwild/rockets-server-auth)**.
-- You don't want a `/me` endpoint or a global guard.
-  → Use **[@bitwild/rockets-core](../rockets-core)** directly.
+## Tutorial — Your first external-auth server
 
-### Installation
+You'll get a working server with `/me`, a `pet` CRUD resource, and a
+custom `AuthAdapterInterface` validating bearer tokens.
 
-**Version Requirements**:
-
-- NestJS: `^11.0.0`
-- Node.js: `>=18.0.0`
-- TypeScript: `>=5.0.0`
+### 1. Install
 
 ```bash
 yarn add @bitwild/rockets @bitwild/rockets-core \
@@ -69,83 +65,58 @@ yarn add @bitwild/rockets @bitwild/rockets-core \
   class-transformer class-validator
 ```
 
----
+Requires NestJS `^11`, Node `>=18`, TypeScript `>=5`.
 
-## Tutorial
-
-### Basic Setup
-
-#### Step 1: Create a UserMetadata entity
-
-Stores local data (profile fields, preferences) for each external user:
+### 2. Implement `AuthAdapterInterface`
 
 ```typescript
-// entities/user-metadata.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-
-@Entity('user_metadata')
-export class UserMetadataEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
-  @Column()
-  userId!: string;  // id of the user in the external system
-
-  @Column({ nullable: true })
-  firstName?: string;
-
-  @Column({ nullable: true })
-  lastName?: string;
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  dateCreated!: Date;
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
-  dateUpdated!: Date;
-}
-```
-
-#### Step 2: Create DTOs
-
-```typescript
-// dto/user-metadata.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
-
-export class UserMetadataCreateDto {
-  @ApiProperty({ required: false }) @IsOptional() @IsString() firstName?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() lastName?: string;
-}
-
-export class UserMetadataUpdateDto extends UserMetadataCreateDto {
-  @ApiProperty() @IsString() id!: string;
-}
-```
-
-#### Step 3: Implement the auth provider
-
-```typescript
-// providers/firebase-auth.provider.ts
+// providers/firebase-auth.adapter.ts
 import { Injectable } from '@nestjs/common';
-import type { AuthProviderInterface, AuthorizedUser } from '@bitwild/rockets-core';
+import * as admin from 'firebase-admin';
+import type { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets';
 
 @Injectable()
-export class FirebaseAuthProvider implements AuthProviderInterface {
+export class FirebaseAuthAdapter implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
-    // Validate with your external auth system
-    // Return the user in Rockets shape
-    const decoded = await verifyWithFirebase(token);
+    const decoded = await admin.auth().verifyIdToken(token);
     return {
       id: decoded.uid,
       sub: decoded.uid,
       email: decoded.email,
-      userRoles: decoded.roles?.map((name) => ({ role: { name } })) ?? [],
+      userRoles: (decoded.roles ?? []).map((name: string) => ({ role: { name } })),
+      claims: decoded,
     };
   }
 }
 ```
 
-#### Step 4: Configure the module
+### 3. Declare your local metadata
+
+```typescript
+// entities/user-metadata.entity.ts
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity('user_metadata')
+export class UserMetadataEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ unique: true }) userId!: string;
+  @Column({ nullable: true }) firstName?: string;
+  @Column({ nullable: true }) lastName?: string;
+}
+
+// dto/user-metadata.dto.ts
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
+
+export class UserMetadataCreateDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() firstName?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() lastName?: string;
+}
+
+export class UserMetadataUpdateDto extends UserMetadataCreateDto {}
+```
+
+### 4. Wire `RocketsModule`
 
 ```typescript
 // app.module.ts
@@ -154,8 +125,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import { RocketsModule } from '@bitwild/rockets';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
-import { UserMetadataCreateDto, UserMetadataUpdateDto } from './dto/user-metadata.dto';
-import { FirebaseAuthProvider } from './providers/firebase-auth.provider';
+import {
+  UserMetadataCreateDto,
+  UserMetadataUpdateDto,
+} from './dto/user-metadata.dto';
+import { FirebaseAuthAdapter } from './providers/firebase-auth.adapter';
 
 @Module({
   imports: [
@@ -165,221 +139,562 @@ import { FirebaseAuthProvider } from './providers/firebase-auth.provider';
       entities: [UserMetadataEntity],
       synchronize: true,
     }),
-    RocketsModule.forRootAsync({
-      inject: [FirebaseAuthProvider],
-      useFactory: (authProvider: FirebaseAuthProvider) => ({
-        authProvider,
-        userMetadata: {
-          createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto,
-        },
-      }),
-      repositories: {
-        module: TypeOrmRepositoryModule,
-        userMetadata: { entity: UserMetadataEntity },
+    RocketsModule.forRoot({
+      auth: FirebaseAuthAdapter,                  // class reference
+      repository: TypeOrmRepositoryModule,
+      userMetadata: {
+        entity: UserMetadataEntity,
+        createDto: UserMetadataCreateDto,
+        updateDto: UserMetadataUpdateDto,
       },
     }),
   ],
-  providers: [FirebaseAuthProvider],
 })
 export class AppModule {}
 ```
 
-#### Step 5: Bootstrap
+The `auth` field takes the **class** (not an instance). Core
+auto-registers the class as a Nest provider AND aliases it to
+`AUTH_ADAPTER_TOKEN` via `useExisting`, so no manual `providers: [...]`
+step is needed. Boot fails fast if the class does not implement
+`AuthAdapterInterface.validateToken`.
 
-```typescript
-// main.ts
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { AppModule } from './app.module';
-
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe());
-  await app.listen(3000);
-}
-bootstrap();
-```
-
-### Testing the Setup
+### 5. Run it
 
 ```bash
-# Get your profile (external user + local metadata)
-curl -X GET http://localhost:3000/me \
-  -H "Authorization: Bearer <your-firebase-token>"
+nest start
+```
 
-# Update your local metadata
+```bash
+TOKEN="<a valid Firebase id token>"
+
+curl http://localhost:3000/me -H "Authorization: Bearer $TOKEN"
+# → { id, sub, email, userRoles, userMetadata }
+
 curl -X PATCH http://localhost:3000/me \
-  -H "Authorization: Bearer <your-firebase-token>" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"userMetadata": {"firstName": "Jane"}}'
+  -d '{ "userMetadata": { "firstName": "Ada" } }'
+```
+
+That's the full integration. Add CRUD resources next via `defineResource()`.
+
+---
+
+## How-to guides
+
+### How to add a CRUD resource
+
+```typescript
+// pet/pet.entity.ts — your TypeORM entity
+@Entity('pets')
+export class PetEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column() name!: string;
+  @Column({ nullable: true }) ownerId?: string;
+}
+
+// pet/pet.resource.ts
+import { defineResource } from '@bitwild/rockets';
+import { Operation } from '@concepta/nestjs-common';
+import { PetEntity } from './pet.entity';
+
+export const petResource = defineResource({
+  key: 'pet',
+  entity: PetEntity,
+  operations: {
+    list:   { response: PetResponseDto },
+    read:   { response: PetResponseDto },
+    create: { request: PetCreateDto, response: PetResponseDto },
+    update: { request: PetUpdateDto, response: PetResponseDto },
+    delete: {},
+  },
+});
+
+// app.module.ts — add to RocketsModule.forRoot
+RocketsModule.forRoot({
+  // ...
+  repository: TypeOrmRepositoryModule,
+  resources: [petResource],
+})
+```
+
+You get `GET/POST/PATCH/DELETE /pets` plus pagination, filtering, and
+relations — without writing a controller.
+
+### How to add a non-CRUD feature (controllers + services + entity colocated)
+
+```typescript
+// auth/auth.feature.ts
+import { defineModuleResource } from '@bitwild/rockets';
+import { UserEntity } from './user.entity';
+import { AuthController } from './auth.controller';
+import { SampleAuthAdapter } from './sample-auth.adapter';
+
+// Flat shape — no `module: { ... }` wrapper.
+export const authFeature = defineModuleResource({
+  entities: [{ key: 'user', entity: UserEntity }],
+  controllers: [AuthController],
+  providers: [SampleAuthAdapter],
+  exports: [SampleAuthAdapter],   // makes it injectable as the `auth` adapter
+});
+
+// app.module.ts
+RocketsModule.forRoot({
+  auth: SampleAuthAdapter,        // class reference, registered by authFeature
+  repository: TypeOrmRepositoryModule,
+  resources: [authFeature, petResource],
+})
+```
+
+The resource owns its entity registration AND its Nest wiring in one
+place. Move/delete the resource = move/delete the whole feature.
+
+### How to add a sub-resource (`/pets/:petId/tags`)
+
+```typescript
+import { defineResource, defineSubResource } from '@bitwild/rockets';
+
+defineResource({
+  key: 'pet',
+  entity: PetEntity,
+  // ...
+  subResources: {
+    petTags: defineSubResource({
+      key: 'petTag',
+      entity: PetTagEntity,
+      urlSegment: 'tags',                              // /pets/:petId/tags
+      parentOwnerColumn: 'userId',                     // required (no default)
+      reloadAfterCreate: true,                         // opt-in eager reload
+      operations: {
+        list:   { response: PetTagResponseDto },
+        create: { body: PetTagCreateDto, response: PetTagResponseDto },
+        delete: {},
+      },
+    }),
+  },
+})
+```
+
+`defineSubResource()` auto-injects:
+
+- **`PathScopeHook`** — strips body-supplied FK then stamps it from
+  `:petId` on create; filters list/read/update/delete by the same
+  param. Throws if the URL param is missing in a CRUD context.
+- **`PathScopeGuard`** — validates authenticated actor + parent
+  ownership (401 / 404 with intended status). Auto-applied via
+  `@UseGuards(...)` on the controller; auto-registered as provider.
+- **`@ApiParam(:petId)`** — appended to every operation for OpenAPI.
+- **`request.params: { id, petId }`** — the controller-level CRUD config.
+
+Configurable on the sub:
+
+| Field | Default | Purpose |
+|---|---|---|
+| `parentOwnerColumn` | **required** | Column used by the auto guard to check parent ownership. **Must be declared explicitly** (no default — wrong column = silent 404 for legitimate users). Use `disablePathScopeGuard: true` when the parent is public. |
+| `disablePathScopeGuard` | `false` | Opt out of the auto guard. |
+| `reloadAfterCreate` | `false` | Opt **in** to `AfterCreateReloadHook`. Adds an extra DB round-trip after create so eager relations land on the response. Adapter-specific behaviour (TypeORM `save()` omits eager loads); off by default. |
+
+### How to inject a dynamic repository
+
+```typescript
+import {
+  InjectDynamicRepository,
+  RepositoryInterface,
+  Where,
+} from '@bitwild/rockets-repository';
+
+@Injectable()
+export class PetService {
+  constructor(
+    @InjectDynamicRepository('pet')
+    private readonly petRepo: RepositoryInterface<PetEntity>,
+  ) {}
+
+  findByOwner(ownerId: string) {
+    return this.petRepo.find({
+      where: Where.eq<PetEntity>('ownerId', ownerId),
+    });
+  }
+}
+```
+
+Key (`'pet'`) matches the one passed to `defineResource()` /
+`defineModuleResource({ entities: [{ key, entity }] })`.
+
+### How to mark a route as public
+
+```typescript
+import { AuthPublic } from '@bitwild/rockets';
+
+@Controller('auth')
+export class AuthController {
+  @Post('signup')
+  @AuthPublic()                  // bypasses AuthServerGuard
+  signup(@Body() dto: SignupDto) { ... }
+}
+```
+
+### How to access the authenticated user
+
+```typescript
+import { AuthUser } from '@concepta/nestjs-authentication';
+import type { AuthorizedUser } from '@bitwild/rockets';
+
+@Get('profile')
+profile(@AuthUser() user: AuthorizedUser) {
+  return user;
+}
+
+// Inside CRUD handlers:
+import { getAuthorizedUserFromCrudContext } from '@bitwild/rockets';
+
+@CommandHandler(CrudCreateCommand)
+class PetCreateHandler {
+  async execute(cmd: CrudCreateCommand) {
+    const user = getAuthorizedUserFromCrudContext(cmd.context);
+    // user.id, user.email, user.userRoles
+  }
+}
+```
+
+### How to scope a resource to its owner
+
+```typescript
+import { OwnerScopeHook } from '@bitwild/rockets';
+import { UseHooks } from '@bitwild/rockets-common';
+
+defineResource({
+  key: 'pet',
+  entity: PetEntity,
+  path: 'pets',
+  controller: {
+    extraDecorators: [UseHooks(OwnerScopeHook)],
+  },
+  // remember to add OwnerScopeHook to providers if you need DI
+})
+```
+
+`OwnerScopeHook` filters List/Read/Update/Delete by `userId === authUser.id`.
+For Create, write a custom command handler — the column needs to go
+into the body, not the where clause.
+
+### How to use a non-TypeORM persistence adapter
+
+Domain code (services, handlers, hooks) depends on `RepositoryInterface`,
+not TypeORM. Swap the adapter:
+
+```typescript
+import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
+
+RocketsModule.forRoot({
+  // ...
+  repository: FirestoreRepositoryModule,
+})
+```
+
+Per-entity overrides for mixed-store apps:
+
+```typescript
+RocketsModule.forRoot({
+  // ...
+  repository: TypeOrmRepositoryModule,
+  userMetadata: {
+    entity: UserMetadataEntity,
+    repository: FirestoreRepositoryModule, // metadata in Firestore
+  },
+  resources: [
+    defineModuleResource({
+      entities: [{
+        key: 'analytics',
+        entity: AnalyticsEntity,
+        repository: FirestoreRepositoryModule,
+      }],
+      providers: [AnalyticsService],
+    }),
+    petResource, // stays on TypeORM (default)
+  ],
+})
 ```
 
 ---
 
-## Configuration
+## Reference
 
-### Auth Provider
+### Endpoints provided
 
-Implement `AuthProviderInterface`:
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /me` | required | External user merged with local metadata |
+| `PATCH /me` | required | Updates local metadata; body validated by `userMetadata.updateDto` |
+| `GET /api` | public | Swagger UI |
+
+Plus all routes contributed by your `defineResource()` and
+`defineModuleResource()` bundles.
+
+### `RocketsModule.forRoot(options) / forRootAsync(asyncOptions)`
+
+Public surface. All fields are forwarded to `RocketsCoreModule`
+internally.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `auth` | `Type<AuthAdapterInterface>` | ✅ | Class reference of the auth adapter. Core auto-registers it as a Nest provider and aliases it to `AUTH_ADAPTER_TOKEN`. Boot validates `validateToken` exists on the prototype. |
+| `repository` | `RepositoryModuleInterface` | optional | Default persistence adapter. Omit when an upstream module already registers entities. |
+| `userMetadata` | `RocketsUserMetadataConfig` | optional | Metadata entity + DTOs (drives `/me`). Supports a per-entity `repository` override. |
+| `resources` | `ReadonlyArray<ResourceInput>` | optional | Mix of `defineResource()`, `defineModuleResource()`, manual configs. |
+| `enableGlobalGuard` | `boolean` | default `true` | Register `AuthServerGuard` as `APP_GUARD`. |
+| `disableController` | `{ me?: boolean }` | optional | Turn off built-in controllers. |
+| `handlers` | `{ upsertUserMetadata?, getUserMetadata? }` | optional | Override metadata CQRS handlers. |
+| `controllers` | `Type[]` | optional | Replace the default controller list. |
+| `global` | `boolean` | default `false` | Make the module global. |
+
+### `AuthAdapterInterface`
 
 ```typescript
-interface AuthProviderInterface {
+interface AuthAdapterInterface {
   validateToken(token: string): Promise<AuthorizedUser>;
 }
 
 interface AuthorizedUser {
-  id: string;
-  sub: string;
+  id: string;                                   // required, stable
+  sub: string;                                  // required, often === id
   email?: string;
-  userRoles?: { role: { name: string } }[];
-  claims?: Record<string, unknown>;
+  userRoles?: { role: { name: string } }[];     // drives RBAC
+  claims?: Record<string, unknown>;             // free-form IdP payload
 }
 ```
 
-### User Metadata
-
-Configure DTOs used by the `/me` PATCH endpoint for validation:
-
-```typescript
-useFactory: () => ({
-  authProvider,
-  userMetadata: {
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
-  },
-})
-```
-
-### Repositories
-
-Unified config for the userMetadata entity and additional standalone entities:
-
-```typescript
-repositories: {
-  module: TypeOrmRepositoryModule,         // default adapter
-  userMetadata: { entity: UserMetadataEntity },
-  entities: [                               // optional additional entities
-    { key: 'user', entity: UserEntity },
-    { key: 'log', entity: LogEntity, module: FirestoreModule },  // override
-  ],
-}
-```
-
-Omit `repositories` when an upstream module (e.g., `rockets-server-auth`)
-already registers the userMetadata repository.
-
-### Resources
-
-Declare CRUD resources alongside external auth:
-
-```typescript
-import { defineResource } from '@bitwild/rockets-core';
-
-resources: [
-  defineResource({
-    key: 'pet',
-    entity: PetEntity,
-    path: 'pets',
-    tags: ['Pets'],
-    dto: { response: PetDto, create: PetCreateDto, update: PetUpdateDto },
-  }),
-]
-```
-
-See **[@bitwild/rockets-core](../rockets-core)** for the full `defineResource`
-API and the `prepareResourceRegistration` pipeline.
-
-### Other options
-
-```typescript
-RocketsModule.forRootAsync({
-  useFactory: () => ({ authProvider, userMetadata: { ... } }),
-  repositories: { ... },
-  resources: [ ... ],
-  enableGlobalGuard: true,    // default: true. Register AuthServerGuard as APP_GUARD
-  disableController: {
-    me: false,                // default: false. Set true to remove the /me controller
-  },
-  handlers: {                 // optional handler overrides (pass-through to core)
-    upsertUserMetadata: MyCustomHandler,
-    getUserMetadata: MyCustomHandler,
-  },
-})
-```
-
----
-
-## API Reference
-
-### Endpoints
-
-#### `GET /me`
-
-Returns the current external user + local metadata.
-
-```json
-{
-  "id": "firebase-uid-abc",
-  "sub": "firebase-uid-abc",
-  "email": "user@example.com",
-  "userRoles": [{ "role": { "name": "user" } }],
-  "userMetadata": {
-    "firstName": "Jane",
-    "lastName": "Doe"
-  }
-}
-```
-
-#### `PATCH /me`
-
-Updates local metadata. The body is validated against
-`userMetadata.updateDto`.
-
-```json
-{
-  "userMetadata": {
-    "firstName": "Jane"
-  }
-}
-```
+| Field | Required | Notes |
+|---|---|---|
+| `id` | yes | Stable user id |
+| `sub` | yes | Subject (often same as id) |
+| `email` | optional | If your IdP exposes it |
+| `userRoles` | optional | Wrapped shape — `[{ role: { name } }]` — required for RBAC |
+| `claims` | optional | Whole IdP payload, available to your code |
 
 ### Decorators
 
-#### `@AuthUser()`
+| Decorator | Purpose |
+|---|---|
+| `@AuthPublic()` | Bypass `AuthServerGuard` on a route or controller. |
+| `@AuthUser()` (from `@concepta/nestjs-authentication`) | Inject the `AuthorizedUser` into a handler param. |
 
-Inject the authorized user into a handler:
+### Helpers re-exported from `rockets-core`
 
-```typescript
-import { AuthUser } from '@bitwild/rockets-common';
-import type { AuthorizedUser } from '@bitwild/rockets-core';
-
-@Get('/profile')
-getProfile(@AuthUser() user: AuthorizedUser) {
-  return user;
-}
-```
-
-#### `@AuthPublic()`
-
-Opt-out of the global guard:
-
-```typescript
-import { AuthPublic } from '@bitwild/rockets-core';
-
-@Get('/public')
-@AuthPublic()
-getPublicInfo() {
-  return { ok: true };
-}
-```
+| Symbol | Purpose |
+|---|---|
+| `defineResource()` | CRUD-shaped resource (auto-generated controller + persistence row). |
+| `defineModuleResource()` | Non-CRUD resource (entity registrations + flat Nest slice: `controllers`, `providers`, `exports`, `imports`). |
+| `defineSubResource()` | Nested resource. Auto-injects `PathScopeHook` + `PathScopeGuard` + parent `@ApiParam` + composed `request.params`. Configurable via `parentOwnerColumn` (required), `disablePathScopeGuard`, `reloadAfterCreate` (opt-in). |
+| `relation(source, target, prop, opts?)` | Type-safe cross-resource relation. |
+| `getAuthorizedUserFromCrudContext(ctx)` | Read auth user from a CRUD context. |
+| `AUTH_ADAPTER_TOKEN` | DI token aliased to the class passed via `auth`. Inject to access the adapter directly. |
+| `AuthServerGuard` | The guard class (registered globally when `enableGlobalGuard: true`). |
+| `PathScopeGuard` | Authenticated-actor + parent-ownership guard (auto-injected on sub-resources; usable directly). |
+| `OwnerScopeHook` | Repo hook scoping list/read/update/delete to `authUser.id`. |
+| `OwnerStampHook` | `beforeCreate`/`beforeUpdate` stamp `userId` from the actor + reject spoofing. |
+| `PathScopeHook` | Generic FK-stamp + scope hook for sub-resources (auto-bound by `defineSubResource`). |
+| `AfterCreateReloadHook` | Re-fetches by id after create so eager relations land on the response. Opt-in on sub-resources via `reloadAfterCreate: true`; add manually to top-level resources via `hooks: [...]`. |
 
 ---
 
-## Related packages
+## Explanation
 
-- **[@bitwild/rockets-core](../rockets-core)** — infrastructure only (no `/me`,
-  no global guard opt-in). Use when you need the minimum.
-- **[@bitwild/rockets-server-auth](https://www.npmjs.com/package/@bitwild/rockets-server-auth)** —
-  full auth system (JWT, signup, login, OAuth, OTP, admin). Use when rockets is
-  your source of truth for users.
+### What `RocketsModule` adds on top of `RocketsCoreModule`
+
+`RocketsModule` is a thin composition root over `RocketsCoreModule`:
+
+- Adds the `MeController` (`/me`, `PATCH /me`).
+- Optionally registers `AuthServerGuard` as a global guard (`enableGlobalGuard`).
+- Forwards the same `repository`, `userMetadata`, `resources`
+  options to core.
+
+Everything you can do here, you can do with `rockets-core` directly —
+you'd just write `MeController` yourself.
+
+### How the configuration is transformed
+
+The single `RocketsModule.forRoot({...})` call expands at boot into a
+collection of regular NestJS module imports, providers, and
+controllers. Knowing what each high-level field becomes makes it
+easier to debug DI errors and reason about what is registered.
+
+#### Input (what you write)
+
+```typescript
+RocketsModule.forRoot({
+  auth: SampleAuthAdapter,
+  repository: TypeOrmRepositoryModule,
+  userMetadata: {
+    entity: UserMetadataEntity,
+    createDto: UserMetadataCreateDto,
+    updateDto: UserMetadataUpdateDto,
+  },
+  resources: [
+    petResource,            // defineResource() — CRUD
+    authFeature,            // defineModuleResource() — entity + Nest slice
+    petTransferFeature,     // defineModuleResource() — pure CQRS
+  ],
+})
+```
+
+#### Output (what gets wired)
+
+| Input field | Becomes |
+|---|---|
+| `auth: SampleAuthAdapter` | `providers.push(SampleAuthAdapter)` + `{ provide: AUTH_ADAPTER_TOKEN, useExisting: SampleAuthAdapter }`. The `AuthServerGuard` injects the token. |
+| `repository: TypeOrmRepositoryModule` | Default adapter for every dynamic-repository row. One `RepositoryModule.forFeature({ module, entities: [...] })` import per adapter group (per-entity overrides via `entry.repository` start a new group). |
+| `userMetadata.entity` | Contributes one entity row to the persistence plan under the well-known key `USER_METADATA_MODULE_ENTITY_KEY`. |
+| `userMetadata.updateDto` | Narrowed into `ROCKETS_USER_METADATA_DTO_TOKEN`; consumed by `MeController` for `PATCH /me` validation. |
+| `resources: [defineResource(...)]` | Each becomes one `CrudModule.forFeature(...)` import. The bundle's entity + relations are folded into the persistence plan. Class-level decorators (`@ApiTags`, `@ApiBearerAuth`, `@UseHooks`, `@UseGuards`) are stamped on the auto-generated controller. |
+| `resources: [defineModuleResource(...)]` | The `entities[]` rows are folded into the persistence plan. The `controllers/providers/exports/imports` slice is materialised as an inline `DynamicModule` and added to `RocketsCoreModule.imports`. |
+| `resources: [...] subResources: { x: defineSubResource(...) }` | The sub is materialised as a peer `CrudResource` with composed `path`, auto-injected `PathScopeHook` (FK scope + stamp on create), auto-injected `PathScopeGuard` (parent ownership), composed `request.params: { id, parentParam }`, and `@ApiParam` per operation. |
+| `enableGlobalGuard: true` (default) | `{ provide: APP_GUARD, useClass: AuthServerGuard }` registered on `RocketsModule`'s providers. |
+
+#### Concrete expansion (sample-server)
+
+```text
+RocketsModule
+└── imports:
+    └── RocketsCoreModule
+        ├── imports:
+        │   ├── CqrsModule.forRoot()
+        │   ├── ConfigModule.forFeature(rocketsCoreDefaultConfig)
+        │   ├── HookModule.forRoot({})
+        │   ├── RepositoryModule.forRoot({})
+        │   │
+        │   ├── RepositoryModule.forFeature({                  ◀── per adapter group
+        │   │     module: TypeOrmRepositoryModule,
+        │   │     entities: [
+        │   │       { key: 'pet',      entity: PetEntity },
+        │   │       { key: 'petTag',   entity: PetTagEntity },
+        │   │       { key: 'user',     entity: UserEntity },
+        │   │       { key: USER_METADATA_MODULE_ENTITY_KEY,
+        │   │         entity: UserMetadataEntity },
+        │   │       …
+        │   │     ],
+        │   │   })
+        │   │
+        │   ├── DynamicModule (authFeature materialised)        ◀── module resource
+        │   │     controllers: [AuthController]
+        │   │     providers:   [SampleAuthAdapter]
+        │   │     exports:     [SampleAuthAdapter]
+        │   │
+        │   ├── DynamicModule (petTransferFeature materialised) ◀── CQRS-only resource
+        │   │     imports:     [CqrsModule]
+        │   │     controllers: [PetTransferController]
+        │   │     providers:   [TransferPetOwnershipHandler]
+        │   │
+        │   ├── CrudModule.forRoot({…SafeCrudContext…})
+        │   ├── CrudModule.forFeature(petResource.core)         ◀── /pets routes
+        │   ├── CrudModule.forFeature(petTagsSubResource)       ◀── /pets/:petId/tags
+        │   └── SwaggerUiModule.registerAsync(…)
+        │
+        ├── providers:
+        │   ├── SampleAuthAdapter                               ◀── auto-registered
+        │   ├── { provide: AUTH_ADAPTER_TOKEN,
+        │   │     useExisting: SampleAuthAdapter }              ◀── the alias
+        │   ├── AuthServerGuard
+        │   ├── { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay }
+        │   ├── { provide: APP_INTERCEPTOR, useClass: ActorOverlay }
+        │   ├── UpsertUserMetadataHandler / GetUserMetadataHandler
+        │   ├── PathScopeGuard subclass per sub-resource        ◀── auto-injected
+        │   └── PathScopeHook subclass per sub-resource         ◀── auto-injected
+        │
+        └── exports: AUTH_ADAPTER_TOKEN, ROCKETS_CORE_SETTINGS_TOKEN, …
+│
+├── controllers: [MeController]                                ◀── added by RocketsModule
+└── providers:  [{ provide: APP_GUARD, useClass: AuthServerGuard }]
+```
+
+#### Sub-resource expansion (`defineSubResource`)
+
+A single sub-resource entry like:
+
+```typescript
+petTags: defineSubResource({
+  key: 'petTag',
+  entity: PetTagEntity,
+  parentOwnerColumn: 'userId',
+})
+```
+
+declared inside `petResource` produces:
+
+```text
+CrudModule.forFeature({
+  controller: {
+    path: 'pets/:petId/tags',                      ◀── composed
+    extraDecorators: [
+      ApiTags('Pet Tags'),
+      ApiParam({ name: 'petId', type: 'string' }),
+      UseHooks(PathScopeHook_petId_petId, …),
+      UseGuards(PathScopeGuard_petId_pet_userId), ◀── auto
+    ],
+    request: {
+      params: {                                    ◀── composed
+        id:    { field: 'id',    type: 'uuid', primary: true },
+        petId: { field: 'petId', type: 'uuid' },
+      },
+    },
+  },
+  operations: [ /* list, read, create, delete */ ],
+})
+
+// Plus, in core.providers:
+PathScopeGuard.for('petId', 'pet', 'userId')           ◀── auto-injected
+PathScopeHook.for(PetTagEntity, 'petId', 'petId')      ◀── auto-injected
+// And if reloadAfterCreate: true:
+AfterCreateReloadHook.for(PetTagEntity)                ◀── opt-in
+```
+
+The trace for any specific resource is reproducible by reading
+`buildAppRegistrationPlan` in `rockets-core/src/infrastructure/resource/aggregate-resources.ts`
+— it returns the `crudResources`, `entityRegistrations`, and `nestModules`
+arrays exactly as listed above before they are spread into Nest's
+import/provider lists.
+
+### Composition with `@bitwild/rockets-auth`
+
+You can use both modules **together**, but only if you understand the
+shape difference:
+
+- `RocketsAuthModule` (built-in auth) keeps its own
+  `repositoryPersistence: { module, entities: { user, userCredentials, … } }`
+  shape — intentionally asymmetric. See [ADR 0003](../../docs/explanation/adr/0003-auth-persistence-asymmetry.md).
+- `RocketsModule` (this package) uses
+  `repository` + `userMetadata` + `resources`.
+
+When both are imported, `RocketsAuthModule` registers the auth
+entities; `RocketsModule` adds your application's resources on top.
+Order matters: `RocketsAuthModule` first, then `RocketsModule`.
+
+### Architecture
+
+```text
+rockets-common         shared utils, zero framework opinion
+rockets-repository     abstract data access (no TypeORM, no Firestore)
+rockets-crud           generic CRUD
+rockets-access-control ACL/RBAC
+    ▲
+rockets-core           framework primitives
+    ▲
+rockets-server         ◀── THIS PACKAGE
+rockets-server-auth    full auth system (uses both above)
+```
+
+### Related documentation
+
+- **Working example:** [`examples/sample-server/`](../../examples/sample-server/)
+  — multi-pattern CRUD with external auth
+- **Tutorial:** [`docs/tutorials/02-first-external-auth.md`](../../docs/tutorials/02-first-external-auth.md)
+- **Architecture flow:** [`docs/diagrams/rockets-architecture-flow.md`](../../docs/diagrams/rockets-architecture-flow.md)
+- **How to declare a resource:** [`docs/how-to/crud/declare-a-resource.md`](../../docs/how-to/crud/declare-a-resource.md)
+- **How to add an entity:** [`docs/how-to/persistence/add-an-entity.md`](../../docs/how-to/persistence/add-an-entity.md)
+
+---
+
+## License
+
+MIT — see [`../../LICENSE.txt`](../../LICENSE.txt).

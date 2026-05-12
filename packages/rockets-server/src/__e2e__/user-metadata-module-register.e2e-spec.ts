@@ -27,12 +27,16 @@ import {
   UpsertUserMetadataHandler,
   GetUserMetadataHandler,
 } from '@bitwild/rockets-core';
-import { ServerAuthProviderFixture } from '../__fixtures__/providers/server-auth.provider.fixture';
+import { ServerAuthAdapterFixture } from '../__fixtures__/providers/server-auth.adapter.fixture';
 import { UserMetadataRepositoryFixture } from '../__fixtures__/repositories/user-metadata.repository.fixture';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
-import type { RocketsOptionsInterface } from '../infrastructure/config/interfaces/rockets-options.interface';
+import type { RocketsOptions } from '../rockets.module-definition';
+import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { RocketsAuthProvider } from '../rockets.constants';
-import { RAW_OPTIONS_TOKEN } from '../rockets.tokens';
+import {
+  RAW_OPTIONS_TOKEN,
+  ROCKETS_USER_METADATA_DTO_TOKEN,
+} from '../rockets.tokens';
 import { UserModule } from '../user.module';
 import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
 import {
@@ -82,7 +86,7 @@ class E2eUserMetadataUpdateDto
 @Module({})
 class UserMetadataModuleRegisterE2eHarnessModule {
   static forTest(
-    options: RocketsOptionsInterface,
+    options: RocketsOptions,
     repo: UserMetadataRepositoryFixture,
   ): DynamicModule {
     return {
@@ -95,15 +99,31 @@ class UserMetadataModuleRegisterE2eHarnessModule {
           provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
           useValue: repo,
         },
-        { provide: RocketsAuthProvider, useClass: ServerAuthProviderFixture },
+        { provide: RocketsAuthProvider, useClass: ServerAuthAdapterFixture },
         Reflector,
         { provide: APP_GUARD, useClass: AuthServerGuard },
         { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay },
+        {
+          provide: ROCKETS_USER_METADATA_DTO_TOKEN,
+          inject: [RAW_OPTIONS_TOKEN],
+          useFactory: (opts: RocketsOptions) => {
+            const um = opts.userMetadata;
+            if (!um) {
+              throw new Error(
+                'UserMetadataModuleRegisterE2eHarnessModule requires userMetadata on RocketsOptions',
+              );
+            }
+            return {
+              updateDto: um.updateDto,
+            };
+          },
+        },
         UpsertUserMetadataHandler,
         GetUserMetadataHandler,
       ],
       exports: [
         RAW_OPTIONS_TOKEN,
+        ROCKETS_USER_METADATA_DTO_TOKEN,
         getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
       ],
     };
@@ -113,10 +133,11 @@ class UserMetadataModuleRegisterE2eHarnessModule {
 describe('UserModule.register via standalone wiring (e2e)', () => {
   let app: INestApplication;
 
-  const baseOptions: RocketsOptionsInterface = {
+  const baseOptions: RocketsOptions = {
     settings: {},
-    authProvider: new ServerAuthProviderFixture(),
+    auth: ServerAuthAdapterFixture,
     userMetadata: {
+      entity: StubUserMetadataEntity,
       createDto: E2eUserMetadataCreateDto,
       updateDto: E2eUserMetadataUpdateDto,
     },

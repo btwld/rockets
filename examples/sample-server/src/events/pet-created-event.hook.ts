@@ -1,5 +1,5 @@
-import { Injectable, PlainLiteralObject } from '@nestjs/common';
-import { AfterCreate, RepoHook } from '@bitwild/rockets-repository';
+import { Injectable } from '@nestjs/common';
+import { EntityHook, PassthroughEntityHookBase } from '@bitwild/rockets-core';
 import { EventBus } from '@nestjs/cqrs';
 import { PetEntity } from '../resources/pet/pet.entity';
 import { PetCreatedEvent } from './pet-created.event';
@@ -8,24 +8,21 @@ import { PetCreatedEvent } from './pet-created.event';
  * Publishes a `PetCreatedEvent` after a Pet row commits.
  *
  * Replaces the previous `PetCreateHandler` whose only post-write
- * responsibility was firing this event. Living as an `@AfterCreate`
+ * responsibility was firing this event. Living as an `afterCreate`
  * hook keeps event publication declarative and resource-local —
  * there is no separate handler/CQRS plumbing to register.
  */
+@EntityHook({ entity: PetEntity })
 @Injectable()
-@RepoHook()
-export class PetCreatedEventHook {
-  constructor(private readonly eventBus: EventBus) {}
+export class PetCreatedEventHook extends PassthroughEntityHookBase<PetEntity> {
+  constructor(private readonly eventBus: EventBus) {
+    super();
+  }
 
-  @AfterCreate()
-  async publish(
-    result: PlainLiteralObject,
-    _ctx?: PlainLiteralObject,
-  ): Promise<PlainLiteralObject> {
-    const pet = result as Partial<PetEntity>;
-    if (pet?.id && pet?.userId) {
+  override async afterCreate(result: PetEntity): Promise<PetEntity> {
+    if (result?.id && result?.userId) {
       this.eventBus.publish(
-        new PetCreatedEvent(pet.id, pet.userId, pet.name ?? ''),
+        new PetCreatedEvent(result.id, result.userId, result.name ?? ''),
       );
     }
     return result;

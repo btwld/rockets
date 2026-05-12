@@ -1,96 +1,68 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import { RocketsModule } from '@bitwild/rockets';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
-import { UserMetadataCreateDto, UserMetadataUpdateDto } from './dto/user-metadata.dto';
 import {
-  UserEntity,
-  SampleAuthProvider,
-  AuthModule,
-  USER_ENTITY_KEY,
-} from './auth';
+  UserMetadataCreateDto,
+  UserMetadataUpdateDto,
+} from './dto/user-metadata.dto';
+import { defineSampleAuth } from './auth';
+import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
+import { petResource } from './resources/pet';
+import { petVaccinationResource } from './resources/pet-vaccination';
+import { tagResource } from './resources/tag';
+import { petShareFeature } from './resources/pet-share';
+import { petTransferFeature } from './resources/pet-transfer';
 import {
-  petResource,
-  petTagResource,
-  PetEntity,
-  PetTagEntity,
-} from './resources/pet';
-import {
-  petVaccinationResource,
-  PetVaccinationEntity,
-} from './resources/pet-vaccination';
-import { tagResource, TagEntity } from './resources/tag';
-import { PetShareEntity, PetShareModule } from './resources/pet-share';
-import { PET_SHARE_ENTITY_KEY } from './resources/pet-share/pet-share.constants';
-import { PetTransferModule } from './resources/pet-transfer';
-import { AdminModule } from './admin';
-import {
-  AppointmentEntity,
-  ReminderEntity,
   appointmentResource,
   reminderResource,
 } from './resources/appointment';
-import { AuditLogEntity, AuditModule } from './audit';
-import { AUDIT_LOG_ENTITY_KEY } from './audit/audit-log.constants';
-import { EventsModule } from './events';
+import { adminFeature } from './admin';
+import { auditFeature } from './audit';
+import { eventsFeature } from './events';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: ':memory:',
-      entities: [
-        UserEntity,
-        UserMetadataEntity,
-        PetEntity,
-        PetVaccinationEntity,
-        TagEntity,
-        PetShareEntity,
-        PetTagEntity,
-        AppointmentEntity,
-        ReminderEntity,
-        AuditLogEntity,
-      ],
-      synchronize: true,
-      dropSchema: true,
-    }),
-    AuthModule,
-    RocketsModule.forRootAsync({
-      imports: [AuthModule],
-      inject: [SampleAuthProvider],
-      useFactory: (authProvider: SampleAuthProvider) => ({
-        authProvider,
-        userMetadata: {
-          createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto,
-        },
-      }),
-      repositories: {
-        module: TypeOrmRepositoryModule,
-        userMetadata: { entity: UserMetadataEntity },
-        entities: [
-          { key: USER_ENTITY_KEY, entity: UserEntity },
-          { key: PET_SHARE_ENTITY_KEY, entity: PetShareEntity },
-          { key: AUDIT_LOG_ENTITY_KEY, entity: AuditLogEntity },
-        ],
+    RocketsModule.forRoot({
+      // Auth feature bundle (entity + controller + adapter, all typed
+      // against `SampleAuthAdapter`). The bundle is auto-prepended to
+      // `resources[]` and `bundle.provider` is aliased to
+      // `AUTH_ADAPTER_TOKEN`.
+      auth: defineSampleAuth(),
+      // Single source of truth for user-metadata.
+      userMetadata: {
+        entity: UserMetadataEntity,
+        createDto: UserMetadataCreateDto,
+        updateDto: UserMetadataUpdateDto,
       },
-      // pet, petTag, petVaccination and tag entities are auto-contributed
-      // by their respective defineResource() bundles below.
+      // Bootstrap-aware adapter — owns `forRoot(entities)` AND
+      // `forFeature(entities)`, so each entity is listed once
+      // (inside the resource that owns it) instead of repeated in a
+      // top-level `TypeOrmModule.forRoot({ entities: [...] })`.
+      repository: defineTypeOrmRepository({
+        type: 'sqlite',
+        database: ':memory:',
+        synchronize: true,
+        dropSchema: true,
+      }),
+      // Single feature recipe: every app concern is a `xxxFeature` /
+      // `xxxResource` bundle declared here. There is no second path
+      // ("Nest @Module top-level"); adding a feature means appending
+      // to this array.
       resources: [
+        // CRUD-shaped bundles.
         petResource,
-        petTagResource,
         petVaccinationResource,
         tagResource,
         appointmentResource,
         reminderResource,
+        // Non-CRUD module bundles (persistence + Nest wiring colocated).
+        petShareFeature,
+        petTransferFeature,
+        adminFeature, // before auditFeature — audit consumes adminFeature's exported AdminGuard
+        auditFeature,
+        eventsFeature,
       ],
     }),
-    PetShareModule,
-    PetTransferModule,
-    AdminModule,
-    AuditModule,
-    EventsModule,
   ],
 })
 export class AppModule {}

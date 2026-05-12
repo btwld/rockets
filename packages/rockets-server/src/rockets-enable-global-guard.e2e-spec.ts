@@ -3,9 +3,10 @@ import { Test } from '@nestjs/testing';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import request from 'supertest';
 import { IsNotEmpty, IsString } from 'class-validator';
-import { RocketsServerE2eUserMetadataRepoModule } from './__e2e__/helpers/rockets-server-e2e-app.factory';
-import { ServerAuthProviderFixture } from './__fixtures__/providers/server-auth.provider.fixture';
-import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
+import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
+import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
+import type { RocketsOptions } from './rockets.module-definition';
+import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
 import {
   type UserMetadataCreatableInterface,
   type UserMetadataModelUpdatableInterface,
@@ -42,13 +43,15 @@ class GuardE2eOpenModule {}
 describe('RocketsModule enableGlobalGuard (e2e)', () => {
   let app: INestApplication;
 
-  const baseOptions: RocketsOptionsInterface = {
+  const baseOptions: RocketsOptions = {
     settings: {},
-    authProvider: new ServerAuthProviderFixture(),
+    auth: ServerAuthAdapterFixture,
     userMetadata: {
+      entity: StubUserMetadataEntity,
       createDto: GuardE2eMetadataCreateDto,
       updateDto: GuardE2eMetadataUpdateDto,
     },
+    repository: E2eFakeRepositoryModule,
   };
 
   afterEach(async () => {
@@ -59,11 +62,7 @@ describe('RocketsModule enableGlobalGuard (e2e)', () => {
 
   it('registers global AuthServerGuard by default so anonymous requests are rejected', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [
-        RocketsServerE2eUserMetadataRepoModule,
-        GuardE2eOpenModule,
-        RocketsModule.forRoot(baseOptions),
-      ],
+      imports: [GuardE2eOpenModule, RocketsModule.forRoot(baseOptions)],
     }).compile();
 
     app = moduleRef.createNestApplication();
@@ -82,7 +81,6 @@ describe('RocketsModule enableGlobalGuard (e2e)', () => {
   it('does not register APP_GUARD when enableGlobalGuard is false', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        RocketsServerE2eUserMetadataRepoModule,
         GuardE2eOpenModule,
         RocketsModule.forRoot({
           ...baseOptions,

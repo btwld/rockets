@@ -1,7 +1,7 @@
 import type { PlainLiteralObject, Provider, Type } from '@nestjs/common';
-import { applyDecorators } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { UseHooks } from '@bitwild/rockets-common';
+import { applyDecorators, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
+import { UseHooks, deriveEntityKey } from '@bitwild/rockets-common';
 import {
   CrudOperationResolver,
   CrudListQuery,
@@ -19,26 +19,35 @@ import {
   CrudRequestConfig,
   CrudResponseConfig,
 } from '@bitwild/rockets-crud';
-import { Operation } from '@concepta/nestjs-common';
+import { Operation } from '@bitwild/rockets-common';
 import type {
   JoinClause,
   RelationActionConfig,
   RepositoryModuleInterface,
   RepositoryProviderOptions,
 } from '@concepta/nestjs-repository';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import type { CrudParamOptionInterface } from '@bitwild/rockets-crud';
+import pluralize from 'pluralize';
 import type { RocketsResourceConfig } from '../../domain/interfaces/rockets-resource.interface';
 import type {
   RocketsResourceDefinition,
   ResourceDtoConfig,
   ResourceHandlerOverrides,
   ResourceOperationName,
-  ResourceOperationOverride,
+  ResourceOperationConfig,
+  ResourceOperationsObject,
   ResourceRelationEntry,
 } from '../../domain/interfaces/rockets-resource-definition.interface';
-import type { RocketsResourceBundle } from '../../domain/interfaces/rockets-resource-bundle.interface';
+import type { CrudResource } from '../../domain/interfaces/rockets-resource-bundle.interface';
+import type { RocketsSubResourceDefinition } from '../../domain/interfaces/rockets-resource-definition.interface';
 import { createPaginatedDto } from './paginated-dto.factory';
 import { createBoundRelation } from './relation';
+import { defaultParentParam } from './define-sub-resource';
+import { PathScopeHook } from '../hooks/path-scope.hook';
+import { PathScopeGuard } from '../guards/path-scope.guard';
+import { AfterCreateReloadHook } from '../hooks/after-create-reload.hook';
+import { ResourceKind } from '../../domain/interfaces/resource-kind.enum';
+import type { RocketsEntityHookForResource } from '../hooks/entity-hook';
 
 type CrudDecorator = ReturnType<typeof applyDecorators>;
 
@@ -54,12 +63,36 @@ const DEFAULT_OPERATIONS: readonly ResourceOperationName[] = [
 ] as const;
 
 /**
- * Default persistence module when `definition.persistence.module` is omitted.
- * TypeORM covers the vast majority of consumer cases. Override by setting
- * `persistence.module` on the definition for alternate adapters.
+ * Convert a camelCase / PascalCase key to a kebab-cased plural URL path:
+ * `petVaccination` → `pet-vaccinations`. Uses the `pluralize` library so
+ * irregular plurals (`category → categories`, `person → people`) work
+ * out of the box.
  */
-const DEFAULT_PERSISTENCE_MODULE: RepositoryModuleInterface =
-  TypeOrmRepositoryModule;
+function defaultPathFromKey(key: string): string {
+  const kebab = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[_\s]+/g, '-')
+    .toLowerCase();
+  return pluralize(kebab);
+}
+
+/**
+ * Convert a camelCase / PascalCase key to a humanised + pluralised
+ * Swagger tag: `petVaccination` → `Pet Vaccinations`.
+ */
+function defaultTagFromKey(key: string): string {
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  if (words.length === 0) return key;
+  // Pluralise only the last word — `petVaccination` → `Pet Vaccinations`,
+  // not `Pets Vaccinations`.
+  words[words.length - 1] = pluralize(words[words.length - 1]);
+  return words.join(' ');
+}
 
 /**
  * Turn a small resource definition into everything Rockets needs to register that resource.
@@ -67,51 +100,119 @@ const DEFAULT_PERSISTENCE_MODULE: RepositoryModuleInterface =
  * - You describe the intent (entity, DTOs, relations, hooks, handlers, …)
  * - Rockets fills in defaults and generates the actual CRUD wiring
  *
- * The return value is a `RocketsResourceBundle` with three friendlier buckets:
+ * The return value is a `CrudResource` with three friendlier buckets:
  * - `core` → the CRUD config (`CrudModule` uses this to create routes)
  * - `persistence` → how this entity is stored (used to build `RepositoryModule.forFeature(...)`)
  * - `meta` → the extra facts Rockets needs to check relations on startup
- *   (`prepareResourceRegistration`)
+ *   (`buildAppRegistrationPlan`)
+ *
+ * @example
+ * Input → output:
+ *
+ * ```ts
+ * // Input
+ * const petResource = defineResource({
+ *   key: 'pet',
+ *   entity: PetEntity,
+ *   // path / tags omitted — derived as 'pets' / ['Pets']
+ *   operations: {
+ *     list:   { response: PetDto },
+ *     create: { body: PetCreateDto, response: PetDto },
+ *   },
+ * });
+ *
+ * // Output
+ * {
+ *   kind: ResourceKind.Crud,
+ *   core: {
+ *     crud: {
+ *       controller: {
+ *         path: 'pets',                    // derived
+ *         entity: 'pet',
+ *         resolver: CrudOperationResolver,
+ *         extraDecorators: [ApiBearerAuth(), ApiTags('Pets')],
+ *       },
+ *       operations: [
+ *         { operation: Operation.List,   response: { resource: PetDto, paginated: ... } },
+ *         { operation: Operation.Create, request: { body: PetCreateDto },
+ *           response: { resource: PetDto },
+ *           command: CrudCreateCommand },
+ *       ],
+ *     },
+ *     providers: [],
+ *   },
+ *   persistence: {
+ *     module: TypeOrmRepositoryModule,    // default
+ *     entity: { key: 'pet', entity: PetEntity, relations: [] },
+ *   },
+ *   meta: { key: 'pet', entityClass: PetEntity, relations: [] },
+ * }
+ *
+ * // What gets wired at boot:
+ * //  • One CrudModule.forFeature(bundle.core)
+ * //  • One row appended to RepositoryModule.forFeature plan
+ * //  • Class-level decorators stamped on the auto-generated controller
+ * ```
  */
 export function defineResource<E extends PlainLiteralObject>(
   definition: RocketsResourceDefinition<E>,
-): RocketsResourceBundle<E> {
+): CrudResource<E> {
   validateDefinition(definition);
 
+  // `key` is optional in the input — derive from the entity class name
+  // when omitted (`PetTagEntity` → `'petTag'`). Explicit `key` always
+  // wins, which is the escape hatch for namespaced or awkward names.
+  const key = definition.key ?? deriveEntityKey(definition.entity);
+
   const {
-    key,
     entity,
-    path,
-    tags,
-    dto = {},
-    operations = DEFAULT_OPERATIONS,
+    path: pathInput,
+    tags: tagsInput,
+    dto: dtoInput = {},
+    operations: operationsInput = DEFAULT_OPERATIONS,
     relations: relationsInput,
     persistence,
-    hooks,
-    handlers = {},
+    hooks: hooksInput,
+    handlers: handlersInput = {},
     providers = [],
     autoRegisterHandlers = true,
-    overrides = {},
+    decorators: extraClassDecorators,
+    public: isPublic = false,
+    request: controllerRequest,
   } = definition;
+
+  // Auto-derive path / tags from key when omitted. Consumers can still
+  // declare them explicitly for legacy mounts, versioned URLs, or custom
+  // Swagger grouping.
+  const path: string | string[] = pathInput ?? defaultPathFromKey(key);
+  const tags: readonly string[] = tagsInput ?? [defaultTagFromKey(key)];
+
+  // Operations may arrive as the legacy `Operation[]` array or as the new
+  // keyed object form. `normalizeOperationsInput` returns a single tuple
+  // we can feed into the rest of the builder uniformly.
+  const normalized = normalizeOperationsInput(key, operationsInput, {
+    dto: dtoInput,
+    handlers: handlersInput,
+  });
+  const operations = normalized.operations;
+  const dto = normalized.dto;
+  const handlers = normalized.handlers;
+  const operationOverrides = normalized.operationOverrides;
+  const hooks = hooksInput;
 
   // Turn the user’s `relations` field into one concrete list.
   // - `relations: (r) => [...]` is the typed builder form
   // - `relations: [...]` is the advanced / escape-hatch form
   const relations = resolveRelations(key, entity, relationsInput);
 
-  const controllerOverrides = overrides.controller ?? {};
-  const operationOverrides = overrides.operations ?? {};
+  const bearerAuth = !isPublic;
+  const response = buildResponse(dto, undefined);
 
-  const bearerAuth = controllerOverrides.bearerAuth ?? true;
-  const resolver = controllerOverrides.resolver ?? CrudOperationResolver;
-
-  const response = buildResponse(dto, controllerOverrides.response);
-
-  const extraDecorators = buildControllerDecorators({
+  const extraDecorators = buildControllerDecorators<E>({
     tags,
     bearerAuth,
     hooks,
-    extra: controllerOverrides.extraDecorators,
+    extra: extraClassDecorators,
   });
 
   const controller: CrudControllerOptionsInterface<PlainLiteralObject> & {
@@ -119,19 +220,11 @@ export function defineResource<E extends PlainLiteralObject>(
   } = {
     path,
     entity: key,
-    resolver,
+    resolver: CrudOperationResolver,
     extraDecorators,
   };
-  if (controllerOverrides.adapter !== undefined) {
-    controller.adapter = controllerOverrides.adapter;
-  }
-  if (controllerOverrides.transactional !== undefined) {
-    controller.transactional = controllerOverrides.transactional;
-  }
   if (response) controller.response = response;
-  if (controllerOverrides.request) {
-    controller.request = controllerOverrides.request;
-  }
+  if (controllerRequest) controller.request = controllerRequest;
 
   // Add joins to List/Read for anything that should show up in API responses
   // (`include: 'never'` stays server-side only).
@@ -146,7 +239,7 @@ export function defineResource<E extends PlainLiteralObject>(
     }),
   );
 
-  const resourceProviders = mergeProviders({
+  const resourceProviders = mergeProviders<E>({
     handlers,
     hooks,
     extra: providers,
@@ -170,10 +263,35 @@ export function defineResource<E extends PlainLiteralObject>(
     ...(persistenceRelations ? { relations: persistenceRelations } : {}),
   };
 
-  return {
+  // Materialise sub-resources. Each one becomes a fully-formed bundle
+  // bound to the parent's path/key. Recursion is handled implicitly:
+  // calling `defineResource()` on the materialised sub spec processes
+  // its own `subResources` field, so an N-level tree composes naturally.
+  const subResourceBundles: CrudResource[] = [];
+  if (definition.subResources) {
+    const subs = definition.subResources as Readonly<
+      Record<string, RocketsSubResourceDefinition | undefined>
+    >;
+    for (const segment of Object.keys(subs)) {
+      const sub = subs[segment];
+      if (!sub) continue;
+      const subBundle = materialiseSubResource({
+        parentKey: key,
+        parentPath: path,
+        parentTags: tags,
+        parentPersistenceModule: persistence?.module,
+        segment,
+        sub,
+      });
+      subResourceBundles.push(subBundle);
+    }
+  }
+
+  const bundle: CrudResource<E> = {
+    kind: ResourceKind.Crud,
     core,
     persistence: {
-      module: persistence?.module ?? DEFAULT_PERSISTENCE_MODULE,
+      ...(persistence?.module ? { module: persistence.module } : {}),
       entity: entityOptions,
     },
     meta: {
@@ -181,35 +299,290 @@ export function defineResource<E extends PlainLiteralObject>(
       entityClass: entity,
       relations: relations ?? [],
     },
+    ...(subResourceBundles.length ? { subResources: subResourceBundles } : {}),
   };
+
+  return bundle;
+}
+
+/**
+ * Compose the parent's path + segment into the sub-resource's path,
+ * inject the auto path-scope hook + `@ApiParam` decorators, and call
+ * `defineResource()` recursively on the materialised spec.
+ */
+function materialiseSubResource(args: {
+  readonly parentKey: string;
+  readonly parentPath: string | readonly string[];
+  readonly parentTags: readonly string[];
+  readonly parentPersistenceModule: RepositoryModuleInterface | undefined;
+  readonly segment: string;
+  readonly sub: RocketsSubResourceDefinition;
+}): CrudResource {
+  const {
+    parentKey,
+    parentPath,
+    parentTags,
+    parentPersistenceModule,
+    segment,
+    sub,
+  } = args;
+
+  if (typeof segment !== 'string' || segment.length === 0) {
+    throw new Error(
+      `defineResource(${parentKey}): subResources keys must be non-empty strings ` +
+        `(got "${String(segment)}").`,
+    );
+  }
+
+  const parentParam = sub.parentParam ?? defaultParentParam(parentKey);
+  const parentForeignKey = sub.parentForeignKey ?? parentParam;
+
+  // The segment key (`keyof Parent`, e.g. `petTags`) drives type-safety
+  // — only real properties of the parent entity are accepted. The URL
+  // shape defaults to `kebab-case(segment)` (e.g. `pet-tags`) but can
+  // be overridden via `sub.urlSegment` when the entity property name
+  // and the user-facing URL need to differ.
+  const urlSegment =
+    sub.urlSegment ??
+    segment
+      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+      .replace(/[_\s]+/g, '-')
+      .toLowerCase();
+
+  const composePath = (p: string): string =>
+    `${p.replace(/\/+$/, '')}/:${parentParam}/${urlSegment}`;
+  const composedPath: string | string[] = Array.isArray(parentPath)
+    ? (parentPath as readonly string[]).map(composePath)
+    : composePath(parentPath as string);
+
+  const def = sub.definition;
+  // Derive sub key the same way `defineResource` does so any reference
+  // here (hook factory, error messages) sees the same string the outer
+  // recursion will compute. Explicit `def.key` always wins.
+  const subKey = def.key ?? deriveEntityKey(def.entity);
+  const tags = def.tags ?? parentTags;
+
+  // Auto-inject the parent's `@ApiParam` on every operation so OpenAPI
+  // documents the URL param.
+  const parentApiParam = ApiParam({
+    name: parentParam,
+    type: 'string',
+    required: true,
+    description: `Parent ${parentKey} id (URL path).`,
+  });
+
+  // Compose the controller-level `request.params` map. User-declared
+  // params on `def.request.params` win (so consumers can opt different
+  // types/fields), with `id` (primary) and parent param as defaults.
+  const userControllerParams =
+    (def.request?.params as Record<
+      string,
+      CrudParamOptionInterface<PlainLiteralObject>
+    >) ?? {};
+  const composedRequest: CrudRequestConfig<PlainLiteralObject> = {
+    ...def.request,
+    params: {
+      id: { field: 'id', type: 'uuid', primary: true },
+      [parentParam]: { field: parentParam, type: 'uuid' },
+      ...userControllerParams,
+    },
+  };
+
+  // Append the parent `@ApiParam` decorator to each declared operation
+  // for OpenAPI documentation. Sub-resources require the keyed
+  // `operations` form because the array form has no per-op slot.
+  const composedOperations = composeSubResourceOperationsDecorators(
+    def.operations,
+    parentApiParam,
+    parentKey,
+  );
+
+  // Auto-inject PathScopeHook for the (entity, parentParam, parentForeignKey)
+  // triple. It scopes reads + stamps the FK on creates, eliminating the
+  // boilerplate of hand-writing a scope hook per junction table. The
+  // entity is propagated so the generated subclass is decorated with
+  // `@EntityHook({ entity })` — internal writes to other entities will
+  // not re-trigger this scope.
+  const ScopeHook = PathScopeHook.for(
+    def.entity,
+    parentParam,
+    parentForeignKey,
+  );
+
+  // Opt-in AfterCreateReloadHook. Off by default because the extra
+  // DB round-trip is not free, and the underlying behaviour
+  // (`save()` omitting eager relations) is adapter-specific. Set
+  // `reloadAfterCreate: true` on the sub when its entity declares
+  // eager relations that consumers depend on.
+  const ReloadHook = sub.reloadAfterCreate
+    ? AfterCreateReloadHook.for(def.entity)
+    : undefined;
+
+  const composedHooks = [
+    ScopeHook,
+    ...(ReloadHook ? [ReloadHook] : []),
+    ...(def.hooks ?? []),
+  ];
+
+  // Auto-inject PathScopeGuard unless explicitly disabled. It enforces
+  // authenticated-actor + parent-ownership at the HTTP layer (so
+  // 401/404 propagate with intended status, vs hooks being wrapped to
+  // 500 by the upstream membrane). The guard is added both as a
+  // provider (so DI can resolve it) and as a class-level decorator
+  // (so it runs on every operation).
+  //
+  // `parentOwnerColumn` is required (no default) so multi-tenant
+  // applications cannot accidentally ship a sub-resource with the
+  // wrong ownership column. Opt out entirely with
+  // `disablePathScopeGuard: true` for public parents.
+  if (!sub.disablePathScopeGuard && !sub.parentOwnerColumn) {
+    throw new Error(
+      `defineSubResource(${subKey}): must declare \`parentOwnerColumn\` ` +
+        `(e.g. 'userId', 'orgId') or opt out with \`disablePathScopeGuard: true\`. ` +
+        `The auto guard cannot pick a default safely — wrong column = silent 404 for everyone.`,
+    );
+  }
+  const ScopeGuard = sub.disablePathScopeGuard
+    ? undefined
+    : PathScopeGuard.for(
+        parentParam,
+        parentKey,
+        sub.parentOwnerColumn as string,
+      );
+
+  const composedDecorators: readonly ClassDecorator[] = [
+    ...(def.decorators ?? []),
+    parentApiParam,
+    ...(ScopeGuard ? [UseGuards(ScopeGuard) as ClassDecorator] : []),
+  ];
+
+  const composedProviders: readonly Provider[] = ScopeGuard
+    ? [...(def.providers ?? []), ScopeGuard]
+    : def.providers ?? [];
+
+  const persistenceModule = def.persistence?.module ?? parentPersistenceModule;
+
+  // Build the materialised definition. Path comes from the composer,
+  // tags inherit from parent if not declared, hooks include the scope
+  // hook, decorators include the parent ApiParam, and the
+  // controller-level `request.params` declares both `id` and the
+  // parent param.
+  const materialised: RocketsResourceDefinition<PlainLiteralObject> = {
+    ...def,
+    path: composedPath,
+    tags,
+    hooks: composedHooks,
+    providers: composedProviders,
+    persistence: persistenceModule ? { module: persistenceModule } : {},
+    operations: composedOperations,
+    decorators: composedDecorators,
+    request: composedRequest,
+  };
+
+  return defineResource(materialised);
+}
+
+/**
+ * Append the parent `@ApiParam` decorator to every declared operation
+ * for OpenAPI documentation. Sub-resources require the keyed
+ * `operations` form (or `undefined` for the default set) because the
+ * array form has no per-op slot.
+ */
+function composeSubResourceOperationsDecorators(
+  declared:
+    | readonly ResourceOperationName[]
+    | ResourceOperationsObject
+    | undefined,
+  parentApiParam: ClassDecorator,
+  parentKey: string,
+): readonly ResourceOperationName[] | ResourceOperationsObject | undefined {
+  if (declared !== undefined && Array.isArray(declared)) {
+    throw new Error(
+      `defineResource(${parentKey}): a sub-resource declared its operations as an array. ` +
+        `Sub-resources require the keyed \`operations: { list: { ... }, create: { ... } }\` form ` +
+        `so the parent \`@ApiParam\` can be appended per operation.`,
+    );
+  }
+  // When the sub omits operations, fall through to defineResource's
+  // default operation set. The parent `@ApiParam` already lives on the
+  // controller class via root-level `decorators`, so the OpenAPI doc
+  // still surfaces the param even on default-only ops.
+  if (declared === undefined) return undefined;
+
+  const obj = declared as ResourceOperationsObject;
+  type OpKey = keyof ResourceOperationsObject;
+  const composed: { [K in OpKey]?: ResourceOperationsObject[K] } = {};
+  const opKeys: readonly OpKey[] = [
+    'list',
+    'read',
+    'create',
+    'update',
+    'replace',
+    'delete',
+    'restore',
+  ];
+  for (const k of opKeys) {
+    const cfg = obj[k];
+    if (!cfg) continue;
+    composed[k] = {
+      ...cfg,
+      decorators: [...(cfg.decorators ?? []), parentApiParam],
+    } as ResourceOperationsObject[typeof k];
+  }
+  return composed;
 }
 
 function validateDefinition<E extends PlainLiteralObject>(
   definition: RocketsResourceDefinition<E>,
 ): void {
-  if (!definition.key || typeof definition.key !== 'string') {
-    throw new Error(
-      'defineResource: `key` is required and must be a non-empty string.',
-    );
-  }
   if (!definition.entity || typeof definition.entity !== 'function') {
+    throw new Error('defineResource: `entity` must be a class constructor.');
+  }
+  if (
+    definition.key !== undefined &&
+    (typeof definition.key !== 'string' || definition.key.length === 0)
+  ) {
     throw new Error(
-      `defineResource[${definition.key}]: \`entity\` must be a class constructor.`,
+      `defineResource(${definition.entity.name}): when provided, ` +
+        '`key` must be a non-empty string.',
     );
   }
-  if (!isNonEmptyStringOrStringArray(definition.path)) {
+  const tag = definition.key ?? definition.entity.name;
+  // path / tags are optional — auto-derived from `key` when omitted.
+  // Validate only when explicitly provided so a malformed value (empty
+  // string, empty array, non-string entries) still fails fast.
+  if (
+    definition.path !== undefined &&
+    !isNonEmptyStringOrStringArray(definition.path)
+  ) {
     throw new Error(
-      `defineResource[${definition.key}]: \`path\` is required and must be a non-empty string or string array.`,
+      `defineResource(${tag}): when provided, \`path\` must be a non-empty string or string array.`,
     );
   }
-  if (!isNonEmptyStringArray(definition.tags)) {
+  if (
+    definition.tags !== undefined &&
+    !isNonEmptyStringArray(definition.tags)
+  ) {
     throw new Error(
-      `defineResource[${definition.key}]: \`tags\` is required and must be a non-empty array of non-empty strings.`,
+      `defineResource(${tag}): when provided, \`tags\` must be a non-empty array of non-empty strings.`,
     );
   }
-  if (definition.operations && definition.operations.length === 0) {
+  if (
+    Array.isArray(definition.operations) &&
+    definition.operations.length === 0
+  ) {
     throw new Error(
-      `defineResource[${definition.key}]: \`operations\` cannot be an empty array.`,
+      `defineResource(${tag}): \`operations\` cannot be an empty array.`,
+    );
+  }
+  if (
+    definition.operations !== undefined &&
+    !Array.isArray(definition.operations) &&
+    typeof definition.operations === 'object' &&
+    Object.keys(definition.operations).length === 0
+  ) {
+    throw new Error(
+      `defineResource(${tag}): \`operations\` cannot be an empty object.`,
     );
   }
   // Full relation checks happen in `resolveRelations` (the builder may build lazily).
@@ -266,22 +639,22 @@ function assertRelationsValid(
   for (const entry of relations) {
     if (typeof entry.source !== 'function') {
       throw new Error(
-        `defineResource[${resourceKey}]: every relation must declare a class \`source\` (use the \`relation()\` helper).`,
+        `defineResource(${resourceKey}): every relation must declare a class \`source\` (use the \`relation()\` helper).`,
       );
     }
     if (typeof entry.target !== 'function') {
       throw new Error(
-        `defineResource[${resourceKey}]: every relation must declare a class \`target\` or a \`() => Class\` thunk.`,
+        `defineResource(${resourceKey}): every relation must declare a class \`target\` or a \`() => Class\` thunk.`,
       );
     }
     if (!entry.propertyName || typeof entry.propertyName !== 'string') {
       throw new Error(
-        `defineResource[${resourceKey}]: every relation must have a non-empty string \`propertyName\`.`,
+        `defineResource(${resourceKey}): every relation must have a non-empty string \`propertyName\`.`,
       );
     }
     if (seen.has(entry.propertyName)) {
       throw new Error(
-        `defineResource[${resourceKey}]: duplicate relation propertyName "${entry.propertyName}". ` +
+        `defineResource(${resourceKey}): duplicate relation propertyName "${entry.propertyName}". ` +
           `Each property on the source entity may carry at most one relation declaration.`,
       );
     }
@@ -318,10 +691,10 @@ function buildResponse(
   return built;
 }
 
-function buildControllerDecorators(args: {
+function buildControllerDecorators<E extends PlainLiteralObject>(args: {
   tags: readonly string[];
   bearerAuth: boolean;
-  hooks: readonly Type[] | undefined;
+  hooks: readonly RocketsEntityHookForResource<E>[] | undefined;
   extra: readonly ClassDecorator[] | undefined;
 }): CrudDecorator[] {
   const decorators: CrudDecorator[] = [];
@@ -379,7 +752,7 @@ interface BuildOperationArgs {
   readonly dto: ResourceDtoConfig;
   readonly joins: readonly JoinClause[] | undefined;
   readonly handlers: ResourceHandlerOverrides;
-  readonly override: ResourceOperationOverride | undefined;
+  readonly override: InternalOperationOverride | undefined;
 }
 
 /**
@@ -478,7 +851,7 @@ function buildOperation(
  * (custom path, DTO, hooks, per-op decorators, …).
  */
 function optionalEnvelope(
-  override: ResourceOperationOverride,
+  override: InternalOperationOverride,
   extraDecorators: CrudDecorator[],
 ): {
   path?: string | string[];
@@ -505,7 +878,7 @@ function optionalEnvelope(
 function buildOperationDecorators(args: {
   op: ResourceOperationName;
   joins: readonly JoinClause[] | undefined;
-  override: ResourceOperationOverride;
+  override: InternalOperationOverride;
 }): CrudDecorator[] {
   const decorators: CrudDecorator[] = [];
 
@@ -536,9 +909,9 @@ function buildOperationDecorators(args: {
  * If you passed custom command/query handler classes, we register them here. Hooks
  * and any `providers: [...]` from the resource definition are included too.
  */
-function mergeProviders(args: {
+function mergeProviders<E extends PlainLiteralObject>(args: {
   handlers: ResourceHandlerOverrides;
-  hooks: readonly Type[] | undefined;
+  hooks: readonly RocketsEntityHookForResource<E>[] | undefined;
   extra: readonly Provider[];
   autoRegisterHandlers: boolean;
 }): Provider[] {
@@ -567,4 +940,235 @@ function mergeProviders(args: {
   for (const p of args.extra) add(p);
 
   return out;
+}
+
+/**
+ * Normalises the polymorphic `operations` input.
+ *
+ * Two shapes are accepted:
+ * - `Operation[]` — legacy array; per-op config comes from `dto`,
+ *   `handlers`, `overrides.operations`.
+ * - `ResourceOperationsObject` — keyed object form; each key holds its own
+ *   body/response/handler/hooks/decorators inline.
+ *
+ * Returns the union of both worlds so the rest of the builder reads one
+ * uniform shape.
+ */
+/**
+ * Internal per-operation override shape produced by `normalizeOperationsInput`.
+ *
+ * Carries everything needed to feed upstream `CrudOperationOptions` for one
+ * operation. Not exported — `ResourceOperationConfig` is the consumer-facing
+ * shape; this is the framework's intermediate representation.
+ */
+interface InternalOperationOverride {
+  query?: Type;
+  command?: Type;
+  request?: CrudRequestConfig<PlainLiteralObject>;
+  response?: CrudResponseConfig;
+  extraDecorators?: readonly (MethodDecorator | ClassDecorator)[];
+  transactional?: boolean;
+  path?: string | string[];
+  methodName?: string;
+  hooks?: readonly Type[];
+}
+
+function normalizeOperationsInput(
+  resourceKey: string,
+  input: readonly ResourceOperationName[] | ResourceOperationsObject,
+  ctx: {
+    dto: ResourceDtoConfig;
+    handlers: ResourceHandlerOverrides;
+  },
+): {
+  operations: readonly ResourceOperationName[];
+  dto: ResourceDtoConfig;
+  handlers: ResourceHandlerOverrides;
+  operationOverrides: Partial<
+    Record<ResourceOperationName, InternalOperationOverride>
+  >;
+} {
+  if (Array.isArray(input)) {
+    // Legacy array form. Validate that any handler the user supplied
+    // belongs to an operation actually enabled — a handler in DI but
+    // wired to no route is a silent dead-letter.
+    const enabled = new Set<ResourceOperationName>(input);
+    const handlerToOp: Record<
+      keyof ResourceHandlerOverrides,
+      ResourceOperationName
+    > = {
+      list: Operation.List,
+      read: Operation.Read,
+      create: Operation.Create,
+      update: Operation.Update,
+      replace: Operation.Replace,
+      delete: Operation.Delete,
+      softDelete: Operation.SoftDelete,
+      restore: Operation.Restore,
+    };
+    for (const slot of Object.keys(
+      ctx.handlers,
+    ) as (keyof ResourceHandlerOverrides)[]) {
+      if (ctx.handlers[slot] && !enabled.has(handlerToOp[slot])) {
+        throw new Error(
+          `defineResource(${resourceKey}): handler declared for "${slot}" but operation "${handlerToOp[slot]}" is not in \`operations\`. ` +
+            `Either enable the operation or remove the handler — handlers wired to no route never fire.`,
+        );
+      }
+    }
+    return {
+      operations: input as readonly ResourceOperationName[],
+      dto: ctx.dto,
+      handlers: ctx.handlers,
+      operationOverrides: {},
+    };
+  }
+
+  const obj = input as ResourceOperationsObject;
+  const operations: ResourceOperationName[] = [];
+  const handlers: { -readonly [K in keyof ResourceHandlerOverrides]: Type } = {
+    ...ctx.handlers,
+  };
+  const operationOverrides: Partial<
+    Record<ResourceOperationName, InternalOperationOverride>
+  > = {};
+
+  const dto: { -readonly [K in keyof ResourceDtoConfig]: Type } = {
+    ...ctx.dto,
+  };
+
+  // Promote per-op response to resource-level `dto.response` ONLY when
+  // every read-side operation that declares a response declares the
+  // SAME class. Mixing shapes (e.g. `read.response = PublicDto` and
+  // `list.response = AdminDto`) would otherwise leak one onto the
+  // auto-paginated DTO and any future op that doesn't declare its own —
+  // an asymmetric data-disclosure bug. When mixed, the consumer must
+  // declare `dto.response` explicitly at the resource level.
+  if (!dto.response) {
+    const declared = [obj.read?.response, obj.list?.response].filter(
+      (r): r is Type => r !== undefined,
+    );
+    const allSame = declared.every((r) => r === declared[0]);
+    if (declared.length > 0 && !allSame) {
+      throw new Error(
+        `defineResource(${resourceKey}): \`operations.read.response\` and \`operations.list.response\` differ. ` +
+          `Declare \`dto.response\` explicitly at the resource level so the auto-paginated DTO and any op without its own response use the right shape.`,
+      );
+    }
+    if (declared.length > 0) dto.response = declared[0];
+  }
+  // Mirror create/update bodies to dto so handler/decorator pipelines that
+  // rely on the resource-level `dto.{create,update}` fallback still see them.
+  if (!dto.create && obj.create?.body) dto.create = obj.create.body;
+  if (!dto.update && obj.update?.body) dto.update = obj.update.body;
+  if (!dto.replace && obj.replace?.body) dto.replace = obj.replace.body;
+
+  const consumeCommon = (
+    op: ResourceOperationName,
+    cfg: ResourceOperationConfig | undefined,
+    handlerSlot: keyof ResourceHandlerOverrides,
+    label: string,
+  ): void => {
+    operations.push(op);
+    if (!cfg) return;
+
+    if (cfg.handler) handlers[handlerSlot] = cfg.handler;
+
+    // Conflict detection (Fix #4): the high-level shorthand fields
+    // (`body`, `response`) and the low-level escape hatches
+    // (`requestOverride`, `responseOverride`) describe overlapping concerns.
+    // Specifying both for the same op is ambiguous — last-write-wins
+    // precedence is a silent footgun. Throw with a clear message.
+    if (cfg.body !== undefined && cfg.requestOverride?.body !== undefined) {
+      throw new Error(
+        `defineResource(${resourceKey}): \`operations.${label}\` declares both \`body\` and \`requestOverride.body\`. ` +
+          `Use one — \`body\` for the high-level shorthand or \`requestOverride.body\` when you also need \`requestOverride.params\`/\`requestOverride.query\` overrides.`,
+      );
+    }
+    if (
+      cfg.response !== undefined &&
+      cfg.responseOverride !== undefined &&
+      (cfg.responseOverride.resource !== undefined ||
+        cfg.responseOverride.paginated !== undefined)
+    ) {
+      throw new Error(
+        `defineResource(${resourceKey}): \`operations.${label}\` declares both \`response\` and \`responseOverride.resource/paginated\`. ` +
+          `Use \`response\` for the simple case or \`responseOverride\` for the full upstream config — not both.`,
+      );
+    }
+
+    const next: InternalOperationOverride = operationOverrides[op]
+      ? { ...operationOverrides[op] }
+      : {};
+    if (cfg.path !== undefined) next.path = cfg.path;
+    if (cfg.methodName !== undefined) next.methodName = cfg.methodName;
+    if (cfg.transactional !== undefined) next.transactional = cfg.transactional;
+    if (cfg.hooks !== undefined) next.hooks = cfg.hooks as readonly Type[];
+    if (cfg.decorators !== undefined) next.extraDecorators = cfg.decorators;
+    if (cfg.requestOverride !== undefined) next.request = cfg.requestOverride;
+    if (cfg.responseOverride !== undefined)
+      next.response = cfg.responseOverride;
+    if (cfg.body !== undefined) {
+      next.request = { ...(next.request ?? {}), body: cfg.body };
+    }
+    if (cfg.response !== undefined) {
+      next.response = {
+        ...(next.response ?? {}),
+        resource: cfg.response,
+        ...(cfg.paginated !== undefined ? { paginated: cfg.paginated } : {}),
+      };
+    }
+    operationOverrides[op] = next;
+  };
+
+  if (obj.list) consumeCommon(Operation.List, obj.list, 'list', 'list');
+  if (obj.read) consumeCommon(Operation.Read, obj.read, 'read', 'read');
+  if (obj.create)
+    consumeCommon(Operation.Create, obj.create, 'create', 'create');
+  if (obj.update)
+    consumeCommon(Operation.Update, obj.update, 'update', 'update');
+  if (obj.replace)
+    consumeCommon(Operation.Replace, obj.replace, 'replace', 'replace');
+
+  if (obj.delete) {
+    const op = obj.delete.soft ? Operation.SoftDelete : Operation.Delete;
+    const slot: keyof ResourceHandlerOverrides = obj.delete.soft
+      ? 'softDelete'
+      : 'delete';
+    consumeCommon(op, obj.delete, slot, 'delete');
+    if (obj.delete.returnDeleted !== undefined) {
+      const next: InternalOperationOverride = operationOverrides[op] ?? {};
+      next.response = {
+        ...(next.response ?? {}),
+        returnDeleted: obj.delete.returnDeleted,
+      };
+      operationOverrides[op] = next;
+    }
+  }
+
+  if (obj.restore) {
+    if (!obj.delete?.soft) {
+      throw new Error(
+        `defineResource(${resourceKey}): \`operations.restore\` requires \`operations.delete: { soft: true }\`. ` +
+          `Restore only applies to soft-deleted rows; with a hard delete there is nothing to restore.`,
+      );
+    }
+    consumeCommon(Operation.Restore, obj.restore, 'restore', 'restore');
+    if (obj.restore.returnRestored !== undefined) {
+      const next: InternalOperationOverride =
+        operationOverrides[Operation.Restore] ?? {};
+      next.response = {
+        ...(next.response ?? {}),
+        returnRestored: obj.restore.returnRestored,
+      };
+      operationOverrides[Operation.Restore] = next;
+    }
+  }
+
+  return {
+    operations,
+    dto,
+    handlers,
+    operationOverrides,
+  };
 }

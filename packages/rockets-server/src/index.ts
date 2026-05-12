@@ -1,6 +1,6 @@
 // ── Re-export core contracts & tokens ──
 export {
-  AUTH_PROVIDER_TOKEN,
+  AUTH_ADAPTER_TOKEN,
   ROCKETS_DISABLE_GUARDS_TOKEN,
   AuthServerGuard,
   AuthPublic,
@@ -28,11 +28,12 @@ export {
 } from '@bitwild/rockets-core';
 
 export type {
-  AuthProviderInterface,
+  AuthAdapterInterface,
   AuthorizedUser,
   AuthorizeUserInterface,
   ValidateTokenInterface,
   RepositoryPersistenceConfig,
+  RocketsUserMetadataConfig,
   RocketsCoreOptionsInterface,
   RocketsCoreOptionsExtrasInterface,
   RocketsCoreSettingsInterface,
@@ -65,9 +66,10 @@ export { ExceptionsFilter } from './infrastructure/filters/exceptions.filter';
 // ── Server's own exports ──
 export { RocketsModule } from './rockets.module';
 export type {
-  RocketsOptionsInterface,
-  UserMetadataConfigInterface,
-} from './infrastructure/config/interfaces/rockets-options.interface';
+  RocketsOptions,
+  RocketsAsyncOptions,
+} from './rockets.module-definition';
+export type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
 export type {
   RocketsOptionsExtrasInterface,
   DisableControllerOptionsInterface,
@@ -78,26 +80,38 @@ export { MeController } from './gateways/http/me.controller';
 // ── Declarative resource definition (re-exported from core) ──
 export {
   defineResource,
+  defineModuleResource,
+  isModuleResource,
+  ResourceKind,
   createPaginatedDto,
-  prepareResourceRegistration,
-  isGeneratedResourceDefinition,
+  buildAppRegistrationPlan,
+  isCrudResource,
   relation,
   createBoundRelation,
   resolveRelationTarget,
+  defineSubResource,
+  isSubResourceDefinition,
+  PathScopeHook,
 } from '@bitwild/rockets-core';
 export type {
-  ResourceRegistrationPlan,
-  ResourceDefinitionInput,
+  AppRegistrationPlan,
+  ResourceInput,
   RocketsResourceDefinition,
   ResourceDtoConfig,
   ResourceRelationEntry,
   ResourcePersistenceConfigDefinition as ResourcePersistenceConfig,
   ResourceHandlerOverrides,
   ResourceOperationName,
-  ResourceOperationOverride,
-  ResourceOverrides,
-  ResourceControllerOverrides,
-  RocketsResourceBundle,
+  ResourceOperationConfig,
+  ResourceDeleteOperationConfig,
+  ResourceRestoreOperationConfig,
+  ResourceOperationsObject,
+  RocketsSubResourceDefinition,
+  RocketsSubResourceInput,
+  CrudResource,
+  ModuleResource,
+  ModuleResourceEntityEntry,
+  DefineModuleResourceInput,
   BoundRelation,
   EntityConstructor,
   RelationOptions,

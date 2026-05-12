@@ -1,0 +1,690 @@
+{
+  "info": {
+    "name": "Rockets — Sample Server",
+    "_postman_id": "8a4f6c2e-4b1a-4f1a-9c2e-001000010001",
+    "description": "End-to-end collection for `examples/sample-server`. Auth/me + CRUD for pets, tags, pet-tags (sub), pet-vaccinations, appointments, reminders, plus pet-share / pet-transfer / admin audit-logs.\n\n**Variables auto-populated:**\n- `accessToken` — set by `POST /auth/signup` and `POST /auth/login`.\n- `userId` — set by `POST /auth/signup` / `GET /me`.\n- `petId`, `tagId`, `petTagId`, `vaccinationId`, `appointmentId`, `reminderId` — set by their respective `POST` requests.\n\nRun the requests in order the first time (signup → create-pet → create-tag → attach-tag) so each ID feeds the next.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('baseUrl')) {",
+          "  pm.collectionVariables.set('baseUrl', 'http://localhost:3000');",
+          "}",
+          "// Surface the current accessToken on every request so DevTools console",
+          "// shows whether the Authorization header is built from a stale or empty value.",
+          "const tok = pm.collectionVariables.get('accessToken') || '';",
+          "if (tok) {",
+          "  console.log('→ accessToken (first 30):', tok.substring(0, 30) + '...');",
+          "} else {",
+          "  console.warn('→ accessToken is EMPTY — protected routes will 401. Run signup or login first.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "petId", "value": "", "type": "string" },
+    { "key": "petUniqueRef", "value": "", "type": "string" },
+    { "key": "petTagId", "value": "", "type": "string" },
+    { "key": "tagId", "value": "", "type": "string" },
+    { "key": "vaccinationId", "value": "", "type": "string" },
+    { "key": "appointmentId", "value": "", "type": "string" },
+    { "key": "reminderId", "value": "", "type": "string" },
+    { "key": "shareUserId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/signup",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"hunter2\",\n  \"name\": \"Alice\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "console.log('signup status:', pm.response.code);",
+                  "console.log('signup body:', JSON.stringify(r, null, 2));",
+                  "if (r && r.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', r.accessToken);",
+                  "  if (pm.environment && pm.environment.name) pm.environment.set('accessToken', r.accessToken);",
+                  "  console.log('✓ accessToken stored:', String(r.accessToken).substring(0, 30) + '...');",
+                  "} else {",
+                  "  console.error('✗ no accessToken in response — variable NOT updated');",
+                  "}",
+                  "if (r && r.id) {",
+                  "  pm.collectionVariables.set('userId', r.id);",
+                  "  console.log('✓ userId stored:', r.id);",
+                  "}",
+                  "pm.test('signup returns accessToken', () => pm.expect(r).to.have.property('accessToken'));",
+                  "pm.test('accessToken is non-empty after signup', () => pm.expect(pm.collectionVariables.get('accessToken')).to.be.a('string').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"hunter2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "console.log('login status:', pm.response.code);",
+                  "console.log('login body:', JSON.stringify(r, null, 2));",
+                  "if (r && r.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', r.accessToken);",
+                  "  if (pm.environment && pm.environment.name) pm.environment.set('accessToken', r.accessToken);",
+                  "  console.log('✓ accessToken stored:', String(r.accessToken).substring(0, 30) + '...');",
+                  "} else {",
+                  "  console.error('✗ no accessToken in response — variable NOT updated');",
+                  "}",
+                  "pm.test('login returns accessToken', () => pm.expect(r).to.have.property('accessToken'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Me",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.id) pm.collectionVariables.set('userId', r.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userMetadata\": {\n    \"firstName\": \"Alice\",\n    \"lastName\": \"Doe\",\n    \"username\": \"alice.doe\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pets",
+      "item": [
+        {
+          "name": "GET /pets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets"]
+            }
+          }
+        },
+        {
+          "name": "POST /pets",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rex\",\n  \"species\": \"dog\",\n  \"breed\": \"labrador\",\n  \"age\": 3,\n  \"color\": \"black\",\n  \"description\": \"Friendly large dog\",\n  \"status\": \"active\",\n  \"uniqueRef\": \"rex-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets"]
+            },
+            "description": "`uniqueRef` is optional but enforced unique by the pet create handler — duplicates are rejected on create. The body uses `{{$timestamp}}` so re-running the request always produces a fresh value."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.id) pm.collectionVariables.set('petId', r.id);",
+                  "if (r.uniqueRef) pm.collectionVariables.set('petUniqueRef', r.uniqueRef);",
+                  "pm.test('returns id', () => pm.expect(r).to.have.property('id'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /pets/:petId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /pets/:petId",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{petId}}\",\n  \"description\": \"Updated description\",\n  \"status\": \"active\",\n  \"uniqueRef\": \"{{petUniqueRef}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /pets/:petId (soft)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /pets/:petId/restore",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "restore"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pet Tags (sub-resource)",
+      "item": [
+        {
+          "name": "GET /pets/:petId/tags",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "tags"]
+            }
+          }
+        },
+        {
+          "name": "POST /pets/:petId/tags",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tagId\": \"{{tagId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "tags"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.id) pm.collectionVariables.set('petTagId', r.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /pets/:petId/tags/:petTagId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/tags/{{petTagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "tags", "{{petTagId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /pets/:petId/tags/:petTagId",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/tags/{{petTagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "tags", "{{petTagId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tags",
+      "item": [
+        {
+          "name": "GET /tags",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags"]
+            }
+          }
+        },
+        {
+          "name": "POST /tags",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"vaccinated\",\n  \"description\": \"Up-to-date on shots\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.id) pm.collectionVariables.set('tagId', r.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tags/:tagId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "{{tagId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /tags/:tagId",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{tagId}}\",\n  \"description\": \"Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "{{tagId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /tags/:tagId",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tags", "{{tagId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pet Vaccinations",
+      "item": [
+        {
+          "name": "GET /pet-vaccinations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pet-vaccinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["pet-vaccinations"]
+            }
+          }
+        },
+        {
+          "name": "POST /pet-vaccinations",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"petId\": \"{{petId}}\",\n  \"name\": \"Rabies\",\n  \"administeredAt\": \"2026-01-15T00:00:00.000Z\",\n  \"notes\": \"Annual booster\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pet-vaccinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["pet-vaccinations"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.id) pm.collectionVariables.set('vaccinationId', r.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /pet-vaccinations/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pet-vaccinations/{{vaccinationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pet-vaccinations", "{{vaccinationId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /pet-vaccinations/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pet-vaccinations/{{vaccinationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pet-vaccinations", "{{vaccinationId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "GET /appointments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"]
+            }
+          }
+        },
+        {
+          "name": "POST /appointments",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"petId\": \"{{petId}}\",\n  \"scheduledAt\": \"2026-06-15T14:00:00.000Z\",\n  \"status\": \"scheduled\",\n  \"notes\": \"Annual checkup\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.id) pm.collectionVariables.set('appointmentId', r.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /appointments/:id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{appointmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "{{appointmentId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /appointments/:id",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{appointmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", "{{appointmentId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reminders",
+      "item": [
+        {
+          "name": "GET /reminders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/reminders",
+              "host": ["{{baseUrl}}"],
+              "path": ["reminders"]
+            }
+          }
+        },
+        {
+          "name": "POST /reminders",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appointmentId\": \"{{appointmentId}}\",\n  \"remindAt\": \"2026-06-14T14:00:00.000Z\",\n  \"channel\": \"email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reminders",
+              "host": ["{{baseUrl}}"],
+              "path": ["reminders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.id) pm.collectionVariables.set('reminderId', r.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pet Share",
+      "item": [
+        {
+          "name": "GET /pets/:petId/share",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/share",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "share"]
+            }
+          }
+        },
+        {
+          "name": "POST /pets/:petId/share",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sharedUserId\": \"{{shareUserId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/share",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "share"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.sharedUserId) pm.collectionVariables.set('shareUserId', r.sharedUserId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /pets/:petId/share/:userId",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/share/{{shareUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "share", "{{shareUserId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pet Transfer",
+      "item": [
+        {
+          "name": "POST /pets/:petId/transfer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newOwnerId\": \"{{shareUserId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}", "transfer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "GET /admin/audit-logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/audit-logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "audit-logs"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 export const ROCKETS_CORE_SETTINGS_TOKEN =
   'ROCKETS_CORE_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN';
 
-export const AUTH_PROVIDER_TOKEN = Symbol('ROCKETS_AUTH_PROVIDER');
+export const AUTH_ADAPTER_TOKEN = Symbol('ROCKETS_AUTH_PROVIDER');
 
 // Use the same string value as @concepta/nestjs-authentication for backward compatibility
 // with existing @AuthPublic() decorators from concepta packages

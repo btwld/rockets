@@ -9,10 +9,12 @@ import {
   UpsertUserMetadataHandler,
   GetUserMetadataHandler,
 } from '@bitwild/rockets-core';
-import { RAW_OPTIONS_TOKEN } from './rockets.tokens';
-import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
-import type { AuthProviderInterface } from './domain/interfaces/auth-provider.interface';
-import type { AuthorizedUser } from './domain/interfaces/auth-user.interface';
+import {
+  RAW_OPTIONS_TOKEN,
+  ROCKETS_USER_METADATA_DTO_TOKEN,
+} from './rockets.tokens';
+import type { RocketsOptions } from './rockets.module-definition';
+import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
 import type { RepositoryInterface } from '@concepta/nestjs-repository';
 import type { UserMetadataEntityInterface } from '@bitwild/rockets-core';
 
@@ -24,23 +26,11 @@ class MetadataUpdateDto {
   id!: string;
 }
 
-function authProviderFixture(): AuthProviderInterface {
-  const user: AuthorizedUser = {
-    id: 'u1',
-    sub: 'u1',
-    claims: {},
-    userRoles: [],
-  };
-  return {
-    validateToken: jest.fn().mockResolvedValue(user),
-  };
-}
-
-function rocketsOptionsFixture(): RocketsOptionsInterface {
+function rocketsOptionsFixture(): RocketsOptions {
   return {
     settings: {},
-    authProvider: authProviderFixture(),
     userMetadata: {
+      entity: StubUserMetadataEntity,
       createDto: MetadataCreateDto,
       updateDto: MetadataUpdateDto,
     },
@@ -70,7 +60,7 @@ function metadataRepositoryFixture(): jest.Mocked<
 @Module({})
 class UserModuleTestHarnessModule {
   static forTest(
-    options: RocketsOptionsInterface,
+    options: RocketsOptions,
     repo: jest.Mocked<RepositoryInterface<UserMetadataEntityInterface>>,
   ): DynamicModule {
     return {
@@ -80,6 +70,13 @@ class UserModuleTestHarnessModule {
       providers: [
         { provide: RAW_OPTIONS_TOKEN, useValue: options },
         {
+          // MeController reads only the narrowed DTO config token.
+          provide: ROCKETS_USER_METADATA_DTO_TOKEN,
+          useValue: {
+            updateDto: options.userMetadata?.updateDto,
+          },
+        },
+        {
           provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
           useValue: repo,
         },
@@ -88,6 +85,7 @@ class UserModuleTestHarnessModule {
       ],
       exports: [
         RAW_OPTIONS_TOKEN,
+        ROCKETS_USER_METADATA_DTO_TOKEN,
         getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
       ],
     };
