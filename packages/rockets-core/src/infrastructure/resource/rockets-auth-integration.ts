@@ -32,6 +32,27 @@ export interface RocketsAuthIntegration {
   readonly rocketsDefaults?: Readonly<{
     readonly enableGlobalGuard?: boolean;
   }>;
+  /**
+   * Opt-in: signal that `authAdapter` is already provided by a module
+   * in `nestImports` (and that module is `global: true`, so the
+   * adapter is reachable from core's scope via `useExisting`).
+   *
+   * When **false / omitted (default, back-compat):** core auto-pushes
+   * the adapter class as a provider in its own scope alongside the
+   * `AUTH_ADAPTER_TOKEN` alias. This is what `defineRocketsAuth` from
+   * `@bitwild/rockets-auth` has always relied on — even though
+   * `RocketsAuthModule` also provides the same class, the duplicate
+   * is benign because `RocketsJwtAuthAdapter`'s constructor only
+   * depends on globally-available providers (`QueryBus`).
+   *
+   * When **true:** core skips the auto-push and ONLY registers the
+   * `AUTH_ADAPTER_TOKEN` alias. Required for adapters whose
+   * constructor pulls dependencies from a private module scope
+   * (`FirebaseAuthAdapter` needs `FIREBASE_TOKEN_VERIFIER_TOKEN`,
+   * which lives inside `FirebaseAuthModule` — re-instantiating in
+   * core's scope fails `Nest can't resolve dependencies` at boot).
+   */
+  readonly authProviderExternallyManaged?: boolean;
 }
 
 export function isRocketsAuthIntegration(

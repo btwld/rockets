@@ -12,10 +12,7 @@ import type {
   AuthorizationPayloadInterface,
   Token,
 } from '@concepta/nestjs-authentication';
-import type {
-  ReferenceEmail,
-  ReferenceId,
-} from '@concepta/nestjs-common';
+import type { ReferenceEmail } from '@concepta/nestjs-common';
 
 import { RocketsAuthUserPortGetByUsernameQuery } from '../../domains/user/application/queries/impl/rockets-auth-user-port-get-by-username.query';
 import { RocketsGetUserBySubjectQuery } from '../../domains/user/application/queries/impl/rockets-get-user-by-subject.query';
@@ -71,22 +68,34 @@ class FakeVerifyCommand extends Command<void> {
 }
 
 class FakeSignAccessCommand extends Command<string> {
-  constructor(public readonly ctx: PlainLiteralObject, public readonly token: Token) {
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly token: Token,
+  ) {
     super();
   }
 }
 class FakeSignRefreshCommand extends Command<string> {
-  constructor(public readonly ctx: PlainLiteralObject, public readonly token: Token) {
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly token: Token,
+  ) {
     super();
   }
 }
 class FakeJwtVerifyAccessQuery extends Query<PlainLiteralObject> {
-  constructor(public readonly ctx: PlainLiteralObject, public readonly token: string) {
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly token: string,
+  ) {
     super();
   }
 }
 class FakeJwtVerifyRefreshQuery extends Query<PlainLiteralObject> {
-  constructor(public readonly ctx: PlainLiteralObject, public readonly token: string) {
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly token: string,
+  ) {
     super();
   }
 }
@@ -107,12 +116,18 @@ class FakeIssueRefreshCommand extends Command<string> {
   }
 }
 class FakeTokenVerifyAccessQuery extends Query<PlainLiteralObject> {
-  constructor(public readonly ctx: PlainLiteralObject, public readonly token: string) {
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly token: string,
+  ) {
     super();
   }
 }
 class FakeTokenVerifyRefreshQuery extends Query<PlainLiteralObject> {
-  constructor(public readonly ctx: PlainLiteralObject, public readonly token: string) {
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly token: string,
+  ) {
     super();
   }
 }
@@ -127,7 +142,10 @@ class FakeValidateTokenQuery extends Query<boolean> {
 
 // User port query that matches `GetUserByEmailQueryInterface`.
 class CustomGetByEmailQuery extends Query<AuthenticationUserResult> {
-  constructor(public readonly ctx: PlainLiteralObject, public readonly email: ReferenceEmail) {
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly email: ReferenceEmail,
+  ) {
     super();
   }
 }
@@ -176,9 +194,9 @@ describe(buildRocketsAuthenticationPorts.name, () => {
         validateQuery: ValidateOtpQuery,
         clearCommand: ClearOtpsCommand,
       });
-      expect(ports.recoveryNotification.sendRecoverLoginNotificationCommand).toBe(
-        FakeRecoverLoginCommand,
-      );
+      expect(
+        ports.recoveryNotification.sendRecoverLoginNotificationCommand,
+      ).toBe(FakeRecoverLoginCommand);
       expect(ports.verifyNotification.sendVerifyNotificationCommand).toBe(
         FakeVerifyCommand,
       );

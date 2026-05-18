@@ -100,9 +100,8 @@ export function createRocketsImports(options: {
   imports: NonNullable<DynamicModule['imports']>;
   extras?: RocketsOptionsExtrasInterface;
 }): NonNullable<DynamicModule['imports']> {
-  const { auth, extraResources, authNestImports } = resolveAuthExtras(
-    options.extras?.auth,
-  );
+  const { auth, extraResources, authNestImports, authExternallyProvided } =
+    resolveAuthExtras(options.extras?.auth);
 
   return [
     ...options.imports,
@@ -112,6 +111,7 @@ export function createRocketsImports(options: {
         swagger: opts.swagger,
       }),
       auth,
+      authExternallyProvided,
       userMetadata: options.extras?.userMetadata,
       repository: options.extras?.repository,
       resources: [...extraResources, ...(options.extras?.resources ?? [])],
@@ -132,12 +132,20 @@ function resolveAuthExtras(
   auth: Type<AuthAdapterInterface> | undefined;
   extraResources: ReadonlyArray<ResourceInput>;
   authNestImports: ReadonlyArray<DynamicModule>;
+  authExternallyProvided: boolean;
 } {
   if (isRocketsAuthIntegration(auth)) {
     return {
       auth: auth.authAdapter,
       extraResources: auth.resources,
       authNestImports: [...auth.nestImports],
+      // Honor the integration's explicit opt-in. Default (false /
+      // omitted) preserves the historic auto-push so
+      // `defineRocketsAuth` and other existing consumers keep
+      // working unchanged. Adapters whose deps live in a private
+      // module scope (e.g. Firebase) must set this to `true` — see
+      // the field's JSDoc.
+      authExternallyProvided: auth.authProviderExternallyManaged === true,
     };
   }
   if (isAuthFeatureBundle(auth)) {
@@ -145,9 +153,21 @@ function resolveAuthExtras(
       auth: auth.provider,
       extraResources: [auth.resource],
       authNestImports: [],
+      // The bundle's `resource` already exports the adapter, but the
+      // historic behavior auto-pushed it again in core. Keep that
+      // for back-compat — bundle adapters typically only inject
+      // globally-available providers, so the duplicate is benign.
+      authExternallyProvided: false,
     };
   }
-  return { auth, extraResources: [], authNestImports: [] };
+  return {
+    auth,
+    extraResources: [],
+    authNestImports: [],
+    // Bare `Type<AuthAdapterInterface>` — core auto-provides it (the
+    // historic behavior consumers rely on).
+    authExternallyProvided: false,
+  };
 }
 
 export function createRocketsControllers(options: {

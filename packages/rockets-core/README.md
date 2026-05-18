@@ -63,11 +63,18 @@ So we extracted the 90% into one library with a single contract:
 
 ```typescript
 RocketsCoreModule.forRoot({
-  authProvider: MyAuthAdapter,     // 1. how to authenticate
-  repository: TypeOrmRepositoryModule,  // 2. where data lives
-  resources: [petResource, /* … */],     // 3. what features exist
+  auth: MyAuthAdapter,                              // 1. how to authenticate
+  repository: defineTypeOrmRepository({ /* … */ }), // 2. where data lives
+  resources: [petResource, /* … */],                // 3. what features exist
 });
 ```
+
+Every input is configuration. The `define*(config)` helpers
+(`defineTypeOrmRepository`, `defineFirebaseAuth`, …) own the
+mechanical wiring — there is no raw `TypeOrmModule.forRoot` in your
+`AppModule`, no manual provider arrays, no hand-listed entities. See
+[Step 2 of the tutorial](#step-2--write-your-repository-helper) for
+how a helper is built.
 
 Anything that **both** the "I want full built-in auth" use case and the
 "I plug my own Firebase/Auth0" use case need — it lives in core. That
@@ -493,55 +500,66 @@ core tried to instantiate that class a second time inside its own
 scope, those dependencies wouldn't be reachable — boot fails with
 `Nest can't resolve dependencies`.
 
-The fix is to tell core "the adapter class is already provided
-elsewhere; just alias the token to it." The convention is a
-`define<Adapter>Auth(config)` helper that returns a
-`RocketsAuthIntegration`:
+`RocketsCoreModule` accepts a bare `Type<AuthAdapterInterface>` only.
+For an adapter that's externally provided, do two things:
+
+1. Import the adapter's owning module into your `AppModule` (or have
+   `RocketsCoreModule.forRoot` do it via a `defineModuleResource` in
+   `resources[]`).
+2. Pass `auth: TheAdapterClass` AND `authExternallyProvided: true`
+   so core skips its own `providers.push(adapterClass)` and only
+   aliases `AUTH_ADAPTER_TOKEN` via `useExisting`.
 
 ```typescript
-// src/auth/define-firebase-auth.ts
+import { Module } from '@nestjs/common';
+import {
+  RocketsCoreModule,
+  defineModuleResource,
+  defineResource,
+} from '@bitwild/rockets-core';
 import {
   FirebaseAuthAdapter,
   FirebaseAuthModule,
 } from '@bitwild/rockets-adapter-firebase';
-import {
-  defineModuleResource,
-  ROCKETS_AUTH_INTEGRATION_KIND,
-} from '@bitwild/rockets-core';
-import type { RocketsAuthIntegration } from '@bitwild/rockets-core';
-import { UserEntity } from './user.entity';
+import { ProductionFirebaseVerifier } from './firebase-verifier';
+import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
+import { UserMetadataEntity } from './user-metadata.entity';
+import { PetEntity } from './pet.entity';
 
-export function defineFirebaseAuth(config: {
-  verifier: Type<FirebaseTokenVerifier>;
-}): RocketsAuthIntegration {
-  return {
-    kind: ROCKETS_AUTH_INTEGRATION_KIND,
-    nestImports: [FirebaseAuthModule.forRoot({ verifier: config.verifier })],
-    authAdapter: FirebaseAuthAdapter,
-    // FirebaseAuthModule already provides the adapter — don't double-register.
-    authProviderExternallyManaged: true,
-    resources: [defineModuleResource({ entities: [UserEntity] })],
-  };
-}
+@Module({
+  imports: [
+    RocketsCoreModule.forRoot({
+      auth: FirebaseAuthAdapter,
+      authExternallyProvided: true,             // ← critical
+      repository: defineTypeOrmRepository({ /* … */ }),
+      userMetadata: { entity: UserMetadataEntity },
+      resources: [
+        // Mount the adapter's owning module via a module resource so
+        // Rockets can re-export it globally. FirebaseAuthModule must
+        // be global (or imported wherever AUTH_ADAPTER_TOKEN is
+        // resolved) for the `useExisting` alias to find it.
+        defineModuleResource({
+          imports: [
+            FirebaseAuthModule.forRoot({ verifier: ProductionFirebaseVerifier }),
+          ],
+        }),
+        defineResource({ entity: PetEntity }),
+      ],
+    }),
+  ],
+})
+export class AppModule {}
 ```
 
-Wire it the same way:
-
-```typescript
-RocketsCoreModule.forRoot({
-  auth: defineFirebaseAuth({ verifier: ProductionFirebaseVerifier }),
-  repository: defineTypeOrmRepository({ /* … */ }),
-  userMetadata: { entity: UserMetadataEntity },
-  resources: [defineResource({ entity: PetEntity })],
-});
-```
-
-> Note: this `RocketsAuthIntegration` shape is only accepted by
-> `RocketsModule.forRoot` (the server package). Core directly only
-> accepts a bare `Type<AuthAdapterInterface>` plus an
-> `authExternallyProvided: true` extras flag. In practice you almost
-> always wire auth through `RocketsModule` — see
-> [`@bitwild/rockets`](../rockets-server/).
+> **If you're using `@bitwild/rockets` (the server package), there's a
+> cleaner option:** `RocketsModule.forRoot` also accepts a
+> `RocketsAuthIntegration` for `auth:`, which packages the
+> external-module import + `authExternallyProvided` flag + entity
+> registration into one `defineXxxAuth(config)` helper. See
+> [`packages/rockets-server/README.md#how-to-auth-adapters-with-external-dependencies`](../rockets-server/README.md#how-to-auth-adapters-with-external-dependencies).
+> Core directly only knows about `Type<AuthAdapterInterface>` + the
+> `authExternallyProvided` flag — the helper-shape sugar lives in the
+> server package.
 
 ---
 
@@ -661,9 +679,10 @@ root. It worked, but:
   the root list).
 
 Today the rule is: **one default adapter** at the top
-(`repository: TypeOrmRepositoryModule`), and **every entity comes from
-a bundle**. Need a mixed store? Set `repository:` per entity inside the
-bundle. Moving a feature = moving the folder.
+(`repository: defineTypeOrmRepository({...})` or any other
+`RepositoryBootstrap`), and **every entity comes from a bundle**.
+Need a mixed store? Set `repository:` per entity inside the bundle.
+Moving a feature = moving the folder.
 
 ### Architecture
 

@@ -192,8 +192,15 @@ function createCoreProviders(options: {
   if (options.extras?.auth) {
     // Auto-register the adapter as a provider AND alias the public
     // token to it via `useExisting`, so consumers do not need a manual
-    // `providers: [...]` step.
-    providers.push(options.extras.auth, {
+    // `providers: [...]` step. Skip the class registration when the
+    // caller signals it is provided elsewhere (bundle resource module
+    // or global module from `RocketsAuthIntegration.nestImports`):
+    // re-providing here would create a second instance in core's
+    // scope, which can't see deps that live in the external module.
+    if (!options.extras.authExternallyProvided) {
+      providers.push(options.extras.auth);
+    }
+    providers.push({
       provide: AUTH_ADAPTER_TOKEN,
       useExisting: options.extras.auth,
     });
@@ -334,4 +341,3 @@ function createSafeCrudRootModule(): DynamicModule {
     exports: [...originalExports, SafeCrudContextInterceptor],
   };
 }
-

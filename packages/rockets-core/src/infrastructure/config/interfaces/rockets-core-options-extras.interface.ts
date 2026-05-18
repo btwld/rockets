@@ -17,6 +17,22 @@ export interface RocketsCoreOptionsExtrasInterface
    */
   readonly auth?: Type<AuthAdapterInterface>;
   /**
+   * Set by `rockets-server` when `auth` was wired through an
+   * `AuthFeatureBundle` or `RocketsAuthIntegration` — both of which
+   * already register the adapter class through their own module
+   * (a resource feature module or a global dynamic module imported
+   * via `nestImports`). When true, core skips its own
+   * `providers: [auth, ...]` push and just creates the
+   * `AUTH_ADAPTER_TOKEN` alias.
+   *
+   * Without this flag, an externally-provided adapter (e.g. the
+   * Firebase adapter, whose constructor needs `FIREBASE_TOKEN_VERIFIER_TOKEN`
+   * provided only by `FirebaseAuthModule`) gets a second instance
+   * created inside core where its deps aren't reachable, throwing
+   * `Nest can't resolve dependencies` at boot.
+   */
+  readonly authExternallyProvided?: boolean;
+  /**
    * User-metadata config — single source of truth for the entity, the
    * create/update/response DTOs, and optional adapter override.
    */
