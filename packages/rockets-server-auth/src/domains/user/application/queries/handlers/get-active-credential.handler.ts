@@ -1,14 +1,24 @@
 import { Inject, Optional } from '@nestjs/common';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
-import { UserCredentialEntityInterface } from '@concepta/nestjs-common';
+import { AppContextHost } from '@concepta/nestjs-common';
+import { UserCredentialEntityInterface } from '@concepta/nestjs-user';
 import {
   RepositoryInterface,
   getDynamicRepositoryToken,
   Where,
 } from '@concepta/nestjs-repository';
+
 import { USER_CREDENTIALS_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
-import { createRepositoryContext } from '../../../../../shared/utils/repository-context.helper';
 import { GetActiveCredentialQuery } from '../impl/get-active-credential.query';
+
+function resolveCredentialLookupCtx(
+  explicit: GetActiveCredentialQuery['ctx'],
+): AppContextHost {
+  if (explicit !== undefined && explicit !== null) {
+    return AppContextHost.from(explicit as AppContextHost);
+  }
+  return new AppContextHost();
+}
 
 @QueryHandler(GetActiveCredentialQuery)
 export class GetActiveCredentialHandler
@@ -29,18 +39,14 @@ export class GetActiveCredentialHandler
   ): Promise<UserCredentialEntityInterface | null> {
     if (!this.credentialsRepo) return null;
 
-    try {
-      const ctx = createRepositoryContext(USER_CREDENTIALS_ENTITY_KEY);
+    const ctx = resolveCredentialLookupCtx(query.ctx);
 
-      return await this.credentialsRepo.findOne({
-        where: Where.and(
-          Where.eq<UserCredentialEntityInterface>('userId', query.userId),
-          Where.eq<UserCredentialEntityInterface>('active', true),
-        ),
-        ctx,
-      });
-    } catch {
-      return null;
-    }
+    return await this.credentialsRepo.findOne({
+      where: Where.and(
+        Where.eq<UserCredentialEntityInterface>('userId', query.userId),
+        Where.eq<UserCredentialEntityInterface>('active', true),
+      ),
+      ctx,
+    });
   }
 }

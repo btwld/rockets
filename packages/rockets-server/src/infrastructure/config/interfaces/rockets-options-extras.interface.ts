@@ -1,5 +1,5 @@
 import { DynamicModule, Type } from '@nestjs/common';
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 import type {
   AbstractUpsertUserMetadataHandler,
   AbstractGetUserMetadataHandler,
@@ -8,6 +8,7 @@ import type {
   RepositoryBootstrap,
   ResourceInput,
   RocketsUserMetadataConfig,
+  RocketsAuthIntegration,
 } from '@bitwild/rockets-core';
 
 export interface DisableControllerOptionsInterface {
@@ -20,19 +21,15 @@ export interface RocketsOptionsExtrasInterface
   disableController?: DisableControllerOptionsInterface;
 
   /**
-   * Auth adapter, accepted in two forms:
-   *
-   * - `Type<AuthAdapterInterface>` — a bare class. The caller is
-   *   responsible for registering it as a Nest provider (typically
-   *   inside the `defineModuleResource()` that owns the user entity).
-   * - `AuthFeatureBundle` — produced by `defineAuthFeature()`
-   *   (or a sample wrapper like `defineSampleAuth()`). The bundle
-   *   carries both the adapter class and the module resource that
-   *   owns its entity / controllers / providers; the module resource
-   *   is auto-prepended to `resources[]`, so the caller does not list
-   *   the auth feature twice.
+   * - `Type<AuthAdapterInterface>` — bare adapter; caller registers providers.
+   * - `AuthFeatureBundle` — from `defineAuthFeature()`; resource prepended to `resources[]`.
+   * - `RocketsAuthIntegration` — from `defineRocketsAuth()` in `@bitwild/rockets-auth`;
+   *   `nestImports` append after core; `resources` merged into the planner.
    */
-  auth?: Type<AuthAdapterInterface> | AuthFeatureBundle;
+  auth?:
+    | Type<AuthAdapterInterface>
+    | AuthFeatureBundle
+    | RocketsAuthIntegration;
 
   /**
    * User-metadata config — entity + DTOs (+ optional response DTO / adapter).

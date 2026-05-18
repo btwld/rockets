@@ -1,15 +1,9 @@
 import { RocketsAuthUserMetadataDto } from '@bitwild/rockets-auth';
 import { RocketsAuthUserMetadataCreatableInterface } from '@bitwild/rockets-auth/dist/domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
-import { RocketsAuthUserMetadataModelUpdatableInterface, RocketsAuthUserMetadataUpdatableInterface } from '@bitwild/rockets-auth/dist/domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
-import { ApiProperty, PartialType, PickType } from '@nestjs/swagger';
+import { RocketsAuthUserMetadataModelUpdatableInterface } from '@bitwild/rockets-auth/dist/domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
+import { ApiProperty, PickType } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 @Exclude()
 export class UserMetadataDto extends RocketsAuthUserMetadataDto {
@@ -64,10 +58,22 @@ export class UserMetadataDto extends RocketsAuthUserMetadataDto {
   bio?: string;
 }
 
-export class UserMetadataCreateDto 
-  extends PickType(UserMetadataDto, ['userId', 'firstName', 'lastName', 'username', 'bio'] as const) implements RocketsAuthUserMetadataCreatableInterface {
-}
+export class UserMetadataCreateDto
+  extends PickType(UserMetadataDto, [
+    'userId',
+    'firstName',
+    'lastName',
+    'username',
+    'bio',
+  ] as const)
+  implements RocketsAuthUserMetadataCreatableInterface {}
 
 export class UserMetadataUpdateDto
-  extends PickType(UserMetadataDto, ['id', 'firstName', 'lastName', 'username', 'bio'] as const) implements RocketsAuthUserMetadataModelUpdatableInterface {
-}
+  extends PickType(UserMetadataDto, [
+    'id',
+    'firstName',
+    'lastName',
+    'username',
+    'bio',
+  ] as const)
+  implements RocketsAuthUserMetadataModelUpdatableInterface {}

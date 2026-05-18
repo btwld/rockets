@@ -1,9 +1,7 @@
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Injectable } from '@nestjs/common';
-import {
-  RepositoryContextInterface,
-  TransactionScope,
-} from '@concepta/nestjs-repository';
+import { TransactionScope } from '@concepta/nestjs-repository';
+import { RepositoryContextInterface } from '@bitwild/rockets-common';
 import {
   CreateUserCommand,
   GetUserByEmailQuery,
@@ -16,6 +14,19 @@ import { DuplicateUserException } from '../../../domain/exceptions/user.exceptio
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 import { AbstractSignupUserHandler } from './abstract-signup-user.handler';
 import { SignupUserCommand } from '../impl/signup-user.command';
+import { userAggregateToEntity } from '../../../../../shared/utils/aggregate-mappers';
+
+/**
+ * Drop server-controlled identity fields from a user-supplied metadata
+ * payload. `id` and `userId` are owned by the persistence layer and must
+ * not be settable via the signup body.
+ */
+function stripIdentityFields<T extends object>(metadata: T): Partial<T> {
+  const copy: Partial<T> = { ...metadata };
+  delete (copy as { id?: unknown }).id;
+  delete (copy as { userId?: unknown }).userId;
+  return copy;
+}
 
 @Injectable()
 export class SignupUserHandler extends AbstractSignupUserHandler {
@@ -49,20 +60,20 @@ export class SignupUserHandler extends AbstractSignupUserHandler {
 
       let userMetadata: RocketsAuthUserEntityInterface['userMetadata'];
       if (dto.userMetadata) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id: _id, userId: _uid, ...safeMetadata } = dto.userMetadata;
         userMetadata = await this.commandBus.execute(
-          new SaveUserMetadataCommand(userId, safeMetadata),
+          new SaveUserMetadataCommand(
+            userId,
+            stripIdentityFields(dto.userMetadata),
+          ),
         );
       }
 
       await this.commandBus.execute(new AssignDefaultRoleCommand(userId));
 
-      const plain = userAggregate.toPlain();
       return {
-        ...plain,
+        ...userAggregateToEntity(userAggregate),
         userMetadata,
-      } as RocketsAuthUserEntityInterface;
+      };
     });
   }
 

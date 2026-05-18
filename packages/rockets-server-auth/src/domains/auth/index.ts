@@ -1,19 +1,29 @@
 // Auth Domain Public API
+//
+// v8 `AuthenticationModule` registers strategies and CQRS token handlers.
+// Rockets adds HTTP routes: `RocketsAuthTokenController` (`/token/password`,
+// `/token/refresh`), and the factory-built `MePasswordController` (`/me/password`).
 
-// Controllers
-export { AuthPasswordController } from './controllers/auth-password.controller';
-export { AuthTokenRefreshController } from './controllers/auth-refresh.controller';
-export { RocketsAuthRecoveryController } from './controllers/auth-recovery.controller';
-export { MePasswordController } from './controllers/me-password.controller';
+// Gateway controllers
+export { buildMePasswordController } from './gateways/http/factories/build-me-password-controller';
+export { RocketsAuthTokenController } from './gateways/http/controllers/rockets-auth-token.controller';
 
-// DTOs
-export { RocketsAuthJwtResponseDto } from './dto/rockets-auth-jwt-response.dto';
-export { RocketsAuthLoginDto } from './dto/rockets-auth-login.dto';
-export { RocketsAuthRefreshDto } from './dto/rockets-auth-refresh.dto';
-export { RocketsAuthRecoverLoginDto } from './dto/rockets-auth-recover-login.dto';
-export { RocketsAuthRecoverPasswordDto } from './dto/rockets-auth-recover-password.dto';
-export { RocketsAuthUpdatePasswordDto } from './dto/rockets-auth-update-password.dto';
-export { RocketsAuthChangePasswordDto } from './dto/rockets-auth-change-password.dto';
+// Application — Commands
+export { ChangeMyPasswordCommand } from './application/commands/impl/change-my-password.command';
+export {
+  AbstractChangeMyPasswordHandler,
+  type ChangeMyPasswordPayload,
+} from './application/commands/handlers/abstract-change-my-password.handler';
+export { ChangeMyPasswordHandler } from './application/commands/handlers/change-my-password.handler';
 
-// Interfaces
-export { RocketsAuthAuthenticationResponseInterface } from '../../interfaces/common/rockets-auth-authentication-response.interface';
+// Infrastructure — DTOs
+export { RocketsAuthChangePasswordDto } from './infrastructure/dto/rockets-auth-change-password.dto';
+
+// Public interfaces (controller extras)
+export type {
+  MePasswordControllerExtras,
+  MePasswordRouteExtras,
+  RocketsAuthClassDecorator,
+  RocketsAuthMethodDecorator,
+  RocketsAuthRouteHandlerOverride,
+} from './interfaces/me-password-controller-extras.interface';

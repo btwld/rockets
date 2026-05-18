@@ -2,13 +2,13 @@ import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { ValidateAndVerifyAccessTokenQuery } from '@concepta/nestjs-authentication';
 import { UserInterface } from '@concepta/nestjs-user';
-import { RoleEntityInterface } from '@concepta/nestjs-role';
 import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
-import { GetAssignedRolesQuery, RoleAssignment } from '@concepta/nestjs-role';
 import { GetUserBySubjectQuery } from '@concepta/nestjs-user';
-import { RocketsEntity } from '../shared/constants/repository-entity-keys.constants';
 import { userAggregateToEntity } from '../shared/utils/aggregate-mappers';
-import { RocketsGetRolesByIdsQuery } from '../domains/role/application/queries/impl/rockets-get-roles-by-ids.query';
+import {
+  resolveUserRoles,
+  UserRolesView,
+} from '../shared/utils/resolve-user-role-names';
 
 @Injectable()
 export class RocketsJwtAuthAdapter {
@@ -20,7 +20,7 @@ export class RocketsJwtAuthAdapter {
     id: string;
     sub: string;
     email: string;
-    userRoles: { role: { name: string } }[];
+    userRoles: UserRolesView['userRoles'];
     claims: Record<string, unknown>;
   }> {
     try {
@@ -47,21 +47,7 @@ export class RocketsJwtAuthAdapter {
       }
 
       const user = userAggregateToEntity(userResult);
-
-      const assignedRoleAssignments = await this.queryBus.execute<
-        GetAssignedRolesQuery,
-        RoleAssignment[]
-      >(new GetAssignedRolesQuery({}, RocketsEntity.userRole, user.id));
-
-      let roleNames: string[] = [];
-      if (assignedRoleAssignments?.length > 0) {
-        const roleIds = assignedRoleAssignments.map((ra) => ra.roleId);
-        const roles = await this.queryBus.execute<
-          RocketsGetRolesByIdsQuery,
-          RoleEntityInterface[]
-        >(new RocketsGetRolesByIdsQuery(roleIds));
-        roleNames = roles.map((role) => role.name);
-      }
+      const userRoles = await resolveUserRoles(this.queryBus, user.id);
 
       this.logger.log(`Successfully validated token for user: ${payload.sub}`);
 
@@ -69,7 +55,7 @@ export class RocketsJwtAuthAdapter {
         id: user.id,
         sub: payload.sub,
         email: user.email,
-        userRoles: roleNames.map((name) => ({ role: { name } })),
+        userRoles,
         claims: { ...payload },
       };
     } catch (error) {

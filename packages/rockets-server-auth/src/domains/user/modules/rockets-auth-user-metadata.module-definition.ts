@@ -1,19 +1,9 @@
-import {
-  ConfigurableModuleBuilder,
-  DynamicModule,
-  Provider,
-} from '@nestjs/common';
-import {
-  getDynamicRepositoryToken,
-  RepositoryInterface,
-} from '@concepta/nestjs-repository';
+import { ConfigurableModuleBuilder, DynamicModule } from '@nestjs/common';
 import { UserMetadataConfigInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
-import { RocketsAuthUserMetadataEntityInterface } from '../interfaces/rockets-auth-user-metadata-entity.interface';
-import { GenericUserMetadataModelService } from '../infrastructure/services/rockets-auth-user-metadata.model.service';
-import {
-  USER_METADATA_MODULE_ENTITY_KEY,
-  UserMetadataModelService,
-} from '../infrastructure/config/user-metadata.constants';
+import { USER_METADATA_REPOSITORY_TOKEN } from '../domain/constants/user-domain.tokens';
+import { UserMetadataRepository } from '../infrastructure/persistence/user-metadata.repository';
+import { SaveUserMetadataHandler } from '../application/commands/handlers/save-user-metadata.handler';
+import { GetUserMetadataHandler } from '../application/queries/handlers/get-user-metadata.handler';
 
 export const RAW_USER_METADATA_OPTIONS_TOKEN = Symbol(
   '__ROCKETS_USER_METADATA_MODULE_RAW_OPTIONS_TOKEN__',
@@ -42,103 +32,34 @@ export type RocketsAuthUserMetadataOptions =
 export type RocketsAuthUserMetadataAsyncOptions =
   typeof ROCKETS_AUTH_USER_METADATA_MODULE_ASYNC_OPTIONS_TYPE;
 
-/**
- * Transform the definition to include the combined providers and imports
- * Following the pattern from rockets-auth.module-definition.ts
- */
 function definitionTransform(
   definition: DynamicModule,
   extras: Partial<UserMetadataExtrasInterface>,
 ): DynamicModule {
-  const { imports = [], providers = [], exports = [] } = definition;
+  // Rename to avoid shadowing the CJS `exports` object — TypeScript compiles
+  // module-level `export const X` references to `exports.X`, which the local
+  // destructured `exports` array would intercept and resolve to `undefined`.
+  const { imports = [], providers = [], exports: defExports = [] } = definition;
 
   return {
     ...definition,
     global: extras.global,
-    imports: createRocketsAuthUserMetadataImports({
-      imports,
-      extras,
-    }),
-    providers: createRocketsAuthUserMetadataProviders({
-      providers,
-      extras,
-    }),
-    exports: createRocketsAuthUserMetadataExports({
-      exports,
-      extras,
-    }),
-  };
-}
-
-/**
- * Create imports following the rockets-auth pattern
- */
-function createRocketsAuthUserMetadataImports(options: {
-  imports: DynamicModule['imports'];
-  extras?: Partial<UserMetadataExtrasInterface>;
-}): DynamicModule['imports'] {
-  const { extras } = options;
-
-  return [
-    ...(options.imports || []),
-
-    // Additional imports from config
-    ...(extras?.imports || []),
-  ];
-}
-
-/**
- * Create providers following the rockets-auth pattern
- */
-function createRocketsAuthUserMetadataProviders(options: {
-  providers: DynamicModule['providers'];
-  extras?: Partial<UserMetadataExtrasInterface>;
-}): Provider[] {
-  return [
-    ...(options.providers || []),
-
-    // TODO: Remove this token + GenericUserMetadataModelService once all callers use SaveUserMetadataCommand /
-    // UserMetadataRepository (keep userMetadataModelService override story via custom repository if still needed).
-    {
-      provide: UserMetadataModelService,
-      inject: [
-        getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-        RAW_USER_METADATA_OPTIONS_TOKEN,
-      ],
-      useFactory: (
-        repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
-        moduleConfig: UserMetadataConfigInterface,
-      ) => {
-        // Use custom service if provided in config
-        if (moduleConfig.userMetadataModelService) {
-          return new moduleConfig.userMetadataModelService(
-            repo,
-            moduleConfig.createDto,
-            moduleConfig.updateDto,
-          );
-        }
-
-        // Otherwise, use the default service
-        return new GenericUserMetadataModelService(
-          repo,
-          moduleConfig.createDto,
-          moduleConfig.updateDto,
-        );
+    imports: [...imports, ...(extras.imports ?? [])],
+    providers: [
+      ...providers,
+      {
+        provide: USER_METADATA_REPOSITORY_TOKEN,
+        useClass: UserMetadataRepository,
       },
-    },
-  ];
-}
-
-/**
- * Create exports following the rockets-auth pattern
- */
-function createRocketsAuthUserMetadataExports(options: {
-  exports: DynamicModule['exports'];
-  extras?: Partial<UserMetadataExtrasInterface>;
-}): DynamicModule['exports'] {
-  return [
-    ...(options.exports || []),
-    RAW_USER_METADATA_OPTIONS_TOKEN,
-    UserMetadataModelService,
-  ];
+      SaveUserMetadataHandler,
+      GetUserMetadataHandler,
+    ],
+    exports: [
+      ...defExports,
+      RAW_USER_METADATA_OPTIONS_TOKEN,
+      USER_METADATA_REPOSITORY_TOKEN,
+      SaveUserMetadataHandler,
+      GetUserMetadataHandler,
+    ],
+  };
 }

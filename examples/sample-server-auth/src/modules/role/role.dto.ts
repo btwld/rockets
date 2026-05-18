@@ -1,7 +1,11 @@
 import { PartialType, PickType } from '@nestjs/swagger';
-import { RocketsAuthRoleCreatableInterface, RocketsAuthRoleDto, RocketsAuthRoleUpdatableInterface } from '@bitwild/rockets-auth';
+import {
+  RocketsAuthRoleCreatableInterface,
+  RocketsAuthRoleDto,
+  RocketsAuthRoleUpdatableInterface,
+} from '@bitwild/rockets-auth';
 
-export class RoleDto extends RocketsAuthRoleDto { }
+export class RoleDto extends RocketsAuthRoleDto {}
 
 export class RoleUpdateDto
   extends PartialType(

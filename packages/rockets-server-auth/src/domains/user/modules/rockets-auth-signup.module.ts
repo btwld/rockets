@@ -10,19 +10,13 @@ import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rocke
 import { RocketsAuthUserCreateDto } from '../infrastructure/dto/rockets-auth-user-create.dto';
 import { RocketsAuthUserDto } from '../infrastructure/dto/rockets-auth-user.dto';
 import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
-import { USER_METADATA_REPOSITORY_TOKEN } from '../infrastructure/config/user-domain.constants';
-
-// Infrastructure
-import { UserMetadataRepository } from '../infrastructure/persistence/user-metadata.repository';
 
 // Application – Commands
 import { SignupUserHandler } from '../application/commands/handlers/signup-user.handler';
-import { SaveUserMetadataHandler } from '../application/commands/handlers/save-user-metadata.handler';
 import { AssignDefaultRoleHandler } from '../application/commands/handlers/assign-default-role.handler';
 import { SignupUserCommand } from '../application/commands/impl/signup-user.command';
 // Application – Queries
 import { GetUserHandler } from '../application/queries/handlers/get-user.handler';
-import { GetUserMetadataHandler } from '../application/queries/handlers/get-user-metadata.handler';
 
 @Module({})
 export class RocketsAuthSignUpModule {
@@ -102,18 +96,13 @@ export class RocketsAuthSignUpModule {
         }),
       ],
       providers: [
-        // Infrastructure: repositories
-        {
-          provide: USER_METADATA_REPOSITORY_TOKEN,
-          useClass: UserMetadataRepository,
-        },
         // Application: command handlers
         SignupHandler,
-        SaveUserMetadataHandler,
         AssignDefaultRoleHandler,
         // Application: query handlers
         GetUserHandler,
-        GetUserMetadataHandler,
+        // SaveUserMetadataHandler / GetUserMetadataHandler / USER_METADATA_REPOSITORY_TOKEN
+        // are provided globally by RocketsAuthUserMetadataModule.
       ],
     };
   }

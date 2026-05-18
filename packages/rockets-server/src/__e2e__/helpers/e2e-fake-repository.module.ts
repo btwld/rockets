@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '@bitwild/rockets-core';
 import { UserMetadataRepositoryFixture } from '../../__fixtures__/repositories/user-metadata.repository.fixture';
 

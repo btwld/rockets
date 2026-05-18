@@ -1,32 +1,39 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import { EventModule } from '@concepta/nestjs-event';
-import {
-  RocketsAuthModule,
-  RocketsJwtAuthProvider,
-} from '@bitwild/rockets-auth';
-import {
-  RocketsModule,
-} from '@bitwild/rockets';
-import {
-  EmailSendOptionsInterface,
-} from '@concepta/nestjs-common';
+import { defineRocketsAuth } from '@bitwild/rockets-auth';
+import { RocketsModule } from '@bitwild/rockets';
+import type { EmailSendOptionsInterface } from '@concepta/nestjs-common/dist/domain/email/interfaces/email-send-options.interface';
 
-// Import ACL configuration
 import { ACService } from './access-control.service';
 import { acRules } from './app.acl';
-
-import { UserMetadataEntity } from './modules/user/entities/user-metadata.entity';
-import { UserMetadataCreateDto, UserMetadataUpdateDto } from './modules/user/dto/user-metadata.dto';
-
-// Import modules
-import { PetModule } from './modules/pet';
-import { UserModule } from './modules/user';
-
-// Import user-related items
 import {
+  SAMPLE_NOTIFICATION_HANDLERS,
+  SampleSendPasswordUpdatedCommand,
+  SampleSendRecoverLoginCommand,
+  SampleSendRecoverPasswordCommand,
+  SampleSendVerifyCommand,
+} from './notification/sample-notification';
+import { UserMetadataEntity } from './modules/user/entities/user-metadata.entity';
+import {
+  UserMetadataCreateDto,
+  UserMetadataUpdateDto,
+} from './modules/user/dto/user-metadata.dto';
+import {
+  PetModule,
+  PetEntity,
+  PetVaccinationEntity,
+  PetAppointmentEntity,
+  createPetResource,
+  createPetVaccinationResource,
+  createPetAppointmentResource,
+} from './modules/pet';
+import { PetAccessQueryService } from './modules/pet/domains/pet/pet-access-query.service';
+import {
+  UserModule,
   UserEntity,
+  UserCredentialEntity,
   UserOtpEntity,
   UserRoleEntity,
   FederatedEntity,
@@ -34,197 +41,150 @@ import {
   UserDto,
   UserCreateDto,
   SampleUserUpdateDto,
-  UserTypeOrmCrudAdapter,
-  UserMetadataTypeOrmCrudAdapter,
 } from './modules/user';
-
-// Import role-related items
-import {
-  RoleEntity,
-  RoleDto,
-  RoleUpdateDto,
-  RoleTypeOrmCrudAdapter,
-} from './modules/role';
-
-// Import pet-related items
-import { PetEntity, PetVaccinationEntity, PetAppointmentEntity } from './modules/pet';
+import { RoleEntity, RoleDto, RoleUpdateDto } from './modules/role';
 import { RoleCreateDto } from './modules/role/role.dto';
 
+const rocketsAuth = defineRocketsAuth({
+  persistence: {
+    module: TypeOrmRepositoryModule,
+    entities: {
+      user: UserEntity,
+      userCredentials: UserCredentialEntity,
+      userOtp: UserOtpEntity,
+      role: RoleEntity,
+      userRole: UserRoleEntity,
+      federatedIdentity: FederatedEntity,
+    },
+  },
+  invitationEntity: InvitationEntity,
+  userMetadata: {
+    entity: UserMetadataEntity,
+    createDto: UserMetadataCreateDto,
+    updateDto: UserMetadataUpdateDto,
+  },
+  useFactory: () => {
+    const mailLogger = new Logger('SampleMailer');
+    return {
+      services: {
+        mailerService: {
+          sendMail: async (options: EmailSendOptionsInterface) => {
+            mailLogger.log(`Email would be sent: ${String(options.to)}`);
+            return Promise.resolve();
+          },
+        },
+      },
+      authentication: {
+        ports: {
+          recoveryNotification: {
+            sendRecoverLoginNotificationCommand: SampleSendRecoverLoginCommand,
+            sendRecoverPasswordNotificationCommand:
+              SampleSendRecoverPasswordCommand,
+            sendPasswordUpdatedNotificationCommand:
+              SampleSendPasswordUpdatedCommand,
+          },
+          verifyNotification: {
+            sendVerifyNotificationCommand: SampleSendVerifyCommand,
+          },
+        },
+      },
+      settings: {
+        role: {
+          adminRoleName: 'admin',
+          defaultUserRoleName: 'user',
+        },
+        email: {
+          from: 'noreply@example.com',
+          baseUrl: 'http://localhost:3000',
+          templates: {
+            sendOtp: {
+              fileName: __dirname + '/../assets/send-otp.template.hbs',
+              subject: 'Your One Time Password',
+            },
+            invitation: {
+              logo: '',
+              fileName: __dirname + '/../assets/invitation.template.hbs',
+              subject: 'You have been invited',
+            },
+            invitationAccepted: {
+              logo: '',
+              fileName:
+                __dirname + '/../assets/invitation-accepted.template.hbs',
+              subject: 'Invitation Accepted',
+            },
+          },
+        },
+        otp: {
+          assignment: 'userOtp',
+          category: 'auth-login',
+          type: 'uuid',
+          expiresIn: '1h',
+        },
+      },
+    };
+  },
+  userCrud: {
+    model: UserDto,
+    dto: {
+      createOne: UserCreateDto,
+      updateOne: SampleUserUpdateDto,
+    },
+  },
+  roleCrud: {
+    model: RoleDto,
+    dto: {
+      createOne: RoleCreateDto,
+      updateOne: RoleUpdateDto,
+    },
+  },
+  invitation: {},
+  accessControl: {
+    service: new ACService(),
+    settings: { rules: acRules },
+    appFilter: false,
+    imports: [PetModule],
+    queryServices: [PetAccessQueryService],
+  },
+  rocketsDefaults: { enableGlobalGuard: false },
+});
 
 @Global()
 @Module({
   imports: [
     EventModule.forRoot({}),
-    // TypeORM configuration with SQLite in-memory
-    TypeOrmExtModule.forRoot({
+    TypeOrmModule.forRoot({
       type: 'sqlite',
       database: ':memory:',
       entities: [
-        UserMetadataEntity, 
+        UserMetadataEntity,
         PetEntity,
         PetVaccinationEntity,
         PetAppointmentEntity,
         UserEntity,
+        UserCredentialEntity,
         UserOtpEntity,
         RoleEntity,
         UserRoleEntity,
         FederatedEntity,
-        InvitationEntity
+        InvitationEntity,
       ],
       synchronize: true,
       dropSchema: true,
     }),
-    // Import domain modules
     PetModule,
     UserModule,
-    TypeOrmExtModule.forFeature({
-      userMetadata: { entity: UserMetadataEntity },
-      user: { entity: UserEntity },
-      role: { entity: RoleEntity },
-      userRole: { entity: UserRoleEntity },
-      userOtp: { entity: UserOtpEntity },
-      federated: { entity: FederatedEntity },
-      invitation: { entity: InvitationEntity },
-    }), 
-    // RocketsAuthModule MUST be imported BEFORE RocketsModule
-    // because RocketsModule depends on RocketsJwtAuthProvider from RocketsAuthModule
-    RocketsAuthModule.forRootAsync({
-      imports: [
-        TypeOrmExtModule.forFeature({
-          user: { entity: UserEntity },
-          userMetadata: { entity: UserMetadataEntity },
-          invitation: { entity: InvitationEntity },
-        }),
+    RocketsModule.forRoot({
+      auth: rocketsAuth,
+      repository: TypeOrmRepositoryModule,
+      resources: [
+        createPetResource(),
+        createPetVaccinationResource(),
+        createPetAppointmentResource(),
       ],
-      // this should be false if we are using the global guard from rockets server
-      enableGlobalJWTGuard: false,
-      useFactory: () => ({ 
-        
-        // Required services configuration
-        services: {
-          mailerService: {
-            sendMail: async (options: EmailSendOptionsInterface) => {
-              console.log('📧 Email would be sent:', options.to);
-              console.log('📧 Email would be html:', options);
-              return Promise.resolve();
-            },
-          },
-        },
-        // Settings for default role assignment and email/otp configuration
-        settings: {
-          role: {
-            adminRoleName: 'admin',
-            defaultUserRoleName: 'user',
-          },
-          email: {
-            from: 'noreply@example.com',
-            baseUrl: 'http://localhost:3000',
-            templates: {
-              sendOtp: {
-                fileName: __dirname + '/../assets/send-otp.template.hbs',
-                subject: 'Your One Time Password',
-              },
-              invitation: {
-                logo: '',
-                fileName: __dirname + '/../assets/invitation.template.hbs',
-                subject: 'You have been invited',
-              },
-              invitationAccepted: {
-                logo: '',
-                fileName: __dirname + '/../assets/invitation-accepted.template.hbs',
-                subject: 'Invitation Accepted',
-              },
-            },
-          },
-          otp: {
-            assignment: 'userOtp',
-            category: 'auth-login',
-            type: 'uuid',
-            expiresIn: '1h',
-          },
-        },
-      }),
-      // Admin user CRUD functionality
-      // This configuration is also used by:
-      // - InvitationAcceptanceModule: validates userMetadata during invitation acceptance
-      // - SignUpModule: validates userMetadata during user signup
-      // - UserMetadataModule: provides CRUD operations for user metadata
-      userCrud: {
-        imports: [
-          TypeOrmModule.forFeature([UserEntity, UserMetadataEntity]),
-          TypeOrmExtModule.forFeature({
-            user: { entity: UserEntity },
-            userMetadata: { entity: UserMetadataEntity },
-          }),
-        ],
-        adapter: UserTypeOrmCrudAdapter,
-        model: UserDto,
-        dto: {
-          createOne: UserCreateDto,
-          updateOne: SampleUserUpdateDto,
-        },
-        // User Metadata Configuration
-        // The updateDto is used by InvitationAcceptanceListener to validate
-        // userMetadata when users accept invitations (e.g., firstName, lastName)
-        userMetadataConfig: {
-          imports: [
-            TypeOrmModule.forFeature([UserEntity, UserMetadataEntity]),
-            TypeOrmExtModule.forFeature({
-              user: { entity: UserEntity },
-              userMetadata: { entity: UserMetadataEntity },
-            }),
-          ],
-          adapter: UserMetadataTypeOrmCrudAdapter,
-          entity: UserMetadataEntity,
-          createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto, // Used for validation in invitation acceptance
-        },
-      },
-      // Admin role CRUD functionality
-      roleCrud: {
-        imports: [TypeOrmModule.forFeature([RoleEntity])],
-        adapter: RoleTypeOrmCrudAdapter,
-        model: RoleDto,
-        dto: {
-          createOne: RoleCreateDto,
-          updateOne: RoleUpdateDto,
-        },
-      },
-      // Access Control configuration
-      accessControl: {
-        service: new ACService(),
-        settings: {
-          rules: acRules,
-        },
-      },
     }),
-    // RocketsModule for additional server features with JWT validation  
-    // Import AFTER RocketsAuthModule to access RocketsJwtAuthProvider
-    RocketsModule.forRootAsync({
-      imports: [
-        TypeOrmExtModule.forFeature({
-          user: { entity: UserEntity },
-        }), 
-      ],
-      inject:[RocketsJwtAuthProvider],
-      useFactory: (rocketsJwtAuthProvider: RocketsJwtAuthProvider) => ({
-        settings: {
-          
-        },
-        // This enables the serverGuard that needs rocketsJwtAuthProvider
-        enableGlobalGuard: true,
-        authProvider: rocketsJwtAuthProvider,
-        userMetadata: {
-          createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto,
-        },
-      }),
-    }),
-    
-    
   ],
   controllers: [],
-  providers: [ACService],
+  providers: [ACService, ...SAMPLE_NOTIFICATION_HANDLERS],
   exports: [ACService],
 })
 export class AppModule {}

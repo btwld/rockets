@@ -10,11 +10,5 @@ export * from './pet-vaccination.dto';
 // Types
 export * from './pet-vaccination.types';
 
-// Services
-export * from './pet-vaccination-typeorm-crud.adapter';
-export * from './pet-vaccination-access-query.service';
-export * from './pet-vaccination.crud.service';
-
-// Controller
-export * from './pet-vaccination.crud.controller';
-
+// Resource bundle
+export * from './pet-vaccination.resource';

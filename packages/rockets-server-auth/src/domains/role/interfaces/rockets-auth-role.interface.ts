@@ -1,4 +1,4 @@
-import { RoleInterface } from '@concepta/nestjs-common';
+import { RoleInterface } from '@concepta/nestjs-role';
 
 /**
  * Rockets Server Role Interface

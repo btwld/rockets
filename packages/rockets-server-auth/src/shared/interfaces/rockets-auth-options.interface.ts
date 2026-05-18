@@ -1,201 +1,190 @@
-import { AuthJwtOptionsInterface } from '@concepta/nestjs-auth-jwt';
-import { AuthRefreshOptionsInterface } from '@concepta/nestjs-auth-refresh';
-
-import { ValidateTokenServiceInterface } from '@concepta/nestjs-authentication';
-
 import { CanAccess } from '@concepta/nestjs-access-control';
-// TODO: update on core modules
-import { AuthAppleOptionsInterface } from '@concepta/nestjs-auth-apple';
-import { AuthGithubOptionsInterface } from '@concepta/nestjs-auth-github';
-import { AuthGoogleOptionsInterface } from '@concepta/nestjs-auth-google';
-import {
-  AuthLocalOptionsInterface,
-  AuthLocalValidateUserServiceInterface,
-} from '@concepta/nestjs-auth-local';
-import { AuthRecoveryOptionsInterface } from '@concepta/nestjs-auth-recovery';
-import { AuthVerifyOptionsInterface } from '@concepta/nestjs-auth-verify';
-import {
+import type {
   AuthenticationOptionsInterface,
-  IssueTokenServiceInterface,
-  VerifyTokenService,
+  AuthenticationPortsInterface,
 } from '@concepta/nestjs-authentication';
 import {
   EmailOptionsInterface,
   EmailServiceInterface,
 } from '@concepta/nestjs-email';
-import { JwtOptionsInterface } from '@concepta/nestjs-jwt';
-import { AuthRouterOptionsInterface } from '@concepta/nestjs-auth-router';
 import { OtpOptionsInterface } from '@concepta/nestjs-otp';
 import { PasswordOptionsInterface } from '@concepta/nestjs-password';
-import { RocketsAuthNotificationServiceInterface } from './rockets-auth-notification.service.interface';
-import { RocketsAuthSettingsInterface } from './rockets-auth-settings.interface';
-import { RocketsAuthUserModelServiceInterface } from './rockets-auth-user-model-service.interface';
 import { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui';
-import {
-  CrudModuleOptionsInterface,
+import type {
   FederatedOptionsInterface,
-  InvitationOptionsInterface,
-  RoleOptionsInterface,
+  FederatedUserPortSettings,
+} from '@concepta/nestjs-federated';
+import type {
+  InvitationNotificationPortSettings,
+  InvitationOtpPortSettings,
+  InvitationSettingsInterface,
+  InvitationUserPortSettings,
+} from '@concepta/nestjs-invitation';
+
+import { CrudModule } from '@concepta/nestjs-crud';
+import { RoleOptionsInterface } from '@concepta/nestjs-role';
+import type {
   UserOptionsInterface,
-  UserPasswordHistoryServiceInterface,
-} from '../compat/concepta-internals';
+  UserPasswordPortSettings,
+  UserSettingsInterface,
+} from '@concepta/nestjs-user';
+import { RocketsAuthSettingsInterface } from './rockets-auth-settings.interface';
 
 /**
- * Combined options interface for the AuthenticationCombinedModule
+ * Options accepted by `CrudModule.forRoot()` (the upstream interface
+ * `CrudModuleOptionsInterface` is not exported publicly in
+ * `@concepta/nestjs-crud@v8.0.0-alpha.5`, so we extract it via TS
+ * inference instead of deep-importing).
+ */
+type CrudModuleOptions = Parameters<typeof CrudModule.forRoot>[0];
+
+/**
+ * Options for `RocketsAuthModule.forRoot(Async)`.
+ *
+ * v8 collapse: the seven v7 auth packages (`auth-jwt`, `auth-local`,
+ * `auth-refresh`, `auth-recovery`, `auth-verify`, `auth-router`, plus the
+ * standalone `nestjs-jwt`) are folded into `@concepta/nestjs-authentication`
+ * v8. The unified module accepts a single `authentication` block that nests
+ * `settings.{jwt, strategies, mfa, guards}` and a `ports` block whose values
+ * are CQRS Command/Query class types (NOT service instances).
+ *
+ * The OAuth provider modules (`auth-apple`, `auth-github`, `auth-google`) are
+ * intentionally absent here — they have not been ported to v8 yet upstream.
+ * See `domains/oauth/` for the deferred wiring with `TODO(upstream:)` markers.
  */
 export interface RocketsAuthOptionsInterface {
   /**
-   * Global settings for the Rockets Server module
-   * Used to configure default behaviors and settings
+   * Global Rockets-specific settings (role names, OTP defaults, email
+   * templates). Drives downstream module factories that combine
+   * Rockets-defined defaults with upstream module options.
    */
   settings: RocketsAuthSettingsInterface;
 
   /**
-   * Swagger UI configuration options
-   * Used to customize the Swagger/OpenAPI documentation interface
+   * Swagger UI configuration. Forwarded to `SwaggerUiModule`.
    */
   swagger?: SwaggerUiOptionsInterface;
-  /**
-   * Core Authentication module options
-   * Used in: AuthenticationModule.forRootAsync
-   */
-  authentication?: AuthenticationOptionsInterface;
 
   /**
-   * Federated authentication module options
-   * Used in: FederatedModule.forRootAsync
+   * Authentication module configuration. Maps directly onto
+   * `@concepta/nestjs-authentication@v8`'s public options shape, except
+   * `ports` is relaxed to `Partial<AuthenticationPortsInterface>` so the
+   * consumer can supply only the ports they care about — `buildRockets`
+   * `AuthenticationPorts()` fills in `user`, `password`, `otp`, `jwt`,
+   * and `token` with rockets-provided defaults. The consumer MUST provide
+   * `recoveryNotification.*` and `verifyNotification.*` Command classes
+   * (no silent no-op default).
+   *
+   * **`settings.*` fields (all forwarded as-is to upstream):**
+   * - `jwt` — access/refresh secrets, sign options. Resolved via
+   *   `resolveJwtSettings()` (env-var fallback + dev-mode random secret).
+   * - `strategies` — `local` / `jwt` / `refresh` strategy toggles.
+   *   Defaulted to all-enabled; pass `{ jwt: {} }` etc. to override.
+   * - `mfa` — `recovery` / `verify` MFA policy overrides
+   *   (`RecoveryPolicySettingsInterface` / `VerifyPolicySettingsInterface`).
+   *   Typed-reachable; no rockets default — upstream supplies defaults
+   *   when omitted.
+   * - `guards` — guard enable/disable policy
+   *   (`GuardsPolicySettingsInterface`). Typed-reachable; no rockets
+   *   default.
+   *
+   * **`ports.*` overrides (all individually overridable):**
+   * - `user`, `password`, `otp` — defaulted by `buildRocketsAuthenticationPorts`.
+   * - `recoveryNotification`, `verifyNotification` — required; fail-fast at boot.
+   * - `jwt`, `token` — optional; upstream supplies defaults
+   *   (`SignAccessTokenCommand`, `IssueAccessTokenCommand`, etc.) when
+   *   omitted. Override to plug in KMS-backed signers, custom claim
+   *   transforms, key rotation, or alternate verify strategies.
+   *
+   * **Extras (`appGuard`, `guards`) live on `extras.auth`**, not here —
+   * upstream resolves them at module-init time, not via the async factory.
    */
-  federated?: Partial<FederatedOptionsInterface>;
+  authentication?: Omit<AuthenticationOptionsInterface, 'ports'> & {
+    ports?: Partial<AuthenticationPortsInterface>;
+  };
 
   /**
-   * JWT module options
-   * Used in: JwtModule.forRootAsync
+   * Federated authentication module options.
+   * Forwarded to `FederatedModule.forRootAsync`. Consumer can override
+   * `userPort.{getByIdQuery, getByEmailQuery, createCommand}` individually;
+   * Rockets defaults to upstream `@concepta/nestjs-user` queries/commands.
    */
-  jwt?: JwtOptionsInterface;
+  federated?: Omit<FederatedOptionsInterface, 'userPort'> & {
+    userPort?: Partial<FederatedUserPortSettings>;
+  };
 
   /**
-   * Auth JWT module options
-   * Used in: AuthJwtModule.forRootAsync
+   * User module options. Forwarded to `UserModule.forRootAsync`.
+   *
+   * **`settings.password.*` fields (all forwarded as-is):**
+   * - `requireCurrent` — default `true`. Setting `false` triggers a
+   *   security warning (dev) or fail-fast (production).
+   * - `reuseAfterDays` — password history window (upstream
+   *   `PasswordPolicySettings`). Defaults from upstream when omitted.
+   *   Requires `ports.password.validateHistoryCommand` to be wired
+   *   (rockets wires `ValidatePasswordHistoryCommand` by default; the
+   *   feature is on out of the box).
+   *
+   * **`ports.password.*` overrides:**
+   * - `createCommand` — defaults to upstream `CreatePasswordCommand`.
+   * - `validateCurrentCommand` — defaults to upstream
+   *   `ValidateCurrentPasswordCommand`.
+   * - `validateHistoryCommand` — defaults to upstream
+   *   `ValidatePasswordHistoryCommand` (rockets-on-by-default; upstream
+   *   itself leaves this `undefined`).
    */
-  authJwt?: Partial<AuthJwtOptionsInterface>;
+  user?: {
+    settings?: UserSettingsInterface;
+    ports?: {
+      password?: Partial<UserPasswordPortSettings>;
+    };
+  } & Omit<UserOptionsInterface, 'settings' | 'ports'>;
 
-  /**
-   * Auth Guard Router module options
-   * Used in: AuthGuardRouterModule.forRootAsync
-   * Configures the Auth Guard Router with provider-specific guards
-   */
-  authRouter?: AuthRouterOptionsInterface;
-
-  /**
-   * Auth Apple module options
-   * Used in: AuthAppleModule.forRootAsync
-   */
-  authApple?: AuthAppleOptionsInterface;
-
-  /**
-   * Auth GitHub module options
-   * Used in: AuthGithubModule.forRootAsync
-   */
-  authGithub?: AuthGithubOptionsInterface;
-
-  /**
-   * Auth Google module options
-   * Used in: AuthGoogleModule.forRootAsync
-   */
-  authGoogle?: AuthGoogleOptionsInterface;
-
-  /**
-   * Auth Local module options
-   * Used in: AuthLocalModule.forRootAsync
-   */
-  authLocal?: Partial<AuthLocalOptionsInterface>;
-
-  /**
-   * Auth Recovery module options
-   * Used in: AuthRecoveryModule.forRootAsync
-   */
-  authRecovery?: Pick<
-    AuthRecoveryOptionsInterface,
-    | 'userModelService'
-    | 'userPasswordService'
-    | 'notificationService'
-    | 'settings'
-  >;
-
-  /**
-   * Auth Refresh module options
-   * Used in: AuthRefreshModule.forRootAsync
-   */
-  refresh?: AuthRefreshOptionsInterface;
-
-  /**
-   * Auth Verify module options
-   * Used in: AuthVerifyModule.forRootAsync
-   */
-  // TODO: add partial
-  authVerify?: AuthVerifyOptionsInterface;
-
-  /**
-   * User module options
-   * Used in: UserModule.forRootAsync
-   */
-  user?: UserOptionsInterface;
-
+  /** Password module options. Forwarded to `PasswordModule.forRootAsync`. */
   password?: PasswordOptionsInterface;
 
+  /** OTP module options. Forwarded to `OtpModule.forRootAsync`. */
   otp?: OtpOptionsInterface;
 
+  /** Email module options. Forwarded to `EmailModule.forRootAsync`. */
   email?: Partial<EmailOptionsInterface>;
 
-  crud?: CrudModuleOptionsInterface;
+  /** CRUD module options. Forwarded to `CrudModule.forRootAsync`. */
+  crud?: CrudModuleOptions;
 
+  /** Role module options. Forwarded to `RoleModule.forRootAsync`. */
   role?: Partial<RoleOptionsInterface>;
 
   /**
-   * Invitation module options
-   * Used in: InvitationModule.forRootAsync
+   * Invitation module options. Forwarded to `InvitationModule.forRootAsync`.
+   *
+   * - `settings`: merged with Rockets defaults (consumer wins per field).
+   * - `ports`: each port (otp, user, notification) is deep-partial — consumer
+   *   can override individual Command/Query classes; Rockets fills in
+   *   defaults wired to `@concepta/nestjs-{user,otp}` and the bundled
+   *   `SendInvitationEmailCommand` / `SendAcceptedEmailCommand`.
    */
-  invitation?: Pick<InvitationOptionsInterface, 'settings'> &
-    Partial<
-      Pick<
-        InvitationOptionsInterface,
-        'userModelService' | 'invitationSendService'
-      >
-    >;
+  invitation?: {
+    settings?: InvitationSettingsInterface;
+    ports?: {
+      otp?: Partial<InvitationOtpPortSettings>;
+      user?: Partial<InvitationUserPortSettings>;
+      notification?: Partial<InvitationNotificationPortSettings>;
+    };
+  };
 
-  /**
-   * Core services used across different modules
-   */
+  /** Cross-cutting services injected into module factories. */
   services: {
     /**
-     * Notification service for sending recovery notifications
-     * Can be used to customize notification delivery
-     * Used in: AuthRecoveryModule
-     * Required: false
+     * Mailer service implementation. REQUIRED — `EmailModule` needs a real
+     * mailer adapter (or the in-process logger fallback).
      */
-    notificationService?: RocketsAuthNotificationServiceInterface;
-    /**
-     * Core authentication services used in AuthenticationModule
-     * Required: true
-     */
-    // TODO: need to update AuthRefreshOptionsInterface to use verifyTokenServiceInterface
-    verifyTokenService?: VerifyTokenService;
-    issueTokenService?: IssueTokenServiceInterface;
-    validateTokenService?: ValidateTokenServiceInterface;
-    validateUserService?: AuthLocalValidateUserServiceInterface;
-    /**
-     * User module services
-     * Used in: UserModule
-     * Required: false
-     */
-    userPasswordHistoryService?: UserPasswordHistoryServiceInterface;
-    userAccessQueryService?: CanAccess;
-    /**
-     * Email service for notifications
-     * Used in: AuthRecoveryModule
-     * Required: true
-     */
-    // TODO: combine both? should we have a default mailer?
     mailerService: EmailServiceInterface;
+
+    /**
+     * Optional access-control query service. Forwarded to
+     * `AccessControlModule.forRoot` when `accessControl` extras are set.
+     */
+    userAccessQueryService?: CanAccess;
   };
 }

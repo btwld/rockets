@@ -5,27 +5,24 @@ import {
   CrudResponsePaginatedInterface,
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
-import { getLocal } from '../../utils/get-local.helper';
+import { getActor } from '@bitwild/rockets-core';
 // TODO: deep imports — move to barrel when @concepta/nestjs-crud exports these
 import { CrudQueryHandler } from '@concepta/nestjs-crud/dist/application/queries/handlers/crud-query.handler';
 import type { CrudQueryInterface } from '@concepta/nestjs-crud/dist/application/queries/interfaces/crud-query.interface';
 import { WhereOperator, type EntityColumn } from '@bitwild/rockets-repository';
-import { PET_MODULE_PET_ENTITY_KEY } from '../../constants/pet.constants';
-import { AppRole } from '../../../../app.acl';
 import { PetEntity } from './pet.entity';
-import {
-  JwtAuthenticatedUserLocal,
-  JwtAuthenticatedUserPayload,
-} from '../../jwt-authenticated-user.local';
 
 /**
- * List handler: users with only the default `user` role see pets filtered by their id.
- * Admins and managers see all pets (ACL still applies on the route).
+ * List handler: filters pets by the authenticated actor's id so users only
+ * see pets they own. Role-based broadening (admins/managers seeing all
+ * pets) is no longer enforced here — the v8 `Actor` overlay only carries
+ * `{id, type}` and not roles. `AccessControlGuard` continues to gate the
+ * route, so callers without the right grant never reach this handler.
  */
 @Injectable()
 export class PetListHandler extends CrudQueryHandler<PetEntity> {
   constructor(
-    @InjectCrudAdapter(PET_MODULE_PET_ENTITY_KEY)
+    @InjectCrudAdapter(PetEntity)
     crudAdapter: CrudAdapter<PetEntity>,
   ) {
     super(crudAdapter);
@@ -35,42 +32,25 @@ export class PetListHandler extends CrudQueryHandler<PetEntity> {
     query: CrudQueryInterface<PetEntity>,
   ): Promise<CrudResponsePaginatedInterface<PetEntity>> {
     const listQuery = query as CrudListQuery<PetEntity>;
-    const user = getLocal<JwtAuthenticatedUserPayload>(
-      listQuery.context,
-      JwtAuthenticatedUserLocal,
-    );
-    if (!user?.id || !user.userRoles?.length) {
+    const actor = getActor(listQuery.context);
+    if (!actor?.id) {
       return this.crudAdapter.list(listQuery.context);
     }
 
-    const roleNames = user.userRoles.map(
-      (ur: { role: { name: string } }) => ur.role.name,
-    );
-    const hasOnlyUserRole =
-      roleNames.includes(AppRole.User) &&
-      !roleNames.includes(AppRole.Admin) &&
-      !roleNames.includes(AppRole.Manager);
-
-    if (!hasOnlyUserRole) {
-      return this.crudAdapter.list(listQuery.context);
-    }
-
+    // Mutate the existing context (an `AppContextHost` Proxy) so its
+    // overlay accessors survive. Spreading into a new object would strip
+    // them and the next `AppContextHost.from(...)` call inside the
+    // repository adapter would throw
+    // `Expected AppContextHost or nullish value, got object`.
     const ctx = listQuery.context;
-    const existingFilter = ctx.query.filter ?? [];
-    const mergedContext = {
-      ...ctx,
-      query: {
-        ...ctx.query,
-        filter: [
-          ...existingFilter,
-          {
-            field: 'userId' as EntityColumn<PetEntity>,
-            operator: WhereOperator.EQ,
-            value: user.id,
-          },
-        ],
+    ctx.query.filter = [
+      ...(ctx.query.filter ?? []),
+      {
+        field: 'userId' as EntityColumn<PetEntity>,
+        operator: WhereOperator.EQ,
+        value: actor.id,
       },
-    };
-    return this.crudAdapter.list(mergedContext);
+    ];
+    return this.crudAdapter.list(ctx);
   }
 }

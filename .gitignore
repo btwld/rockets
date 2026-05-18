@@ -123,7 +123,7 @@ dist
 # .yarn meta
 .yarn
 
-# local agent handoff context
+# local agent scratchpad — never commit
 .context/
 
 
@@ -133,3 +133,10 @@ dist
 
 #Ignore cursor AI rules
 .cursor/rules/codacy.mdc
+
+# Editor / OS / backup leftovers — never commit these
+*.bak
+*.orig
+*~
+.DS_Store
+Thumbs.db

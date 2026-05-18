@@ -17,73 +17,32 @@
 
 ## ⚠️ **Module Import Order**
 
-> **CRITICAL**: When using both `RocketsModule` and `RocketsAuthModule` together, the import order is **mandatory**.
+### **Golden path (recommended): one `RocketsModule` + `defineRocketsAuth`**
 
-### **Correct Import Order**
+Use a single `RocketsModule.forRoot` / `forRootAsync` and pass built-in auth as
+`auth: defineRocketsAuth({ persistence, userMetadata, userCrud, … })` from
+`@bitwild/rockets-auth`. `RocketsModule` merges auth persistence into the same
+`buildAppRegistrationPlan` surface as your domain `resources[]` and, **inside
+that dynamic module**, wires **`RocketsCoreModule` before** the auth
+`nestImports` slice — so you do **not** manually order `RocketsAuthModule` vs
+`RocketsModule` at the app root.
 
-```typescript
-// app.module.ts
-@Module({
-  imports: [
-    // 1. FIRST: RocketsAuthModule - provides RocketsJwtAuthProvider
-    RocketsAuthModule.forRootAsync({
-      // ... configuration
-    }),
-    
-    // 2. SECOND: RocketsModule - consumes RocketsJwtAuthProvider
-    RocketsModule.forRootAsync({
-      inject: [RocketsJwtAuthProvider],
-      useFactory: (authProvider: RocketsJwtAuthProvider) => ({
-        authProvider,
-        enableGlobalGuard: true,
-        // ... other configuration
-      }),
-    }),
-  ],
-})
-export class AppModule {}
-```
+See [`examples/sample-server-auth/`](../examples/sample-server-auth/) and
+[`development-guides/ROCKETS_AI_INDEX.md`](./ROCKETS_AI_INDEX.md) (built-in auth row).
 
-### **Why This Order Matters**
+### **Legacy: two sibling imports (`RocketsAuthModule` + `RocketsModule`)**
 
-- **RocketsAuthModule** exports `RocketsJwtAuthProvider`
-- **RocketsModule** needs to inject `RocketsJwtAuthProvider` for authentication
-- **Dependency Resolution**: NestJS resolves dependencies in import order
-
-### **With Access Control**
-
-When adding AccessControlModule, use this order:
-
-```typescript
-@Module({
-  imports: [
-    // 1. AccessControlModule (global module)
-    AccessControlModule.forRoot({...}),
-    
-    // 2. RocketsAuthModule with ACL configuration
-    RocketsAuthModule.forRootAsync({
-      accessControl: { ... },
-      // ... other config
-    }),
-    
-    // 3. RocketsModule with auth provider
-    RocketsModule.forRootAsync({
-      inject: [RocketsJwtAuthProvider],
-      // ... config
-    }),
-  ],
-})
-```
-
-### **Common Errors**
+If you still compose `RocketsAuthModule` and `RocketsModule` as **separate**
+entries in `@Module({ imports: [...] })`, Nest resolves siblings in list order.
+Then **`RocketsAuthModule` must come first** so `RocketsJwtAuthAdapter` exists
+before `RocketsModule.forRootAsync({ inject: [RocketsJwtAuthAdapter], … })`.
 
 ```bash
-# Wrong order causes this error:
-❌ Nest can't resolve dependencies of RocketsModule (?). 
-   Please make sure that the RocketsJwtAuthProvider is available.
+# Wrong order (legacy layout) can yield:
+❌ Nest can't resolve dependencies of RocketsModule (?).
+   Please make sure that the RocketsJwtAuthAdapter is available.
 
-# Solution: Import RocketsAuthModule BEFORE RocketsModule
-✅ RocketsAuthModule → RocketsModule
+# Fix: RocketsAuthModule → RocketsModule (or migrate to defineRocketsAuth above)
 ```
 
 ---
@@ -161,7 +120,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RocketsServerModule } from '@bitwild/rockets-server';
-import { YourExternalAuthProvider } from './auth/your-external-auth.provider';
+import { YourExternalAuthProvider } from './auth/your-external-auth.adapter';
 
 @Module({
   imports: [
@@ -203,10 +162,10 @@ export class AppModule {}
 ```typescript
 // auth/auth0.provider.ts
 import { Injectable } from '@nestjs/common';
-import { AuthProviderInterface } from '@bitwild/rockets-server';
+import { AuthAdapterInterface } from '@bitwild/rockets-server';
 
 @Injectable()
-export class Auth0Provider implements AuthProviderInterface {
+export class Auth0Provider implements AuthAdapterInterface {
   async validateUser(token: string): Promise<any> {
     // Validate JWT token with Auth0
     // Return user object or throw error
@@ -224,230 +183,270 @@ export class Auth0Provider implements AuthProviderInterface {
 }
 ```
 
+### **Repository adapter + module resources**
+
+`RocketsModule.forRootAsync` carries a single top-level
+`repository: RepositoryModuleInterface` (the default persistence adapter)
+and a unified `resources[]` list. Every dynamic-repository row in the app
+flows through that one entry point:
+
+- `defineResource()` bundles auto-contribute their entity row.
+- `defineModuleResource({ entities, module })` bundles contribute
+  additional persistence rows **and/or** Nest module slices (controllers,
+  providers, exports, imports) without a separate `@Module` file in
+  `AppModule.imports`.
+- `userMetadata.entity` always registers under `USER_METADATA_MODULE_ENTITY_KEY`.
+
+```typescript
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { RocketsModule } from '@bitwild/rockets';
+import { defineModuleResource } from '@bitwild/rockets-core';
+import { petResource } from './resources/pet';
+import { auditFeature } from './audit';                  // defineModuleResource()
+import { petTransferFeature } from './resources/pet-transfer'; // entities: [] (CQRS only)
+
+RocketsModule.forRootAsync({
+  inject: [SampleAuthAdapter],
+  useFactory: (authProvider: SampleAuthAdapter) => ({ authProvider }),
+  userMetadata: {
+    entity: UserMetadataEntity,
+    createDto: UserMetadataCreateDto,
+    updateDto: UserMetadataUpdateDto,
+    // repository: FirestoreRepositoryModule, // optional per-entity override
+  },
+  repository: TypeOrmRepositoryModule, // <-- single root adapter
+  resources: [
+    petResource,         // CRUD bundle
+    auditFeature,        // entities[] + Nest slice (controller + service)
+    petTransferFeature,  // entities: [] — pure Nest slice (CQRS handlers)
+  ],
+});
+```
+
+**Per-entity adapter override.** Within a `defineModuleResource` bundle,
+each entity entry can declare its own `repository` to escape the root
+default:
+
+```typescript
+defineModuleResource({
+  entities: [
+    { key: 'audit', entity: AuditLogEntity }, // root adapter (TypeORM)
+    {
+      key: 'cache',
+      entity: CacheRowEntity,
+      repository: RedisRepositoryModule, // overrides root for this row
+    },
+  ],
+  module: { providers: [CacheService], exports: [CacheService] },
+});
+```
+
+**Allow-empty bundles.** A feature that only consumes already-registered
+repositories (e.g. a CQRS workflow) sets `entities: []` and contributes
+just the Nest slice — the registration plan still wires the
+controllers/providers automatically.
+
 ---
 
 ## 🔐 **Rockets Server Auth Configuration**
 
-### **Complete Auth System Setup**
+### **Complete auth system setup (`RocketsModule` + `defineRocketsAuth`)**
+
+Full built-in auth is composed through **`RocketsModule.forRoot`** with
+`auth: defineRocketsAuth({ persistence, userMetadata, userCrud, useFactory, … })`.
+The `useFactory` / `inject` contract matches `RocketsAuthModule.forRootAsync`
+options (settings, services, roleCrud, accessControl, …); **persistence is only
+on `defineRocketsAuth`**, not on `RocketsAuthModule`.
 
 ```typescript
-// app.module.ts - rockets-server-auth
+// app.module.ts — same settings surface as before, new composition root
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RocketsAuthModule } from '@bitwild/rockets-server-auth';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { RocketsModule } from '@bitwild/rockets';
+import { defineRocketsAuth } from '@bitwild/rockets-auth';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ 
-      isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
-    }),
-    
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: configService.get('DATABASE_URL'),
+        url: config.get('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') === 'development',
-        logging: configService.get('NODE_ENV') === 'development',
-        ssl: configService.get('NODE_ENV') === 'production' ? {
-          rejectUnauthorized: false
-        } : false,
+        synchronize: config.get('NODE_ENV') === 'development',
       }),
     }),
-
-    RocketsAuthModule.forRootAsync({
+    RocketsModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        settings: {
-          // JWT Configuration
-          jwt: {
-            secret: configService.get('JWT_SECRET'),
-            expiresIn: configService.get('JWT_EXPIRES_IN', '1h'),
-          },
-          
-          // Authentication Methods
-          authLocal: {
-            enabled: true,
-            usernameField: 'email',
-            passwordField: 'password',
-          },
-          
-          authJwt: {
-            enabled: true,
-            secretKey: configService.get('JWT_SECRET'),
-          },
-
-          // OAuth Providers
-          authOAuth: {
-            enabled: true,
-            google: {
-              clientId: configService.get('GOOGLE_CLIENT_ID'),
-              clientSecret: configService.get('GOOGLE_CLIENT_SECRET'),
-              callbackURL: configService.get('GOOGLE_CALLBACK_URL'),
-            },
-            github: {
-              clientId: configService.get('GITHUB_CLIENT_ID'),
-              clientSecret: configService.get('GITHUB_CLIENT_SECRET'),
-              callbackURL: configService.get('GITHUB_CALLBACK_URL'),
+      useFactory: (configService: ConfigService) => {
+        const rocketsAuth = defineRocketsAuth({
+          persistence: {
+            module: TypeOrmRepositoryModule,
+            entities: {
+              user: UserEntity,
+              userCredentials: UserCredentialEntity,
+              userMetadata: UserMetadataEntity,
+              userOtp: UserOtpEntity,
+              role: RoleEntity,
+              userRole: UserRoleEntity,
             },
           },
-
-          // Password Recovery
-          authRecovery: {
-            enabled: true,
-            expiresIn: '1h',
-            email: {
-              from: configService.get('EMAIL_FROM'),
-              subject: 'Password Recovery',
-            },
+          userMetadata: {
+            entity: UserMetadataEntity,
+            createDto: UserMetadataCreateDto,
+            updateDto: UserMetadataUpdateDto,
           },
-
-          // Email Verification
-          authVerify: {
-            enabled: true,
-            expiresIn: '24h',
-            email: {
-              from: configService.get('EMAIL_FROM'),
-              subject: 'Verify Your Email',
-            },
-          },
-
-          // OTP/2FA
-          otp: {
-            enabled: true,
-            expiresIn: '5m',
-            length: 6,
-            email: {
-              from: configService.get('EMAIL_FROM'),
-              subject: 'Your OTP Code',
-            },
-          },
-
-          // User Management
-          user: {
-            enabled: true,
-            adminRoleName: 'Admin',
-            defaultRoleName: 'User',
-          },
-
-          // Admin Features
-          userAdmin: {
-            enabled: true,
-            adminPath: '/admin',
-          },
-
-          // Email Configuration
-          email: {
-            transport: {
-              host: configService.get('SMTP_HOST'),
-              port: parseInt(configService.get('SMTP_PORT', '587')),
-              secure: configService.get('SMTP_SECURE') === 'true',
-              auth: {
-                user: configService.get('SMTP_USER'),
-                pass: configService.get('SMTP_PASS'),
+          inject: [ConfigService],
+          useFactory: (cs: ConfigService) => ({
+            settings: {
+              jwt: {
+                secret: cs.get('JWT_SECRET'),
+                expiresIn: cs.get('JWT_EXPIRES_IN', '1h'),
               },
+              authLocal: { enabled: true, usernameField: 'email', passwordField: 'password' },
+              authJwt: { enabled: true, secretKey: cs.get('JWT_SECRET') },
+              /* authOAuth, authRecovery, otp, email, user, userAdmin, … */
             },
-            defaults: {
-              from: configService.get('EMAIL_FROM'),
-            },
+            services: { mailerService: /* … */ },
+          }),
+          userCrud: {
+            model: UserDto,
+            dto: { createOne: UserCreateDto, updateOne: UserUpdateDto },
           },
-        },
-      }),
+        });
+        return {
+          repository: TypeOrmRepositoryModule,
+          auth: rocketsAuth,
+          userMetadata: rocketsAuth.userMetadata,
+          resources: [],
+        };
+      },
     }),
   ],
 })
 export class AppModule {}
 ```
 
-### **Minimal Auth Configuration**
+### **Minimal auth configuration**
 
 ```typescript
-// app.module.ts - minimal rockets-server-auth
-RocketsAuthModule.forRoot({
-  settings: {
-    // Enable only what you need
-    authLocal: { enabled: true },
-    authJwt: { enabled: true },
-    user: { enabled: true },
-    
-    // Minimal email configuration
-    email: {
-      transport: {
-        host: 'localhost',
-        port: 1025, // MailHog for development
+// Minimal slice — still requires persistence + userMetadata + userCrud on defineRocketsAuth
+import { defineRocketsAuth } from '@bitwild/rockets-auth';
+import { RocketsModule } from '@bitwild/rockets';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+
+RocketsModule.forRoot({
+  repository: TypeOrmRepositoryModule,
+  auth: defineRocketsAuth({
+    persistence: {
+      module: TypeOrmRepositoryModule,
+      entities: {
+        user: UserEntity,
+        userCredentials: UserCredentialEntity,
       },
     },
+    userMetadata: { entity: UserMetadataEntity, createDto, updateDto },
+    userCrud: { model: UserDto, dto: { createOne: UserCreateDto, updateOne: UserUpdateDto } },
+    useFactory: () => ({
+      settings: {
+        authLocal: { enabled: true },
+        authJwt: { enabled: true },
+        user: { enabled: true },
+        email: { transport: { host: 'localhost', port: 1025 } },
+      },
+    }),
+  }),
+  userMetadata: {
+    entity: UserMetadataEntity,
+    createDto,
+    updateDto,
   },
-})
+  resources: [],
+});
 ```
 
-### **Complete Configuration with CRUD Admin**
+### **Complete configuration with CRUD admin (`defineRocketsAuth`)**
+
+`defineRocketsAuth` turns the friendly `persistence.entities` map into
+`defineModuleResource` rows (canonical repository keys) that register alongside
+your app `resources[]`. Admin user CRUD stays CQRS-driven; admin role CRUD
+still keys off the `role` row — pass `roleCrud` as today.
 
 ```typescript
-// app.module.ts - Complete auth with admin CRUD functionality
+// app.module.ts — built-in auth + Rockets core/server in one tree
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { RocketsAuthModule } from '@bitwild/rockets-server-auth';
-import { 
-  UserEntity, 
-  RoleEntity, 
-  UserTypeOrmCrudAdapter, 
-  RoleTypeOrmCrudAdapter,
-  RocketsAuthUserDto,
-  RocketsAuthRoleDto,
-  RocketsAuthUserCreateDto,
-  RocketsAuthUserUpdateDto,
-  RocketsAuthRoleCreateDto,
-  RocketsAuthRoleUpdateDto,
-} from '@bitwild/rockets-server-auth';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { RocketsModule } from '@bitwild/rockets';
+import { defineRocketsAuth } from '@bitwild/rockets-auth';
+import {
+  UserEntity,
+  UserCredentialEntity,
+  UserMetadataEntity,
+  UserOtpEntity,
+  RoleEntity,
+  UserRoleEntity,
+} from './entities';
+import {
+  UserDto,
+  UserCreateDto,
+  UserUpdateDto,
+  UserMetadataCreateDto,
+  UserMetadataUpdateDto,
+  RoleDto,
+  RoleCreateDto,
+  RoleUpdateDto,
+} from './dto';
+
+const rocketsAuth = defineRocketsAuth({
+  persistence: {
+    module: TypeOrmRepositoryModule,
+    entities: {
+      user: UserEntity,
+      userCredentials: UserCredentialEntity,
+      userMetadata: UserMetadataEntity,
+      userOtp: UserOtpEntity,
+      role: RoleEntity,
+      userRole: UserRoleEntity,
+    },
+  },
+  userMetadata: {
+    entity: UserMetadataEntity,
+    createDto: UserMetadataCreateDto,
+    updateDto: UserMetadataUpdateDto,
+  },
+  useFactory: () => ({
+    settings: {
+      /* authLocal, authJwt, email, role, otp, … */
+    },
+    services: { mailerService: /* … */ },
+  }),
+  userCrud: {
+    model: UserDto,
+    dto: { createOne: UserCreateDto, updateOne: UserUpdateDto },
+  },
+  roleCrud: {
+    model: RoleDto,
+    dto: { createOne: RoleCreateDto, updateOne: RoleUpdateDto },
+  },
+});
 
 @Module({
   imports: [
-    // Enhanced TypeORM for model services
-    TypeOrmExtModule.forFeature({
-      user: { entity: UserEntity },
-      role: { entity: RoleEntity },
+    TypeOrmModule.forRoot({
+      /* … */
+      autoLoadEntities: true,
     }),
-    
-    // Standard TypeORM for CRUD operations (required for adapters)
-    TypeOrmModule.forFeature([UserEntity, RoleEntity]),
-    
-    RocketsAuthModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        settings: {
-          authLocal: { enabled: true },
-          authJwt: { enabled: true },
-          user: { enabled: true },
-          userAdmin: { enabled: true },
-        },
-        
-        // User CRUD Admin Configuration
-        userCrud: {
-          imports: [TypeOrmModule.forFeature([UserEntity])], // Required for adapter
-          adapter: UserTypeOrmCrudAdapter,
-          model: RocketsAuthUserDto,
-          dto: {
-            createOne: RocketsAuthUserCreateDto,
-            updateOne: RocketsAuthUserUpdateDto,
-          },
-        },
-        
-        // Role CRUD Admin Configuration  
-        roleCrud: {
-          imports: [TypeOrmModule.forFeature([RoleEntity])], // Required for adapter
-          adapter: RoleTypeOrmCrudAdapter,
-          model: RocketsAuthRoleDto,
-          dto: {
-            createOne: RocketsAuthRoleCreateDto,
-            updateOne: RocketsAuthRoleUpdateDto,
-          },
-        },
-      }),
+    RocketsModule.forRoot({
+      repository: TypeOrmRepositoryModule,
+      auth: rocketsAuth,
+      userMetadata: rocketsAuth.userMetadata,
+      resources: [
+        /* defineResource / defineModuleResource for domain tables */
+      ],
     }),
   ],
 })
@@ -571,12 +570,12 @@ Are you implementing CRUD operations?
 })
 ```
 
-❌ **Mistake 2:** Forgetting `TypeOrmModule` in CRUD config imports
+❌ **Mistake 2:** Forgetting `TypeOrmModule` in `userCrud` / `roleCrud` imports
 ```typescript
-// WRONG - CRUD config needs its own imports
+// WRONG — handlers/adapters need TypeORM metadata for your entities
 userCrud: {
-  adapter: UserTypeOrmCrudAdapter,  // ❌ Won't find repository!
-  // Missing: imports: [TypeOrmModule.forFeature([UserEntity])]
+  model: UserDto,
+  // Missing: imports: [TypeOrmModule.forFeature([UserEntity, UserMetadataEntity])]
 }
 ```
 
@@ -860,6 +859,41 @@ export class AppConfigService {
   }
 }
 ```
+
+### **Auth persistence (`defineRocketsAuth` → planner rows)**
+
+Instead of registering each auth table twice, pass **`persistence`** on
+`defineRocketsAuth`. It expands into `defineModuleResource` rows for
+`RocketsModule` / `RocketsCoreModule` (same planner as domain `resources[]`).
+Friendly property names (`user`, `userCredentials`, …) map to canonical
+repository keys inside the helper — callers never import those constants.
+
+```typescript
+defineRocketsAuth({
+  persistence: {
+    module: TypeOrmRepositoryModule,
+    entities: {
+      user: UserEntity,
+      userCredentials: UserCredentialEntity,
+      userMetadata: UserMetadataEntity,
+      userOtp: UserOtpEntity,
+      role: RoleEntity,
+      userRole: UserRoleEntity,
+      federatedIdentity: FederatedEntity,
+    },
+  },
+  invitationEntity: InvitationEntity, // optional `invitation` key
+  userMetadata: { entity, createDto, updateDto },
+  userCrud: { model, dto: { createOne, updateOne } },
+  // …useFactory / settings / roleCrud / accessControl / …
+});
+```
+
+- **`OtpModule.forFeature`** is attached to the auth resource bundle only when
+  `entities.userOtp` is present.
+- **`federated`** extras still supply their own imports when you enable OAuth.
+- **`RocketsAuthModule` no longer accepts `repositoryPersistence`** — persistence
+  is compiled at the `RocketsModule` boundary via `defineRocketsAuth`.
 
 ---
 

@@ -3,7 +3,6 @@ import {
   RocketsAuthInvitationAcceptanceModuleClass,
   RocketsAuthInvitationAcceptanceOptions,
   RocketsAuthInvitationAcceptanceAsyncOptions,
-  INVITATION_ACCEPTANCE_LISTENER_TOKEN,
 } from './rockets-auth-invitation-acceptance.module-definition';
 
 /**
@@ -35,4 +34,7 @@ export class RocketsAuthInvitationAcceptanceModule extends RocketsAuthInvitation
 }
 
 // Re-export for convenience
-export { INVITATION_ACCEPTANCE_LISTENER_TOKEN };
+export {
+  INVITATION_ACCEPTANCE_LISTENER_TOKEN,
+  type InvitationAcceptedEventHandler,
+} from './rockets-auth-invitation-acceptance.module-definition';

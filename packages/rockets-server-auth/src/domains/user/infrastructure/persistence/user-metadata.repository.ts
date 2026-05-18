@@ -1,15 +1,15 @@
 import {
   InjectDynamicRepository,
   RepositoryInterface,
-  RepositoryContextInterface,
   Where,
 } from '@concepta/nestjs-repository';
+import { RepositoryContextInterface } from '@bitwild/rockets-common';
 import { Injectable } from '@nestjs/common';
 import { DeepPartial } from '@concepta/nestjs-common';
 import { UserMetadataRepositoryInterface } from '../../domain/repositories/user-metadata-repository.interface';
 import { RocketsAuthUserMetadataEntityInterface } from '../../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../interfaces/rockets-auth-user-metadata-updatable.interface';
-import { USER_METADATA_MODULE_ENTITY_KEY } from '../config/user-metadata.constants';
+import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../../shared/constants/repository-entity-keys.constants';
 
 @Injectable()
 export class UserMetadataRepository implements UserMetadataRepositoryInterface {
@@ -43,21 +43,23 @@ export class UserMetadataRepository implements UserMetadataRepositoryInterface {
   ): Promise<RocketsAuthUserMetadataEntityInterface> {
     const existing = await this.findByUserId(ctx, userId);
     if (existing) {
-      const definedData = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== undefined),
-      );
-      return this.repo.update(
-        existing,
-        definedData as DeepPartial<RocketsAuthUserMetadataEntityInterface>,
-        { ctx },
-      );
+      return this.repo.update(existing, dropUndefined(data), { ctx });
     }
-    return this.repo.create(
-      {
-        ...data,
-        userId,
-      } as DeepPartial<RocketsAuthUserMetadataEntityInterface>,
-      { ctx },
-    );
+    return this.repo.create({ ...data, userId }, { ctx });
   }
+}
+
+/**
+ * Strip `undefined` values from a partial entity payload while preserving
+ * the typed `DeepPartial<T>` shape.
+ */
+function dropUndefined<T extends object>(input: T): DeepPartial<T> {
+  const out: Partial<T> = {};
+  for (const key of Object.keys(input) as (keyof T)[]) {
+    const value = input[key];
+    if (value !== undefined) {
+      out[key] = value;
+    }
+  }
+  return out as DeepPartial<T>;
 }

@@ -1,22 +1,52 @@
 export { RocketsAuthModule } from './rockets-auth.module';
+export { defineRocketsAuth } from './define-rockets-auth';
+export type { DefineRocketsAuthInput } from './define-rockets-auth';
 
 export * from './domains/auth';
 export * from './domains/user';
-export * from './domains/oauth';
+// TODO(upstream: concepta/nestjs-auth-apple|github|google) — re-add
+// `export * from './domains/oauth'` once v8 OAuth provider packages ship.
+// The domain is parked under `domains/oauth/` (controller body preserved
+// in a block comment for fast restore).
 export * from './domains/otp';
 export * from './domains/role';
 export * from './domains/invitation';
 
 export * from './shared';
 
-export { generateSwaggerJson } from './generate-swagger';
-export { RocketsJwtAuthProvider } from './provider/rockets-jwt-auth.provider';
+export { RocketsJwtAuthAdapter } from './provider/rockets-jwt-auth.adapter';
 
+export { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from './shared/constants/rockets-auth.constants';
+
+// Access-control re-exports — so consumers single-source from
+// `@bitwild/rockets-server-auth` instead of dual-importing from
+// `@concepta/nestjs-access-control`. Mirrors what `RocketsAuthModule`
+// actually wires when `extras.accessControl` is provided.
 export {
-  ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-  ADMIN_USER_CRUD_SERVICE_TOKEN,
-  ADMIN_ROLE_CRUD_SERVICE_TOKEN,
-} from './shared/constants/rockets-auth.constants';
+  AccessControlModule,
+  AccessControlGuard,
+  AccessControlFilter,
+  AccessControlContext,
+  AccessControlService,
+  AccessControlCreateMany,
+  AccessControlCreateOne,
+  AccessControlDeleteOne,
+  AccessControlGrant,
+  AccessControlQuery,
+  AccessControlReadMany,
+  AccessControlReadOne,
+  AccessControlRecoverOne,
+  AccessControlReplaceOne,
+  AccessControlUpdateOne,
+  ActionEnum,
+  PossessionEnum,
+  AccessControlAction,
+} from '@concepta/nestjs-access-control';
+export type {
+  AccessControlOptionsInterface,
+  AccessControlContextInterface,
+  CanAccess,
+} from '@concepta/nestjs-access-control';
 
 export type { RocketsAuthOptionsInterface } from './shared/interfaces/rockets-auth-options.interface';
 export type { RocketsAuthOptionsExtrasInterface } from './shared/interfaces/rockets-auth-options-extras.interface';

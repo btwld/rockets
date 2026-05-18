@@ -1,11 +1,4 @@
-import {
-  ByIdInterface,
-  CreateOneInterface,
-  FindInterface,
-  ReferenceIdInterface,
-  RemoveOneInterface,
-  UpdateOneInterface
-} from '@concepta/nestjs-common';
+import { ByIdInterface, ReferenceIdInterface } from '@bitwild/rockets-common';
 import { PetVaccinationEntityInterface } from '../pet-vaccination/pet-vaccination.interface';
 import { PetAppointmentEntityInterface } from '../pet-appointment/pet-appointment.interface';
 
@@ -56,15 +49,21 @@ export interface PetEntityInterface extends PetInterface {
  * Pet Creatable Interface
  * Defines what fields can be provided when creating a pet
  */
-export interface PetCreatableInterface extends Pick<PetInterface, 'name' | 'species' | 'age' | 'userId'>, 
-  Partial<Pick<PetInterface, 'breed' | 'color' | 'description' | 'status'>> {}
+export interface PetCreatableInterface
+  extends Pick<PetInterface, 'name' | 'species' | 'age' | 'userId'>,
+    Partial<Pick<PetInterface, 'breed' | 'color' | 'description' | 'status'>> {}
 
 /**
  * Pet Updatable Interface
  * Defines what fields can be updated on a pet (excludes userId)
  */
 export interface PetUpdatableInterface
-  extends Partial<Pick<PetInterface, 'name' | 'species' | 'breed' | 'age' | 'color' | 'description' | 'status'>>{ }
+  extends Partial<
+    Pick<
+      PetInterface,
+      'name' | 'species' | 'breed' | 'age' | 'color' | 'description' | 'status'
+    >
+  > {}
 
 /**
  * Pet Model Updatable Interface
@@ -81,12 +80,10 @@ export interface PetModelUpdatableInterface extends PetUpdatableInterface {
  * Defines the contract for the Pet model service
  */
 export interface PetModelServiceInterface
-  extends FindInterface<PetEntityInterface, PetEntityInterface>,
-    ByIdInterface<string, PetEntityInterface>,
-    CreateOneInterface<PetCreatableInterface, PetEntityInterface>,
-    UpdateOneInterface<PetModelUpdatableInterface, PetEntityInterface>,
-    RemoveOneInterface<Pick<PetEntityInterface, 'id'>, PetEntityInterface>
-{
+  extends ByIdInterface<string, PetEntityInterface> {
+  create(data: PetCreatableInterface): Promise<PetEntityInterface>;
+  update(data: PetModelUpdatableInterface): Promise<PetEntityInterface>;
+  remove(query: Pick<PetEntityInterface, 'id'>): Promise<PetEntityInterface>;
   /**
    * Find pets by user ID
    */

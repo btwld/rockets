@@ -1,7 +1,6 @@
-import { CommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { SignupUserCommand } from '../impl/signup-user.command';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
-import { CrudCommandHandlerInterface } from '@concepta/nestjs-crud/dist/application/commands/interfaces/crud-command-handler.interface';
 
 /**
  * Abstract base class for signup command handlers.
@@ -13,10 +12,9 @@ import { CrudCommandHandlerInterface } from '@concepta/nestjs-crud/dist/applicat
  * To customise signup logic, extend this class and register the
  * subclass via `RocketsAuthModule.forRoot({ userCrud: { signupHandler } })`.
  */
-
 @CommandHandler(SignupUserCommand)
 export abstract class AbstractSignupUserHandler
-  implements CrudCommandHandlerInterface<RocketsAuthUserEntityInterface>
+  implements ICommandHandler<SignupUserCommand, RocketsAuthUserEntityInterface>
 {
   abstract execute(
     command: SignupUserCommand,

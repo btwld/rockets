@@ -10,6 +10,10 @@
     ]
   },
   "resolutions": {
+    "@nestjs/common": "11.1.18",
+    "@nestjs/core": "11.1.18",
+    "@nestjs/platform-express": "11.1.18",
+    "@nestjs/testing": "11.1.18",
     "jws": "3.2.3",
     "qs": "6.14.1",
     "path-to-regexp": "8.3.0",
@@ -44,7 +48,7 @@
     "@darraghor/eslint-plugin-nestjs-typed": "^3.22.6",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
-    "@nestjs/testing": "^11.0.0",
+    "@nestjs/testing": "^11.1.18",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.0",
     "@types/node": "^18.19.44",
@@ -85,7 +89,7 @@
     "typescript": "^5.4.0"
   },
   "scripts": {
-    "postinstall": "husky install && patch-package",
+    "postinstall": "husky install && patch-package && node scripts/patch-concepta-runtime-context.cjs",
     "clean": "./node_modules/.bin/rimraf packages/*/dist packages/*/tsconfig.tsbuildinfo docs",
     "build": "./node_modules/.bin/tsc --build",
     "prepublish": "yarn clean && yarn build",

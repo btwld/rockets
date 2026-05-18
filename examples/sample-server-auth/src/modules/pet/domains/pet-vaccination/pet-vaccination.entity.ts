@@ -1,11 +1,17 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { CommonSqliteEntity } from '@concepta/nestjs-typeorm-ext';
 import { PetVaccinationEntityInterface } from './pet-vaccination.interface';
-import { PetEntity } from '../pet';
+import type { PetEntity } from '../pet/pet.entity';
 
 /**
  * Pet Vaccination Entity
- * 
+ *
  * Tracks vaccination records for pets including:
  * - Vaccine name and administration date
  * - Next due date for follow-up vaccinations
@@ -13,7 +19,10 @@ import { PetEntity } from '../pet';
  * - Batch number and notes for record keeping
  */
 @Entity('pet_vaccinations')
-export class PetVaccinationEntity extends CommonSqliteEntity implements PetVaccinationEntityInterface {
+export class PetVaccinationEntity
+  extends CommonSqliteEntity
+  implements PetVaccinationEntityInterface
+{
   @PrimaryGeneratedColumn('uuid')
   declare id: string;
 
@@ -38,7 +47,7 @@ export class PetVaccinationEntity extends CommonSqliteEntity implements PetVacci
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
-  @ManyToOne(() => PetEntity, (pet) => pet.vaccinations)
+  @ManyToOne('PetEntity', 'vaccinations')
   @JoinColumn({ name: 'petId' })
   pet?: PetEntity;
 }

@@ -7,5 +7,5 @@ export const PetVaccinationResource = {
   Many: 'pet-vaccination',
 } as const;
 
-export type PetVaccinationResourceType = typeof PetVaccinationResource[keyof typeof PetVaccinationResource];
-
+export type PetVaccinationResourceType =
+  (typeof PetVaccinationResource)[keyof typeof PetVaccinationResource];

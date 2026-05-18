@@ -1,0 +1,12 @@
+# @bitwild publish order (dependencies first).
+# Prereq: yarn install && yarn build
+# Per package: yarn workspace <name> npm publish --access public
+# (Yarn 4 rewrites workspace:^ to ^<version> in the packed manifest.)
+#
+# 1  @bitwild/rockets-common
+# 2  @bitwild/rockets-repository
+# 3  @bitwild/rockets-crud
+# 4  @bitwild/rockets-access-control
+# 5  @bitwild/rockets-core
+# 6  @bitwild/rockets          (npm name; folder packages/rockets-server)
+# 7  @bitwild/rockets-auth     (folder packages/rockets-server-auth)

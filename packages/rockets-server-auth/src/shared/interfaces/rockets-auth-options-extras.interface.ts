@@ -1,19 +1,15 @@
 import { AccessControlOptionsInterface } from '@concepta/nestjs-access-control';
 import type { CanAccess } from '@concepta/nestjs-access-control';
-import { AuthRouterOptionsExtrasInterface } from '@concepta/nestjs-auth-router';
-import { RepositoryInterface } from '@concepta/nestjs-repository';
-import { RocketsAuthUserMetadataEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
+import type { CanActivate } from '@nestjs/common';
+import type { AuthenticationOptionsExtrasInterface } from '@concepta/nestjs-authentication';
 import { RocketsAuthUserMetadataCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
 import { DynamicModule, Provider, Type } from '@nestjs/common';
 import { RocketsAuthUserCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-creatable.interface';
 import { RocketsAuthUserUpdatableInterface } from '../../domains/user/interfaces/rockets-auth-user-updatable.interface';
-import { RocketsAuthRoleEntityInterface } from '../../domains/role/interfaces/rockets-auth-role-entity.interface';
 import { RocketsAuthRoleCreatableInterface } from '../../domains/role/interfaces/rockets-auth-role-creatable.interface';
 import { RocketsAuthRoleUpdatableInterface } from '../../domains/role/interfaces/rockets-auth-role-updatable.interface';
-import { RocketsAuthUserMetadataModelServiceInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-model-service.interface';
 import { RocketsAuthUserMetadataModelUpdatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
-import { RoleOptionsExtrasInterface } from '../compat/concepta-internals';
-import { RocketsAuthRepositoryPersistenceOptions } from './rockets-auth-repository-persistence.interface';
+import { RoleExtrasInterface } from '@concepta/nestjs-role';
 import { RocketsAuthPortsConfigInterface } from './rockets-auth-ports-config.interface';
 import {
   AbstractSignupUserHandler,
@@ -42,7 +38,7 @@ export interface UserMetadataConfigInterface<
 
   /**
    * Entity class for user metadata.
-   * Used for dynamic repository registration with TypeOrmExtModule.
+   * Used for dynamic repository registration with RepositoryModule.
    * ALWAYS required - every adapter has an associated entity.
    */
   entity: Type;
@@ -56,26 +52,13 @@ export interface UserMetadataConfigInterface<
    * Must extend RocketsAuthUserMetadataEntityInterface
    */
   updateDto: new () => TUpdateDto;
-  /**
-   * Optional custom UserMetadataModelService override
-   * If provided, this class will be instantiated instead of the default GenericUserMetadataModelService
-   * Useful for implementing custom metadata logic while maintaining centralization
-   *
-   * TODO: Replace this extension point with a custom UserMetadataRepository (or handler) when
-   * UserMetadataModelService is removed.
-   */
-  userMetadataModelService?: new (
-    repo: RepositoryInterface<RocketsAuthUserMetadataEntityInterface>,
-    createDto: new () => TCreateDto,
-    updateDto: new () => TUpdateDto,
-  ) => RocketsAuthUserMetadataModelServiceInterface;
 }
 
 export interface UserCrudOptionsExtrasInterface {
   /**
    * Module imports for user CRUD
    *
-   * Must include TypeOrmExtModule.forFeature with entity registrations:
+   * Must include RepositoryModule.forFeature with entity registrations:
    * - `USER_CRUD_ENTITY_KEY` for the user repository
    * - `USER_METADATA_MODULE_ENTITY_KEY` for the metadata repository
    */
@@ -134,26 +117,20 @@ export interface RoleCrudOptionsExtrasInterface {
     createOne?: Type<RocketsAuthRoleCreatableInterface>;
     updateOne?: Type<RocketsAuthRoleUpdatableInterface>;
   };
+  /**
+   * Controller customization seams (decorators, hooks, per-route handler
+   * overrides). See `domains/role/interfaces/role-controller-extras.interface.ts`
+   * and `.context/v8-ddd-refactor-plan.md` §2.8.
+   */
+  controller?: import('../../domains/role/interfaces/role-controller-extras.interface').RoleControllerExtras;
 }
 
 /**
  * Configuration interface for disabling specific controllers.
  */
 export interface DisableControllerOptionsInterface {
-  /** Disable password change controller. */
-  password?: boolean;
-
-  /** Disable token refresh controller. */
-  refresh?: boolean;
-
-  /** Disable password recovery controller. */
-  recovery?: boolean;
-
   /** Disable OTP controller. */
   otp?: boolean;
-
-  /** Disable OAuth controllers. */
-  oAuth?: boolean;
 
   /** Disable user signup controller. */
   signup?: boolean;
@@ -163,13 +140,6 @@ export interface DisableControllerOptionsInterface {
 
   /** Disable admin roles management submodule. */
   adminRoles?: boolean;
-
-  /**
-   * Set to `true` to disable the user controller. Default: false (enabled)
-   *
-   * @deprecated Legacy/tests compatibility - prefer using specific controller flags
-   */
-  user?: boolean;
 
   /** Disable invitation creation controller. */
   invitation?: boolean;
@@ -185,19 +155,59 @@ export interface DisableControllerOptionsInterface {
 
   /** Disable authenticated me/password controller. */
   mePassword?: boolean;
+
+  /** Disable `/token/password` and `/token/refresh`. */
+  token?: boolean;
 }
 
 export interface RocketsAuthOptionsExtrasInterface
   extends Pick<DynamicModule, 'global' | 'controllers'> {
-  /**
-   * Register JWT auth guard as an application-wide guard.
-   */
-  enableGlobalJWTGuard?: boolean;
   user?: { imports: DynamicModule['imports'] };
-  otp?: { imports: DynamicModule['imports'] };
+  /**
+   * Auth domain extras. `controller` accepts the standard triplet
+   * documented in `.context/v8-ddd-refactor-plan.md` §2.8:
+   * `classDecorators`, `routes[*].decorators`. The `MePasswordController`
+   * is factory-built; the `auth.controller` extras are forwarded to that
+   * factory so consumers can append guards / throttling / ACL without
+   * subclassing the controller.
+   */
+  auth?: {
+    imports?: DynamicModule['imports'];
+    controller?: import('../../domains/auth/interfaces/me-password-controller-extras.interface').MePasswordControllerExtras;
+    /**
+     * Forwarded to `AuthenticationModule.forRootAsync({ appGuard })`.
+     *
+     * Per upstream `AuthenticationOptionsExtrasInterface.appGuard`:
+     * - `undefined` → upstream registers its default `JwtGuard` as `APP_GUARD`.
+     * - `false` → no global guard; rely on `@UseGuards()` per controller.
+     * - `CanActivate` instance → use this instead of the default.
+     */
+    appGuard?: false | CanActivate;
+    /**
+     * Forwarded to `AuthenticationModule.forRootAsync({ guards })` — registers
+     * route-named guards for the auth-router feature (multi-strategy routing).
+     *
+     * Note: the implementations of these guards live in the v7 OAuth provider
+     * packages (`@concepta/nestjs-auth-{google,github,apple,router}`), which
+     * are blocked by upstream gap G1. Until those ship v8, the plumbing exists
+     * but the feature is unusable. Safe to leave undefined.
+     */
+    guards?: AuthenticationOptionsExtrasInterface['guards'];
+  };
+  otp?: {
+    imports?: DynamicModule['imports'];
+    /**
+     * OTP controller customization (decorators per route, hooks, etc.).
+     * See `domains/otp/interfaces/otp-controller-extras.interface.ts`.
+     */
+    controller?: import('../../domains/otp/interfaces/otp-controller-extras.interface').OtpControllerExtras;
+  };
   federated?: { imports: DynamicModule['imports'] };
-  role?: RoleOptionsExtrasInterface & { imports: DynamicModule['imports'] };
-  authRouter?: AuthRouterOptionsExtrasInterface;
+  role?: RoleExtrasInterface & { imports: DynamicModule['imports'] };
+  // TODO(upstream: concepta/nestjs-auth-router) — re-enable `authRouter`
+  // extras when v8 OAuth providers ship; that block carried
+  // `AuthRouterOptionsExtrasInterface` from the v7 nestjs-auth-router
+  // package which has been removed.
   userCrud?: UserCrudOptionsExtrasInterface;
   roleCrud?: RoleCrudOptionsExtrasInterface;
   /**
@@ -214,13 +224,13 @@ export interface RocketsAuthOptionsExtrasInterface
   disableController?: DisableControllerOptionsInterface;
   invitation?: {
     imports?: DynamicModule['imports'];
+    /**
+     * Per-controller customization for the four invitation controllers
+     * (`invitation`, `acceptance`, `revocation`, `reattempt`).
+     * See `domains/invitation/interfaces/invitation-controller-extras.interface.ts`.
+     */
+    controllers?: import('../../domains/invitation/interfaces/invitation-controller-extras.interface').InvitationDomainControllerExtras;
   };
-  /**
-   * When provided, Rockets registers `RepositoryModule.forFeature` and
-   * conditional `OtpModule.forFeature` internally from the given entity
-   * classes. Apps no longer need to pass canonical key strings.
-   */
-  repositoryPersistence?: RocketsAuthRepositoryPersistenceOptions;
   /**
    * Port handler overrides for granular customization.
    * Each handler can be replaced individually without modifying core Port services.

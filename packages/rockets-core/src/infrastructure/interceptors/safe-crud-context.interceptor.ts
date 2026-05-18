@@ -30,12 +30,13 @@ import { CrudContextOverlay, CrudMetaview } from '@bitwild/rockets-crud';
  * This preserves upstream semantics for CRUD controllers while letting
  * mixed-controller apps coexist without a 500.
  */
-// TODO(upstream: concepta/nestjs-crud) — CrudContextOverlay.resolve() should
-// no-op on handlers without @CrudOperation metadata instead of throwing.
-// Once upstream lands that fix, delete this file, delete
-// createSafeCrudRootModule() in rockets-core.module-definition.ts, and drop
-// the crud-metaview.service deep /dist import below. The bare
-// CrudModule.forRoot({}) will then be safe for mixed-controller apps.
+// TODO(upstream: concepta/nestjs-crud) — the upstream master branch has
+// already fixed CrudContextOverlay.attach() to no-op on handlers without
+// @CrudOperation metadata (commit 5249672f), but the fix is NOT yet
+// shipped in the published 8.0.0-alpha.5 we consume. Once a new alpha
+// (≥ 8.0.0-alpha.6) ships with this fix and we bump, delete this file,
+// delete createSafeCrudRootModule() in rockets-core.module-definition.ts,
+// and the bare CrudModule.forRoot({}) will be safe for mixed apps.
 @Injectable()
 export class SafeCrudContextInterceptor implements NestInterceptor {
   constructor(

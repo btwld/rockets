@@ -19,7 +19,7 @@ import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
 import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
+import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
 import { IsOptional, IsString } from 'class-validator';
 
 import {

@@ -10,13 +10,11 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional, PickType, PartialType, IntersectionType } from '@nestjs/swagger';
-import { CommonEntityDto } from '@concepta/nestjs-common';
-import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
 import {
   PetInterface,
   PetCreatableInterface,
-  PetUpdatableInterface,
   PetModelUpdatableInterface,
   PetStatus,
 } from './pet.interface';
@@ -27,15 +25,14 @@ import { PetAppointmentDto } from '../pet-appointment';
  * Base Pet DTO that implements the PetInterface
  * Following SDK patterns with proper validation and API documentation
  */
+@Exclude()
 export class PetDto implements PetInterface {
-  
   @ApiProperty({
     description: 'Pet unique identifier',
     example: 'pet-123',
   })
   id!: string;
 
-  
   @ApiProperty({
     description: 'Pet name',
     example: 'Buddy',
@@ -48,7 +45,6 @@ export class PetDto implements PetInterface {
   @MaxLength(255, { message: 'Pet name cannot exceed 255 characters' })
   name!: string;
 
-  
   @ApiProperty({
     description: 'Pet species',
     example: 'dog',
@@ -59,7 +55,6 @@ export class PetDto implements PetInterface {
   @MaxLength(100, { message: 'Species cannot exceed 100 characters' })
   species!: string;
 
-  
   @ApiPropertyOptional({
     description: 'Pet breed',
     example: 'Golden Retriever',
@@ -70,7 +65,6 @@ export class PetDto implements PetInterface {
   @MaxLength(255, { message: 'Breed cannot exceed 255 characters' })
   breed?: string;
 
-  
   @ApiProperty({
     description: 'Pet age in years',
     example: 3,
@@ -82,7 +76,6 @@ export class PetDto implements PetInterface {
   @Max(50, { message: 'Age cannot exceed 50 years' })
   age!: number;
 
-  
   @ApiPropertyOptional({
     description: 'Pet color',
     example: 'golden',
@@ -93,7 +86,6 @@ export class PetDto implements PetInterface {
   @MaxLength(100, { message: 'Color cannot exceed 100 characters' })
   color?: string;
 
-  
   @ApiPropertyOptional({
     description: 'Pet description',
     example: 'A friendly and energetic dog',
@@ -102,7 +94,6 @@ export class PetDto implements PetInterface {
   @IsOptional()
   description?: string;
 
-  
   @ApiProperty({
     description: 'Pet status',
     example: PetStatus.ACTIVE,
@@ -111,7 +102,6 @@ export class PetDto implements PetInterface {
   @IsEnum(PetStatus)
   status!: PetStatus;
 
-  
   @ApiProperty({
     description: 'User ID who owns this pet',
     example: 'user-123',
@@ -120,28 +110,24 @@ export class PetDto implements PetInterface {
   @IsNotEmpty()
   userId!: string;
 
-  
   @ApiProperty({
     description: 'Date when the pet was created',
     example: '2023-01-01T00:00:00.000Z',
   })
   dateCreated!: Date;
 
-  
   @ApiProperty({
     description: 'Date when the pet was last updated',
     example: '2023-01-01T00:00:00.000Z',
   })
   dateUpdated!: Date;
 
-  
   @ApiPropertyOptional({
     description: 'Date when the pet was deleted (soft delete)',
     example: null,
   })
   dateDeleted!: Date | null;
 
-  
   @ApiProperty({
     description: 'Version number for optimistic locking',
     example: 1,
@@ -154,8 +140,14 @@ export class PetDto implements PetInterface {
  * Defines required fields for pet creation
  * userId will be set from authenticated user context
  */
+@Exclude()
 export class PetCreateDto implements PetCreatableInterface {
-  @ApiProperty({ description: 'Pet name', example: 'Buddy', maxLength: 255, minLength: 1 })
+  @ApiProperty({
+    description: 'Pet name',
+    example: 'Buddy',
+    maxLength: 255,
+    minLength: 1,
+  })
   @Expose()
   @IsString()
   @IsNotEmpty()
@@ -170,39 +162,65 @@ export class PetCreateDto implements PetCreatableInterface {
   @MaxLength(100)
   species!: string;
 
-  @ApiProperty({ description: 'Pet age in years', example: 3, minimum: 0, maximum: 50 })
+  @ApiProperty({
+    description: 'Pet age in years',
+    example: 3,
+    minimum: 0,
+    maximum: 50,
+  })
   @Expose()
   @IsInt()
   @Min(0)
   @Max(50)
   age!: number;
 
-  @ApiPropertyOptional({ description: 'Pet breed', example: 'Golden Retriever', maxLength: 255 })
+  @ApiPropertyOptional({
+    description: 'Pet breed',
+    example: 'Golden Retriever',
+    maxLength: 255,
+  })
   @Expose()
   @IsString()
   @IsOptional()
   @MaxLength(255)
   breed?: string;
 
-  @ApiPropertyOptional({ description: 'Pet color', example: 'golden', maxLength: 100 })
+  @ApiPropertyOptional({
+    description: 'Pet color',
+    example: 'golden',
+    maxLength: 100,
+  })
   @Expose()
   @IsString()
   @IsOptional()
   @MaxLength(100)
   color?: string;
 
-  @ApiPropertyOptional({ description: 'Pet description', example: 'A friendly dog' })
+  @ApiPropertyOptional({
+    description: 'Pet description',
+    example: 'A friendly dog',
+  })
   @Expose()
   @IsString()
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ description: 'Pet status', example: PetStatus.ACTIVE, enum: PetStatus })
+  @ApiProperty({
+    description: 'Pet status',
+    example: PetStatus.ACTIVE,
+    enum: PetStatus,
+  })
   @Expose()
   @IsEnum(PetStatus)
   status!: PetStatus;
 
-  // userId is handled by the controller/service from authenticated user context
+  /** Must be exposed or ValidationPipe (whitelist) strips it before PetCreateHandler runs. */
+  @ApiProperty({
+    description: 'Owner user id (PetCreateHandler may override from auth)',
+  })
+  @Expose()
+  @IsString()
+  @IsNotEmpty()
   userId!: string;
 }
 
@@ -211,6 +229,7 @@ export class PetCreateDto implements PetCreatableInterface {
  * Defines fields that can be updated
  * Excludes userId from updates for security
  */
+@Exclude()
 export class PetUpdateDto implements PetModelUpdatableInterface {
   @ApiProperty({ description: 'Pet ID', example: 'pet-123' })
   @Expose()
@@ -218,28 +237,45 @@ export class PetUpdateDto implements PetModelUpdatableInterface {
   @IsNotEmpty()
   id!: string;
 
-  @ApiPropertyOptional({ description: 'Pet name', example: 'Buddy', maxLength: 255 })
+  @ApiPropertyOptional({
+    description: 'Pet name',
+    example: 'Buddy',
+    maxLength: 255,
+  })
   @Expose()
   @IsString()
   @IsOptional()
   @MaxLength(255)
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Pet species', example: 'dog', maxLength: 100 })
+  @ApiPropertyOptional({
+    description: 'Pet species',
+    example: 'dog',
+    maxLength: 100,
+  })
   @Expose()
   @IsString()
   @IsOptional()
   @MaxLength(100)
   species?: string;
 
-  @ApiPropertyOptional({ description: 'Pet breed', example: 'Golden Retriever', maxLength: 255 })
+  @ApiPropertyOptional({
+    description: 'Pet breed',
+    example: 'Golden Retriever',
+    maxLength: 255,
+  })
   @Expose()
   @IsString()
   @IsOptional()
   @MaxLength(255)
   breed?: string;
 
-  @ApiPropertyOptional({ description: 'Pet age', example: 3, minimum: 0, maximum: 50 })
+  @ApiPropertyOptional({
+    description: 'Pet age',
+    example: 3,
+    minimum: 0,
+    maximum: 50,
+  })
   @Expose()
   @IsInt()
   @IsOptional()
@@ -247,7 +283,11 @@ export class PetUpdateDto implements PetModelUpdatableInterface {
   @Max(50)
   age?: number;
 
-  @ApiPropertyOptional({ description: 'Pet color', example: 'golden', maxLength: 100 })
+  @ApiPropertyOptional({
+    description: 'Pet color',
+    example: 'golden',
+    maxLength: 100,
+  })
   @Expose()
   @IsString()
   @IsOptional()
@@ -273,6 +313,7 @@ export class PetUpdateDto implements PetModelUpdatableInterface {
  * Pet Response DTO
  * Used for API responses - includes all fields
  */
+@Exclude()
 export class PetResponseDto implements PetInterface {
   @ApiProperty({ description: 'Pet unique identifier', example: 'pet-123' })
   @Expose()
@@ -286,7 +327,10 @@ export class PetResponseDto implements PetInterface {
   @Expose()
   species!: string;
 
-  @ApiPropertyOptional({ description: 'Pet breed', example: 'Golden Retriever' })
+  @ApiPropertyOptional({
+    description: 'Pet breed',
+    example: 'Golden Retriever',
+  })
   @Expose()
   breed?: string;
 

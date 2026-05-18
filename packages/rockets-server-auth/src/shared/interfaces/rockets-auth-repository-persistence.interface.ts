@@ -1,27 +1,34 @@
 import type { Type } from '@nestjs/common';
+import type { OtpInterface } from '@concepta/nestjs-otp';
 import type {
-  OtpInterface,
-  RoleAssignmentEntityInterface,
-  RoleEntityInterface,
-  UserCredentialInterface,
   UserEntityInterface,
-} from '@concepta/nestjs-common';
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository/dist/interfaces/repository-module.interface';
-import type { RocketsAuthUserMetadataEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
+  UserCredentialInterface,
+} from '@concepta/nestjs-user';
+import type {
+  RoleEntityInterface,
+  RoleAssignmentEntityInterface,
+} from '@concepta/nestjs-role';
+import type { IdentityEntityInterface } from '@concepta/nestjs-federated';
+import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 
 /**
  * Entity classes that Rockets Auth needs for repository persistence.
  *
  * Keys are friendly identifiers; the library maps them internally
  * to canonical repository keys (USER_CRUD_ENTITY_KEY, etc.).
+ *
+ * The `userMetadata` entity is intentionally not part of this shape —
+ * it is configured separately via the `userMetadata` field on
+ * `DefineRocketsAuthInput` (single source of truth consumed by core).
  */
 export interface RocketsAuthRepositoryPersistenceEntities {
   readonly user: Type<UserEntityInterface>;
   readonly userCredentials: Type<UserCredentialInterface>;
-  readonly userMetadata?: Type<RocketsAuthUserMetadataEntityInterface>;
   readonly userOtp?: Type<OtpInterface>;
   readonly role?: Type<RoleEntityInterface>;
   readonly userRole?: Type<RoleAssignmentEntityInterface>;
+  /** Federated identity store (e.g. OAuth link rows); key `identity` in `RepositoryModule`. */
+  readonly federatedIdentity?: Type<IdentityEntityInterface>;
 }
 
 /**

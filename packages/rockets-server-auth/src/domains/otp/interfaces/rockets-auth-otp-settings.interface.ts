@@ -1,7 +1,5 @@
-import {
-  OtpCreatableInterface,
-  ReferenceAssignment,
-} from '@concepta/nestjs-common';
+import { ReferenceAssignment } from '@concepta/nestjs-common';
+import { OtpCreatableInterface } from '@concepta/nestjs-otp';
 
 /**
  * Rockets Server OTP settings interface

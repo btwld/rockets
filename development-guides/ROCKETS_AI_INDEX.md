@@ -4,11 +4,9 @@
 
 ## 🧭 Agent Instruction Files
 
-- Canonical repository instructions: [`../AGENTS.md`](../AGENTS.md)
+- Canonical repository instructions: [`../AGENTS.md`](../AGENTS.md) — includes **rule 13** (database-agnostic persistence) and **“How to work with the project owner”** (tone: concise, code-forward, high quality bar)
 - Compatibility alias: `../CLAUDE.md` (symlink to `../AGENTS.md`)
-- Session handoff snapshot: [`../.context/handoff.md`](../.context/handoff.md)
-- Shared collaboration notes: [`../.context/notes.md`](../.context/notes.md)
-- Shared task handoff list: [`../.context/todos.md`](../.context/todos.md)
+- Initiative scope, three-layer model, roadmap, open decisions (feedback): [`../docs/explanation/rockets-initiative.md`](../docs/explanation/rockets-initiative.md)
 
 ## 📋 **Quick Tasks**
 
@@ -17,7 +15,8 @@
 |------|-------|-------|
 | **Choose packages** (rockets-server vs rockets-server-auth) | [ROCKETS_PACKAGES_GUIDE.md](./ROCKETS_PACKAGES_GUIDE.md) | 400 |
 | **Configure application** (main.ts, modules, env) | [CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md) | 250 |
-| **Provide dynamic repo token** (`userMetadata` via `TypeOrmExtModule.forFeature`) | [ROCKETS_PACKAGES_GUIDE.md](./ROCKETS_PACKAGES_GUIDE.md#phase-31-dynamic-repository-tokens-critical) | ~
+| **Built-in auth via `defineRocketsAuth`** (`RocketsModule` + one `userMetadata`) | [CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md#module-import-order) + [`examples/sample-server-auth/`](../examples/sample-server-auth/) | ~ |
+| **Provide dynamic repo token** (`userMetadata` via `TypeOrmExtModule.forFeature`) | [ROCKETS_PACKAGES_GUIDE.md](./ROCKETS_PACKAGES_GUIDE.md#phase-31-dynamic-repository-tokens-critical) | ~ |
 
 ### **🎯 Phase 2: Module Development**
 | Task | Guide | Lines |
@@ -57,8 +56,9 @@
 ## 🎯 **Package Ecosystem Overview**
 
 ### **Core Rockets Packages**
-- **@bitwild/rockets-server**: Minimal auth + user metadata (2 endpoints)
-- **@bitwild/rockets-server-auth**: Complete auth system (15+ endpoints)
+- **@bitwild/rockets-core**: Shared infrastructure (auth abstraction, CQRS, declarative resources, repositories, Swagger). Used by both server and auth.
+- **@bitwild/rockets** (rockets-server): External auth integration — `/me` endpoint + global guard for external auth providers (Firebase, Auth0, etc.)
+- **@bitwild/rockets-server-auth**: Complete built-in auth system (JWT, signup, login, OAuth, OTP, admin)
 
 ### **@concepta Package Categories (32 total)**
 - **Core**: common, crud, typeorm-ext (5 packages)

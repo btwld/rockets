@@ -7,6 +7,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`RocketsAuthIntegration`** (`ROCKETS_AUTH_INTEGRATION_KIND`,
+  `isRocketsAuthIntegration`) in `@bitwild/rockets-core` for bundles
+  returned by `@bitwild/rockets-auth` **`defineRocketsAuth()`**.
+
+### Changed
+
+- **`RocketsModule`**: when `extras.auth` is a `RocketsAuthIntegration`,
+  merges `resources` and appends `nestImports` **after**
+  `RocketsCoreModule.forRootAsync` so repository rows exist before
+  `RocketsAuthModule` boots. Merges `userMetadata` /
+  `rocketsDefaults.enableGlobalGuard` from the integration when not set on
+  extras.
+
 ## [1.0.0-alpha.7] - 2026-02-19
 
 ### Changed

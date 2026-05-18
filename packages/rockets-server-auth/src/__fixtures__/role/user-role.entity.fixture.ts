@@ -1,6 +1,6 @@
 import { Entity, ManyToOne } from 'typeorm';
 import { ReferenceIdInterface } from '@concepta/nestjs-common';
-import { RoleInterface } from '@concepta/nestjs-common';
+import { RoleInterface } from '@concepta/nestjs-role';
 import { RoleAssignmentSqliteEntity } from '@concepta/nestjs-typeorm-ext';
 
 import { RoleEntityFixture } from './role.entity.fixture';

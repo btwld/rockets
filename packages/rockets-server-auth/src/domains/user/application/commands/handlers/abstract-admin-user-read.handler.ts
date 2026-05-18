@@ -1,10 +1,9 @@
 import { Injectable, PlainLiteralObject } from '@nestjs/common';
 import {
   CrudAdapter,
+  CrudReadQuery,
   CrudResponsePaginatedInterface,
 } from '@concepta/nestjs-crud';
-import type { CrudQueryHandlerInterface } from '@concepta/nestjs-crud/dist/application/queries/interfaces/crud-query-handler.interface';
-import type { CrudQueryInterface } from '@concepta/nestjs-crud/dist/application/queries/interfaces/crud-query.interface';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 
 /**
@@ -17,12 +16,10 @@ import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth
  * via `RocketsAuthModule.forRoot({ userCrud: { handlers: { adminRead } } })`.
  */
 @Injectable()
-export abstract class AbstractAdminUserReadHandler
-  implements CrudQueryHandlerInterface<RocketsAuthUserEntityInterface>
-{
+export abstract class AbstractAdminUserReadHandler {
   abstract readonly crudAdapter: CrudAdapter<RocketsAuthUserEntityInterface>;
   abstract execute(
-    query: CrudQueryInterface<RocketsAuthUserEntityInterface>,
+    query: CrudReadQuery<RocketsAuthUserEntityInterface>,
   ): Promise<
     | (RocketsAuthUserEntityInterface & PlainLiteralObject)
     | CrudResponsePaginatedInterface<RocketsAuthUserEntityInterface>

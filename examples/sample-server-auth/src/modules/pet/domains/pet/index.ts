@@ -13,12 +13,11 @@ export * from './pet.types';
 // Exception
 export * from './pet.exception';
 
-// Services
-export * from './pet-typeorm-crud.adapter';
+// Services & handlers
 export * from './pet-model.service';
 export * from './pet-access-query.service';
-export * from './pet.crud.service';
+export * from './pet-list.handler';
+export * from './pet-create.handler';
 
-// Controller
-export * from './pet.crud.controller';
-
+// Resource bundle
+export * from './pet.resource';

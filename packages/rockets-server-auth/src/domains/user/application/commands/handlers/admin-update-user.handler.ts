@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { CrudUpdateCommand } from '@concepta/nestjs-crud';
-import type { CrudCommandInterface } from '@concepta/nestjs-crud/dist/application/commands/interfaces/crud-command.interface';
 
 import { UpdateUserCommand } from '../impl/update-user.command';
 import { AbstractAdminUserUpdateHandler } from './abstract-admin-user-update.handler';
@@ -15,13 +14,13 @@ export class AdminUpdateUserHandler extends AbstractAdminUserUpdateHandler {
   }
 
   async execute(
-    command: CrudCommandInterface<RocketsAuthUserEntityInterface>,
-  ): Promise<RocketsAuthUserEntityInterface> {
-    const { context, dto } = command as CrudUpdateCommand<
+    command: CrudUpdateCommand<
       RocketsAuthUserEntityInterface,
       RocketsAuthUserUpdatableInterface
-    >;
-    const id = context.params.id as string;
+    >,
+  ): Promise<RocketsAuthUserEntityInterface> {
+    const { context, dto } = command;
+    const id = String(context.params.id);
 
     return this.commandBus.execute(new UpdateUserCommand(context, id, dto));
   }

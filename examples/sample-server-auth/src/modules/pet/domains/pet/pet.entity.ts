@@ -1,19 +1,14 @@
-import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-  OneToMany,
-} from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { CommonSqliteEntity } from '@concepta/nestjs-typeorm-ext';
 import { PetEntityInterface, PetStatus } from './pet.interface';
-import { PetVaccinationEntity } from '../pet-vaccination';
-import { PetAppointmentEntity } from '../pet-appointment';
+import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
+import { PetAppointmentEntity } from '../pet-appointment/pet-appointment.entity';
 
 @Entity('pets')
-export class PetEntity extends CommonSqliteEntity implements PetEntityInterface {
-  @PrimaryGeneratedColumn('uuid')
-  declare id: string;
-
+export class PetEntity
+  extends CommonSqliteEntity
+  implements PetEntityInterface
+{
   @Column({ type: 'varchar', length: 255, nullable: false })
   name!: string;
 

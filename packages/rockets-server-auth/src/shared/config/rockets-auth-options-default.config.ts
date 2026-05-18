@@ -20,8 +20,8 @@ export const rocketsAuthOptionsDefaultConfig = registerAs(
         defaultUserRoleName: process.env?.DEFAULT_USER_ROLE_NAME ?? 'user',
       },
       email: {
-        from: 'from',
-        baseUrl: 'baseUrl',
+        from: process.env?.EMAIL_FROM ?? '',
+        baseUrl: process.env?.EMAIL_BASE_URL ?? '',
         tokenUrlFormatter: (baseUrl: string, passcode: string) => {
           return `${baseUrl}/${passcode}`;
         },

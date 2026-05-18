@@ -19,9 +19,13 @@
 
 | Your Need | Package | When to Use |
 |-----------|---------|-------------|
-| **External Auth System** (Auth0, Firebase, Cognito) | `@bitwild/rockets-server` | You have existing auth, just need user metadata |
+| **Infrastructure only** (no `/me`, no global guard) | `@bitwild/rockets-core` | Minimum footprint — build your own auth & endpoints on top |
+| **External Auth System** (Auth0, Firebase, Cognito) | `@bitwild/rockets` (rockets-server) | You have existing auth, just need `/me` + user metadata |
 | **Complete Auth System** | `@bitwild/rockets-server-auth` | You need login, signup, recovery, OAuth, admin |
-| **Both** (Recommended) | Both packages | Complete system with external provider option |
+| **Both** (Recommended) | `rockets` + `rockets-server-auth` | Complete system with external provider option |
+
+> `rockets-core` is imported by both `rockets` and `rockets-server-auth`. You only
+> need to depend on it directly when using it stand-alone.
 
 ### **Feature Comparison:**
 
@@ -141,7 +145,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RocketsServerModule } from '@bitwild/rockets-server';
-import { YourAuthProvider } from './auth/your-auth.provider';
+import { YourAuthProvider } from './auth/your-auth.adapter';
 
 @Module({
   imports: [
@@ -185,44 +189,55 @@ export class AppModule {}
 
 ### **Phase 3.1: Dynamic Repository Tokens (Critical)**
 
-When using `@bitwild/rockets-server`, the module expects a dynamic repository token for `userMetadata`. You MUST provide this token so Rockets can inject a `RepositoryInterface` for the user metadata store.
-
-There are two ways to satisfy this:
-
-1) Recommended (TypeORM): register via `@concepta/nestjs-typeorm-ext`
+When using `@bitwild/rockets-server`, every dynamic-repository row in the
+app — including the user-metadata table — flows through a single root
+adapter you set on `RocketsModule.forRootAsync`:
 
 ```ts
 // app.module.ts
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { RocketsModule } from '@bitwild/rockets-server';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { RocketsModule } from '@bitwild/rockets';
+import { defineModuleResource } from '@bitwild/rockets-core';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
 import { UserMetadataCreateDto, UserMetadataUpdateDto } from './dto/user-metadata.dto';
 
-const options = {
-  settings: {},
-  authProvider: /* your provider */,
-  userMetadata: {
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
-  },
-};
-
 @Module({
   imports: [
-    TypeOrmExtModule.forRoot({ /* db config */ }),
-
-    // CRITICAL: provides dynamic repository token for 'userMetadata'
-    TypeOrmExtModule.forFeature({
-      userMetadata: { entity: UserMetadataEntity },
+    TypeOrmModule.forRoot({
+      type: 'sqlite',
+      database: ':memory:',
+      entities: [UserMetadataEntity /*, ... */],
+      synchronize: true,
     }),
-
-    RocketsModule.forRoot(options),
+    RocketsModule.forRootAsync({
+      useFactory: () => ({ authProvider: /* your provider */ }),
+      // Root adapter — applied to userMetadata + every defineResource /
+      // defineModuleResource entity unless they declare their own override.
+      repository: TypeOrmRepositoryModule,
+      userMetadata: {
+        entity: UserMetadataEntity,
+        createDto: UserMetadataCreateDto,
+        updateDto: UserMetadataUpdateDto,
+        // repository: FirestoreRepositoryModule, // optional per-entity override
+      },
+      resources: [
+        // CRUD bundles auto-contribute their entity row.
+        // defineModuleResource bundles add extra rows + Nest wiring:
+        defineModuleResource({
+          entities: [{ key: 'audit', entity: AuditLogEntity }],
+          module: { providers: [AuditService], exports: [AuditService] },
+        }),
+      ],
+    }),
   ],
 })
 export class AppModule {}
 ```
 
-If you omit this, you'll see an error like:
+If you omit `repository` AND `userMetadata.repository`, the user-metadata
+row is assumed to be registered by an upstream module (e.g. auth persistence
+compiled via `defineRocketsAuth` into the same planner as `resources[]`).
+Otherwise you'll see:
 
 ```
 Nest can't resolve dependencies of the UserMetadataModelService (..., DYNAMIC_REPOSITORY_TOKEN_userMetadata).
@@ -230,9 +245,10 @@ Nest can't resolve dependencies of the UserMetadataModelService (..., DYNAMIC_RE
 
 Make sure `UserMetadataEntity` is also included in your TypeORM entities list.
 
-2) Custom persistence (non-TypeORM or custom adapter): provide the token manually
-
-If you are not using `@concepta/nestjs-typeorm-ext`, export a provider whose token matches the one requested by `InjectDynamicRepository('userMetadata')`, and whose value implements `RepositoryInterface<UserMetadataEntityInterface>`.
+**Custom persistence (non-TypeORM)** — supply your own adapter
+implementing `RepositoryModuleInterface` either as the root `repository`
+or per-entity. As a last resort you can still bind the dynamic
+repository token manually:
 
 ```ts
 // user-metadata.repository.adapter.ts (implements RepositoryInterface<UserMetadataEntityInterface>)

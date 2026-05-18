@@ -1,4 +1,4 @@
-import { RepositoryContextInterface } from '@concepta/nestjs-repository';
+import { RepositoryContextInterface } from '@bitwild/rockets-common';
 import { ReferenceId } from '@concepta/nestjs-common';
 import { RocketsAuthUserUpdatableInterface } from '../../../interfaces/rockets-auth-user-updatable.interface';
 

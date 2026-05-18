@@ -7,4 +7,3 @@ import { InvitationSqliteEntity } from '@concepta/nestjs-typeorm-ext';
  */
 @Entity()
 export class InvitationEntity extends InvitationSqliteEntity {}
-

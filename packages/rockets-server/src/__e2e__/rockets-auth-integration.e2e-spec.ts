@@ -1,0 +1,153 @@
+import {
+  Controller,
+  Get,
+  INestApplication,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { IsString } from 'class-validator';
+import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import {
+  AUTH_ADAPTER_TOKEN,
+  defineModuleResource,
+  ROCKETS_AUTH_INTEGRATION_KIND,
+  type AuthAdapterInterface,
+  type AuthorizedUser,
+  type RocketsAuthIntegration,
+  type UserMetadataCreatableInterface,
+  type UserMetadataModelUpdatableInterface,
+} from '@bitwild/rockets-core';
+import {
+  InjectDynamicRepository,
+  type RepositoryInterface,
+} from '@bitwild/rockets-repository';
+import request from 'supertest';
+import { RocketsModule } from '../rockets.module';
+import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
+
+@Entity('integration_users')
+class IntegrationUserEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  email!: string;
+}
+
+@Injectable()
+class IntegrationAuthAdapter implements AuthAdapterInterface {
+  async validateToken(token: string): Promise<AuthorizedUser> {
+    if (token === 'valid-integration-token') {
+      return {
+        id: 'user-integration',
+        sub: 'user-integration',
+        email: 'integration@test.com',
+        userRoles: [{ role: { name: 'admin' } }],
+        claims: {},
+      };
+    }
+    throw new UnauthorizedException();
+  }
+}
+
+@ApiTags('IntegrationAuth')
+@Controller('integration-auth')
+class IntegrationAuthController {
+  constructor(
+    @InjectDynamicRepository('integrationUser')
+    private readonly userRepo: RepositoryInterface<IntegrationUserEntity>,
+  ) {}
+
+  @Get('probe')
+  @ApiOkResponse({
+    description:
+      'Whether the dynamic repo for the integration user entity is bound.',
+  })
+  probe(): { repoBound: boolean } {
+    return { repoBound: typeof this.userRepo.find === 'function' };
+  }
+}
+
+class IntegrationMetadataCreateDto implements UserMetadataCreatableInterface {
+  @IsString() userId!: string;
+}
+class IntegrationMetadataUpdateDto
+  implements UserMetadataModelUpdatableInterface
+{
+  @IsString() id!: string;
+}
+
+function buildRocketsAuthIntegration(): RocketsAuthIntegration {
+  return {
+    kind: ROCKETS_AUTH_INTEGRATION_KIND,
+    authAdapter: IntegrationAuthAdapter,
+    nestImports: [],
+    resources: [
+      defineModuleResource({
+        entities: [IntegrationUserEntity],
+        controllers: [IntegrationAuthController],
+      }),
+    ],
+  };
+}
+
+describe('RocketsModule — auth: RocketsAuthIntegration (e2e)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          entities: [IntegrationUserEntity],
+          synchronize: true,
+          dropSchema: true,
+        }),
+        RocketsModule.forRoot({
+          auth: buildRocketsAuthIntegration(),
+          userMetadata: {
+            entity: StubUserMetadataEntity,
+            createDto: IntegrationMetadataCreateDto,
+            updateDto: IntegrationMetadataUpdateDto,
+            repository: E2eFakeRepositoryModule,
+          },
+          repository: TypeOrmRepositoryModule,
+          resources: [],
+        }),
+      ],
+    }).compile();
+
+    app = moduleRef.createNestApplication();
+    await app.init();
+  });
+
+  afterAll(async () => {
+    if (app) await app.close();
+  });
+
+  it('resolves `AUTH_ADAPTER_TOKEN` to the integration adapter class', () => {
+    const adapter = app.get<AuthAdapterInterface>(AUTH_ADAPTER_TOKEN);
+    expect(adapter).toBeInstanceOf(IntegrationAuthAdapter);
+  });
+
+  it('merges integration `resources` into the planner (repo probe returns 200)', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/integration-auth/probe')
+      .set('Authorization', 'Bearer valid-integration-token');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ repoBound: true });
+  });
+
+  it('mounts the controller from the merged module resource', async () => {
+    const res = await request(app.getHttpServer()).get(
+      '/integration-auth/probe',
+    );
+    expect([200, 401]).toContain(res.status);
+  });
+});

@@ -1,4 +1,4 @@
-import { UserEntityInterface } from '@concepta/nestjs-common';
+import { UserEntityInterface } from '@concepta/nestjs-user';
 
 export class RocketsUpdateUserCommand {
   constructor(

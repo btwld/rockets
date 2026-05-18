@@ -1,30 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
-  OtpCreateInterface,
-  OtpValidateInterface,
-  OtpClearInterface,
-  OtpInterface,
   AssigneeRelationInterface,
   ReferenceAssignment,
-  OtpCreateParamsInterface,
 } from '@concepta/nestjs-common';
+import { OtpInterface } from '@concepta/nestjs-otp';
+
 import { RocketsCreateOtpCommand } from '../../domains/otp/application/commands/impl/rockets-create-otp.command';
+import type { RocketsCreateOtpParams } from '../../domains/otp/application/commands/impl/rockets-create-otp.command';
 import { RocketsClearOtpsCommand } from '../../domains/otp/application/commands/impl/rockets-clear-otps.command';
 import { RocketsValidateOtpQuery } from '../../domains/otp/application/queries/impl/rockets-validate-otp.query';
 
 export const ROCKETS_AUTH_OTP_PORT_TOKEN = Symbol('__ROCKETS_AUTH_OTP_PORT__');
 
+/**
+ * OTP port adapter — bridges Rockets-internal callers (the OTP controller,
+ * recovery / verify command handlers) to the v8 nestjs-otp CQRS surface
+ * via Rockets-local query/command classes.
+ *
+ * v8 collapse: in v7 this implemented `OtpCreateInterface`,
+ * `OtpValidateInterface`, `OtpClearInterface` from `@concepta/nestjs-common`
+ * (the upstream service-shape contracts). v8 removed those interfaces — the
+ * `OtpPort` exposed by `@concepta/nestjs-authentication` v8 is a class, not
+ * an interface to implement, and is configured at module-registration time
+ * via CQRS Command/Query class types (not service instances). This adapter
+ * therefore exposes a Rockets-shaped surface only, preserved for internal
+ * callers that already depend on it.
+ */
 @Injectable()
-export class RocketsAuthOtpPortService
-  implements OtpCreateInterface, OtpValidateInterface, OtpClearInterface
-{
+export class RocketsAuthOtpPortService {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
   ) {}
 
-  async create(params: OtpCreateParamsInterface): Promise<OtpInterface> {
+  async create(params: RocketsCreateOtpParams): Promise<OtpInterface> {
     return this.commandBus.execute(new RocketsCreateOtpCommand(params));
   }
 

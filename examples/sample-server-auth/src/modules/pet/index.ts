@@ -9,6 +9,3 @@ export * from './domains/pet-vaccination';
 
 // Pet Appointment Domain
 export * from './domains/pet-appointment';
-
-// Constants
-export * from './constants/pet.constants';

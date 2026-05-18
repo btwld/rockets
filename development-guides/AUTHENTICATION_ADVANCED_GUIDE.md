@@ -38,7 +38,7 @@ The Rockets authentication system consists of several core components:
 // 2. Guard uses AuthLocalStrategy → CustomAuthLocalValidationService
 // 3. Validation service checks credentials → User entity
 // 4. Success → IssueTokenService generates JWT tokens
-// 5. Subsequent requests → AuthJwtGuard → RocketsJwtAuthProvider
+// 5. Subsequent requests → AuthJwtGuard → RocketsJwtAuthAdapter
 // 6. Provider validates token → Enriched user object with roles
 ```
 
@@ -62,10 +62,10 @@ The Rockets authentication system consists of several core components:
 
 ### Creating a Custom JWT Authentication Provider
 
-The `RocketsJwtAuthProvider` can be extended or replaced to implement custom token validation logic:
+The `RocketsJwtAuthAdapter` can be extended or replaced to implement custom token validation logic:
 
 ```typescript
-// providers/custom-jwt-auth.provider.ts
+// providers/custom-jwt-auth.adapter.ts
 import { Injectable, Inject, UnauthorizedException, Logger } from '@nestjs/common';
 import { VerifyTokenService } from '@concepta/nestjs-authentication';
 import { UserModelService } from '@concepta/nestjs-user';
@@ -364,7 +364,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { CustomJwtAuthProvider } from '../providers/custom-jwt-auth.provider';
+import { CustomJwtAuthProvider } from '../providers/custom-jwt-auth.adapter';
 
 @Injectable()
 export class CustomJwtStrategy extends PassportStrategy(Strategy, 'custom-jwt') {
@@ -1412,7 +1412,7 @@ import { AccessControlModule } from '@concepta/nestjs-access-control';
 
 // Custom services
 import { CustomAuthLocalValidationService } from './services/custom-auth-local-validation.service';
-import { CustomJwtAuthProvider } from './providers/custom-jwt-auth.provider';
+import { CustomJwtAuthProvider } from './providers/custom-jwt-auth.adapter';
 import { TotpMfaService } from './services/totp-mfa.service';
 import { SessionManagementService } from './services/session-management.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';

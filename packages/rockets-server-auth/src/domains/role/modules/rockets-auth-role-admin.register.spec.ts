@@ -1,5 +1,5 @@
 import { RocketsAuthRoleAdminModule } from './rockets-auth-role-admin.module';
-import { RocketsAuthRoleDto } from '../dto/rockets-auth-role.dto';
+import { RocketsAuthRoleDto } from '../infrastructure/dto/rockets-auth-role.dto';
 
 describe('RocketsAuthRoleAdminModule.register', () => {
   it('builds CrudModule feature with paginated admin DTO', () => {

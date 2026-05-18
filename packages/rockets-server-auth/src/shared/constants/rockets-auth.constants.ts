@@ -1,69 +1,10 @@
-export const AUTHENTICATION_MODULE_SETTINGS_TOKEN =
-  'AUTHENTICATION_MODULE_SETTINGS_TOKEN';
+import { USER_OTP_ENTITY_KEY } from './repository-entity-keys.constants';
 
 export const ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN =
   'ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN';
 
-export const AUTHENTICATION_MODULE_VALIDATE_TOKEN_SERVICE_TOKEN =
-  'AUTHENTICATION_MODULE_VALIDATE_TOKEN_SERVICE_TOKEN';
-
-export const AUTHENTICATION_MODULE_DISABLE_GUARDS_TOKEN =
-  'AUTHENTICATION_MODULE_DISABLE_GUARDS_TOKEN';
-
-export const ROCKETS_AUTH_MODULE_OPTIONS_TOKEN =
-  'ROCKETS_AUTH_MODULE_OPTIONS_TOKEN';
-
-export const ROCKETS_AUTH_MODULE_USER_LOOKUP_SERVICE_TOKEN =
-  'ROCKETS_AUTH_MODULE_USER_LOOKUP_SERVICE_TOKEN';
-
-export const RocketsAuthEmailService = Symbol(
-  '__ROCKETS_AUTH_EMAIL_SERVICE_TOKEN__',
-);
-
-export const RocketsAuthUserModelService = Symbol(
-  '__ROCKETS_AUTH_USER_LOOKUP_TOKEN__',
-);
-
-// Admin CRUD Service Token
-export const ADMIN_USER_CRUD_SERVICE_TOKEN = Symbol(
-  '__ADMIN_USER_CRUD_SERVICE_TOKEN__',
-);
-
-export const ADMIN_ROLE_CRUD_SERVICE_TOKEN = Symbol(
-  '__ADMIN_ROLE_CRUD_SERVICE_TOKEN__',
-);
-
-// Admin User Relations Tokens
-export const ROCKETS_ADMIN_USER_METADATA_ADAPTER = Symbol(
-  '__ROCKETS_ADMIN_USER_METADATA_ADAPTER__',
-);
-
-export const ROCKETS_ADMIN_USER_RELATION_REGISTRY = Symbol(
-  '__ROCKETS_ADMIN_USER_RELATION_REGISTRY__',
-);
-
-export const ROCKETS_ADMIN_USER_METADATA_SERVICE = Symbol(
-  '__ROCKETS_ADMIN_USER_METADATA_SERVICE__',
-);
-
-// Signup CRUD Service Token
-export const SIGNUP_USER_CRUD_SERVICE_TOKEN = Symbol(
-  '__SIGNUP_USER_CRUD_SERVICE_TOKEN__',
-);
-
-// Signup User Relations Tokens
-export const ROCKETS_SIGNUP_USER_METADATA_ADAPTER = Symbol(
-  '__ROCKETS_SIGNUP_USER_METADATA_ADAPTER__',
-);
-
-export const ROCKETS_SIGNUP_USER_RELATION_REGISTRY = Symbol(
-  '__ROCKETS_SIGNUP_USER_RELATION_REGISTRY__',
-);
-
-import { USER_OTP_ENTITY_KEY } from './repository-entity-keys.constants';
-
 /**
- * OTP assignment constant for user-scoped OTP
- * This value must match the entity key used in OtpModule configuration
+ * OTP assignment constant for user-scoped OTP.
+ * Must match the entity key used in OtpModule configuration.
  */
 export const ROCKETS_AUTH_OTP_ASSIGNMENT = USER_OTP_ENTITY_KEY;

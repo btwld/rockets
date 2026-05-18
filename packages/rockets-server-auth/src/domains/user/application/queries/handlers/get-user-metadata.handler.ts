@@ -6,7 +6,7 @@ import { UserMetadataRepositoryInterface } from '../../../domain/repositories/us
 import { USER_METADATA_REPOSITORY_TOKEN } from '../../../domain/constants/user-domain.tokens';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsAuthUserMetadataEntityInterface } from '../../../interfaces/rockets-auth-user-metadata-entity.interface';
-import { createRepositoryContext } from '../../../../../shared/utils/repository-context.helper';
+import { createRepositoryContext } from '@bitwild/rockets-common';
 
 @QueryHandler(GetUserMetadataQuery)
 export class GetUserMetadataHandler

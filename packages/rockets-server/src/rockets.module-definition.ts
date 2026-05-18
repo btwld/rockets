@@ -10,11 +10,13 @@ import {
   AuthServerGuard,
   ROCKETS_CORE_SETTINGS_TOKEN,
   isAuthFeatureBundle,
+  isRocketsAuthIntegration,
 } from '@bitwild/rockets-core';
 import type {
   AuthAdapterInterface,
   AuthFeatureBundle,
   ResourceInput,
+  RocketsAuthIntegration,
 } from '@bitwild/rockets-core';
 import type { Type } from '@nestjs/common';
 import { MeController } from './gateways/http/me.controller';
@@ -59,16 +61,38 @@ function definitionTransform(
     exports = [],
   } = definition;
 
+  const mergedExtras = mergeRocketsAuthIntegrationExtras(extras);
+
   return {
     ...definition,
     global: extras.global,
-    imports: createRocketsImports({ imports, extras }),
+    imports: createRocketsImports({ imports, extras: mergedExtras }),
     controllers: createRocketsControllers({
       controllers: extras.controllers ?? controllers,
       extras,
     }),
-    providers: createRocketsProviders({ providers, extras }),
+    providers: createRocketsProviders({ providers, extras: mergedExtras }),
     exports: createRocketsExports({ exports }),
+  };
+}
+
+function mergeRocketsAuthIntegrationExtras(
+  extras: RocketsOptionsExtrasInterface,
+): RocketsOptionsExtrasInterface {
+  const auth = extras.auth;
+  if (!isRocketsAuthIntegration(auth)) {
+    return extras;
+  }
+  const userMetadata = extras.userMetadata ?? auth.userMetadata;
+  const enableGlobalGuard =
+    auth.rocketsDefaults?.enableGlobalGuard !== undefined
+      ? auth.rocketsDefaults.enableGlobalGuard
+      : extras.enableGlobalGuard;
+
+  return {
+    ...extras,
+    ...(userMetadata !== undefined ? { userMetadata } : {}),
+    ...(enableGlobalGuard !== undefined ? { enableGlobalGuard } : {}),
   };
 }
 
@@ -76,12 +100,9 @@ export function createRocketsImports(options: {
   imports: NonNullable<DynamicModule['imports']>;
   extras?: RocketsOptionsExtrasInterface;
 }): NonNullable<DynamicModule['imports']> {
-  // When `auth` is an `AuthFeatureBundle` (produced by `defineAuthFeature()`),
-  // unpack it into the two values core actually consumes: the adapter
-  // class (registered/aliased to `AUTH_ADAPTER_TOKEN`) and the
-  // `ModuleResource` that owns its entity / controllers / providers
-  // (prepended to `resources[]`).
-  const { auth, extraResources } = resolveAuthExtras(options.extras?.auth);
+  const { auth, extraResources, authNestImports } = resolveAuthExtras(
+    options.extras?.auth,
+  );
 
   return [
     ...options.imports,
@@ -97,19 +118,36 @@ export function createRocketsImports(options: {
       handlers: options.extras?.handlers,
       global: true,
     }),
+    ...authNestImports,
   ];
 }
 
 function resolveAuthExtras(
-  auth: Type<AuthAdapterInterface> | AuthFeatureBundle | undefined,
+  auth:
+    | Type<AuthAdapterInterface>
+    | AuthFeatureBundle
+    | RocketsAuthIntegration
+    | undefined,
 ): {
   auth: Type<AuthAdapterInterface> | undefined;
   extraResources: ReadonlyArray<ResourceInput>;
+  authNestImports: ReadonlyArray<DynamicModule>;
 } {
-  if (isAuthFeatureBundle(auth)) {
-    return { auth: auth.provider, extraResources: [auth.resource] };
+  if (isRocketsAuthIntegration(auth)) {
+    return {
+      auth: auth.authAdapter,
+      extraResources: auth.resources,
+      authNestImports: [...auth.nestImports],
+    };
   }
-  return { auth, extraResources: [] };
+  if (isAuthFeatureBundle(auth)) {
+    return {
+      auth: auth.provider,
+      extraResources: [auth.resource],
+      authNestImports: [],
+    };
+  }
+  return { auth, extraResources: [], authNestImports: [] };
 }
 
 export function createRocketsControllers(options: {

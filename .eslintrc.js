@@ -32,6 +32,16 @@ module.exports = {
     '@darraghor/nestjs-typed/param-decorator-name-matches-route-param': 'off',
     'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
     'tsdoc/syntax': 'error',
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      },
+    ],
   },
   overrides: [
     {
@@ -67,6 +77,16 @@ module.exports = {
       ],
       rules: {
         'tsdoc/syntax': 'off',
+      },
+    },
+    {
+      files: [
+        'packages/rockets-core/src/infrastructure/resource/aggregate-resources.ts',
+        'packages/rockets-server/src/infrastructure/resource/aggregate-resources.ts',
+      ],
+      rules: {
+        // `args.resources` trips tsdoc/syntax (no dotted @param names); prose stays on @param args.
+        'jsdoc/check-param-names': 'off',
       },
     },
     {

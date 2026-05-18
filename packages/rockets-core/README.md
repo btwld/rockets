@@ -4,87 +4,258 @@
 [![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-Shared server infrastructure for the Rockets ecosystem. Auth abstraction,
-CQRS wiring, declarative resources, repository registration, Swagger
-setup — the foundation that `@bitwild/rockets` and `@bitwild/rockets-auth`
-build on.
+The **shared engine** under every Rockets app. It knows nothing about
+HTTP routes, signup forms, or your IdP — it just owns the wiring that
+both `@bitwild/rockets` (bring-your-own auth) and
+`@bitwild/rockets-auth` (built-in auth) build on.
 
-> **Most apps don't import this directly.** Install
-> [`@bitwild/rockets`](../rockets-server/) (bring-your-own auth) or
-> [`@bitwild/rockets-auth`](../rockets-server-auth/) (built-in auth)
-> instead. They re-export everything you need from core.
+> **You probably don't import this directly.** Use
+> [`@bitwild/rockets`](../rockets-server/) or
+> [`@bitwild/rockets-auth`](../rockets-server-auth/) — they re-export
+> everything in core and add the parts you'll actually call.
 
 ---
 
 ## Table of contents
 
-- [Introduction](#introduction)
-- [Tutorial — Bootstrap a core-only app](#tutorial--bootstrap-a-core-only-app)
+- [What is `rockets-core` (in plain English)](#what-is-rockets-core-in-plain-english)
+- [Why does it exist?](#why-does-it-exist)
+- [Designed for AI-driven code generation](#designed-for-ai-driven-code-generation)
+- [What it does — three jobs](#what-it-does--three-jobs)
+- [What it does NOT do](#what-it-does-not-do)
+- [Tutorial — boot a tiny core-only app](#tutorial--boot-a-tiny-core-only-app)
 - [How-to guides](#how-to-guides)
 - [Reference](#reference)
-- [Explanation](#explanation)
 - [License](#license)
 
 ---
 
-## Introduction
+## What is `rockets-core` (in plain English)
 
-`rockets-core` is the **declarative composition layer** that turns a
-list of bundles into a working NestJS application. Three things flow
-through one configuration object:
+Think of a typical NestJS app: you have entities, controllers, a JWT
+guard, Swagger setup, a CQRS bus, dozens of `@Module` files, and a
+TypeORM connection. Every project re-writes the same boring plumbing.
 
-1. **A persistence adapter** (`repository`) — any
-   `RepositoryModuleInterface` (TypeORM, Firestore, Mongo, …).
-2. **User-metadata wiring** (`userMetadata`) — the entity + DTOs the
-   core uses to store profile data alongside the auth identity.
-3. **A list of resources** (`resources`) — bundles produced by
-   `defineResource()` (CRUD-shaped) or `defineModuleResource()`
-   (non-CRUD persistence + Nest wiring).
+`rockets-core` does that plumbing **once**, behind one configuration
+object. You hand it:
 
-Internally, `buildAppRegistrationPlan()` aggregates these into a single
-`AppRegistrationPlan { crudResources, entityRegistrations, nestModules }`
-that the module-definition consumes to wire `RepositoryModule.forFeature`,
-`CrudModule.forFeature`, and the materialised feature modules.
+1. **An auth check** — "given a bearer token, who is this?"
+2. **A database adapter** — "use TypeORM" (or Firestore, or Mongo).
+3. **A list of features** — "I have a `Pet` resource, an audit log, …"
 
-### When to use this package directly
-
-Pick `rockets-core` only if you want the infrastructure but **none of
-the opinionated layers above it**:
-
-- ✓ You implement your own auth provider AND your own `/me` endpoint.
-- ✓ You want declarative CRUD via `defineResource()` without a global guard.
-- ✓ You're building a custom composition root and don't want
-  `rockets-server`'s presentation layer.
-
-For 95 % of apps, use `@bitwild/rockets` or `@bitwild/rockets-auth`.
-
-### What this package does NOT provide
-
-- No controllers (no presentation layer in core).
-- No login / signup / OAuth / OTP — those live in `rockets-server-auth`.
-- No `/me` endpoint — that lives in `rockets-server`.
+It hands back a working application: protected routes, a CRUD API,
+auto-generated Swagger, and one global guard. **You wrote no
+controllers, no `@Module` boilerplate, no entity registration.**
 
 ---
 
-## Tutorial — Bootstrap a core-only app
+## Why does it exist?
 
-You'll get a NestJS app that:
+We kept building NestJS APIs and noticed two things:
 
-- Validates a bearer token through your own `AuthAdapterInterface`.
-- Registers a CRUD `pet` resource with auto-generated handlers.
-- Stores user metadata in TypeORM.
+- **90% of every app is the same.** Auth guard → JWT → repository →
+  controller → DTO validation → Swagger. We copy-pasted it for years.
+- **The remaining 10% is what makes the app yours.** Business rules,
+  custom routes, integration with other systems. That's where time
+  *should* go.
+
+So we extracted the 90% into one library with a single contract:
+
+```typescript
+RocketsCoreModule.forRoot({
+  authProvider: MyAuthAdapter,     // 1. how to authenticate
+  repository: TypeOrmRepositoryModule,  // 2. where data lives
+  resources: [petResource, /* … */],     // 3. what features exist
+});
+```
+
+Anything that **both** the "I want full built-in auth" use case and the
+"I plug my own Firebase/Auth0" use case need — it lives in core. That
+includes the auth abstraction, the CRUD planner, the dynamic repository
+wiring, and Swagger registration.
+
+---
+
+## Designed for AI-driven code generation
+
+This is not an accidental property — it's the **headline design goal**.
+AI code-generation agents (Claude Code, Copilot, Cursor, etc.) work
+best when each feature is a **single, self-contained configuration
+object** that does not require cross-file context to understand.
+
+`rockets-core` is built around that constraint:
+
+- **One bundle = one feature.** A `defineResource()` call carries the
+  entity, the DTOs, the hooks, the operations, the relations, and the
+  sub-resources — all in one place. An AI agent reading `pet.resource.ts`
+  has the whole `Pet` feature in front of it: no need to open the
+  controller, the service, a separate module file, a routes file, a
+  Swagger config, or a repository registration block.
+- **No hand-wired `@Module` files per feature.** Adding a feature means
+  emitting one config object and appending it to `resources[]`.
+  Removing it means deleting that one object. The AI never has to
+  reason about what to register where.
+- **No hidden side-files.** Entities, DTOs, hooks, and providers live
+  inside the bundle that needs them. There is no global "register every
+  entity here" list, no top-level controller file to keep in sync. The
+  AI never patches "two places to keep matching."
+- **One contract per concern, no leakage.** Auth → `AuthAdapterInterface`.
+  Data → `RepositoryInterface`. CRUD → `defineResource()`. Custom
+  workflows → `defineModuleResource()`. The AI doesn't need to choose
+  between a dozen overlapping abstractions.
+
+**AI + declarative configuration is a strong combination.** The same
+properties that make this codebase easy for humans to skim — one
+source of truth per feature, predictable file layout, no scattered
+`@Module()` boilerplate — make it predictable and safe for AI to extend.
+
+If you generate a `Pet` resource, an `Appointment` resource, and a
+`PetTransfer` workflow with three separate AI prompts, each prompt
+can run in isolation: it writes one folder, exports one bundle,
+appends one line to `resources[]`. The features can't collide with
+each other and there's no global state to keep coherent.
+
+---
+
+## What it does — three jobs
+
+### 1. Defines the auth contract (without implementing it)
+
+Core declares one interface:
+
+```typescript
+interface AuthAdapterInterface {
+  validateToken(token: string): Promise<AuthorizedUser>;
+}
+```
+
+It does **not** care whether you verify the token with a local secret,
+call Firebase Admin SDK, or talk to Auth0. You implement that interface;
+core makes sure every protected route calls it.
+
+### 2. Plans the database for you
+
+You don't write `TypeOrmModule.forFeature([PetEntity])` per feature.
+Instead, each bundle declares its own entities:
+
+```typescript
+defineResource({ key: 'pet', entity: PetEntity, path: 'pets' })
+```
+
+Core collects every entity from every bundle, calls
+`RepositoryModule.forFeature(...)` once per adapter, and gives you a
+dynamic repository injected by key:
+
+```typescript
+@InjectDynamicRepository('pet') private repo: RepositoryInterface<PetEntity>
+```
+
+Swap TypeORM for Firestore? Change the `repository:` field. Domain
+code never moves.
+
+### 3. Generates CRUD from descriptions, not code
+
+You describe the resource:
+
+```typescript
+defineResource({
+  entity: PetEntity,
+  hooks: [OwnerStampHook.for(PetEntity)],   // optional behavior
+  operations: {
+    list:   { response: PetDto },
+    create: { body: PetCreateDto, response: PetDto },
+    delete: { soft: true, returnDeleted: true },
+  },
+})
+```
+
+Core produces the controller, validation pipeline, joins for relations,
+Swagger schema, and the right CQRS command/query for each operation.
+Adding an endpoint is appending to `resources[]`, not creating a folder
+of NestJS files.
+
+---
+
+## What it does NOT do
+
+| Not in core | Where it lives |
+|---|---|
+| `/me` endpoint | [`@bitwild/rockets`](../rockets-server/) |
+| `POST /auth/signup`, `POST /auth/login` | [`@bitwild/rockets-auth`](../rockets-server-auth/) |
+| OAuth, OTP, password recovery, admin pages | [`@bitwild/rockets-auth`](../rockets-server-auth/) |
+| Any HTTP controller | server packages |
+
+Why? Core is the *shared* layer. The moment it shipped a controller,
+both `rockets-server` and `rockets-server-auth` would inherit that
+route whether they wanted it or not. Composition stays clean when each
+package owns its presentation surface.
+
+---
+
+## Tutorial — boot a tiny core-only app
+
+The headline rule: **`AppModule` should contain a single `forRoot` call
+that only receives configuration.** No raw `TypeOrmModule.forRoot`, no
+parallel auth module, no hand-listed entities. Everything is passed
+through `define*` helpers that turn configuration into the shapes core
+expects.
+
+You'll end up with:
+
+- A bearer-token guard that runs **your** `validateToken` on every request.
+- A `GET/POST/PATCH/DELETE /pets` API (no controller code).
+- User-metadata stored in TypeORM, joined to the external user via `userId`.
 
 ### 1. Install
 
 ```bash
-yarn add @bitwild/rockets-core @concepta/nestjs-repository @concepta/nestjs-repository-typeorm @nestjs/typeorm typeorm
+yarn add @bitwild/rockets-core \
+  @concepta/nestjs-repository @concepta/nestjs-repository-typeorm \
+  @nestjs/typeorm typeorm class-validator class-transformer
 ```
 
-### 2. Implement an `AuthAdapterInterface`
+### 2. A `defineTypeOrmRepository` helper (configuration → bootstrap)
+
+This is the **only place** in your app that mentions TypeORM. It turns
+a connection config into a `RepositoryBootstrap` that owns *both* the
+connection (`forRoot`) and per-entity registration (`forFeature`).
+Rockets supplies the entity list — derived from `resources[]` +
+`userMetadata` — so you never list entities twice.
 
 ```typescript
-// my-auth.adapter.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+// src/repository/define-typeorm-repository.ts (copy once per app)
+import type { DynamicModule, PlainLiteralObject, Type } from '@nestjs/common';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import type {
+  DynamicRepositoryModule,
+  RepositoryProviderOptions,
+} from '@concepta/nestjs-repository';
+import type { RepositoryBootstrap } from '@bitwild/rockets-core';
+
+export function defineTypeOrmRepository(
+  connection: TypeOrmModuleOptions,
+): RepositoryBootstrap {
+  return {
+    name: 'typeorm-bootstrap',
+    forFeature: (entities: RepositoryProviderOptions[]): DynamicRepositoryModule =>
+      TypeOrmRepositoryModule.forFeature(entities),
+    forRoot: (entities: ReadonlyArray<Type<PlainLiteralObject>>): DynamicModule =>
+      TypeOrmModule.forRoot({ ...connection, entities: [...entities] }),
+  };
+}
+```
+
+The convention: **each adapter package ships its own `defineXxxRepository(config)`
+helper**. Firestore would expose `defineFirestoreRepository(config)`,
+Mongo would expose `defineMongoRepository(config)`, etc. The
+application only sees configuration.
+
+### 3. Implement the auth adapter
+
+```typescript
+// src/auth/my-auth.adapter.ts
+import { Injectable } from '@nestjs/common';
 import { verify } from 'jsonwebtoken';
 import type { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets-core';
 
@@ -106,100 +277,109 @@ export class MyAuthAdapter implements AuthAdapterInterface {
 }
 ```
 
-### 3. Wire `RocketsCoreModule`
+For self-contained adapters (no external module deps), passing the
+**class** is enough — core auto-registers it as a provider and aliases
+`AUTH_ADAPTER_TOKEN` to it via `useExisting`. No `providers: [MyAuthAdapter]`
+step required.
+
+For adapters that depend on an external Nest module (e.g.
+`FirebaseAuthModule` registers `FirebaseAuthAdapter` alongside a
+verifier provider), use `defineAuthFeature()` or a `RocketsAuthIntegration`
+instead — see [How-to: auth adapters with external dependencies](#how-to-auth-adapters-with-external-dependencies).
+
+### 4. Compose the app — one `forRoot` call, only configuration
 
 ```typescript
-// app.module.ts
+// src/app.module.ts
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
-import {
-  RocketsCoreModule,
-  defineResource,
-  defineModuleResource,
-} from '@bitwild/rockets-core';
-import { UserMetadataEntity, PetEntity, AuditLogEntity } from './entities';
-import { AuditService } from './audit/audit.service';
-import { MyAuthAdapter } from './my-auth.adapter';
+import { RocketsCoreModule, defineResource } from '@bitwild/rockets-core';
+import { UserMetadataEntity, PetEntity } from './entities';
+import { MyAuthAdapter } from './auth/my-auth.adapter';
+import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: ':memory:',
-      entities: [UserMetadataEntity, PetEntity, AuditLogEntity],
-      synchronize: true,
-    }),
-    RocketsCoreModule.forRootAsync({
-      inject: [MyAuthAdapter],
-      useFactory: (authProvider) => ({ authProvider }),
-      repository: TypeOrmRepositoryModule,
+    RocketsCoreModule.forRoot({
+      // 1. Auth: the adapter class. Core auto-registers it and
+      //    aliases AUTH_ADAPTER_TOKEN — no separate providers entry.
+      auth: MyAuthAdapter,
+
+      // 2. Persistence: configuration goes IN, a RepositoryBootstrap
+      //    comes OUT. Rockets owns forRoot(entities) + forFeature().
+      repository: defineTypeOrmRepository({
+        type: 'sqlite',
+        database: ':memory:',
+        synchronize: true,
+      }),
+
+      // 3. User-metadata table — joined to the external user via userId.
       userMetadata: { entity: UserMetadataEntity },
+
+      // 4. Features. Each defineResource carries its own entity.
       resources: [
-        defineResource({
-          key: 'pet',
-          entity: PetEntity,
-          path: 'pets',
-          tags: ['Pets'],
-        }),
-        defineModuleResource({
-          entities: [{ key: 'audit-log', entity: AuditLogEntity }],
-          module: { providers: [AuditService], exports: [AuditService] },
-        }),
+        defineResource({ entity: PetEntity }), // key/path/tags inferred
       ],
     }),
   ],
-  providers: [MyAuthAdapter],
 })
 export class AppModule {}
 ```
 
-### 4. Run
+**There is no `TypeOrmModule.forRoot` here.** There is no parallel auth
+module. There is no `providers: [MyAuthAdapter]` either — `auth: MyAuthAdapter`
+covers it. The `AppModule` only contains *configuration* — every
+mechanical detail is owned by a `define*` helper.
+
+### 5. Run
 
 ```bash
 nest start
 ```
 
-You now have:
-
-- `GET/POST/PATCH/DELETE /pets` — auto-generated CRUD.
-- `AuditLogEntity` registered as a dynamic repository (key `audit-log`).
-- `MyAuthAdapter.validateToken()` called on every protected request.
-
-> Need `/me`? Use [`@bitwild/rockets`](../rockets-server/) instead.
+You now have `GET /pets`, `GET /pets/:id`, `POST /pets`, `PATCH /pets/:id`,
+`DELETE /pets/:id`, every route protected by your bearer-token check, and
+Swagger at `/api`. If you also want `GET /me` and a global guard
+pre-wired (the default for external-auth apps), jump to
+[`@bitwild/rockets`](../rockets-server/).
 
 ---
 
 ## How-to guides
 
-### How to add a new entity to an existing app
+### Add a CRUD feature
 
-Use either `defineResource()` (auto-contributes the entity, generates
-CRUD) or `defineModuleResource({ entities: [...] })` (entity-only or
-entity + Nest wiring):
+CRUD-shaped (auto-generates a controller):
 
 ```typescript
-// CRUD-shaped: pet entity gets auto-registered under key 'pet'.
 defineResource({ key: 'pet', entity: PetEntity, path: 'pets' })
-
-// Non-CRUD: junction table or supporting table with no controller.
-defineModuleResource({
-  entities: [{ key: 'pet-tag', entity: PetTagEntity }],
-  module: {},
-})
-
-// Non-CRUD with services + controller colocated.
-defineModuleResource({
-  entities: [{ key: 'pet-share', entity: PetShareEntity }],
-  module: {
-    controllers: [PetShareController],
-    providers: [PetShareService],
-    exports: [PetShareService], // exports propagate globally
-  },
-})
 ```
 
-### How to inject a dynamic repository
+Just a table (no controller) or a feature with your own controllers
+and services — use `defineModuleResource` with the **flat shape**:
+
+```typescript
+// Entity-only (junction table, supporting data)
+defineModuleResource({
+  entities: [PetTagEntity],
+});
+
+// Entity + controller + service
+defineModuleResource({
+  entities: [PetShareEntity],
+  controllers: [PetShareController],
+  providers: [PetShareService],
+  exports: [PetShareService],   // only what other bundles inject
+});
+
+// CQRS-only workflow (uses an entity owned elsewhere)
+defineModuleResource({
+  imports: [CqrsModule],
+  controllers: [PetTransferController],
+  providers: [TransferPetOwnershipHandler],
+});
+```
+
+### Inject a dynamic repository
 
 ```typescript
 import {
@@ -215,146 +395,201 @@ export class PetService {
     private readonly petRepo: RepositoryInterface<PetEntity>,
   ) {}
 
-  async findByOwner(ownerId: string) {
-    return this.petRepo.find({
-      where: Where.eq<PetEntity>('ownerId', ownerId),
-    });
+  findByOwner(ownerId: string) {
+    return this.petRepo.find({ where: Where.eq<PetEntity>('userId', ownerId) });
   }
 }
 ```
 
-The key string (`'pet'`) is the same one passed to `defineResource()`
-or `defineModuleResource({ entities: [{ key: 'pet', ... }] })`.
+The string key (`'pet'`) is the same one in `defineResource({ key: 'pet', … })`
+or the entity's name with the trailing `Entity` stripped if you let it
+infer.
 
-### How to override the per-entity adapter (mixed-store apps)
-
-```typescript
-RocketsCoreModule.forRoot({
-  // Default for everything else
-  repository: TypeOrmRepositoryModule,
-
-  // userMetadata in Firestore
-  userMetadata: {
-    entity: UserMetadataEntity,
-    repository: FirestoreRepositoryModule,
-  },
-
-  resources: [
-    // pet in TypeORM (default)
-    defineResource({ key: 'pet', entity: PetEntity, path: 'pets' }),
-
-    // analytics in Firestore (per-entity override)
-    defineModuleResource({
-      entities: [{
-        key: 'analytics-event',
-        entity: AnalyticsEventEntity,
-        repository: FirestoreRepositoryModule,
-      }],
-      module: { providers: [AnalyticsService] },
-    }),
-  ],
-})
-```
-
-### How to access the authenticated user inside a handler
+### Access the authenticated user inside a CRUD handler
 
 ```typescript
-import { getAuthorizedUserFromCrudContext } from '@bitwild/rockets-core';
+import { getActor, getCrudContext } from '@bitwild/rockets-core';
 
 @CommandHandler(CrudCreateCommand)
 export class PetCreateHandler {
   async execute(cmd: CrudCreateCommand) {
-    const authUser = getAuthorizedUserFromCrudContext(cmd.context);
-    // authUser.id, authUser.email, authUser.userRoles
+    const actor = getActor(cmd.context);
+    // actor.id, actor.email, actor.userRoles
   }
 }
 ```
 
-No parameter drilling, no request mutation, no custom decorators.
+No parameter drilling, no decorators on the auto-generated controller.
 
-### How to apply repository hooks (per-request scoping)
+### Scope rows to the current user
+
+`OwnerStampHook` stamps `userId` on create/update; `OwnerScopeHook`
+filters list/read/update/delete by `userId`. Both are **factories**:
 
 ```typescript
-import { OwnerScopeHook } from '@bitwild/rockets-core';
-import { UseHooks } from '@bitwild/rockets-common';
+import { OwnerStampHook, OwnerScopeHook } from '@bitwild/rockets-core';
 
 defineResource({
-  key: 'pet',
   entity: PetEntity,
-  path: 'pets',
-  controller: {
-    extraDecorators: [UseHooks(OwnerScopeHook)],
-  },
-})
-// Add OwnerScopeHook to the resource's `providers: [...]` too.
+  hooks: [
+    OwnerStampHook.for(PetEntity),   // write-side
+    OwnerScopeHook.for(PetEntity),   // read-side
+  ],
+});
 ```
 
-`OwnerScopeHook` filters List/Read/Update/Delete by the authenticated
-user's id. For Create, you still need a custom command handler — that
-column has to go into the body, not the where clause.
+Both default to a `userId` column; pass a second argument to override.
 
-### How to swap the persistence adapter (e.g. Firestore)
+### Use a non-TypeORM persistence adapter
+
+Every adapter ships a `define<Adapter>Repository(config)` helper that
+returns a `RepositoryBootstrap`. The pattern is identical to
+`defineTypeOrmRepository` — configuration in, bootstrap out:
 
 ```typescript
-// Replace the import
-import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
+import { defineFirestoreRepository } from '@bitwild/rockets-adapter-firestore';
 
 RocketsCoreModule.forRoot({
-  // ...
-  repository: FirestoreRepositoryModule,
-})
+  repository: defineFirestoreRepository({
+    projectId: process.env.GCP_PROJECT_ID!,
+    credentials: { /* … */ },
+  }),
+  // … the rest is unchanged
+});
 ```
 
-Domain code (services, handlers, hooks) **does not change** — it depends
-on `RepositoryInterface`, not on the concrete adapter.
+Services and handlers depend on `RepositoryInterface`, never on the
+underlying SDK. The same `defineResource` declaration works against any
+adapter.
+
+### Mix two stores in one app
+
+```typescript
+RocketsCoreModule.forRoot({
+  repository: defineTypeOrmRepository({ /* … */ }),    // default for everything
+  resources: [
+    defineResource({ entity: PetEntity }),             // TypeORM
+    defineModuleResource({
+      entities: [{
+        key: 'analytics-event',
+        entity: AnalyticsEventEntity,
+        repository: defineFirestoreRepository({ /* … */ }),  // per-entity override
+      }],
+    }),
+  ],
+});
+```
+
+The default bootstrap owns its entity set; the override-only entities
+go to the override's bootstrap. Each adapter sees only the entities it
+should.
+
+### How-to: auth adapters with external dependencies
+
+Some adapters (`FirebaseAuthAdapter`, OAuth providers, …) ship their
+**own Nest module** that provides the adapter alongside its
+dependencies (a token verifier, an HTTP client, options tokens). If
+core tried to instantiate that class a second time inside its own
+scope, those dependencies wouldn't be reachable — boot fails with
+`Nest can't resolve dependencies`.
+
+The fix is to tell core "the adapter class is already provided
+elsewhere; just alias the token to it." The convention is a
+`define<Adapter>Auth(config)` helper that returns a
+`RocketsAuthIntegration`:
+
+```typescript
+// src/auth/define-firebase-auth.ts
+import {
+  FirebaseAuthAdapter,
+  FirebaseAuthModule,
+} from '@bitwild/rockets-adapter-firebase';
+import {
+  defineModuleResource,
+  ROCKETS_AUTH_INTEGRATION_KIND,
+} from '@bitwild/rockets-core';
+import type { RocketsAuthIntegration } from '@bitwild/rockets-core';
+import { UserEntity } from './user.entity';
+
+export function defineFirebaseAuth(config: {
+  verifier: Type<FirebaseTokenVerifier>;
+}): RocketsAuthIntegration {
+  return {
+    kind: ROCKETS_AUTH_INTEGRATION_KIND,
+    nestImports: [FirebaseAuthModule.forRoot({ verifier: config.verifier })],
+    authAdapter: FirebaseAuthAdapter,
+    // FirebaseAuthModule already provides the adapter — don't double-register.
+    authProviderExternallyManaged: true,
+    resources: [defineModuleResource({ entities: [UserEntity] })],
+  };
+}
+```
+
+Wire it the same way:
+
+```typescript
+RocketsCoreModule.forRoot({
+  auth: defineFirebaseAuth({ verifier: ProductionFirebaseVerifier }),
+  repository: defineTypeOrmRepository({ /* … */ }),
+  userMetadata: { entity: UserMetadataEntity },
+  resources: [defineResource({ entity: PetEntity })],
+});
+```
+
+> Note: this `RocketsAuthIntegration` shape is only accepted by
+> `RocketsModule.forRoot` (the server package). Core directly only
+> accepts a bare `Type<AuthAdapterInterface>` plus an
+> `authExternallyProvided: true` extras flag. In practice you almost
+> always wire auth through `RocketsModule` — see
+> [`@bitwild/rockets`](../rockets-server/).
 
 ---
 
 ## Reference
 
-### `RocketsCoreModule.forRoot(options) / forRootAsync(asyncOptions)`
+### `RocketsCoreModule.forRoot(options)` / `forRootAsync(asyncOptions)`
 
-| Field | Type | Required | Description |
+| Field | Type | Required | What it does |
 |---|---|---|---|
-| `authProvider` | `AuthAdapterInterface` | ✅ | Validates bearer tokens; produces `AuthorizedUser`. |
-| `repository` | `RepositoryModuleInterface` | optional | Default persistence adapter. Required if any bundle has unannotated entities. |
-| `userMetadata` | `RocketsUserMetadataConfig` | optional | Entity + DTOs for the metadata table. |
-| `resources` | `ReadonlyArray<ResourceInput>` | optional | Mix of `defineResource()`, `defineModuleResource()`, manual configs. |
-| `handlers` | `{ upsertUserMetadata?, getUserMetadata? }` | optional | Override the default user-metadata CQRS handlers. |
-| `providers` | `Provider[]` | optional | Extra providers registered on `RocketsCoreModule`. |
-| `global` | `boolean` | default `true` | Module is global (its exports become app-wide). |
+| `auth` | `Type<AuthAdapterInterface>` | optional† | Adapter class. Core auto-registers it as a provider AND aliases `AUTH_ADAPTER_TOKEN` to it via `useExisting`. |
+| `authExternallyProvided` | `boolean` (default `false`) | optional | Set `true` when the adapter class is already a provider in an external Nest module (e.g. `FirebaseAuthModule`). Core skips its own registration and just aliases the token. |
+| `repository` | `RepositoryModuleInterface \| RepositoryBootstrap` | optional | Default persistence adapter. A `RepositoryBootstrap` owns *both* the connection (`forRoot(entities)`) and per-entity registration (`forFeature`) — use this so you never list entities at the app root. |
+| `userMetadata` | `RocketsUserMetadataConfig` | optional | Entity + DTOs for the metadata table that joins to external users. |
+| `resources` | `ReadonlyArray<ResourceInput>` | optional | A mix of `defineResource`, `defineModuleResource`, and hand-built configs. |
+| `handlers` | `{ upsertUserMetadata?, getUserMetadata? }` | optional | Override the default metadata CQRS handlers. |
+| `providers` | `Provider[]` | optional | Extra providers to register on `RocketsCoreModule`. |
+| `global` | `boolean` (default `true`) | optional | Module is global — its exports are app-wide. |
 
-### `defineResource(input)` — CRUD-shaped feature
+† Required at the layer that exposes endpoints (e.g. `RocketsModule` always
+needs an auth source). Core itself will boot without it for tests.
 
-| Field | Type | Description |
-|---|---|---|
-| `key` | `string` | Dynamic-repository key (e.g. `'pet'`). |
-| `entity` | `Type` | The entity class. Auto-registered. |
-| `path` | `string` | HTTP path (e.g. `'pets'`). |
-| `tags` | `string[]` | Swagger tags. |
-| `relations` | `relation()[]` | Cross-resource relations (validated against the entity index). |
-| `subResources` | `Record<string, defineSubResource()>` | Nested resources. |
-| `controller` | `{ extraDecorators?, response? }` | Append decorators / response shape. |
-| `operations` | `Operation[]` | Override default CRUD operations / handlers. |
+### `defineResource(input)` — CRUD bundle
 
-### `defineModuleResource(input)` — non-CRUD feature
+| Field | What it does |
+|---|---|
+| `entity` | Entity class. Auto-registers the persistence row. |
+| `key` | Repository key (defaults to entity name minus `Entity`, lowercase first char). |
+| `path` | URL path (defaults to plural kebab-case of the key). |
+| `tags` | Swagger tags (default derived from key). |
+| `dto` | `{ response, create, update, replace, paginated }` DTOs. |
+| `operations` | `{ list, read, create, update, replace, delete, restore }` per-op config. |
+| `relations` | `(rel) => [rel(TagEntity, 'tags')]` — type-safe cross-resource relations. |
+| `hooks` | Repository hooks (owner scoping, audit, etc.). |
+| `subResources` | Nested resources (e.g. `/pets/:petId/tags`). |
+| `public` | If `true`, skip the bearer-auth decorator on this resource. |
+| `decorators` | Extra class-level decorators on the generated controller. |
 
-| Field | Type | Description |
-|---|---|---|
-| `entities` | `ReadonlyArray<{ key, entity, repository? }>` | Persistence rows contributed by this feature. Optional. |
-| `module` | `{ imports?, controllers?, providers?, exports? }` | Nest dynamic module slice colocated with the feature. |
+### `defineModuleResource(input)` — non-CRUD bundle
 
-`exports` propagate globally (see [Explanation — feature exports](#feature-exports-are-globally-visible)).
+**Flat shape** (no nested `module:` key):
 
-### `userMetadata` config
-
-| Field | Type | Description |
-|---|---|---|
-| `entity` | `Type` | The metadata table entity. |
-| `createDto` | `Type` | DTO validated on `PATCH /me` create path. |
-| `updateDto` | `Type` | DTO validated on `PATCH /me` update path. |
-| `responseDto` | `Type` | optional response shape. |
-| `repository` | `RepositoryModuleInterface` | optional per-entity override. |
+| Field | What it does |
+|---|---|
+| `entities` | Persistence rows. Bare class or `{ key, entity, repository? }`. Optional. |
+| `imports` | Nest module imports for this feature. |
+| `controllers` | Nest controllers for this feature. |
+| `providers` | Nest providers. |
+| `exports` | Public surface — globally visible (see [explanation](#feature-exports-are-globally-visible)). |
 
 ### `AuthAdapterInterface`
 
@@ -364,115 +599,88 @@ interface AuthAdapterInterface {
 }
 
 interface AuthorizedUser {
-  id: string;                                    // required
-  sub: string;                                   // required (often === id)
+  id: string;
+  sub: string;
   email?: string;
-  userRoles?: { role: { name: string } }[];      // drives RBAC
-  claims?: Record<string, unknown>;              // free-form IdP payload
+  userRoles?: { role: { name: string } }[];   // drives RBAC
+  claims?: Record<string, unknown>;            // free-form IdP payload
 }
 ```
 
-### `AppRegistrationPlan` (returned by `buildAppRegistrationPlan`)
-
-| Field | Type | Description |
-|---|---|---|
-| `crudResources` | `ReadonlyArray<RocketsResourceConfig>` | CRUD configs passed to `CrudModule.forFeature()`. |
-| `entityRegistrations` | `ReadonlyArray<RepositoryPersistenceConfig>` | One row per persistence adapter group. |
-| `nestModules` | `ReadonlyArray<DynamicModule>` | Materialised feature-resource Nest slices. |
-
-This is internal — apps don't construct it directly. Documented for
-people debugging the wiring.
-
-### Helpers
+### Helpers (most used)
 
 | Symbol | Purpose |
 |---|---|
-| `defineResource()` | Build a CRUD-shaped resource bundle. |
-| `defineModuleResource()` | Build a non-CRUD feature resource bundle. |
-| `defineSubResource()` | Nested resource (1-level) under a parent. |
-| `relation(source, target, prop, opts?)` | Type-safe cross-resource relation declaration. |
-| `getAuthorizedUserFromCrudContext(ctx)` | Read the auth user from the CRUD context. |
-| `OwnerScopeHook` | Repository hook scoping List/Read/Update/Delete to `authUser.id`. |
-| `AuthServerGuard` | The bearer-token guard. Opt-in via `APP_GUARD` (in server packages). |
-| `@AuthPublic()` | Mark a route or controller as not requiring authentication. |
+| `defineResource()` | CRUD bundle. |
+| `defineModuleResource()` | Non-CRUD bundle (entities + Nest wiring). |
+| `defineSubResource()` | Nested resource (1 level under a parent). |
+| `defineAuthFeature()` | Auth adapter + entities + auth controllers in one bundle. |
+| `relation(target, prop, opts?)` | Type-safe cross-resource relation. |
+| `getActor(ctx)` | Read the authenticated user from a CRUD context. |
+| `getCrudContext(ctx)` | Read the full CRUD context (request, params, …). |
+| `OwnerStampHook.for(Entity)` | Stamp `userId` on create/update. |
+| `OwnerScopeHook.for(Entity)` | Filter list/read/update/delete by `userId`. |
+| `AfterCreateReloadHook.for(Entity)` | Reload an entity after create (eager relations). |
+| `PathScopeHook.for(Entity, paramName, fkColumn)` | Filter sub-resource by parent URL param. |
+| `PathScopeGuard.for(paramName, parentKey, ownerColumn)` | Verify actor owns the parent. |
+| `AuthServerGuard` | Bearer-token guard. Server packages opt-in via `APP_GUARD`. |
+| `@AuthPublic()` | Mark a route as not requiring auth. |
+| `AUTH_ADAPTER_TOKEN` | Inject the configured adapter (`@Inject(AUTH_ADAPTER_TOKEN)`). |
 
 ---
 
 ## Explanation
 
-### Why `rockets-core` has no controllers
+### Why core has no controllers
 
-Core is shared infrastructure. Both `rockets-server` (external auth)
-and `rockets-server-auth` (built-in auth) sit on top of it. A controller
-in core would force both consumers to ship that route. Putting routes
-in the server packages keeps each composition pure.
-
-### Single `repository`, bundles own entities
-
-Earlier versions used `repositories: { module, entities[] }` — one block
-listing every entity. That had two problems: (1) entities lived in a
-flat list disconnected from the feature that needed them, (2) splitting
-or moving a feature meant editing two places.
-
-Today the contract is: **one default adapter at the top level**
-(`repository`), and **every entity comes from a bundle**
-(`defineResource()` auto-contributes; `defineModuleResource()` lists
-what it owns). Per-entity adapter overrides exist for mixed-store apps
-(`userMetadata.repository`, `entry.repository`).
-
-This is the protocol we converged on after iterating across two majors.
-See `AGENTS.md` Hard-Learned Rule #4 for the canonical rationale.
-
-### Database-agnostic by default
-
-The supported contract is `RepositoryInterface` (from
-`@bitwild/rockets-repository`). Concrete backends — TypeORM, Firestore,
-custom — are pluggable per app. `rockets-core` itself never imports
-TypeORM; example configs use it only as the common case.
+Both `@bitwild/rockets` and `@bitwild/rockets-auth` build on core. If
+core shipped `MeController`, every consumer would get it whether the
+app's product surface called for it or not. Presentation lives in
+server packages so each composition stays focused.
 
 ### Feature exports are globally visible
 
-`RocketsCoreModule` is a global Nest module (`global: true`). Every
-feature resource's `exports: [...]` is re-exported by core, which makes
-them globally injectable. Two consequences:
+`RocketsCoreModule` is a global Nest module. Anything a
+`defineModuleResource` puts in `exports: [...]` becomes injectable from
+**anywhere** in the app. That's powerful (an outer `useFactory` can
+inject a provider buried in a feature) and dangerous (two features
+exporting `Logger` collide silently).
 
-1. **Powerful** — the `inject: [SampleAuthAdapter]` factory of an outer
-   `RocketsModule.forRootAsync` can resolve a provider that lives
-   inside a feature resource, no separate import needed.
-2. **Dangerous** — two feature resources exporting providers with the
-   same name (`PriceFormatter`, `AuditService`) collide silently in the
-   DI container.
+**Rule:** only export what other bundles or outer factories actually
+inject. Internal helpers stay in `providers:` without `exports`. Use
+prefixed names (`BillingPriceFormatter`) or injection tokens
+(`BILLING_TOKEN`) when collisions are likely.
 
-**Rule** (also enforced in `AGENTS.md` Hard-Learned Rule #14): only
-export from a feature resource what other features or outer factories
-**actually inject**. Internal helpers stay in `providers` only. When a
-shared name is unavoidable, prefix it (`BillingPriceFormatter`) or use
-an injection token.
+### Why one root `repository` + bundles owning their own entities
+
+Earlier versions used a single flat `entities: [...]` block at the
+root. It worked, but:
+
+- Entities lived in a list disconnected from the feature that needed them.
+- Moving a feature meant editing two places (the feature folder *and*
+  the root list).
+
+Today the rule is: **one default adapter** at the top
+(`repository: TypeOrmRepositoryModule`), and **every entity comes from
+a bundle**. Need a mixed store? Set `repository:` per entity inside the
+bundle. Moving a feature = moving the folder.
 
 ### Architecture
 
 ```text
 rockets-common         shared utils, zero framework opinion
 rockets-repository     abstract data access (no TypeORM, no Firestore)
-rockets-crud           generic CRUD
-rockets-access-control ACL/RBAC
+rockets-crud           generic CRUD generator
+rockets-access-control ACL/RBAC primitives
     ▲
-rockets-core           ◀── THIS PACKAGE
+rockets-core           ◀── THIS PACKAGE (auth abstraction, planner, hooks)
     ▲
-rockets-server         composition root for external auth integration
-rockets-server-auth    full auth system (JWT, signup, login, OAuth, OTP)
+rockets-server         external-auth composition root (/me + global guard)
+rockets-server-auth    built-in auth (signup, login, OAuth, OTP, admin)
 ```
-
-### Related documentation
-
-- [How to declare a resource](../../docs/how-to/crud/declare-a-resource.md)
-- [How to swap TypeORM for Firestore](../../docs/how-to/persistence/swap-typeorm-for-firestore.md)
-- [How to add an entity](../../docs/how-to/persistence/add-an-entity.md)
-- [Architecture flow diagram](../../docs/diagrams/rockets-architecture-flow.md)
-- [ADR 0003 — auth-persistence asymmetry](../../docs/explanation/adr/0003-auth-persistence-asymmetry.md)
 
 ---
 
 ## License
 
-MIT — see [`../../LICENSE.txt`](../../LICENSE.txt).
+BSD-3-Clause — see [`../../LICENSE.txt`](../../LICENSE.txt).

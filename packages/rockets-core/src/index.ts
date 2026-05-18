@@ -88,6 +88,11 @@ export type {
   AuthFeatureConfig,
   AuthFeatureBundle,
 } from './infrastructure/resource/define-auth-feature';
+export {
+  ROCKETS_AUTH_INTEGRATION_KIND,
+  isRocketsAuthIntegration,
+} from './infrastructure/resource/rockets-auth-integration';
+export type { RocketsAuthIntegration } from './infrastructure/resource/rockets-auth-integration';
 
 // Resource config & definition API
 export type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';

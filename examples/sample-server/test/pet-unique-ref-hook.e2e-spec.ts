@@ -6,10 +6,10 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
 /**
- * Focused repro for the custom Pet create handler: duplicate `uniqueRef` on
- * create must return clear `409 Conflict`.
+ * Duplicate `uniqueRef` on create: `PetUniqueRefHook.beforeCreate` must
+ * return clear `409 Conflict` without a custom create handler.
  */
-describe('Pet uniqueRef create handler (e2e)', () => {
+describe('Pet uniqueRef beforeCreate hook (e2e)', () => {
   let app: INestApplication;
   let accessToken: string;
 
@@ -69,6 +69,8 @@ describe('Pet uniqueRef create handler (e2e)', () => {
       })
       .expect(409);
 
-    expect(res.body.message).toContain('E2E-UNIQUE-REF-001');
+    expect(res.body.message).toBe(
+      'Pet uniqueRef "E2E-UNIQUE-REF-001" is already in use',
+    );
   });
 });

@@ -7,9 +7,9 @@ import { RoleEntity } from '../role/role.entity';
 import { UserRoleEntity } from './entities/user-role.entity';
 import { FederatedEntity } from './entities/federated.entity';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
-import { UserTypeOrmCrudAdapter } from './adapters/user-typeorm-crud.adapter';
-import { RocketsJwtAuthProvider } from '@bitwild/rockets-auth';
-import { MockAuthProvider } from '../../mock-auth.provider';
+import { RocketsJwtAuthAdapter } from '@bitwild/rockets-auth';
+import { MockAuthAdapter } from '../../mock-auth.adapter';
+import { UserAuthCrudWiringModule } from './user-auth-crud-wiring.module';
 
 @Module({
   imports: [
@@ -21,20 +21,16 @@ import { MockAuthProvider } from '../../mock-auth.provider';
       FederatedEntity,
       UserMetadataEntity,
     ]),
+    UserAuthCrudWiringModule,
   ],
   controllers: [],
-  providers: [
-    Reflector,
-    UserTypeOrmCrudAdapter,
-    RocketsJwtAuthProvider,
-    MockAuthProvider,
-  ],
+  providers: [Reflector, RocketsJwtAuthAdapter, MockAuthAdapter],
   exports: [
     TypeOrmModule,
+    UserAuthCrudWiringModule,
     Reflector,
-    UserTypeOrmCrudAdapter,
-    RocketsJwtAuthProvider,
-    MockAuthProvider,
+    RocketsJwtAuthAdapter,
+    MockAuthAdapter,
   ],
 })
 export class UserModule {}

@@ -1,6 +1,6 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "testSequencer": "<rootDir>/scripts/jest-e2e-barrel-last-sequencer.cjs",
+  
   "testEnvironment": "node",
   "testRegex": ".*\\.e2e-spec\\.ts$",
   "testPathIgnorePatterns": ["/node_modules/", "/dist/", "/examples/"],
@@ -10,9 +10,6 @@
   "maxWorkers": 1,
   "forceExit": true,
   "moduleNameMapper": {
-    "^@concepta/nestjs-federated(.*)$": "<rootDir>/packages/rockets-server-auth/src/__fixtures__/stubs/nestjs-federated-stub.ts"
-  },
-  "setupFiles": [
-    "<rootDir>/packages/rockets-server-auth/src/__fixtures__/stubs/patch-concepta-common.ts"
-  ]
+    "^@concepta/nestjs-invitation/dist/(.*)$": "<rootDir>/node_modules/@concepta/nestjs-invitation/dist/$1"
+  }
 }

@@ -1,5 +1,8 @@
 import { HttpStatus } from '@nestjs/common';
-import { RuntimeException, RuntimeExceptionOptions } from '@concepta/nestjs-common';
+import {
+  RuntimeException,
+  RuntimeExceptionOptions,
+} from '@bitwild/rockets-common';
 
 export class PetException extends RuntimeException {
   constructor(message: string, options?: RuntimeExceptionOptions) {
@@ -50,4 +53,3 @@ export class PetUnauthorizedAccessException extends PetException {
     this.errorCode = 'PET_UNAUTHORIZED_ACCESS_ERROR';
   }
 }
-

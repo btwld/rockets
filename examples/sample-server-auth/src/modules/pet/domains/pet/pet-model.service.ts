@@ -1,160 +1,115 @@
 import { Injectable } from '@nestjs/common';
 import {
-  RepositoryInterface,
-  ModelService,
   InjectDynamicRepository,
-} from '@concepta/nestjs-common';
-import { 
-  PetEntityInterface, 
-  PetCreatableInterface, 
-  PetUpdatableInterface, 
+  type RepositoryInterface,
+  Where,
+} from '@bitwild/rockets-repository';
+import {
+  PetEntityInterface,
+  PetCreatableInterface,
+  PetUpdatableInterface,
   PetModelUpdatableInterface,
   PetModelServiceInterface,
   PetStatus,
 } from './pet.interface';
-import { PET_MODULE_PET_ENTITY_KEY } from '../../constants/pet.constants';
+import { PetEntity } from './pet.entity';
 import { PetCreateDto, PetUpdateDto } from './pet.dto';
 import { PetNotFoundException } from './pet.exception';
 
 /**
- * Pet Model Service
- * 
- * Provides business logic for pet operations.
- * Extends the base ModelService and implements custom pet-specific methods.
+ * Pet domain service backed by the dynamic repository registered for the
+ * pet bundle. Database-agnostic — depends only on `RepositoryInterface`,
+ * never on `Repository<PetEntity>` from typeorm.
  */
 @Injectable()
-export class PetModelService
-  extends ModelService<
-    PetEntityInterface,
-    PetCreateDto,
-    PetUpdateDto
-  >
-  implements PetModelServiceInterface
-{
+export class PetModelService implements PetModelServiceInterface {
   public readonly createDto = PetCreateDto;
   public readonly updateDto = PetUpdateDto;
 
   constructor(
-    @InjectDynamicRepository(PET_MODULE_PET_ENTITY_KEY)
-    public readonly repo: RepositoryInterface<PetEntityInterface>,
-  ) {
-    super(repo);
+    @InjectDynamicRepository(PetEntity)
+    private readonly repo: RepositoryInterface<PetEntity>,
+  ) {}
+
+  async byId(id: string): Promise<PetEntityInterface | null> {
+    return this.repo.findOne({
+      where: Where.eq<PetEntity>('id', id),
+    });
   }
 
-  /**
-   * Override create method to add business validation
-   */
   async create(data: PetCreatableInterface): Promise<PetEntityInterface> {
-    // Set default status if not provided
-    const petData = {
+    const petData: PetCreatableInterface = {
       status: PetStatus.ACTIVE,
       ...data,
     };
-    return super.create(petData);
+    return this.repo.create(petData as PetEntity);
   }
 
-  /**
-   * Override update method to add business validation
-   */
   async update(data: PetModelUpdatableInterface): Promise<PetEntityInterface> {
-    // Ensure userId cannot be updated
-    const { ...updateData } = data;
-    return super.update(updateData);
+    const { id, ...rest } = data;
+    const existing = (await this.getPetById(id)) as PetEntity;
+    return this.repo.update(existing, rest as PetEntity);
   }
 
-  /**
-   * Get pet by ID with proper error handling
-   */
-  async getPetById(id: string): Promise<PetEntityInterface> {
-    const pet = await this.repo.findOne({
-      where: { 
-        id, 
-        dateDeleted: undefined
-      }
-    });
-    
-    if (!pet) {
-      throw new PetNotFoundException();
-    }
-    
+  async remove(
+    query: Pick<PetEntityInterface, 'id'>,
+  ): Promise<PetEntityInterface> {
+    const pet = (await this.getPetById(query.id)) as PetEntity;
+    await this.repo.delete(pet);
     return pet;
   }
 
-  /**
-   * Find pets by user ID
-   */
+  async getPetById(id: string): Promise<PetEntityInterface> {
+    const pet = await this.byId(id);
+    if (!pet) {
+      throw new PetNotFoundException();
+    }
+    return pet;
+  }
+
   async findByUserId(userId: string): Promise<PetEntityInterface[]> {
     return this.repo.find({
-      where: { 
-        userId, 
-        dateDeleted: undefined
-      }
+      where: Where.eq<PetEntity>('userId', userId),
     });
   }
 
-  /**
-   * Get pets by user ID with proper error handling
-   */
   async getPetsByUserId(userId: string): Promise<PetEntityInterface[]> {
     return this.findByUserId(userId);
   }
 
-  /**
-   * Update pet data (excludes userId modification)
-   */
   async updatePet(
     id: string,
     petData: PetUpdatableInterface,
   ): Promise<PetEntityInterface> {
-    
-    // Merge update data with existing pet (excluding userId)
-    const updateData: PetModelUpdatableInterface = {
+    return this.update({
       id,
       ...petData,
-    };
-    
-    return this.update(updateData);
-  }
-
-  /**
-   * Soft delete a pet
-   */
-  async softDelete(id: string): Promise<PetEntityInterface> {
-    const pet = await this.getPetById(id);
-    
-    // Perform soft delete by setting dateDeleted
-    const updateData = {
-      id,
-      dateDeleted: new Date(),
-      version: pet.version + 1,
-    };
-    
-    return this.update(updateData as PetModelUpdatableInterface);
-  }
-
-  /**
-   * Find pets by user ID and species
-   */
-  async findByUserIdAndSpecies(userId: string, species: string): Promise<PetEntityInterface[]> {
-    return this.repo.find({
-      where: { 
-        userId, 
-        species,
-        dateDeleted: undefined
-      }
     });
   }
 
-  /**
-   * Check if user owns the pet
-   */
+  async softDelete(id: string): Promise<PetEntityInterface> {
+    const pet = (await this.getPetById(id)) as PetEntity;
+    return this.repo.softDelete(pet);
+  }
+
+  async findByUserIdAndSpecies(
+    userId: string,
+    species: string,
+  ): Promise<PetEntityInterface[]> {
+    return this.repo.find({
+      where: Where.and(
+        Where.eq<PetEntity>('userId', userId),
+        Where.eq<PetEntity>('species', species),
+      ),
+    });
+  }
+
   async isPetOwnedByUser(petId: string, userId: string): Promise<boolean> {
     const pet = await this.repo.findOne({
-      where: { 
-        id: petId, 
-        userId,
-        dateDeleted: undefined
-      }
+      where: Where.and(
+        Where.eq<PetEntity>('id', petId),
+        Where.eq<PetEntity>('userId', userId),
+      ),
     });
     return !!pet;
   }

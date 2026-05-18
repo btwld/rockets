@@ -22,7 +22,7 @@ export class PetEntity {
 
   /**
    * Optional external reference, globally unique when set (SQLite allows
-   * multiple NULLs on a UNIQUE column). Checked in `PetCreateHandler`
+   * multiple NULLs on a UNIQUE column). Checked in `PetUniqueRefHook`
    * before insert; the column still enforces uniqueness at persistence time.
    */
   @Column({ type: 'varchar', length: 64, nullable: true, unique: true })

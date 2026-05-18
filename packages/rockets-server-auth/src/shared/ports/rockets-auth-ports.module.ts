@@ -1,4 +1,14 @@
 import { Global, Module, Provider, Type } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { PasswordPort, UserPort } from '@concepta/nestjs-authentication';
+import {
+  AUTHENTICATION_PASSWORD_PORT_TOKEN,
+  AUTHENTICATION_USER_PORT_TOKEN,
+} from '@concepta/nestjs-authentication/dist/authentication.constants';
+
+import { buildRocketsAuthenticationPorts } from '../authentication/build-rockets-authentication-ports';
+import { RAW_OPTIONS_TOKEN } from '../constants/rockets-auth-raw-options.token';
+import type { RocketsAuthOptionsInterface } from '../interfaces/rockets-auth-options.interface';
 import {
   RocketsAuthOtpPortService,
   ROCKETS_AUTH_OTP_PORT_TOKEN,
@@ -6,7 +16,6 @@ import {
 import {
   RocketsAuthUserPortService,
   ROCKETS_AUTH_USER_PORT_TOKEN,
-  ROCKETS_AUTH_USER_PASSWORD_PORT_TOKEN,
 } from './rockets-auth-user-port.service';
 import { RocketsAuthPortsConfigInterface } from '../interfaces/rockets-auth-ports-config.interface';
 
@@ -17,6 +26,7 @@ import { RocketsGetUserByIdHandler } from '../../domains/user/application/querie
 import { RocketsCreateUserHandler } from '../../domains/user/application/commands/handlers/rockets-create-user.handler';
 import { RocketsUpdateUserHandler } from '../../domains/user/application/commands/handlers/rockets-update-user.handler';
 import { GetActiveCredentialHandler } from '../../domains/user/application/queries/handlers/get-active-credential.handler';
+import { RocketsAuthUserPortGetByUsernameHandler } from '../../domains/user/application/queries/handlers/rockets-auth-user-port-get-by-username.handler';
 import { RocketsCreateOtpHandler } from '../../domains/otp/application/commands/handlers/rockets-create-otp.handler';
 import { RocketsClearOtpsHandler } from '../../domains/otp/application/commands/handlers/rockets-clear-otps.handler';
 import { RocketsValidateOtpHandler } from '../../domains/otp/application/queries/handlers/rockets-validate-otp.handler';
@@ -76,18 +86,48 @@ export class RocketsAuthPortsModule {
         provide: ROCKETS_AUTH_USER_PORT_TOKEN,
         useExisting: RocketsAuthUserPortService,
       },
-      {
-        provide: ROCKETS_AUTH_USER_PASSWORD_PORT_TOKEN,
-        useValue: {},
-      },
     ];
 
     const handlerProviders: Provider[] = [
       ...resolvedUserHandlers,
+      RocketsAuthUserPortGetByUsernameHandler,
       ...resolvedOtpHandlers,
     ];
 
-    const allProviders = [...serviceProviders, ...handlerProviders];
+    const authenticationUpstreamPortProviders: Provider[] = [
+      {
+        provide: AUTHENTICATION_USER_PORT_TOKEN,
+        inject: [QueryBus, CommandBus, RAW_OPTIONS_TOKEN],
+        useFactory: (
+          queryBus: QueryBus,
+          commandBus: CommandBus,
+          opts: RocketsAuthOptionsInterface,
+        ): UserPort =>
+          new UserPort(
+            buildRocketsAuthenticationPorts(opts).user,
+            queryBus,
+            commandBus,
+          ),
+      },
+      {
+        provide: AUTHENTICATION_PASSWORD_PORT_TOKEN,
+        inject: [CommandBus, RAW_OPTIONS_TOKEN],
+        useFactory: (
+          commandBus: CommandBus,
+          opts: RocketsAuthOptionsInterface,
+        ): PasswordPort =>
+          new PasswordPort(
+            buildRocketsAuthenticationPorts(opts).password,
+            commandBus,
+          ),
+      },
+    ];
+
+    const allProviders = [
+      ...serviceProviders,
+      ...authenticationUpstreamPortProviders,
+      ...handlerProviders,
+    ];
 
     return {
       module: RocketsAuthPortsModule,

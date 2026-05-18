@@ -4,7 +4,7 @@
  * same `where` shape as Concepta's `Where.eq`, and the `findOne`, `create`,
  * `update` methods used by production handlers.
  */
-import { Where, type RepositoryInterface } from '@concepta/nestjs-repository';
+import { Where, type RepositoryInterface } from '@bitwild/rockets-repository';
 import {
   UpsertUserMetadataHandler,
   UpsertUserMetadataCommand,

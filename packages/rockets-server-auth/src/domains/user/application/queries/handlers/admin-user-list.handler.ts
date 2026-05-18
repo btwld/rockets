@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import {
   CrudAdapter,
+  CrudListQuery,
   CrudResponsePaginatedInterface,
   InjectCrudAdapter,
 } from '@concepta/nestjs-crud';
-import type { CrudQueryInterface } from '@concepta/nestjs-crud/dist/application/queries/interfaces/crud-query.interface';
 import { USER_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 import { AbstractAdminUserListHandler } from '../../commands/handlers/abstract-admin-user-list.handler';
@@ -19,7 +19,7 @@ export class AdminUserListHandler extends AbstractAdminUserListHandler {
   }
 
   async execute(
-    query: CrudQueryInterface<RocketsAuthUserEntityInterface>,
+    query: CrudListQuery<RocketsAuthUserEntityInterface>,
   ): Promise<
     | RocketsAuthUserEntityInterface
     | CrudResponsePaginatedInterface<RocketsAuthUserEntityInterface>

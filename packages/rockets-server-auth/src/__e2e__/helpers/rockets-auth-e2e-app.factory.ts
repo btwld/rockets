@@ -1,7 +1,7 @@
+import './patch-crud-module-for-e2e.bootstrap';
+
 import { EmailSendInterface, ExceptionsFilter } from '@concepta/nestjs-common';
 import { EventModule } from '@concepta/nestjs-event';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { RepositoryModule } from '@concepta/nestjs-repository';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   DynamicModule,
@@ -14,13 +14,13 @@ import { ConfigService } from '@nestjs/config';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RocketsModule } from '@bitwild/rockets';
 import { ormConfig } from '../../__fixtures__/ormconfig.fixture';
 import { InvitationEntityFixture } from '../../__fixtures__/invitation/invitation.entity.fixture';
 import { UserOtpEntityFixture } from '../../__fixtures__/user/user-otp-entity.fixture';
 import { UserFixture } from '../../__fixtures__/user/user.entity.fixture';
 import { UserCredentialEntityFixture } from '../../__fixtures__/user/user-credential.entity.fixture';
 import { FederatedEntityFixture } from '../../__fixtures__/federated/federated.entity.fixture';
-import { RocketsAuthModule } from '../../rockets-auth.module';
 import { RoleEntityFixture } from '../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../__fixtures__/role/user-role.entity.fixture';
 import { UserMetadataEntityFixture } from '../../__fixtures__/user/user-metadata.entity.fixture';
@@ -30,8 +30,15 @@ import { RocketsAuthUserMetadataDto } from '../../domains/user/infrastructure/dt
 import { RocketsAuthUserCreateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-create.dto';
 import { RocketsAuthUserUpdateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-update.dto';
 import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../../shared/constants/rockets-auth.constants';
-import type { RocketsAuthOptionsInterface } from '../../shared/interfaces/rockets-auth-options.interface';
-import type { RocketsAuthOptionsExtrasInterface } from '../../shared/interfaces/rockets-auth-options-extras.interface';
+import { defineRocketsAuth } from '../../define-rockets-auth';
+import type { DefineRocketsAuthInput } from '../../define-rockets-auth';
+import {
+  E2E_NOTIFICATION_HANDLERS,
+  E2eSendPasswordUpdatedNotificationCommand,
+  E2eSendRecoverLoginNotificationCommand,
+  E2eSendRecoverPasswordNotificationCommand,
+  E2eSendVerifyNotificationCommand,
+} from '../../__fixtures__/notification/test-notification.fixture';
 
 /** ConfigService stub used by several Rockets Auth e2e apps. */
 @Module({
@@ -63,20 +70,90 @@ const typeOrmRootEntities = [
   InvitationEntityFixture,
 ] as const;
 
-function defaultRocketsAuthForRoot(
+/**
+ * Extras the e2e helper can splice into the factory return without each
+ * test having to reproduce the full `useFactory` closure. Currently used
+ * by `password-history.e2e-spec.ts` to enable the history check.
+ */
+export interface RocketsAuthE2eFactoryExtras {
+  readonly userPasswordSettings?: {
+    readonly reuseAfterDays?: number;
+    readonly requireCurrent?: boolean;
+  };
+}
+
+function defaultDefineRocketsAuthInput(
   mailerService: EmailSendInterface,
-): RocketsAuthOptionsInterface & RocketsAuthOptionsExtrasInterface {
+  extras: RocketsAuthE2eFactoryExtras = {},
+): DefineRocketsAuthInput {
   return {
-    repositoryPersistence: {
+    useFactory: () => ({
+      services: { mailerService },
+      authentication: {
+        ports: {
+          recoveryNotification: {
+            sendRecoverLoginNotificationCommand:
+              E2eSendRecoverLoginNotificationCommand,
+            sendRecoverPasswordNotificationCommand:
+              E2eSendRecoverPasswordNotificationCommand,
+            sendPasswordUpdatedNotificationCommand:
+              E2eSendPasswordUpdatedNotificationCommand,
+          },
+          verifyNotification: {
+            sendVerifyNotificationCommand: E2eSendVerifyNotificationCommand,
+          },
+        },
+      },
+      ...(extras.userPasswordSettings
+        ? {
+            user: {
+              settings: { password: { ...extras.userPasswordSettings } },
+            },
+          }
+        : {}),
+      settings: {
+        role: { adminRoleName: 'admin' },
+        email: {
+          from: 'test@test.com',
+          baseUrl: 'http://localhost',
+          templates: {
+            sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+            invitation: {
+              logo: '',
+              fileName: 'inv.hbs',
+              subject: 'Invitation',
+            },
+            invitationAccepted: {
+              logo: '',
+              fileName: 'inv-acc.hbs',
+              subject: 'Accepted',
+            },
+          },
+        },
+        otp: {
+          assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
+          category: 'test',
+          type: 'uuid',
+          expiresIn: '1h',
+        },
+      },
+    }),
+    inject: [],
+    persistence: {
       module: TypeOrmRepositoryModule,
       entities: {
         user: UserFixture,
         userCredentials: UserCredentialEntityFixture,
-        userMetadata: UserMetadataEntityFixture,
         userOtp: UserOtpEntityFixture,
         role: RoleEntityFixture,
         userRole: UserRoleEntityFixture,
+        federatedIdentity: FederatedEntityFixture,
       },
+    },
+    userMetadata: {
+      entity: UserMetadataEntityFixture,
+      createDto: RocketsAuthUserMetadataDto,
+      updateDto: RocketsAuthUserMetadataDto,
     },
     userCrud: {
       imports: [
@@ -87,20 +164,9 @@ function defaultRocketsAuthForRoot(
         createOne: RocketsAuthUserCreateDto,
         updateOne: RocketsAuthUserUpdateDto,
       },
-      userMetadataConfig: {
-        imports: [TypeOrmModule.forFeature([UserMetadataEntityFixture])],
-        entity: UserMetadataEntityFixture,
-        createDto: RocketsAuthUserMetadataDto,
-        updateDto: RocketsAuthUserMetadataDto,
-      },
     },
-    jwt: {
-      settings: {
-        access: { secret: 'test-secret' },
-        default: { secret: 'test-secret' },
-        refresh: { secret: 'test-secret' },
-      },
-    },
+    invitationEntity: InvitationEntityFixture,
+    invitation: {},
     user: {
       imports: [TypeOrmModule.forFeature([UserCredentialEntityFixture])],
     },
@@ -109,56 +175,6 @@ function defaultRocketsAuthForRoot(
         TypeOrmModule.forFeature([RoleEntityFixture, UserRoleEntityFixture]),
       ],
     },
-    federated: {
-      imports: [
-        TypeOrmExtModule.forFeature({
-          federated: { entity: FederatedEntityFixture },
-        }),
-        RepositoryModule.forFeature({
-          module: TypeOrmRepositoryModule,
-          entities: [{ key: 'federated', entity: FederatedEntityFixture }],
-        }),
-      ],
-    },
-    invitation: {
-      imports: [
-        TypeOrmExtModule.forFeature({
-          invitation: { entity: InvitationEntityFixture },
-        }),
-        RepositoryModule.forFeature({
-          module: TypeOrmRepositoryModule,
-          entities: [{ key: 'invitation', entity: InvitationEntityFixture }],
-        }),
-      ],
-      userModelService: undefined as never,
-    },
-    settings: {
-      role: { adminRoleName: 'admin' },
-      email: {
-        from: 'test@test.com',
-        baseUrl: 'http://localhost',
-        templates: {
-          sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
-          invitation: {
-            logo: '',
-            fileName: 'inv.hbs',
-            subject: 'Invitation',
-          },
-          invitationAccepted: {
-            logo: '',
-            fileName: 'inv-acc.hbs',
-            subject: 'Accepted',
-          },
-        },
-      },
-      otp: {
-        assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
-        category: 'test',
-        type: 'uuid',
-        expiresIn: '1h',
-      },
-    },
-    services: { mailerService },
   };
 }
 
@@ -167,38 +183,50 @@ export interface CreateRocketsAuthStandardE2eModuleOptions {
   /** Extra Nest controllers (e.g. JWT-protected test route). */
   readonly extraControllers?: Type[];
   /**
-   * Shallow merge into `RocketsAuthModule.forRoot` (e.g. `disableController`).
-   * Nested objects such as `disableController` replace defaults unless you spread them yourself.
+   * Shallow merge into `defineRocketsAuth` input (e.g. `disableController`).
    */
-  readonly rocketsAuthOverrides?: Partial<
-    RocketsAuthOptionsInterface & RocketsAuthOptionsExtrasInterface
-  >;
+  readonly rocketsAuthOverrides?: Partial<DefineRocketsAuthInput>;
+  /**
+   * Per-test tweaks to the default `useFactory` return without rewriting it.
+   * Today only `userPasswordSettings` (for password-history tests). Add
+   * more knobs as tests need them.
+   */
+  readonly factoryExtras?: RocketsAuthE2eFactoryExtras;
 }
 
 /**
- * Shared TypeORM + {@link RocketsAuthModule} wiring for package e2e tests
- * (same shape as the historical `rockets-auth.e2e-spec` bootstrap).
+ * Shared TypeORM + {@link RocketsModule} + {@link defineRocketsAuth} wiring
+ * for package e2e tests.
  */
 export async function createRocketsAuthStandardE2eTestingModule(
   options: CreateRocketsAuthStandardE2eModuleOptions,
 ): Promise<TestingModule> {
-  const { mockEmailService, extraControllers = [], rocketsAuthOverrides } =
-    options;
+  const {
+    mockEmailService,
+    extraControllers = [],
+    rocketsAuthOverrides,
+    factoryExtras,
+  } = options;
 
-  const baseRoot = defaultRocketsAuthForRoot(mockEmailService);
-  const mergedRoot = {
-    ...baseRoot,
+  const baseInput = defaultDefineRocketsAuthInput(
+    mockEmailService,
+    factoryExtras,
+  );
+  const mergedInput: DefineRocketsAuthInput = {
+    ...baseInput,
     ...rocketsAuthOverrides,
     disableController: {
-      ...baseRoot.disableController,
+      ...baseInput.disableController,
       ...rocketsAuthOverrides?.disableController,
     },
   };
 
+  const rocketsAuth = defineRocketsAuth(mergedInput);
+
   const imports: DynamicModule['imports'] = [
     RocketsAuthE2eMockConfigModule,
     EventModule.forRoot({}),
-    TypeOrmExtModule.forRootAsync({
+    TypeOrmModule.forRootAsync({
       inject: [],
       useFactory: () => ({
         ...ormConfig,
@@ -212,17 +240,27 @@ export async function createRocketsAuthStandardE2eTestingModule(
       UserRoleEntityFixture,
       RoleEntityFixture,
     ]),
-    RocketsAuthModule.forRoot(mergedRoot),
+    RocketsModule.forRoot({
+      auth: rocketsAuth,
+      repository: TypeOrmRepositoryModule,
+    }),
   ];
 
   return Test.createTestingModule({
     imports,
     controllers: extraControllers,
+    providers: [...E2E_NOTIFICATION_HANDLERS],
   }).compile();
 }
 
 export function applyRocketsAuthE2eAppGlobals(app: INestApplication): void {
   const exceptionsFilter = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidUnknownValues: true,
+    }),
+  );
 }

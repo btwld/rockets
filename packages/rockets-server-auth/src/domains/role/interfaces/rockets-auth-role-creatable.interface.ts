@@ -1,4 +1,4 @@
-import { RoleCreatableInterface } from '@concepta/nestjs-common';
+import { RoleCreatableInterface } from '@concepta/nestjs-role';
 
 /**
  * Rockets Auth Role Creatable Interface

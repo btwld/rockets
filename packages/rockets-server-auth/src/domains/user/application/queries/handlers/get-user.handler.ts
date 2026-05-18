@@ -5,7 +5,8 @@ import {
   User,
 } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
-import { createRepositoryContext } from '../../../../../shared/utils/repository-context.helper';
+import { createRepositoryContext } from '@bitwild/rockets-common';
+import { userAggregateToEntity } from '../../../../../shared/utils/aggregate-mappers';
 
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 import { RocketsAuthUserMetadataEntityInterface } from '../../../interfaces/rockets-auth-user-metadata-entity.interface';
@@ -37,10 +38,9 @@ export class GetUserHandler implements IQueryHandler<GetUserQuery> {
       });
     }
 
-    const plain = user.toPlain();
     return {
-      ...plain,
+      ...userAggregateToEntity(user),
       userMetadata: userMetadata ?? undefined,
-    } as RocketsAuthUserEntityInterface;
+    };
   }
 }

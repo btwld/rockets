@@ -25,12 +25,12 @@ const allResources = Object.values(AppResource);
 /**
  * Access Control Rules
  * Uses the accesscontrol library to define role-based permissions
- * 
+ *
  * Pattern:
  * - .grant(role) - Grant permissions to a role
  * - .resource(resource) - Specify the resource
  * - .create() / .read() / .update() / .delete() - Specify actions
- * 
+ *
  * @see https://www.npmjs.com/package/accesscontrol
  */
 export const acRules: AccessControl = new AccessControl();
@@ -62,6 +62,3 @@ acRules
   .readOwn()
   .updateOwn()
   .deleteOwn();
-
-
-

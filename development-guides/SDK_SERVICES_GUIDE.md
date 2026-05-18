@@ -602,7 +602,7 @@ import { AccessControlServiceInterface } from '@concepta/nestjs-access-control';
 @Injectable()
 export class AccessControlService implements AccessControlServiceInterface {
   /**
-   * Extract user from JWT token (populated by RocketsJwtAuthProvider)
+   * Extract user from JWT token (populated by RocketsJwtAuthAdapter)
    */
   async getUser<T>(context: ExecutionContext): Promise<T> {
     const request = context.switchToHttp().getRequest();
@@ -622,7 +622,7 @@ export class AccessControlService implements AccessControlServiceInterface {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // Roles are populated by RocketsJwtAuthProvider during token validation
+    // Roles are populated by RocketsJwtAuthAdapter during token validation
     return user.userRoles?.map(ur => ur.role.name) || [];
   }
 }

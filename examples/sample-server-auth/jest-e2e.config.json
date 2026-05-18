@@ -3,7 +3,30 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "moduleNameMapper": {
+    "^@bitwild/rockets-auth$": "<rootDir>/../../packages/rockets-server-auth/dist/index.js",
+    "^@bitwild/rockets$": "<rootDir>/../../packages/rockets-server/dist/index.js",
+    "^@bitwild/rockets-core$": "<rootDir>/../../packages/rockets-core/dist/index.js",
+    "^@bitwild/rockets-common$": "<rootDir>/../../packages/rockets-common/dist/index.js",
+    "^@bitwild/rockets-repository$": "<rootDir>/../../packages/rockets-repository/dist/index.js",
+    "^@bitwild/rockets-crud$": "<rootDir>/../../packages/rockets-crud/dist/index.js",
+    "^@bitwild/rockets-access-control$": "<rootDir>/../../packages/rockets-access-control/dist/index.js",
+    "^@nestjs/common$": "<rootDir>/../../node_modules/@nestjs/common",
+    "^@nestjs/core$": "<rootDir>/../../node_modules/@nestjs/core",
+    "^@nestjs/cqrs$": "<rootDir>/../../node_modules/@nestjs/cqrs",
+    "^@nestjs/platform-express$": "<rootDir>/../../node_modules/@nestjs/platform-express",
+    "^@nestjs/testing$": "<rootDir>/../../node_modules/@nestjs/testing",
+    "^@nestjs/typeorm$": "<rootDir>/../../node_modules/@nestjs/typeorm",
+    "^typeorm$": "<rootDir>/../../node_modules/typeorm",
+    "^@concepta/nestjs-common/aggregate$": "<rootDir>/../../node_modules/@concepta/nestjs-common/dist/index-aggregate",
+    "^@concepta/(.*)$": "<rootDir>/../../node_modules/@concepta/$1",
+    "^class-transformer$": "<rootDir>/../../node_modules/class-transformer",
+    "^class-validator$": "<rootDir>/../../node_modules/class-validator"
+  },
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.ts$": [
+      "ts-jest",
+      { "tsconfig": "<rootDir>/../../tsconfig.jest.json" }
+    ]
   }
 }

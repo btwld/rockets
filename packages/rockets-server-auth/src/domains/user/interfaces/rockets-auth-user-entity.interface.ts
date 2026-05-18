@@ -1,4 +1,4 @@
-import { UserEntityInterface } from '@concepta/nestjs-common';
+import { UserEntityInterface } from '@concepta/nestjs-user';
 import { RocketsAuthUserMetadataEntityInterface } from './rockets-auth-user-metadata-entity.interface';
 
 /**

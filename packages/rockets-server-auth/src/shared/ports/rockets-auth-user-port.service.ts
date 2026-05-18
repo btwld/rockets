@@ -3,10 +3,14 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
   ReferenceIdInterface,
   ReferenceSubject,
+} from '@concepta/nestjs-common';
+import {
+  UserInterface,
   UserEntityInterface,
   UserCredentialEntityInterface,
-} from '@concepta/nestjs-common';
+} from '@concepta/nestjs-user';
 import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
+import { userAggregateToEntity } from '../utils/aggregate-mappers';
 import { RocketsGetUserByEmailQuery } from '../../domains/user/application/queries/impl/rockets-get-user-by-email.query';
 import { RocketsGetUserByUsernameQuery } from '../../domains/user/application/queries/impl/rockets-get-user-by-username.query';
 import { RocketsGetUserBySubjectQuery } from '../../domains/user/application/queries/impl/rockets-get-user-by-subject.query';
@@ -19,14 +23,9 @@ export const ROCKETS_AUTH_USER_PORT_TOKEN = Symbol(
   '__ROCKETS_AUTH_USER_PORT__',
 );
 
-export const ROCKETS_AUTH_USER_PASSWORD_PORT_TOKEN = Symbol(
-  '__ROCKETS_AUTH_USER_PASSWORD_PORT__',
-);
-
 /** User with optional credential fields for auth-local compatibility. */
 interface UserWithCredentials extends UserEntityInterface {
   passwordHash?: string | null;
-  passwordSalt?: string | null;
 }
 
 @Injectable()
@@ -39,121 +38,73 @@ export class RocketsAuthUserPortService {
   async bySubject(
     subject: ReferenceSubject,
   ): Promise<ReferenceIdInterface | null> {
-    try {
-      const result = await this.queryBus.execute<
-        RocketsGetUserBySubjectQuery,
-        DomainAggregate<UserEntityInterface> | ReferenceIdInterface | null
-      >(new RocketsGetUserBySubjectQuery(subject));
-      if (!result) return null;
-      return 'id' in result ? { id: result.id } : null;
-    } catch {
-      return null;
-    }
+    const result = await this.queryBus.execute<
+      RocketsGetUserBySubjectQuery,
+      DomainAggregate<UserInterface> | ReferenceIdInterface | null
+    >(new RocketsGetUserBySubjectQuery({}, subject));
+    if (!result) return null;
+    return 'id' in result ? { id: result.id } : null;
   }
 
   async byId(id: string): Promise<UserEntityInterface | null> {
-    try {
-      const result = await this.queryBus.execute<
-        RocketsGetUserByIdQuery,
-        DomainAggregate<UserEntityInterface> | null
-      >(new RocketsGetUserByIdQuery(id));
-      return result ? (result.toPlain() as UserEntityInterface) : null;
-    } catch {
-      return null;
-    }
+    const result = await this.queryBus.execute<
+      RocketsGetUserByIdQuery,
+      DomainAggregate<UserInterface> | null
+    >(new RocketsGetUserByIdQuery(id));
+    return result ? userAggregateToEntity(result) : null;
   }
 
   async byEmail(email: string): Promise<UserWithCredentials | null> {
-    try {
-      const result = await this.queryBus.execute<
-        RocketsGetUserByEmailQuery,
-        DomainAggregate<UserEntityInterface> | null
-      >(new RocketsGetUserByEmailQuery(email));
-      if (!result) return null;
-      return this.enrichWithCredentials(result);
-    } catch {
-      return null;
-    }
+    const result = await this.queryBus.execute<
+      RocketsGetUserByEmailQuery,
+      DomainAggregate<UserInterface> | null
+    >(new RocketsGetUserByEmailQuery(email));
+    if (!result) return null;
+    return this.enrichWithCredentials(result);
   }
 
   async byUsername(username: string): Promise<UserWithCredentials | null> {
-    try {
-      const result = await this.queryBus.execute<
-        RocketsGetUserByUsernameQuery,
-        DomainAggregate<UserEntityInterface> | null
-      >(new RocketsGetUserByUsernameQuery(username));
-      if (!result) return null;
-      return this.enrichWithCredentials(result);
-    } catch {
-      return null;
-    }
+    const result = await this.queryBus.execute<
+      RocketsGetUserByUsernameQuery,
+      DomainAggregate<UserInterface> | null
+    >(new RocketsGetUserByUsernameQuery(username));
+    if (!result) return null;
+    return this.enrichWithCredentials(result);
   }
 
   async update(
     data: Partial<UserEntityInterface> & { id: string },
   ): Promise<UserEntityInterface | null> {
-    try {
-      const result = await this.commandBus.execute<
-        RocketsUpdateUserCommand,
-        DomainAggregate<UserEntityInterface> | null
-      >(new RocketsUpdateUserCommand(data.id, data));
-      return result ? (result.toPlain() as UserEntityInterface) : null;
-    } catch {
-      return null;
-    }
+    const result = await this.commandBus.execute<
+      RocketsUpdateUserCommand,
+      DomainAggregate<UserInterface> | null
+    >(new RocketsUpdateUserCommand(data.id, data));
+    return result ? userAggregateToEntity(result) : null;
   }
 
   async create(
     data: Partial<UserEntityInterface>,
   ): Promise<UserEntityInterface | null> {
-    try {
-      const result = await this.commandBus.execute<
-        RocketsCreateUserCommand,
-        DomainAggregate<UserEntityInterface> | null
-      >(new RocketsCreateUserCommand(data));
-      return result ? (result.toPlain() as UserEntityInterface) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  async find(options: {
-    where: Record<string, unknown>;
-  }): Promise<UserEntityInterface[]> {
-    const { where } = options;
-    if ('email' in where && typeof where.email === 'string') {
-      const result = await this.byEmail(where.email);
-      return result ? [result] : [];
-    }
-    if ('username' in where && typeof where.username === 'string') {
-      const result = await this.byUsername(where.username);
-      return result ? [result] : [];
-    }
-    if ('id' in where && typeof where.id === 'string') {
-      const result = await this.byId(where.id);
-      return result ? [result] : [];
-    }
-    return [];
+    const result = await this.commandBus.execute<
+      RocketsCreateUserCommand,
+      DomainAggregate<UserInterface> | null
+    >(new RocketsCreateUserCommand(data));
+    return result ? userAggregateToEntity(result) : null;
   }
 
   /** auth-local expects passwordHash/passwordSalt on the user object. */
   private async enrichWithCredentials(
-    userAggregate: DomainAggregate<UserEntityInterface>,
+    userAggregate: DomainAggregate<UserInterface>,
   ): Promise<UserWithCredentials> {
-    const plain = userAggregate.toPlain() as UserWithCredentials;
+    const plain: UserWithCredentials = userAggregateToEntity(userAggregate);
 
-    try {
-      const credential = await this.queryBus.execute<
-        GetActiveCredentialQuery,
-        UserCredentialEntityInterface | null
-      >(new GetActiveCredentialQuery(userAggregate.id));
+    const credential = await this.queryBus.execute<
+      GetActiveCredentialQuery,
+      UserCredentialEntityInterface | null
+    >(new GetActiveCredentialQuery(userAggregate.id));
 
-      if (credential) {
-        plain.passwordHash = credential.passwordHash;
-        plain.passwordSalt = credential.passwordSalt;
-      }
-    } catch {
-      // credentials unavailable — return user without password fields
+    if (credential) {
+      plain.passwordHash = credential.passwordHash;
     }
 
     return plain;

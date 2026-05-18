@@ -3,6 +3,7 @@ export * from './user.module';
 
 // Entities
 export * from './entities/user.entity';
+export * from './entities/user-credential.entity';
 export * from './entities/user-metadata.entity';
 export * from './entities/user-otp.entity';
 export * from './entities/user-role.entity';
@@ -15,10 +16,5 @@ export * from './dto/user.dto';
 export * from './dto/user-create.dto';
 export * from './dto/user-update.dto';
 
-// Adapters
-export * from './adapters/user-typeorm-crud.adapter';
-export * from './adapters/user-metadata-typeorm-crud.adapter';
-
 // Providers
-export { RocketsJwtAuthProvider } from '@bitwild/rockets-auth';
-export * from '../../mock-auth.provider';
+export { RocketsJwtAuthAdapter } from '@bitwild/rockets-auth';

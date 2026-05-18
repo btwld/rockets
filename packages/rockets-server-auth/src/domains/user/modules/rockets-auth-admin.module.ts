@@ -24,10 +24,6 @@ import {
 import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
 import { RocketsAuthUserInterface } from '../interfaces/rockets-auth-user.interface';
-import { USER_METADATA_REPOSITORY_TOKEN } from '../infrastructure/config/user-domain.constants';
-
-// Infrastructure
-import { UserMetadataRepository } from '../infrastructure/persistence/user-metadata.repository';
 
 // Application – Query handlers
 import { AdminUserListHandler } from '../application/queries/handlers/admin-user-list.handler';
@@ -36,12 +32,7 @@ import { AdminUserReadHandler } from '../application/queries/handlers/admin-user
 // Application – Command handlers
 import { AdminUpdateUserHandler } from '../application/commands/handlers/admin-update-user.handler';
 import { AdminDeleteUserHandler } from '../application/commands/handlers/admin-delete-user.handler';
-import { SaveUserMetadataHandler } from '../application/commands/handlers/save-user-metadata.handler';
 import { UpdateUserHandler } from '../application/commands/handlers/update-user.handler';
-import { GetUserMetadataHandler } from '../application/queries/handlers/get-user-metadata.handler';
-
-// Application – Gateway Config
-import { AdminUserUpdateConfig } from '../gateways/http/admin/admin-crud-update-config';
 
 @Module({})
 export class RocketsAuthAdminModule {
@@ -133,16 +124,6 @@ export class RocketsAuthAdminModule {
         }),
       ],
       providers: [
-        // Config
-        {
-          provide: AdminUserUpdateConfig,
-          useValue: new AdminUserUpdateConfig(admin.userMetadataConfig),
-        },
-        // Infrastructure: repositories
-        {
-          provide: USER_METADATA_REPOSITORY_TOKEN,
-          useClass: UserMetadataRepository,
-        },
         // Application: query handlers
         ListHandler,
         ReadHandler,
@@ -150,8 +131,8 @@ export class RocketsAuthAdminModule {
         UpdateHandler,
         DeleteHandler,
         UpdateUserHandler,
-        SaveUserMetadataHandler,
-        GetUserMetadataHandler,
+        // SaveUserMetadataHandler / GetUserMetadataHandler / USER_METADATA_REPOSITORY_TOKEN
+        // are provided globally by RocketsAuthUserMetadataModule.
       ],
       exports: [],
     };

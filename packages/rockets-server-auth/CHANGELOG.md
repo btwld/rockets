@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Breaking
+
+- **`repositoryPersistence` removed** from `RocketsAuthOptionsExtrasInterface`.
+  Use **`defineRocketsAuth()`** from this package: it registers auth entities
+  through `@bitwild/rockets-core`’s planner (`resources[]`) and returns a
+  **`RocketsAuthIntegration`** for `RocketsModule.forRoot({ auth: ... })`.
+  `RocketsModule` loads **`RocketsCoreModule` before `RocketsAuthModule`** when
+  `auth` is an integration bundle so dynamic repositories exist at auth boot.
+
+### Added
+
+- **`defineRocketsAuth`** and **`DefineRocketsAuthInput`** — single entry for
+  persistence manifest + `userMetadata` + `RocketsAuthModule.forRootAsync` options.
+
 ## [1.0.0-alpha.7] - 2026-02-19
 
 ### Changed

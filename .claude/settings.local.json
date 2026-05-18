@@ -37,7 +37,8 @@
       "Bash(yarn test:*)",
       "Bash(node:*)",
       "Bash(git diff:*)",
-      "Bash(yarn install:*)"
+      "Bash(yarn install:*)",
+      "Bash(gh api *)"
     ],
     "deny": []
   }

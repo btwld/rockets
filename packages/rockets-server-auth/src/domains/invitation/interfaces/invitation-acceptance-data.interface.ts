@@ -1,8 +1,5 @@
-import {
-  LiteralObject,
-  InvitationAcceptedEventPayloadInterface,
-  InvitationInterface,
-} from '@concepta/nestjs-common';
+import { LiteralObject, ReferenceIdInterface } from '@concepta/nestjs-common';
+import { InvitationInterface } from '@concepta/nestjs-invitation';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../user/interfaces/rockets-auth-user-metadata-updatable.interface';
 
 /**
@@ -23,12 +20,12 @@ export interface InvitationAcceptanceDataInterface extends LiteralObject {
 }
 
 /**
- * Generic version of InvitationAcceptedEventPayloadInterface
- * with strongly-typed data field
+ * Mirrors the shape of the upstream InvitationAcceptedEventPayloadInterface
+ * (not publicly exported from barrels) with a strongly-typed data field.
  */
 export interface TypedInvitationAcceptedEventPayloadInterface<
   TData extends LiteralObject = LiteralObject,
-> extends Omit<InvitationAcceptedEventPayloadInterface, 'data'> {
-  invitation: InvitationInterface;
+> {
+  invitation: ReferenceIdInterface & InvitationInterface;
   data?: TData;
 }

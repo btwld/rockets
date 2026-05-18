@@ -9,27 +9,29 @@ import {
   CrudQueryException,
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
-import { getLocal } from '../../utils/get-local.helper';
+import { getActor } from '@bitwild/rockets-core';
 // TODO: deep imports — move to barrel when @concepta/nestjs-crud exports these
 import { CrudCommandHandler } from '@concepta/nestjs-crud/dist/application/commands/handlers/crud-command.handler';
 import type { CrudCommandInterface } from '@concepta/nestjs-crud/dist/application/commands/interfaces/crud-command.interface';
-import { PET_MODULE_PET_ENTITY_KEY } from '../../constants/pet.constants';
 import { PetEntity } from './pet.entity';
 import { PetCreatableInterface } from './pet.interface';
-import { AppRole } from '../../../../app.acl';
-import {
-  JwtAuthenticatedUserLocal,
-  JwtAuthenticatedUserPayload,
-} from '../../jwt-authenticated-user.local';
 
 /**
- * Sets `userId` from CRUD locals (JWT user). Elevated roles may set `userId` from the body;
- * others always own the created pet.
+ * Stamps `userId` from the authenticated actor that `ActorOverlay`
+ * publishes on the CRUD context. Replaces the v7 `UseCrudLocals` flow,
+ * which is broken in v8 `@concepta/nestjs-crud`
+ * (`CrudLocalsInterceptor.reflectionService.getLocals` is no longer a
+ * method).
+ *
+ * Admin-override of `userId` (previously gated on the user's roles) is
+ * dropped here because the v8 `Actor` overlay only carries `{id, type}`.
+ * Authorization is already enforced upstream by `AccessControlGuard`, so
+ * the handler simply pins ownership to the caller.
  */
 @Injectable()
 export class PetCreateHandler extends CrudCommandHandler<PetEntity> {
   constructor(
-    @InjectCrudAdapter(PET_MODULE_PET_ENTITY_KEY)
+    @InjectCrudAdapter(PetEntity)
     crudAdapter: CrudAdapter<PetEntity>,
   ) {
     super(crudAdapter);
@@ -41,22 +43,13 @@ export class PetCreateHandler extends CrudCommandHandler<PetEntity> {
       PetCreatableInterface
     >;
     const body = withBody.dto as PetCreatableInterface;
-    const authUser = getLocal<JwtAuthenticatedUserPayload>(
-      withBody.context,
-      JwtAuthenticatedUserLocal,
-    );
-    if (!authUser?.id) {
+    const actor = getActor(withBody.context);
+    if (!actor?.id) {
       throw new UnauthorizedException();
     }
-    const roleNames = authUser.userRoles.map(
-      (ur: { role: { name: string } }) => ur.role.name,
-    );
-    const isElevated =
-      roleNames.includes(AppRole.Admin) || roleNames.includes(AppRole.Manager);
-    const userId = isElevated && body.userId ? body.userId : authUser.id;
     const dto: PetCreatableInterface = {
       ...body,
-      userId,
+      userId: actor.id,
     };
     try {
       return await this.crudAdapter.create(withBody.context, dto);

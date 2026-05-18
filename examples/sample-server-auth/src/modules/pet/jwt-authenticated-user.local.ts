@@ -4,7 +4,7 @@ import type { CrudContextInterface } from '@bitwild/rockets-crud';
 import type { CrudLocalInterface } from '@concepta/nestjs-crud/dist/infrastructure/interceptors/interfaces/crud-local.interface';
 
 /**
- * Shape of `request.user` after JWT validation ({@link RocketsJwtAuthProvider}).
+ * Shape of `request.user` after JWT validation ({@link RocketsJwtAuthAdapter}).
  * When unauthenticated, {@link JwtAuthenticatedUserLocal.resolve} returns `id: ''`
  * and empty roles (CRUD locals require a plain object, not `null`).
  */

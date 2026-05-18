@@ -2,7 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Injectable } from '@nestjs/common';
 
 import { PasswordCreationService } from '@concepta/nestjs-password';
-import { CommandBus } from '@nestjs/cqrs';
+import { TransactionScope } from '@concepta/nestjs-repository';
+import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import {
   RocketsAuthUserPortService,
   ROCKETS_AUTH_USER_PORT_TOKEN,
@@ -11,12 +12,12 @@ import {
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
   ROCKETS_AUTH_OTP_ASSIGNMENT,
 } from '../../../shared/constants/rockets-auth.constants';
-import { EventAsyncInterface, EventListenerOn } from '@concepta/nestjs-event';
+import { InvitationAcceptanceDataInterface } from '../interfaces/invitation-acceptance-data.interface';
 import {
-  InvitationAcceptanceDataInterface,
-  TypedInvitationAcceptedEventPayloadInterface,
-} from '../interfaces/invitation-acceptance-data.interface';
-import { InvitationInterface } from '@concepta/nestjs-common';
+  InvitationAcceptedEvent,
+  InvitationInterface,
+} from '@concepta/nestjs-invitation';
+import { ReferenceIdInterface } from '@concepta/nestjs-common';
 import {
   INVITATION_ACCEPTANCE_LISTENER_TOKEN,
   RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN,
@@ -24,14 +25,17 @@ import {
 import { RocketsAuthInvitationAcceptanceModule } from '../modules/rockets-auth-invitation-acceptance.module';
 import { AssignDefaultRoleCommand } from '../../user/application/commands/impl/assign-default-role.command';
 import { SaveUserMetadataCommand } from '../../user/application/commands/impl/save-user-metadata.command';
+import { InvitationUserAcceptanceListener } from '../application/listeners/invitation-user-acceptance.listener';
+
+function createInvitationAcceptedEvent(
+  invitation: ReferenceIdInterface & InvitationInterface,
+  data?: InvitationAcceptanceDataInterface,
+): InvitationAcceptedEvent {
+  return new InvitationAcceptedEvent({} as never, invitation as never, data);
+}
 
 describe('InvitationUserAcceptanceListener', () => {
-  let listener: EventListenerOn<
-    EventAsyncInterface<
-      TypedInvitationAcceptedEventPayloadInterface<InvitationAcceptanceDataInterface>,
-      boolean
-    >
-  >;
+  let listener: InvitationUserAcceptanceListener;
   let mockUserPortService: jest.Mocked<
     Pick<RocketsAuthUserPortService, 'byId' | 'update'>
   >;
@@ -45,16 +49,14 @@ describe('InvitationUserAcceptanceListener', () => {
     active: false,
   };
 
-  const mockInvitation: InvitationInterface = {
+  const mockInvitation: ReferenceIdInterface & InvitationInterface = {
     id: 'invitation-123',
     code: 'abc-123',
     userId: 'user-123',
     category: 'user',
-    active: true,
     constraints: {},
-    dateCreated: new Date(),
-    dateUpdated: new Date(),
-    dateDeleted: null,
+    dateAccepted: null,
+    dateRevoked: null,
   };
 
   const mockSettings = {
@@ -104,6 +106,15 @@ describe('InvitationUserAcceptanceListener', () => {
       execute: jest.fn(),
     } as jest.Mocked<Pick<CommandBus, 'execute'>>;
 
+    // Pass-through TransactionScope mock — runs the callback in-place so
+    // assertions on side effects still work, and re-throws on failure so the
+    // outer catch in the listener receives the error.
+    const txScopeMock = {
+      run: jest.fn(
+        async (_ctx: unknown, fn: () => Promise<unknown>) => await fn(),
+      ),
+    } as unknown as TransactionScope;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         {
@@ -122,6 +133,10 @@ describe('InvitationUserAcceptanceListener', () => {
           provide: ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
           useValue: mockSettings,
         },
+        {
+          provide: TransactionScope,
+          useValue: txScopeMock,
+        },
         // Provide the listener via the factory (simulating the module definition)
         {
           provide: RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN,
@@ -132,53 +147,33 @@ describe('InvitationUserAcceptanceListener', () => {
       ],
     }).compile();
 
-    listener = module.get(INVITATION_ACCEPTANCE_LISTENER_TOKEN);
+    listener = module.get<InvitationUserAcceptanceListener>(
+      INVITATION_ACCEPTANCE_LISTENER_TOKEN,
+    );
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('listen', () => {
-    it('should return true for non-user category invitations', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: { ...mockInvitation, category: 'org' },
-          data: {},
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+  describe('handle', () => {
+    it('should skip processing for non-user category invitations', async () => {
+      const event = createInvitationAcceptedEvent(
+        { ...mockInvitation, category: 'org' },
+        {},
+      );
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(true);
       expect(mockUserPortService.byId).not.toHaveBeenCalled();
     });
 
     it('should process user invitation with password successfully', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            password: 'Test123!',
-            firstName: 'John',
-            lastName: 'Doe',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+        firstName: 'John',
+        lastName: 'Doe',
+      });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -188,11 +183,8 @@ describe('InvitationUserAcceptanceListener', () => {
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(true);
       expect(mockUserPortService.byId).toHaveBeenCalledWith('user-123');
       expect(mockPasswordService.create).toHaveBeenCalledWith('Test123!');
       expect(mockUserPortService.update).toHaveBeenCalledWith({
@@ -207,31 +199,17 @@ describe('InvitationUserAcceptanceListener', () => {
     });
 
     it('should process invitation without password', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            firstName: 'John',
-            lastName: 'Doe',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        firstName: 'John',
+        lastName: 'Doe',
+      });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(true);
       expect(mockPasswordService.create).not.toHaveBeenCalled();
       expect(mockUserPortService.update).toHaveBeenCalledWith({
         id: 'user-123',
@@ -240,24 +218,13 @@ describe('InvitationUserAcceptanceListener', () => {
     });
 
     it('should create user metadata when provided', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            password: 'Test123!',
-            userMetadata: {
-              bio: 'Test bio',
-              phoneNumber: '+1234567890',
-            },
-          },
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+        userMetadata: {
+          bio: 'Test bio',
+          phoneNumber: '+1234567890',
         },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+      });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -267,11 +234,7 @@ describe('InvitationUserAcceptanceListener', () => {
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
-
-      // Assert
-      expect(result).toBe(true);
+      await listener.handle(event);
 
       const metadataCall = mockCommandBus.execute.mock.calls.find(
         (call: unknown[]) => call[0] instanceof SaveUserMetadataCommand,
@@ -289,23 +252,15 @@ describe('InvitationUserAcceptanceListener', () => {
     });
 
     it('should assign specific roleId from invitation constraints', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: {
-            ...mockInvitation,
-            constraints: { roleId: 'role-123' },
-          },
-          data: {
-            password: 'Test123!',
-          },
+      const event = createInvitationAcceptedEvent(
+        {
+          ...mockInvitation,
+          constraints: { roleId: 'role-123' },
         },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+        {
+          password: 'Test123!',
+        },
+      );
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -315,33 +270,22 @@ describe('InvitationUserAcceptanceListener', () => {
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(true);
       expect(mockCommandBus.execute).toHaveBeenCalled();
     });
 
     it('should ignore roleId from acceptance payload (security test)', async () => {
-      // Arrange - roleId in payload should be ignored, only constraints.roleId is used
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: {
-            ...mockInvitation,
-            constraints: { roleId: 'admin-role-123' },
-          },
-          data: {
-            password: 'Test123!',
-            roleId: 'user-role-456', // This should be ignored
-          },
+      const event = createInvitationAcceptedEvent(
+        {
+          ...mockInvitation,
+          constraints: { roleId: 'admin-role-123' },
         },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+        {
+          password: 'Test123!',
+          roleId: 'user-role-456',
+        },
+      );
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -351,29 +295,15 @@ describe('InvitationUserAcceptanceListener', () => {
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert - should use roleId from constraints, not from payload
-      expect(result).toBe(true);
       expect(mockCommandBus.execute).toHaveBeenCalled();
     });
 
     it('should assign default role when roleId not in constraints', async () => {
-      // Arrange - no roleId in constraints, should fall back to default
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation, // constraints: {}
-          data: {
-            password: 'Test123!',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+      });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -383,88 +313,46 @@ describe('InvitationUserAcceptanceListener', () => {
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(true);
       expect(mockCommandBus.execute).toHaveBeenCalledWith(
         expect.any(AssignDefaultRoleCommand),
       );
     });
 
-    it('should return false when user not found', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            password: 'Test123!',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+    it('should stop when user not found', async () => {
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+      });
 
       mockUserPortService.byId.mockResolvedValue(null as never);
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(false);
       expect(mockUserPortService.byId).toHaveBeenCalledWith('user-123');
       expect(mockPasswordService.create).not.toHaveBeenCalled();
       expect(mockUserPortService.update).not.toHaveBeenCalled();
     });
 
-    it('should return false and log error when password creation fails', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            password: 'Test123!',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+    it('should catch error when password creation fails', async () => {
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+      });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockRejectedValue(
         new Error('Password hash failed'),
       );
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(false);
       expect(mockUserPortService.update).not.toHaveBeenCalled();
     });
 
-    it('should return false when user update fails', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            password: 'Test123!',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+    it('should catch error when user update fails', async () => {
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+      });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -473,29 +361,15 @@ describe('InvitationUserAcceptanceListener', () => {
       } as never);
       mockUserPortService.update.mockRejectedValue(new Error('Update failed'));
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(false);
       expect(mockCommandBus.execute).not.toHaveBeenCalled();
     });
 
-    it('should return false when role assignment fails', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            password: 'Test123!',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+    it('should catch error when role assignment fails', async () => {
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+      });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockPasswordService.create.mockResolvedValue({
@@ -507,79 +381,40 @@ describe('InvitationUserAcceptanceListener', () => {
         new Error('Role assignment failed'),
       );
 
-      // Act
-      const result = await listener.listen(event);
-
-      // Assert
-      expect(result).toBe(false);
+      await listener.handle(event);
     });
 
     it('should handle empty data payload', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {},
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+      const event = createInvitationAcceptedEvent(mockInvitation, {});
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
+      await listener.handle(event);
 
-      // Assert
-      expect(result).toBe(true);
       expect(mockPasswordService.create).not.toHaveBeenCalled();
     });
 
     it('should handle undefined data payload', async () => {
-      // Arrange
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: undefined,
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+      const event = createInvitationAcceptedEvent(mockInvitation, undefined);
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
-      // Act
-      const result = await listener.listen(event);
-
-      // Assert
-      expect(result).toBe(true);
+      await listener.handle(event);
     });
   });
 
   describe('Custom listener override', () => {
     it('should allow custom listener service to be used', async () => {
-      // Arrange - Create a custom listener class with overridden behavior
       @Injectable()
-      class CustomInvitationUserAcceptanceListener {
-        async listen(
-          _event: EventAsyncInterface<
-            TypedInvitationAcceptedEventPayloadInterface,
-            boolean
-          >,
-        ): Promise<boolean> {
-          // Custom behavior - always return true for testing
-          return true;
-        }
+      @EventsHandler(InvitationAcceptedEvent)
+      class CustomInvitationUserAcceptanceListener
+        implements IEventHandler<InvitationAcceptedEvent>
+      {
+        async handle(_event: InvitationAcceptedEvent): Promise<void> {}
       }
 
       const customModule = await Test.createTestingModule({
@@ -600,41 +435,27 @@ describe('InvitationUserAcceptanceListener', () => {
             provide: ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
             useValue: mockSettings,
           },
-          // Provide custom listener via useClass
+          CustomInvitationUserAcceptanceListener,
           {
             provide: INVITATION_ACCEPTANCE_LISTENER_TOKEN,
-            useClass: CustomInvitationUserAcceptanceListener,
+            useExisting: CustomInvitationUserAcceptanceListener,
           },
         ],
       }).compile();
 
-      const customListener = customModule.get(
-        INVITATION_ACCEPTANCE_LISTENER_TOKEN,
-      );
+      const customListener = customModule.get<
+        IEventHandler<InvitationAcceptedEvent>
+      >(INVITATION_ACCEPTANCE_LISTENER_TOKEN);
 
-      const event = {
-        key: 'InvitationAcceptedEventAsync',
-        expectsReturnOf: Promise,
-        payload: {
-          invitation: mockInvitation,
-          data: {
-            password: 'Test123!',
-          },
-        },
-      } as unknown as EventAsyncInterface<
-        TypedInvitationAcceptedEventPayloadInterface,
-        boolean
-      >;
+      const event = createInvitationAcceptedEvent(mockInvitation, {
+        password: 'Test123!',
+      });
 
-      // Act
-      const result = await customListener.listen(event);
+      await customListener.handle(event);
 
-      // Assert
-      expect(result).toBe(true);
       expect(customListener).toBeInstanceOf(
         CustomInvitationUserAcceptanceListener,
       );
-      // Custom listener should not have called any services
       expect(mockUserPortService.byId).not.toHaveBeenCalled();
     });
   });

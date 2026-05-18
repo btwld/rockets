@@ -14,6 +14,7 @@ import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth
 import { RocketsAuthUserMetadataEntityInterface } from '../../../interfaces/rockets-auth-user-metadata-entity.interface';
 import { SaveUserMetadataCommand } from '../impl/save-user-metadata.command';
 import { GetUserMetadataQuery } from '../../queries/impl/get-user-metadata.query';
+import { userAggregateToEntity } from '../../../../../shared/utils/aggregate-mappers';
 
 @CommandHandler(UpdateUserCommand)
 export class UpdateUserHandler implements ICommandHandler<UpdateUserCommand> {
@@ -34,8 +35,6 @@ export class UpdateUserHandler implements ICommandHandler<UpdateUserCommand> {
       User
     >(new UpstreamUpdateUserCommand(ctx, id, userData));
 
-    const plain = userAggregate.toPlain();
-
     let metadata: RocketsAuthUserEntityInterface['userMetadata'];
     if (userMetadata && Object.keys(userMetadata).length > 0) {
       metadata = await this.commandBus.execute(
@@ -50,8 +49,8 @@ export class UpdateUserHandler implements ICommandHandler<UpdateUserCommand> {
     }
 
     return {
-      ...plain,
+      ...userAggregateToEntity(userAggregate),
       userMetadata: metadata,
-    } as RocketsAuthUserEntityInterface;
+    };
   }
 }

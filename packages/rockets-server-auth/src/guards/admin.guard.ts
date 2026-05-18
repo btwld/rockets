@@ -9,12 +9,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
-import { RoleEntityInterface } from '@concepta/nestjs-common';
+import { RoleEntityInterface } from '@concepta/nestjs-role';
 import { IsAssignedRoleQuery } from '@concepta/nestjs-role';
 import { RocketsAuthSettingsInterface } from '../shared/interfaces/rockets-auth-settings.interface';
 import { RocketsEntity } from '../shared/constants/repository-entity-keys.constants';
 import { ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from '../shared/constants/rockets-auth.constants';
-import { createRepositoryContext } from '../shared/utils/repository-context.helper';
 import { logAndGetErrorDetails } from '../shared/utils/error-logging.helper';
 import { RocketsGetRoleByNameQuery } from '../domains/role/application/queries/impl/rockets-get-role-by-name.query';
 
@@ -50,9 +49,8 @@ export class AdminGuard implements CanActivate {
         throw new ForbiddenException();
       }
 
-      const ctx = createRepositoryContext(RocketsEntity.userRole);
       return await this.queryBus.execute<IsAssignedRoleQuery, boolean>(
-        new IsAssignedRoleQuery(ctx, role.id, user.id),
+        new IsAssignedRoleQuery({}, RocketsEntity.userRole, role.id, user.id),
       );
     } catch (error) {
       if (error instanceof ForbiddenException) {

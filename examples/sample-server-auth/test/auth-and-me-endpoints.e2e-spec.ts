@@ -4,7 +4,10 @@ import { CommandBus } from '@nestjs/cqrs';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ExceptionsFilter } from '@bitwild/rockets';
 import { CreateRoleCommand, AssignRoleCommand } from '@concepta/nestjs-role';
-import { USER_ROLE_ENTITY_KEY } from '@bitwild/rockets-auth';
+import {
+  ROLE_CRUD_ENTITY_KEY,
+  USER_ROLE_ENTITY_KEY,
+} from '@bitwild/rockets-auth';
 import { AppModule } from '../src/app.module';
 
 /**
@@ -107,9 +110,11 @@ describe('Auth & Me Endpoints (e2e)', () => {
     });
 
     it('POST /token/refresh — refreshes access token', async () => {
+      // Endpoint expects `refreshToken` in the request body, not in the
+      // Authorization header — the `RefreshGuard` reads `body.refreshToken`.
       const res = await request(app.getHttpServer())
         .post('/token/refresh')
-        .set('Authorization', `Bearer ${refreshToken}`)
+        .send({ refreshToken })
         .expect(200);
 
       expect(res.body).toHaveProperty('accessToken');

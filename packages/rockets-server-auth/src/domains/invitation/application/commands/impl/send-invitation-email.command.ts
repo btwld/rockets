@@ -1,57 +1,60 @@
 import { PlainLiteralObject } from '@nestjs/common';
 import {
-  SendInvitationEmailCommandInterface,
-  SendAcceptedEmailCommandInterface,
+  SendInvitationNotificationCommandInterface,
+  SendAcceptedNotificationCommandInterface,
 } from '@concepta/nestjs-invitation';
 import type { InvitationEventPayloadInterface } from '@concepta/nestjs-invitation';
-import type { InvitationEmailTemplateSettings } from '@concepta/nestjs-invitation';
 
 /**
  * Command to send an invitation email to a user.
  *
- * Implements the `SendInvitationEmailCommandInterface` required by
- * `InvitationEmailPort` so it can be passed as `ports.email.sendInvitationCommand`.
+ * Implements the v8 `SendInvitationNotificationCommandInterface` required by
+ * `InvitationNotificationPort` so it can be passed as
+ * `ports.notification.sendInvitationCommand`.
+ *
+ * v8 simplification: the upstream interface no longer carries `from`,
+ * `baseUrl`, or `template` — those resolve inside the handler from
+ * `RocketsAuthSettingsInterface.email`.
  */
 export class SendInvitationEmailCommand
-  implements SendInvitationEmailCommandInterface
+  implements SendInvitationNotificationCommandInterface
 {
   readonly ctx: PlainLiteralObject;
   readonly invitation: InvitationEventPayloadInterface;
   readonly passcode: string;
   readonly tokenExp: Date;
-  readonly from: string;
-  readonly baseUrl: string;
-  readonly template: InvitationEmailTemplateSettings;
 
-  constructor(params: SendInvitationEmailCommand) {
+  constructor(params: {
+    ctx: PlainLiteralObject;
+    invitation: InvitationEventPayloadInterface;
+    passcode: string;
+    tokenExp: Date;
+  }) {
     this.ctx = params.ctx;
     this.invitation = params.invitation;
     this.passcode = params.passcode;
     this.tokenExp = params.tokenExp;
-    this.from = params.from;
-    this.baseUrl = params.baseUrl;
-    this.template = params.template;
   }
 }
 
 /**
  * Command to send an "invitation accepted" confirmation email.
  *
- * Implements the `SendAcceptedEmailCommandInterface` required by
- * `InvitationEmailPort` so it can be passed as `ports.email.sendAcceptedCommand`.
+ * Implements the v8 `SendAcceptedNotificationCommandInterface` required by
+ * `InvitationNotificationPort` so it can be passed as
+ * `ports.notification.sendAcceptedCommand`.
  */
 export class SendAcceptedEmailCommand
-  implements SendAcceptedEmailCommandInterface
+  implements SendAcceptedNotificationCommandInterface
 {
   readonly ctx: PlainLiteralObject;
   readonly invitation: InvitationEventPayloadInterface;
-  readonly from: string;
-  readonly template: InvitationEmailTemplateSettings;
 
-  constructor(params: SendAcceptedEmailCommand) {
+  constructor(params: {
+    ctx: PlainLiteralObject;
+    invitation: InvitationEventPayloadInterface;
+  }) {
     this.ctx = params.ctx;
     this.invitation = params.invitation;
-    this.from = params.from;
-    this.template = params.template;
   }
 }

@@ -6,15 +6,15 @@ import { UserMetadataDto } from './user-metadata.dto';
 
 /**
  * User Create DTO
- * 
+ *
  * Extends RocketsAuthUserCreateDto with custom userMetadata field.
  * Overrides the base userMetadata to use project-specific UserMetadataDto.
  */
 export class UserCreateDto extends RocketsAuthUserCreateDto {
-    @ApiPropertyOptional({ type: UserMetadataDto, description: 'User metadata' })
-    @Expose()
-    @IsOptional()
-    @ValidateNested()
-    @Type(() => UserMetadataDto)
-    userMetadata?: UserMetadataDto;
+  @ApiPropertyOptional({ type: UserMetadataDto, description: 'User metadata' })
+  @Expose()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UserMetadataDto)
+  userMetadata?: UserMetadataDto;
 }

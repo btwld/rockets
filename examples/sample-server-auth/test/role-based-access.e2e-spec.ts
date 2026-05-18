@@ -1,39 +1,69 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+} from '@nestjs/common';
 import request from 'supertest';
+import { CommandBus } from '@nestjs/cqrs';
 import { AppModule } from '../src/app.module';
-import { HttpAdapterHost } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ExceptionsFilter } from '@bitwild/rockets';
-import { RoleModelService, RoleService } from '@concepta/nestjs-role';
+import { CreateRoleCommand, AssignRoleCommand } from '@concepta/nestjs-role';
+import {
+  ROLE_CRUD_ENTITY_KEY,
+  USER_ROLE_ENTITY_KEY,
+} from '@bitwild/rockets-auth';
 import { acRules } from '../src/app.acl';
 
-describe('Role-Based Access Control (e2e)', () => {
-  
-  // Test ACL rules directly
-  describe('ACL Rules Configuration', () => {
-    it('should verify manager cannot delete pets', () => {
-      const permission = acRules.can('manager').deleteAny('pet');
-      expect(permission.granted).toBe(false);
-    });
+// `AppContextHost.from()` only accepts `AppContextHost | null | undefined | {}`.
+// `createRepositoryContext({entity: ...})` returns a non-empty plain object,
+// which the upstream context validator rejects with "Expected AppContextHost
+// or nullish value, got object". Use `null` to match the bootstrap pattern in
+// `main.ts` and the sibling `auth-and-me-endpoints.e2e-spec.ts`.
+const roleCrudContext = null;
+const userRoleAssignmentContext = null;
 
-    it('should verify manager can create, read, and update pets', () => {
-      expect(acRules.can('manager').createAny('pet').granted).toBe(true);
-      expect(acRules.can('manager').readAny('pet').granted).toBe(true);
-      expect(acRules.can('manager').updateAny('pet').granted).toBe(true);
-    });
+@Catch()
+class LoggingExceptionsFilter implements ExceptionFilter {
+  constructor(
+    private readonly adapterHost: HttpAdapterHost,
+    private readonly delegate: ExceptionsFilter,
+  ) {}
 
-    it('should verify admin can delete pets', () => {
-      expect(acRules.can('admin').deleteAny('pet').granted).toBe(true);
-    });
+  catch(exception: unknown, host: ArgumentsHost): void {
+    // eslint-disable-next-line no-console
+    console.error('[e2e]', exception);
+    this.delegate.catch(exception as never, host);
+  }
+}
 
-    it('should verify user can only delete own pets', () => {
-      expect(acRules.can('user').deleteOwn('pet').granted).toBe(true);
-      expect(acRules.can('user').deleteAny('pet').granted).toBe(false);
-    });
+describe('ACL rules (static)', () => {
+  it('should verify manager cannot delete pets', () => {
+    const permission = acRules.can('manager').deleteAny('pet');
+    expect(permission.granted).toBe(false);
   });
+
+  it('should verify manager can create, read, and update pets', () => {
+    expect(acRules.can('manager').createAny('pet').granted).toBe(true);
+    expect(acRules.can('manager').readAny('pet').granted).toBe(true);
+    expect(acRules.can('manager').updateAny('pet').granted).toBe(true);
+  });
+
+  it('should verify admin can delete pets', () => {
+    expect(acRules.can('admin').deleteAny('pet').granted).toBe(true);
+  });
+
+  it('should verify user can only delete own pets', () => {
+    expect(acRules.can('user').deleteOwn('pet').granted).toBe(true);
+    expect(acRules.can('user').deleteAny('pet').granted).toBe(false);
+  });
+});
+
+describe('Role-Based Access Control (e2e)', () => {
   let app: INestApplication;
-  let roleModelService: RoleModelService;
-  let roleService: RoleService;
+  let commandBus: CommandBus;
   let adminToken: string;
   let adminUserId: string;
   let regularUserToken: string;
@@ -44,37 +74,51 @@ describe('Role-Based Access Control (e2e)', () => {
   let regularUserPetId: string;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    // Full bootstrap (same as production): TestingModule fails to wire CommandBus/ModuleRef here.
+    app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'log'],
+    });
 
-    app = moduleFixture.createNestApplication();
-    
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-    
-    const exceptionsFilter = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
-    
-    roleModelService = app.get(RoleModelService);
-    roleService = app.get(RoleService);
-    
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true }),
+    );
+
+    const httpAdapterHost = app.get(HttpAdapterHost);
+    app.useGlobalFilters(
+      new LoggingExceptionsFilter(
+        httpAdapterHost,
+        new ExceptionsFilter(httpAdapterHost),
+      ),
+    );
+
     await app.init();
 
-    // Create roles
-    const adminRole = await roleModelService.create({
-      name: 'admin',
-      description: 'Administrator role',
-    });
+    commandBus = app.get(CommandBus);
 
-    await roleModelService.create({
-      name: 'manager',
-      description: 'Manager role with limited permissions (cannot delete)',
-    });
+    // Create roles (nestjs-role v8 CQRS)
+    const adminRoleCreated = await commandBus.execute(
+      new CreateRoleCommand(roleCrudContext, ROLE_CRUD_ENTITY_KEY, {
+        name: 'admin',
+        description: 'Administrator role',
+      }),
+    );
+    const adminRoleId = (
+      adminRoleCreated as { toPlain: () => { id: string } }
+    ).toPlain().id;
 
-    await roleModelService.create({
-      name: 'user',
-      description: 'Default role for authenticated users',
-    });
+    await commandBus.execute(
+      new CreateRoleCommand(roleCrudContext, ROLE_CRUD_ENTITY_KEY, {
+        name: 'manager',
+        description: 'Manager role with limited permissions (cannot delete)',
+      }),
+    );
+
+    await commandBus.execute(
+      new CreateRoleCommand(roleCrudContext, ROLE_CRUD_ENTITY_KEY, {
+        name: 'user',
+        description: 'Default role for authenticated users',
+      }),
+    );
 
     // Create admin user
     const adminSignupRes = await request(app.getHttpServer())
@@ -90,15 +134,20 @@ describe('Role-Based Access Control (e2e)', () => {
     adminUserId = adminSignupRes.body.id;
 
     // Assign admin role to admin user
-    await roleService.assignRole({
-      assignment: 'user',
-      role: { id: adminRole.id },
-      assignee: { id: adminUserId },
-    });
+    await commandBus.execute(
+      new AssignRoleCommand(
+        userRoleAssignmentContext,
+        USER_ROLE_ENTITY_KEY,
+        adminRoleId,
+        adminUserId,
+      ),
+    );
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app != null) {
+      await app.close();
+    }
   });
 
   describe('Admin User', () => {
@@ -158,7 +207,7 @@ describe('Role-Based Access Control (e2e)', () => {
       await request(app.getHttpServer())
         .delete(`/pets/${adminPetId}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+        .expect(204);
     });
   });
 
@@ -217,7 +266,9 @@ describe('Role-Based Access Control (e2e)', () => {
 
       expect(Array.isArray(response.body.data)).toBe(true);
       // User should only see their own pets
-      const userPets = response.body.data.filter((pet: { userId: string }) => pet.userId === regularUserId);
+      const userPets = response.body.data.filter(
+        (pet: { userId: string }) => pet.userId === regularUserId,
+      );
       expect(userPets.length).toBeGreaterThan(0);
     });
 
@@ -236,7 +287,7 @@ describe('Role-Based Access Control (e2e)', () => {
       await request(app.getHttpServer())
         .delete(`/pets/${regularUserPetId}`)
         .set('Authorization', `Bearer ${regularUserToken}`)
-        .expect(200);
+        .expect(204);
     });
 
     it('should NOT be able to access other users pets', async () => {
@@ -265,7 +316,7 @@ describe('Role-Based Access Control (e2e)', () => {
       await request(app.getHttpServer())
         .delete(`/pets/${adminOnlyPetId}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+        .expect(204);
     });
   });
 
@@ -291,7 +342,9 @@ describe('Role-Based Access Control (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const managerRole = rolesResponse.body.data.find((role: { name: string; id: string }) => role.name === 'manager');
+      const managerRole = rolesResponse.body.data.find(
+        (role: { name: string; id: string }) => role.name === 'manager',
+      );
       expect(managerRole).toBeDefined();
 
       // Assign manager role
@@ -374,7 +427,7 @@ describe('Role-Based Access Control (e2e)', () => {
       await request(app.getHttpServer())
         .delete(`/pets/${testPetId}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+        .expect(204);
     });
 
     it('should NOT be able to delete pets as manager (even own pets)', async () => {
@@ -398,20 +451,14 @@ describe('Role-Based Access Control (e2e)', () => {
       const deleteResponse = await request(app.getHttpServer())
         .delete(`/pets/${testPetId}`)
         .set('Authorization', `Bearer ${managerToken}`);
-      
-      // Log the response for debugging
-      console.log('\nManager Delete Attempt:');
-      console.log('Status:', deleteResponse.status);
-      console.log('Body:', deleteResponse.body);
-      
-      // The expectation here depends on role precedence logic:
-      // - If roles are additive (OR logic), manager with 'user' role can deleteOwn -> expect 200
-      // - If roles are restrictive (AND logic), manager role blocks delete -> expect 403
-      // Current system appears to use additive logic, so we expect 200
-      expect(deleteResponse.status).toBe(200);
 
-      // Since manager can delete own pets (due to 'user' role), no cleanup needed
-      // This is actually correct behavior given the current role design
+      // Manager role has no delete grant (see app.acl); delete is denied before handler.
+      expect(deleteResponse.status).toBe(403);
+
+      await request(app.getHttpServer())
+        .delete(`/pets/${testPetId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(204);
     });
 
     it('should NOT be able to delete other users pets as manager', async () => {
@@ -419,10 +466,7 @@ describe('Role-Based Access Control (e2e)', () => {
       const deleteResponse = await request(app.getHttpServer())
         .delete(`/pets/${adminPetId}`)
         .set('Authorization', `Bearer ${managerToken}`);
-      
-      console.log('\nManager Delete Other User Pet Attempt:');
-      console.log('Status:', deleteResponse.status);
-      
+
       // Manager should NOT be able to delete pets from other users
       expect(deleteResponse.status).toBe(403);
     });
@@ -430,9 +474,7 @@ describe('Role-Based Access Control (e2e)', () => {
 
   describe('Unauthenticated Access', () => {
     it('should NOT access protected endpoints without token', async () => {
-      await request(app.getHttpServer())
-        .get('/pets')
-        .expect(401);
+      await request(app.getHttpServer()).get('/pets').expect(401);
     });
 
     it('should NOT create pets without authentication', async () => {
@@ -447,4 +489,3 @@ describe('Role-Based Access Control (e2e)', () => {
     });
   });
 });
-

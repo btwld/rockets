@@ -1,4 +1,5 @@
-import { ReferenceAssignment, OtpInterface } from '@concepta/nestjs-common';
+import { ReferenceAssignment } from '@concepta/nestjs-common';
+import { OtpInterface } from '@concepta/nestjs-otp';
 
 export class RocketsClearOtpsCommand {
   constructor(

@@ -1,8 +1,8 @@
-import { 
+import {
   RocketsAuthUserEntityInterface,
   RocketsAuthUserInterface,
   RocketsAuthUserCreatableInterface,
-  RocketsAuthUserUpdatableInterface 
+  RocketsAuthUserUpdatableInterface,
 } from '@bitwild/rockets-auth';
 
 export interface UserEntityInterface extends RocketsAuthUserEntityInterface {

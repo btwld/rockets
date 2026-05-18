@@ -30,7 +30,7 @@ export class UserEntity extends UserSqliteEntity {
 
   @OneToMany(() => UserOtpEntity, (userOtp) => userOtp.assignee)
   userOtps?: UserOtpEntity[];
-  
+
   @OneToMany(() => FederatedEntity, (federated) => federated.assignee)
   federatedAccounts?: FederatedEntity[];
 

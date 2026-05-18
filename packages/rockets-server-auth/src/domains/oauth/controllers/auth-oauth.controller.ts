@@ -1,3 +1,35 @@
+// TODO(upstream: concepta/nestjs-auth-apple|github|google) — re-enable this
+// controller when v8 OAuth provider packages ship.
+//
+// As of @concepta/nestjs-authentication@8.0.0-alpha.5, the v7 OAuth provider
+// packages (`nestjs-auth-apple`, `nestjs-auth-github`, `nestjs-auth-google`)
+// have HARD `dependencies` on `@concepta/nestjs-authentication@^7.0.0-alpha.10`.
+// Installing them alongside v8 produces two parallel `nestjs-authentication`
+// trees in node_modules with separate guard/strategy registries, so the v8
+// `AuthRouterGuard` cannot dispatch to v7-registered providers at runtime.
+//
+// Until upstream publishes v8 of those three OAuth provider packages, the
+// entire OAuth flow is parked. The original implementation is preserved
+// below in a block comment for fast restore once the upstream blocker
+// clears. To re-enable:
+//
+//  1. Restore the imports + class body below.
+//  2. Update the imports: replace `IssueTokenService`/`IssueTokenServiceInterface`
+//     with the v8 equivalents (the v8 module dispatches via
+//     `IssueAccessTokenCommand` / `IssueAuthenticatedResponseCommand`).
+//     Replace `AuthenticationJwtResponseDto` with `AuthenticationResponseDto`.
+//     Source `AuthenticatedUserInterface` from
+//     `@concepta/nestjs-authentication` (it lives there in v8) instead of
+//     `@concepta/nestjs-common`.
+//     `AuthRouterGuard` is exported from `@concepta/nestjs-authentication` v8.
+//  3. Re-add `AuthOAuthController` to `module-definition`'s controllers list.
+//  4. Re-export from `domains/oauth/index.ts`.
+//  5. Restore the controller in `examples/sample-server-auth` if needed.
+
+export {};
+
+/* original implementation kept verbatim for restoration ---
+
 import { Controller, Inject, Get, UseGuards, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiTags, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import {
@@ -13,39 +45,16 @@ import {
 } from '@concepta/nestjs-authentication';
 import { AuthRouterGuard } from '@concepta/nestjs-auth-router';
 
-/**
- * OAuth controller following the OpenAPI specification
- *
- * This controller handles OAuth flows according to the specification:
- * - /oauth/authorize: Redirects to external OAuth provider
- * - /oauth/callback: Handles OAuth callback and errors
- *
- * Flow:
- * - Client calls /oauth/authorize?provider=google&scopes=email userMetadata to be redirected to the provider's login page
- * - After authorization, the user is redirected to the callback URL defined in the provider config
- * - The /oauth/callback URL is called with the authorization code or error parameters
- * - The code is used to get the access token and user userMetadata from the provider
- * - The user userMetadata is used to create a new user or return the existing user from federated module
- * - The user is authenticated and a token is issued
- * - The token is returned to the client
- *
- * Supported providers: google, apple, github (configurable)
- */
 @Controller('oauth')
 @UseGuards(AuthRouterGuard)
 @AuthPublic()
 @ApiTags('Authentication')
 export class AuthOAuthController {
   constructor(
-    // TODO: define where to get it from, a issue token only for oauth?
     @Inject(IssueTokenService)
     private issueTokenService: IssueTokenServiceInterface,
   ) {}
 
-  /**
-   * OAuth Authorize - redirects to provider-specific OAuth login
-   * Matches /oauth/authorize endpoint from OpenAPI spec
-   */
   @ApiResponse({
     status: 302,
     description:
@@ -54,10 +63,7 @@ export class AuthOAuthController {
       Location: {
         description:
           'URL to which the user agent should redirect (or open in a browser for mobile apps).',
-        schema: {
-          type: 'string',
-          format: 'uri',
-        },
+        schema: { type: 'string', format: 'uri' },
       },
     },
   })
@@ -67,33 +73,19 @@ export class AuthOAuthController {
       'Name of the OAuth provider. Supported providers: google, github, apple',
     example: 'google',
     required: true,
-    schema: {
-      type: 'string',
-      enum: ['google', 'github', 'apple'],
-    },
+    schema: { type: 'string', enum: ['google', 'github', 'apple'] },
   })
   @ApiQuery({
     name: 'scopes',
     required: true,
     description:
-      'Space separated list of OAuth scopes to pass on to the provider. Common scopes: email, userMetadata, openid',
-    example: 'email,userMetadata',
-    schema: {
-      type: 'string',
-      pattern: '[^ ]+( +[^ ]+)*',
-    },
+      'Space-separated list of OAuth scopes to pass on to the provider. Common scopes: email, profile, openid.',
+    example: 'email profile',
+    schema: { type: 'string', pattern: '[^ ]+( +[^ ]+)*' },
   })
   @Get('authorize')
-  authorize(): void {
-    // The OAuthGuard will handle routing to the appropriate provider guard
-    // based on the provider query parameter and redirect to the OAuth provider
-    return;
-  }
+  authorize(): void { return; }
 
-  /**
-   * OAuth Callback - handles the OAuth callback from the provider
-   * Matches /oauth/callback endpoint from OpenAPI spec
-   */
   @ApiOkResponse({
     type: AuthenticationJwtResponseDto,
     description: 'DTO containing an access token and a refresh token.',
@@ -105,10 +97,6 @@ export class AuthOAuthController {
     return this.issueTokenService.responsePayload(user.id);
   }
 
-  /**
-   * OAuth Callback POST - handles the OAuth callback from the provider (POST method)
-   * Matches /oauth/callback POST endpoint from OpenAPI spec
-   */
   @ApiOkResponse({
     type: AuthenticationJwtResponseDto,
     description: 'DTO containing an access token and a refresh token.',
@@ -120,3 +108,4 @@ export class AuthOAuthController {
     return this.issueTokenService.responsePayload(user.id);
   }
 }
+--- end original implementation */

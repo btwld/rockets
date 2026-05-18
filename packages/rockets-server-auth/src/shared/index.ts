@@ -16,19 +16,15 @@ export {
   RocketsAuthOptionsExtrasInterface,
   UserMetadataConfigInterface,
 } from './interfaces/rockets-auth-options-extras.interface';
-export { RocketsAuthEntitiesOptionsInterface } from './interfaces/rockets-auth-entities-options.interface';
 export type {
   RocketsAuthRepositoryPersistenceEntities,
   RocketsAuthRepositoryPersistenceOptions,
 } from './interfaces/rockets-auth-repository-persistence.interface';
 export { RocketsAuthSettingsInterface } from './interfaces/rockets-auth-settings.interface';
-export { RocketsAuthUserModelServiceInterface } from './interfaces/rockets-auth-user-model-service.interface';
-export { RocketsAuthNotificationServiceInterface } from './interfaces/rockets-auth-notification.service.interface';
 
 export {
   RocketsAuthUserPortService,
   ROCKETS_AUTH_USER_PORT_TOKEN,
-  ROCKETS_AUTH_USER_PASSWORD_PORT_TOKEN,
 } from './ports/rockets-auth-user-port.service';
 export {
   RocketsAuthOtpPortService,

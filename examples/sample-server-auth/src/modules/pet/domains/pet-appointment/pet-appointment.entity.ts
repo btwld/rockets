@@ -1,11 +1,20 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { CommonSqliteEntity } from '@concepta/nestjs-typeorm-ext';
-import { PetAppointmentEntityInterface, PetAppointmentStatus } from './pet-appointment.interface';
-import { PetEntity } from '../pet';
+import {
+  PetAppointmentEntityInterface,
+  PetAppointmentStatus,
+} from './pet-appointment.interface';
+import type { PetEntity } from '../pet/pet.entity';
 
 /**
  * Pet Appointment Entity
- * 
+ *
  * Tracks appointment records for pets including:
  * - Appointment date and type (checkup, surgery, etc.)
  * - Veterinarian and reason for visit
@@ -13,7 +22,10 @@ import { PetEntity } from '../pet';
  * - Diagnosis and treatment notes
  */
 @Entity('pet_appointments')
-export class PetAppointmentEntity extends CommonSqliteEntity implements PetAppointmentEntityInterface {
+export class PetAppointmentEntity
+  extends CommonSqliteEntity
+  implements PetAppointmentEntityInterface
+{
   @PrimaryGeneratedColumn('uuid')
   declare id: string;
 
@@ -49,7 +61,7 @@ export class PetAppointmentEntity extends CommonSqliteEntity implements PetAppoi
   @Column({ type: 'text', nullable: true })
   treatment?: string;
 
-  @ManyToOne(() => PetEntity, (pet) => pet.appointments)
+  @ManyToOne('PetEntity', 'appointments')
   @JoinColumn({ name: 'petId' })
   pet?: PetEntity;
 }

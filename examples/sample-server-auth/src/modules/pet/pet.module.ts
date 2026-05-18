@@ -1,120 +1,22 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmExtModule } from '@concepta/nestjs-typeorm-ext';
-import { CrudRelationRegistry } from '@concepta/nestjs-crud';
-
-// Pet Domain
-import {
-  PetEntity,
-  PetModelService,
-  PetTypeOrmCrudAdapter,
-  PetCrudService,
-  PetAccessQueryService,
-  PetCrudController,
-} from './domains/pet';
-
-// Pet Vaccination Domain
-import {
-  PetVaccinationEntity,
-  PetVaccinationTypeOrmCrudAdapter,
-  PetVaccinationCrudService,
-  PetVaccinationCrudController,
-  PetVaccinationAccessQueryService,
-} from './domains/pet-vaccination';
-
-// Pet Appointment Domain
-import {
-  PetAppointmentEntity,
-  PetAppointmentTypeOrmCrudAdapter,
-  PetAppointmentCrudService,
-  PetAppointmentCrudController,
-  PetAppointmentAccessQueryService,
-} from './domains/pet-appointment';
-
-// Constants
-import { PET_MODULE_PET_ENTITY_KEY } from './constants/pet.constants';
 
 /**
- * Pet Module
- * 
- * Provides pet-related functionality including:
- * - Pet entity and repository configuration
- * - Pet vaccination and appointment tracking
- * - Pet model service for business logic
- * - CRUD operations with access control
- * - Relationship queries for vaccinations and appointments
- * - Separate CRUD controllers for pets, vaccinations, and appointments
- * - TypeORM and TypeOrmExt integration
+ * Pet feature wrapper.
+ *
+ * `PetModelService` and `JwtAuthenticatedUserLocal` are declared on the
+ * pet resource bundle in `pet.resource.ts → providers: [...]` because they
+ * inject `@InjectDynamicRepository(PetEntity)` and need to share the same
+ * module scope as the dynamic-repository registration produced by
+ * `defineResource({ entity: PetEntity })`.
+ *
+ * `PetAccessQueryService` is registered by `AccessControlModule` itself —
+ * the v7 access-control module adds every entry of
+ * `accessControl.queryServices: [...]` to its own provider list, and
+ * `AccessControlGuard` resolves it via strict `moduleRef.resolve()`
+ * against that same scope.
+ *
+ * Kept as an empty placeholder so existing `imports: [PetModule]` entries
+ * (`app.module.ts`, `accessControl.imports`) keep type-checking.
  */
-@Module({
-  imports: [
-    // Register Pet entities with TypeORM including related entities
-    TypeOrmModule.forFeature([
-      PetEntity,
-      PetVaccinationEntity,
-      PetAppointmentEntity,
-    ]),
-    
-    // Register Pet entity with TypeOrmExt for enhanced repository features
-    TypeOrmExtModule.forFeature({
-      [PET_MODULE_PET_ENTITY_KEY]: {
-        entity: PetEntity,
-      },
-    }),
-  ],
-  controllers: [
-    PetCrudController,
-    PetVaccinationCrudController,
-    PetAppointmentCrudController,
-  ],
-  providers: [
-    // Database adapters
-    PetTypeOrmCrudAdapter,
-    PetVaccinationTypeOrmCrudAdapter,
-    PetAppointmentTypeOrmCrudAdapter,
-    
-    // Business logic service
-    PetModelService,
-    
-    // CRUD operations services
-    PetCrudService,
-    PetVaccinationCrudService,
-    PetAppointmentCrudService,
-    
-    // Access control services
-    PetAccessQueryService,
-    PetVaccinationAccessQueryService,
-    PetAppointmentAccessQueryService,
-    
-    // Relation registry for CrudRelations
-    {
-      provide: 'PET_RELATION_REGISTRY',
-      inject: [PetVaccinationCrudService, PetAppointmentCrudService],
-      useFactory(
-        vaccinationService: PetVaccinationCrudService,
-        appointmentService: PetAppointmentCrudService,
-      ) {
-        const registry = new CrudRelationRegistry<
-          PetEntity,
-          [PetVaccinationEntity, PetAppointmentEntity]
-        >();
-        registry.register(vaccinationService);
-        registry.register(appointmentService);
-        return registry;
-      },
-    },
-  ],
-  exports: [
-    // Export model service for use in other modules
-    PetModelService,
-    
-    // Export CRUD adapters for advanced use cases
-    PetTypeOrmCrudAdapter,
-    PetVaccinationTypeOrmCrudAdapter,
-    PetAppointmentTypeOrmCrudAdapter,
-    
-    // Export TypeORM module for relationship entities
-    TypeOrmModule,
-  ],
-})
+@Module({})
 export class PetModule {}

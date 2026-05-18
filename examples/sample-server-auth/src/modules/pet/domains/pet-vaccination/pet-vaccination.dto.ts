@@ -1,7 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-import { IsString, IsDate, IsOptional, IsNotEmpty, MaxLength } from 'class-validator';
-import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
+import {
+  IsString,
+  IsDate,
+  IsOptional,
+  IsNotEmpty,
+  MaxLength,
+} from 'class-validator';
+import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
 
 /**
  * Pet Vaccination DTO
@@ -284,4 +290,3 @@ export class PetVaccinationPaginatedDto extends CrudResponsePaginatedDto<PetVacc
   @Type(() => PetVaccinationDto)
   declare data: PetVaccinationDto[];
 }
-

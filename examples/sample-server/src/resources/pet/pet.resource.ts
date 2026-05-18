@@ -9,8 +9,8 @@ import { PetTagEntity } from './pet-tag.entity';
 import { TagEntity } from '../tag/tag.entity';
 import { PetTagCreateDto, PetTagResponseDto } from './pet-tag.dto';
 import { PetCreatedEventHook } from '../../events/pet-created-event.hook';
-import { PetCreateHandler } from './pet-create.handler';
-import { PetTagCreateHandler } from './pet-tag-create.handler';
+import { PetUniqueRefHook } from './pet-unique-ref.hook';
+import { PetTagTagIdExistsHook } from './pet-tag-tag-id-exists.hook';
 
 const PetOwnerStamp = OwnerStampHook.for(PetEntity);
 const PetAuditLogHook = AuditLogHook.for(PetEntity);
@@ -23,6 +23,8 @@ const PetAuditLogHook = AuditLogHook.for(PetEntity);
  * - {@link PetOwnerOrSharedHook} — `beforeFindAndCount` / `beforeFindOne`
  *   broaden read scope to "owner OR shared user" while keeping writes
  *   strict-owner.
+ * - {@link PetUniqueRefHook} — `beforeCreate` rejects duplicate
+ *   `uniqueRef` with `409 Conflict` (no custom create handler).
  * - {@link AuditLogHook} — `afterCreate` / `afterUpdate` / `afterSoftDelete`
  *   write to the audit trail.
  * - {@link PetCreatedEventHook} — `afterCreate` publishes
@@ -34,6 +36,7 @@ const PetAuditLogHook = AuditLogHook.for(PetEntity);
  * op, and auto-injects a `PathScopeHook` that filters reads by `petId`
  * and stamps the FK on creates — eliminating the per-junction
  * boilerplate that previously lived in a separate `pet-tag.resource.ts`.
+ * {@link PetTagTagIdExistsHook} validates `tagId` on create (no custom handler).
  */
 export const petResource = defineResource({
   entity: PetEntity,
@@ -45,6 +48,7 @@ export const petResource = defineResource({
   hooks: [
     PetOwnerStamp,
     PetOwnerOrSharedHook,
+    PetUniqueRefHook,
     PetAuditLogHook,
     PetCreatedEventHook,
   ],
@@ -54,7 +58,6 @@ export const petResource = defineResource({
     create: {
       body: PetCreateDto,
       response: PetResponseDto,
-      handler: PetCreateHandler,
     },
     update: { body: PetUpdateDto, response: PetResponseDto },
     delete: { soft: true, returnDeleted: true },
@@ -68,6 +71,7 @@ export const petResource = defineResource({
     // the `entity` field — no need to repeat it as a generic.
     petTags: defineSubResource({
       entity: PetTagEntity,
+      hooks: [PetTagTagIdExistsHook],
       tags: ['Pet Tags'],
       urlSegment: 'tags',
       // `parentOwnerColumn` is required: the auto guard checks that
@@ -90,7 +94,6 @@ export const petResource = defineResource({
         create: {
           body: PetTagCreateDto,
           response: PetTagResponseDto,
-          handler: PetTagCreateHandler,
         },
         delete: {},
       },
