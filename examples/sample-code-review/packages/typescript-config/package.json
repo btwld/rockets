@@ -1,0 +1,10 @@
+{
+  "name": "typescript-config",
+  "version": "1.0.0",
+  "description": "Shared TypeScript configs for sample-code-review (aligned with rockets-starter).",
+  "private": true,
+  "files": [
+    "base.json",
+    "nextjs.json"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "description": "sample-code-review Web — React UI (Firebase + GitHub); talks to local api :3001.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "dev": "vite --port 3000",
+    "preview": "vite preview --port 3000",
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"lint: configure eslint when needed\"",
+    "clean": "rm -rf dist",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "firebase": "^11.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.11"
+  }
+}

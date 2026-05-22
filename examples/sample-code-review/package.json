@@ -1,0 +1,27 @@
+{
+  "name": "sample-code-review",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "yarn workspace api build && yarn workspace web build",
+    "dev": "concurrently -k -n api,web -c blue,green \"yarn workspace api dev\" \"yarn workspace web dev\"",
+    "dev:api": "yarn workspace api dev",
+    "dev:web": "yarn workspace web dev",
+    "type-check": "yarn workspace api type-check && yarn workspace web type-check",
+    "clean": "yarn workspace api clean && yarn workspace web clean",
+    "test:e2e": "yarn workspace api test:e2e",
+    "test:e2e:ui": "yarn workspace web test:e2e"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "resolutions": {
+    "@nestjs/common": "11.1.18",
+    "@nestjs/core": "11.1.18",
+    "@nestjs/platform-express": "11.1.18"
+  }
+}

@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Sora', 'Avenir Next', 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --app-bg: #f5efe4;
+    --app-bg-deep: #e9dcc4;
+    --app-ink: #172033;
+    --app-muted: #5d6677;
+    --app-line: rgba(23, 32, 51, 0.1);
+    --app-card: rgba(252, 246, 237, 0.82);
+    --app-card-strong: rgba(248, 241, 231, 0.96);
+    --app-field: rgba(255, 255, 255, 0.98);
+    --app-field-border: rgba(23, 32, 51, 0.18);
+    --app-accent: #0f766e;
+    --app-accent-strong: #115e59;
+    --app-warm: #c67d32;
+    --app-warm-soft: #f2d9b9;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-height: 100%;
+    background:
+      radial-gradient(circle at top left, rgba(198, 125, 50, 0.2), transparent 28%),
+      radial-gradient(circle at top right, rgba(15, 118, 110, 0.16), transparent 22%),
+      linear-gradient(180deg, #fbf7f0 0%, var(--app-bg) 52%, var(--app-bg-deep) 100%);
+  }
+
+  body {
+    @apply m-0 min-h-screen antialiased;
+    color: var(--app-ink);
+    background: transparent;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  a {
+    color: var(--app-accent-strong);
+    text-decoration-color: rgba(15, 118, 110, 0.28);
+    text-underline-offset: 0.2em;
+    transition:
+      color 160ms ease,
+      text-decoration-color 160ms ease;
+  }
+
+  a:hover {
+    color: var(--app-accent);
+    text-decoration-color: rgba(15, 118, 110, 0.5);
+  }
+
+  ::selection {
+    background: rgba(15, 118, 110, 0.18);
+  }
+}
+
+@layer utilities {
+  .app-shell-grid {
+    background-image:
+      linear-gradient(rgba(23, 32, 51, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(23, 32, 51, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .app-orb {
+    animation: app-orb-float 16s ease-in-out infinite;
+  }
+
+  .app-orb-delay {
+    animation-delay: -5s;
+  }
+
+  .app-panel-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .app-panel-sheen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.42) 18%,
+      rgba(255, 255, 255, 0) 42%
+    );
+    transform: translateX(-135%);
+    animation: app-sheen 13s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes app-orb-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.05);
+  }
+}
+
+@keyframes app-sheen {
+  0%,
+  100% {
+    transform: translateX(-135%);
+  }
+
+  40%,
+  60% {
+    transform: translateX(135%);
+  }
+}

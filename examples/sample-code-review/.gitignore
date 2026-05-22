@@ -1,0 +1,12 @@
+node_modules/
+dist/
+apps/api/dist/
+apps/api/data/
+apps/api/secrets/
+apps/web/dist/
+.env
+.env.local
+apps/api/.env
+apps/api/.env.local
+apps/web/.env
+apps/web/.env.local
