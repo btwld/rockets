@@ -6,12 +6,6 @@ import {
 } from '@concepta/nestjs-repository';
 import type { RepositoryInterface } from '@concepta/nestjs-repository';
 
-import { isPageableRepository } from '@bitwild/rockets-repository';
-
-import {
-  FirestoreRepository,
-  isFirestoreRepository,
-} from '../repository/firestore-repository';
 import { FirestoreRepositoryModule } from '../firestore-repository.module';
 
 class WidgetEntity {
@@ -152,50 +146,6 @@ describe(FirestoreRepositoryModule.name, () => {
     const visible = await repo.find({ where: Where.eq('id', 's1') });
     expect(visible).toHaveLength(1);
     expect(visible[0]?.dateRemoved).toBeNull();
-  });
-
-  it('findPage returns nextCursor for a second page', async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        FirestoreRepositoryModule.forFeature([
-          { key: 'widget', entity: WidgetEntity, collection: 'widgets-cursor' },
-        ]),
-      ],
-    }).compile();
-
-    const repo = moduleRef.get(getDynamicRepositoryToken('widget'));
-    if (
-      !isFirestoreRepository<WidgetEntity>(repo) ||
-      !isPageableRepository(repo)
-    ) {
-      throw new Error('Expected pageable FirestoreRepository instance');
-    }
-
-    for (const spec of [
-      { id: 'c1', title: 'Alpha' },
-      { id: 'c2', title: 'Beta' },
-      { id: 'c3', title: 'Gamma' },
-    ]) {
-      await repo.create({
-        ...spec,
-        dateCreated: new Date(),
-      });
-    }
-
-    const first = await repo.findPage({
-      order: [{ field: 'title', order: SortOrder.ASC }],
-      pageSize: 2,
-    });
-    expect(first.items.map((row) => row.id)).toEqual(['c1', 'c2']);
-    expect(first.nextCursor?.token).toEqual(expect.any(String));
-
-    const second = await repo.findPage({
-      order: [{ field: 'title', order: SortOrder.ASC }],
-      pageSize: 2,
-      after: first.nextCursor,
-    });
-    expect(second.items.map((row) => row.id)).toEqual(['c3']);
-    expect(second.nextCursor).toBeNull();
   });
 
   it('findAndCount returns total without take', async () => {

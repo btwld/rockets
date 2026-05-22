@@ -6,7 +6,10 @@
   "workspaces": {
     "packages": [
       "packages/*",
-      "examples/*"
+      "examples/*",
+      "examples/sample-code-review",
+      "examples/sample-code-review/apps/*",
+      "examples/sample-code-review/packages/*"
     ]
   },
   "resolutions": {
@@ -126,6 +129,9 @@
     "sample-auth:debug": "yarn workspace sample-server-auth start:debug",
     "sample-auth:build": "yarn workspace sample-server-auth build",
     "sample-auth:test:e2e": "yarn workspace sample-server-auth test:e2e",
+    "sample-code-review:dev": "yarn build && yarn workspace sample-code-review dev",
+    "sample-code-review:build": "yarn build && yarn workspace sample-code-review build",
+    "sample-code-review:test:e2e": "yarn build && yarn workspace sample-code-review test:e2e",
     "samples:build": "yarn sample:build && yarn sample-auth:build",
     "samples:test:e2e": "yarn sample:test:e2e && yarn sample-auth:test:e2e",
     "pack:bitwild:rockets": "yarn workspace @bitwild/rockets pack",

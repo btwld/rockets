@@ -52,13 +52,3 @@ export interface FirestoreQueryRequest {
   readonly withDeleted?: boolean;
   readonly softDeleteField?: string;
 }
-
-export interface FirestorePageQueryRequest extends FirestoreQueryRequest {
-  readonly pageSize: number;
-  readonly afterPosition?: FirestoreQueryPagePosition;
-}
-
-export interface FirestoreQueryPagePosition {
-  readonly documentId: string;
-  readonly orderBy: readonly FirestoreOrderBy[];
-}

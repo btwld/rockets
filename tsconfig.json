@@ -37,6 +37,9 @@
     },
     {
       "path": "packages/rockets-server-auth"
+    },
+    {
+      "path": "packages/rockets-adapter-firebase"
     }
   ]
 }

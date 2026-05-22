@@ -12,8 +12,8 @@ import type {
 } from '../interfaces/firestore-backend.interface';
 import type {
   FirestoreFilterOp,
+  FirestoreOrderBy,
   FirestoreQueryBranch,
-  FirestoreQueryFilter,
 } from '../interfaces/firestore-query.interface';
 import { applyFirestorePostFilters } from '../repository/firestore-post-filter';
 
@@ -53,20 +53,49 @@ export class AdminFirestoreBackend implements FirestoreBackend {
     collection: string,
     options: FirestoreBranchQueryOptions,
   ): Promise<Record<string, unknown>[]> {
-    if (options.afterPosition) {
-      return this.loadBranchRowsWithCursor(collection, options);
-    }
-
-    const rows = await this.loadBranchRows(collection, options.branch);
-    const filtered = applyFirestorePostFilters(rows, options.branch.postFilters);
-    const ordered = this.sortRows(filtered, options.orderBy);
-
+    const branch = options.branch;
     const skip = options.skip ?? 0;
-    const sliced = ordered.slice(skip);
-    if (typeof options.take === 'number' && options.take > 0) {
-      return sliced.slice(0, options.take);
+    const take = options.take;
+
+    if (
+      branch.documentId ||
+      (branch.documentIds && branch.documentIds.length > 0)
+    ) {
+      const rows = await this.loadBranchRows(collection, branch);
+      const filtered = applyFirestorePostFilters(rows, branch.postFilters);
+      const ordered = this.sortRows(filtered, options.orderBy);
+      const sliced = ordered.slice(skip);
+      return typeof take === 'number' && take > 0
+        ? sliced.slice(0, take)
+        : sliced;
     }
-    return sliced;
+
+    // Post-filters require in-memory evaluation, so we cannot rely on
+    // server-side limit alone — read all matching docs and slice locally.
+    if (branch.postFilters.length > 0) {
+      const query = this.buildOrderedQuery(collection, branch, options.orderBy);
+      const snapshot = await query.get();
+      const rows = snapshot.docs.map((doc) =>
+        this.normalise(doc.data(), doc.id),
+      );
+      const filtered = applyFirestorePostFilters(rows, branch.postFilters);
+      const sliced = filtered.slice(skip);
+      return typeof take === 'number' && take > 0
+        ? sliced.slice(0, take)
+        : sliced;
+    }
+
+    // Fast path: push orderBy + limit(skip + take) to Firestore, slice(skip)
+    // locally. Reads are O(skip + take), not O(collection size).
+    let query = this.buildOrderedQuery(collection, branch, options.orderBy);
+    if (typeof take === 'number' && take > 0) {
+      query = query.limit(skip + take);
+    }
+    const snapshot = await query.get();
+    const rows = snapshot.docs.map((doc) =>
+      this.normalise(doc.data(), doc.id),
+    );
+    return skip > 0 ? rows.slice(skip) : rows;
   }
 
   async countBranch(
@@ -112,47 +141,6 @@ export class AdminFirestoreBackend implements FirestoreBackend {
     return snapshot.docs.map((doc) => this.normalise(doc.data(), doc.id));
   }
 
-  private async loadBranchRowsWithCursor(
-    collection: string,
-    options: FirestoreBranchQueryOptions,
-  ): Promise<Record<string, unknown>[]> {
-    const branch = options.branch;
-    const orderBy =
-      options.orderBy && options.orderBy.length > 0
-        ? options.orderBy
-        : [{ field: 'id', direction: 'asc' as const }];
-
-    if (branch.documentId || (branch.documentIds && branch.documentIds.length > 0)) {
-      throw new Error(
-        'Firestore adapter: cursor pagination does not support id/documentIds branches.',
-      );
-    }
-
-    const cursorId = options.afterPosition?.documentId;
-    if (!cursorId) {
-      return [];
-    }
-
-    const cursorSnap = await this.db().collection(collection).doc(cursorId).get();
-    if (!cursorSnap.exists) {
-      throw new Error(
-        `Firestore adapter: cursor document "${cursorId}" was not found in "${collection}".`,
-      );
-    }
-
-    let query = this.buildCollectionQuery(collection, branch);
-    for (const clause of orderBy) {
-      query = query.orderBy(clause.field, clause.direction);
-    }
-    query = query.startAfter(cursorSnap);
-    if (typeof options.take === 'number' && options.take > 0) {
-      query = query.limit(options.take + 1);
-    }
-
-    const snapshot = await query.get();
-    return snapshot.docs.map((doc) => this.normalise(doc.data(), doc.id));
-  }
-
   private buildCollectionQuery(
     collection: string,
     branch: FirestoreQueryBranch,
@@ -170,9 +158,23 @@ export class AdminFirestoreBackend implements FirestoreBackend {
     return query;
   }
 
+  private buildOrderedQuery(
+    collection: string,
+    branch: FirestoreQueryBranch,
+    orderBy: readonly FirestoreOrderBy[] | undefined,
+  ): Query {
+    let query = this.buildCollectionQuery(collection, branch);
+    if (orderBy) {
+      for (const clause of orderBy) {
+        query = query.orderBy(clause.field, clause.direction);
+      }
+    }
+    return query;
+  }
+
   private sortRows(
     rows: Record<string, unknown>[],
-    orderBy?: FirestoreBranchQueryOptions['orderBy'],
+    orderBy?: readonly FirestoreOrderBy[],
   ): Record<string, unknown>[] {
     if (!orderBy || orderBy.length === 0) {
       return rows;

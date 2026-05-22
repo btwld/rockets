@@ -1,10 +1,59 @@
 import type { DynamicModule, Provider } from '@nestjs/common';
-import {
-  normaliseModuleResourceEntity,
-  type ModuleResourceEntityInput,
-  type ModuleResource,
+import { resolveEntityKey } from '@bitwild/rockets-common';
+import type {
+  ModuleResource,
+  ModuleResourceEntityEntry,
+  ModuleResourceEntityInput,
 } from '../../domain/interfaces/module-resource.interface';
 import { ResourceKind } from '../../domain/interfaces/resource-kind.enum';
+
+/**
+ * Normalise a class shorthand or full entry into the canonical
+ * {@link ModuleResourceEntityEntry} shape.
+ *
+ * Internal helper for {@link defineModuleResource}. Not exported from
+ * the package barrel because every consumer reaches the same behaviour
+ * through `defineModuleResource()`.
+ *
+ * @example
+ * Input → output:
+ *
+ * ```ts
+ * // Class shorthand → derives the key
+ * normaliseModuleResourceEntity(UserEntity)
+ * // → { key: 'user', entity: UserEntity }
+ *
+ * // Full entry → passes through unchanged
+ * normaliseModuleResourceEntity({ key: 'audit', entity: AuditEntity })
+ * // → { key: 'audit', entity: AuditEntity }
+ *
+ * // Adapter override without explicit key → key derived from entity
+ * normaliseModuleResourceEntity({
+ *   entity: AnalyticsEntity,
+ *   repository: FirestoreRepositoryModule,
+ * })
+ * // → { key: 'analytics', entity: AnalyticsEntity, repository: FirestoreRepositoryModule }
+ * ```
+ */
+function normaliseModuleResourceEntity(
+  input: ModuleResourceEntityInput,
+): ModuleResourceEntityEntry {
+  if (typeof input === 'function') {
+    return { key: resolveEntityKey(input), entity: input };
+  }
+
+  const key = input.key ?? resolveEntityKey(input.entity);
+  const entry: ModuleResourceEntityEntry = {
+    key,
+    entity: input.entity,
+  };
+
+  if (input.repository !== undefined) {
+    return { ...entry, repository: input.repository };
+  }
+
+  return entry;
+}
 
 /**
  * Input accepted by {@link defineModuleResource}.

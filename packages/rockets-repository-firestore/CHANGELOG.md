@@ -4,10 +4,9 @@
 
 ### Added
 
-- `findPage` implements `PageableRepositoryInterface` from `@bitwild/rockets-repository` (opaque `nextCursor.token`, Firestore `startAfter` under the hood).
 - Full `WhereOperator` coverage (EQ, NE, comparisons, IN, NIN, null checks, string matchers, BETWEEN) with Firestore-native or post-filter execution.
 - OR support via `RepositoryAdapter.toDnf()`.
-- `skip` / `take` pagination.
+- `skip` / `take` pagination — `orderBy` + `limit(skip + take)` pushed to the Firestore Admin SDK so reads scale with the page, not the collection.
 - Efficient `count` / `findAndCount` (aggregation when possible).
 - Soft delete / restore when `dateRemoved` or `deletedAt` is configured on the entity (or via `softDeleteField` option).
 - `withDeleted` on find options.

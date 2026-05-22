@@ -54,20 +54,7 @@ export class InMemoryFirestoreBackend implements FirestoreBackend {
     const filtered = applyFirestorePostFilters(rows, options.branch.postFilters);
     const ordered = sortInMemory(filtered, options.orderBy);
 
-    let startIndex = options.skip ?? 0;
-    if (options.afterPosition) {
-      const cursorIndex = ordered.findIndex(
-        (row) => row.id === options.afterPosition?.documentId,
-      );
-      if (cursorIndex < 0) {
-        throw new Error(
-          `Firestore adapter: cursor document "${options.afterPosition.documentId}" was not found.`,
-        );
-      }
-      startIndex = cursorIndex + 1;
-    }
-
-    const sliced = ordered.slice(startIndex);
+    const sliced = ordered.slice(options.skip ?? 0);
     if (typeof options.take === 'number' && options.take > 0) {
       return sliced.slice(0, options.take);
     }

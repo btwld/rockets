@@ -414,6 +414,10 @@ import { RocketsModule } from '@bitwild/rockets';
 import { MyAuthAdapter } from './auth/my-auth.adapter';
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 import { UserMetadataEntity } from './users/user-metadata.entity';
+import {
+  UserMetadataCreateDto,
+  UserMetadataUpdateDto,
+} from './users/user-metadata.dto';
 import { petResource } from './pets/pet.resource';
 
 @Module({
@@ -434,7 +438,15 @@ import { petResource } from './pets/pet.resource';
       }),
 
       // 3. User-metadata table — joined to the external user by userId.
-      userMetadata: { entity: UserMetadataEntity },
+      //    createDto / updateDto are required: they must implement
+      //    UserMetadataCreatableInterface (has `userId: string`) and
+      //    UserMetadataModelUpdatableInterface (has `id: string`).
+      //    See packages/rockets-server/README.md Step 2 for the shape.
+      userMetadata: {
+        entity: UserMetadataEntity,
+        createDto: UserMetadataCreateDto,
+        updateDto: UserMetadataUpdateDto,
+      },
 
       // 4. Features. Each bundle carries its own entity/DTOs/hooks.
       resources: [petResource /* , … */],

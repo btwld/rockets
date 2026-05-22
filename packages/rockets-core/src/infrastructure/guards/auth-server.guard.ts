@@ -58,7 +58,11 @@ export class AuthServerGuard implements CanActivate {
       return undefined;
     }
 
-    const [type, token] = authHeader.split(' ');
-    return type === 'Bearer' ? token : undefined;
+    const [type, ...rest] = authHeader.split(' ');
+    if (type !== 'Bearer' || rest.length === 0) {
+      return undefined;
+    }
+    const token = rest.join(' ').trim();
+    return token.length > 0 ? token : undefined;
   }
 }

@@ -86,42 +86,31 @@ Composite queries (`where` + `orderBy` on different fields, multiple inequalitie
 require composite indexes in the Firebase console. The emulator logs a creation
 link when a query is missing an index.
 
-## Cursor pagination (`findPage`)
+## Pagination
 
-Pagination types live in **`@bitwild/rockets-repository`** (`RepositoryPageQuery`,
-`PageableRepositoryInterface`). This adapter implements that contract with Firestore
-`startAfter`; TypeORM or other adapters can implement the same interface differently.
+The adapter honours the standard `RepositoryInterface` contract — `find({ skip, take, order, where })`
+plus `findAndCount` / `count`. No cursor type is exposed; CRUD modules and any
+other consumer of `RepositoryInterface` work identically against TypeORM and Firestore.
+
+Reads are O(skip + take): the adapter pushes `orderBy` + `limit(skip + take)` to the
+Firestore Admin SDK and slices `[skip, skip + take]` locally. For typical CRUD pages
+(1–10), cost is negligible; deep pagination (page 500+) scales linearly with the
+offset, which is the inherent cost of emulating SQL `OFFSET` on Firestore.
 
 ```typescript
-import {
-  isPageableRepository,
-  type RepositoryPageCursor,
-} from '@bitwild/rockets-repository';
-
-let after: RepositoryPageCursor | null = null;
-
-if (!isPageableRepository(reports)) {
-  throw new Error('Repository adapter does not support findPage');
-}
-
-do {
-  const page = await reports.findPage({
-    where: Where.eq('userId', userId),
-    order: [{ field: 'dateCreated', order: SortOrder.DESC }],
-    pageSize: 20,
-    after,
-  });
-  after = page.nextCursor;
-  // page.items ...
-} while (after);
+const reports = repo.find({
+  where: Where.eq('userId', userId),
+  order: [{ field: 'dateCreated', order: SortOrder.DESC }],
+  skip: 40,
+  take: 20,
+});
 ```
 
-Requires a single AND branch (no OR), no post-filters on the query, and `pageSize > 0`.
-The same `order` must be passed on every page (validated against the cursor).
-Sort fields need a matching composite index when combined with `where`.
+Sort fields combined with `where` may require a composite index — the Admin SDK
+logs a creation link when one is missing.
 
 ## Limitations (Firestore platform)
 
 - No cross-collection joins.
-- `skip` on large collections is expensive (no SQL OFFSET); prefer `findPage` + `afterCursor`.
+- Deep `skip` costs O(skip + take) reads (no native OFFSET).
 - `nin` and some string matchers run as post-filters after the Firestore query.

@@ -13,3 +13,4 @@ exclude_paths:
   - '.husky/**'
   - '.vscode/**'
   - 'docker/**'
+  - 'examples/**'

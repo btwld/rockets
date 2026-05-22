@@ -22,21 +22,10 @@ import {
 } from '../constants/firestore-soft-delete.constants';
 import type { FirestoreBackend } from '../interfaces/firestore-backend.interface';
 import type {
-  PageableRepositoryInterface,
-  RepositoryPageQuery,
-  RepositoryPageResult,
-} from '@bitwild/rockets-repository';
-import type {
   FirestoreOrderBy,
-  FirestorePageQueryRequest,
   FirestoreQueryRequest,
 } from '../interfaces/firestore-query.interface';
 import { resolveSoftDeleteFieldFromMetadata } from './firestore-entity-metadata';
-import {
-  assertCursorOrderMatches,
-  decodeFirestorePageCursor,
-} from './firestore-page-cursor.codec';
-import { runFirestoreQueryPage } from './firestore-query-page';
 import { runFirestoreCount, runFirestoreQuery } from './firestore-query-runner';
 import { translateDnfBranch } from './firestore-where.translator';
 
@@ -49,7 +38,6 @@ export interface FirestoreRepositoryOptions<Entity extends PlainLiteralObject> {
 
 export class FirestoreRepository<Entity extends PlainLiteralObject>
   extends RepositoryAdapter<Entity>
-  implements PageableRepositoryInterface<Entity>
 {
   readonly metadata: RepositoryMetadataInterface<Entity>;
   private readonly softDeleteField?: string;
@@ -67,24 +55,6 @@ export class FirestoreRepository<Entity extends PlainLiteralObject>
       this.buildQueryRequest(options),
     );
     return rows.map((row) => this.fromStore(row));
-  }
-
-  /**
-   * Cursor-based pagination (`startAfter`). Use for large collections instead of
-   * `find({ skip })`. Uses {@link RepositoryPageQuery} from `@bitwild/rockets-repository`.
-   */
-  async findPage(
-    query: RepositoryPageQuery<Entity>,
-  ): Promise<RepositoryPageResult<Entity>> {
-    const page = await runFirestoreQueryPage(
-      this.options.backend,
-      this.options.collection,
-      this.buildPageQueryRequest(query),
-    );
-    return {
-      items: page.rows.map((row) => this.fromStore(row)),
-      nextCursor: page.nextCursor,
-    };
   }
 
   protected async doFindOne(
@@ -236,26 +206,6 @@ export class FirestoreRepository<Entity extends PlainLiteralObject>
     };
   }
 
-  private buildPageQueryRequest(
-    query: RepositoryPageQuery<Entity>,
-  ): FirestorePageQueryRequest {
-    const orderBy =
-      mapOrderBy(query.order) ?? [{ field: 'id', direction: 'asc' as const }];
-    const afterPosition = decodeFirestorePageCursor(query.after ?? undefined);
-    if (afterPosition) {
-      assertCursorOrderMatches(afterPosition, orderBy);
-    }
-
-    return {
-      branches: this.resolveBranches(query.where),
-      orderBy,
-      pageSize: query.pageSize,
-      afterPosition,
-      withDeleted: query.withDeleted,
-      softDeleteField: this.softDeleteField,
-    };
-  }
-
   private resolveBranches(where?: WhereClause) {
     if (!where) {
       return [{ filters: [], postFilters: [] }];
@@ -333,5 +283,3 @@ export function isFirestoreRepository<Entity extends PlainLiteralObject>(
 ): repo is FirestoreRepository<Entity> {
   return repo instanceof FirestoreRepository;
 }
-
-export { isPageableRepository } from '@bitwild/rockets-repository';

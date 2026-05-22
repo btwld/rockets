@@ -253,10 +253,12 @@ export function defineTypeOrmRepository(
 }
 ```
 
-The convention: **each adapter package ships its own `defineXxxRepository(config)`
-helper**. Firestore would expose `defineFirestoreRepository(config)`,
-Mongo would expose `defineMongoRepository(config)`, etc. The
-application only sees configuration.
+The convention: **for each persistence adapter you use, expose one
+`define<Adapter>Repository(config)` helper** that takes connection
+config in and returns a `RepositoryBootstrap`. The app's `AppModule`
+keeps seeing pure configuration. Today this repo ships only the
+TypeORM adapter; future adapters (Firestore, Mongo, …) would follow
+the same shape.
 
 ### 3. Implement the auth adapter
 
@@ -301,6 +303,10 @@ instead — see [How-to: auth adapters with external dependencies](#how-to-auth-
 import { Module } from '@nestjs/common';
 import { RocketsCoreModule, defineResource } from '@bitwild/rockets-core';
 import { UserMetadataEntity, PetEntity } from './entities';
+import {
+  UserMetadataCreateDto,
+  UserMetadataUpdateDto,
+} from './dto/user-metadata.dto';
 import { MyAuthAdapter } from './auth/my-auth.adapter';
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 
@@ -320,7 +326,14 @@ import { defineTypeOrmRepository } from './repository/define-typeorm-repository'
       }),
 
       // 3. User-metadata table — joined to the external user via userId.
-      userMetadata: { entity: UserMetadataEntity },
+      //    `createDto` / `updateDto` are required: they implement
+      //    UserMetadataCreatableInterface (`userId: string`) and
+      //    UserMetadataModelUpdatableInterface (`id: string`) respectively.
+      userMetadata: {
+        entity: UserMetadataEntity,
+        createDto: UserMetadataCreateDto,
+        updateDto: UserMetadataUpdateDto,
+      },
 
       // 4. Features. Each defineResource carries its own entity.
       resources: [
@@ -449,38 +462,37 @@ Both default to a `userId` column; pass a second argument to override.
 
 ### Use a non-TypeORM persistence adapter
 
-Every adapter ships a `define<Adapter>Repository(config)` helper that
-returns a `RepositoryBootstrap`. The pattern is identical to
-`defineTypeOrmRepository` — configuration in, bootstrap out:
+The `repository:` field accepts any value implementing
+`RepositoryModuleInterface` (`forFeature(entities)`) or
+`RepositoryBootstrap` (which also owns `forRoot(entities)`).
 
-```typescript
-import { defineFirestoreRepository } from '@bitwild/rockets-adapter-firestore';
+The convention going forward is the same `define<Adapter>Repository(config)`
+factory pattern shown in [Step 2 of the tutorial](#step-2--write-your-repository-helper):
+the helper accepts configuration and returns a `RepositoryBootstrap`.
+Domain code talks to `RepositoryInterface` only, so swapping adapters
+is one line.
 
-RocketsCoreModule.forRoot({
-  repository: defineFirestoreRepository({
-    projectId: process.env.GCP_PROJECT_ID!,
-    credentials: { /* … */ },
-  }),
-  // … the rest is unchanged
-});
-```
-
-Services and handlers depend on `RepositoryInterface`, never on the
-underlying SDK. The same `defineResource` declaration works against any
-adapter.
+> Today the only first-party adapter in this repo is TypeORM
+> (`@concepta/nestjs-repository-typeorm`). When other adapters ship
+> (Firestore, Mongo, …), each will follow the same factory shape and
+> drop into `repository:` without changes elsewhere in the app.
 
 ### Mix two stores in one app
+
+The `entities` row inside `defineModuleResource` accepts a per-entity
+`repository:` override that takes precedence over the default
+adapter:
 
 ```typescript
 RocketsCoreModule.forRoot({
   repository: defineTypeOrmRepository({ /* … */ }),    // default for everything
   resources: [
-    defineResource({ entity: PetEntity }),             // TypeORM
+    defineResource({ entity: PetEntity }),             // → default (TypeORM)
     defineModuleResource({
       entities: [{
         key: 'analytics-event',
         entity: AnalyticsEventEntity,
-        repository: defineFirestoreRepository({ /* … */ }),  // per-entity override
+        repository: defineOtherAdapter({ /* … */ }),   // per-entity override
       }],
     }),
   ],
@@ -488,8 +500,9 @@ RocketsCoreModule.forRoot({
 ```
 
 The default bootstrap owns its entity set; the override-only entities
-go to the override's bootstrap. Each adapter sees only the entities it
-should.
+go to the override's bootstrap. Each adapter sees only the entities
+it should. The override accepts any `RepositoryModuleInterface` or
+`RepositoryBootstrap`.
 
 ### How-to: auth adapters with external dependencies
 
@@ -511,6 +524,7 @@ For an adapter that's externally provided, do two things:
    aliases `AUTH_ADAPTER_TOKEN` via `useExisting`.
 
 ```typescript
+import * as admin from 'firebase-admin';
 import { Module } from '@nestjs/common';
 import {
   RocketsCoreModule,
@@ -521,10 +535,13 @@ import {
   FirebaseAuthAdapter,
   FirebaseAuthModule,
 } from '@bitwild/rockets-adapter-firebase';
-import { ProductionFirebaseVerifier } from './firebase-verifier';
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 import { UserMetadataEntity } from './user-metadata.entity';
 import { PetEntity } from './pet.entity';
+
+const firebaseApp = admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
+});
 
 @Module({
   imports: [
@@ -539,9 +556,7 @@ import { PetEntity } from './pet.entity';
         // be global (or imported wherever AUTH_ADAPTER_TOKEN is
         // resolved) for the `useExisting` alias to find it.
         defineModuleResource({
-          imports: [
-            FirebaseAuthModule.forRoot({ verifier: ProductionFirebaseVerifier }),
-          ],
+          imports: [FirebaseAuthModule.forRoot({ firebaseApp })],
         }),
         defineResource({ entity: PetEntity }),
       ],

@@ -5,10 +5,7 @@ import type {
   Type,
 } from '@nestjs/common';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
-import { deriveEntityKey, resolveEntityKey } from '@bitwild/rockets-common';
 import type { ResourceKind } from './resource-kind.enum';
-
-export { deriveEntityKey };
 
 /**
  * One persistence row contributed by a module resource.
@@ -28,10 +25,21 @@ export interface ModuleResourceEntityEntry {
 }
 
 /**
+ * Object form for `entities[]` when you need a per-entity adapter override
+ * or a custom key. `key` is optional — derived from `entity` when omitted
+ * (same rule as the class shorthand).
+ */
+export interface ModuleResourceEntityEntryInput {
+  readonly key?: string;
+  readonly entity: Type<PlainLiteralObject>;
+  readonly repository?: RepositoryModuleInterface;
+}
+
+/**
  * Shorthand input for `entities[]`: a bare class is accepted, and the
  * key is derived from the class name (strip trailing `Entity`,
- * lowercase first char). Use the explicit `{ key, entity, repository? }`
- * form when you need a custom key or per-entity adapter override.
+ * lowercase first char). Use `{ entity, repository? }` for adapter
+ * overrides; add `key` only when you need a non-derived name.
  *
  * Examples (derived keys):
  * - `UserEntity` → `'user'`
@@ -40,6 +48,7 @@ export interface ModuleResourceEntityEntry {
  */
 export type ModuleResourceEntityInput =
   | ModuleResourceEntityEntry
+  | ModuleResourceEntityEntryInput
   | Type<PlainLiteralObject>;
 
 /**
@@ -67,38 +76,4 @@ export interface ModuleResource {
   readonly controllers?: NonNullable<DynamicModule['controllers']>;
   readonly providers?: ReadonlyArray<Provider>;
   readonly exports?: NonNullable<DynamicModule['exports']>;
-}
-
-/**
- * Normalise a class shorthand or full entry into the canonical
- * `ModuleResourceEntityEntry` shape.
- *
- * @example
- * Input → output:
- *
- * ```ts
- * // Class shorthand → derives the key
- * normaliseModuleResourceEntity(UserEntity)
- * // → { key: 'user', entity: UserEntity }
- *
- * // Full entry → passes through unchanged
- * normaliseModuleResourceEntity({ key: 'audit', entity: AuditEntity })
- * // → { key: 'audit', entity: AuditEntity }
- *
- * // Full entry with adapter override → preserved
- * normaliseModuleResourceEntity({
- *   key: 'analytics',
- *   entity: AnalyticsEntity,
- *   repository: FirestoreRepositoryModule,
- * })
- * // → { key: 'analytics', entity: AnalyticsEntity, repository: FirestoreRepositoryModule }
- * ```
- */
-export function normaliseModuleResourceEntity(
-  input: ModuleResourceEntityInput,
-): ModuleResourceEntityEntry {
-  if (typeof input === 'function') {
-    return { key: resolveEntityKey(input), entity: input };
-  }
-  return input;
 }

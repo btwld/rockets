@@ -215,38 +215,53 @@ The next five steps are a complete app — no external example required.
 ## Step 1 — implement the auth adapter
 
 The adapter is the **only place** that knows about your IdP. It
-implements one method:
+implements one method.
+
+For this tutorial we'll use a **self-contained JWT adapter** — it has
+no external Nest module dependencies, only the `jsonwebtoken` library.
+That keeps `auth: MyAuthAdapter` as the simplest possible wiring.
 
 ```typescript
-// src/auth/firebase-auth.adapter.ts
+// src/auth/my-auth.adapter.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import type { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets-core';
-import { auth as firebaseAuth } from 'firebase-admin';
+import { verify } from 'jsonwebtoken';
+import type {
+  AuthAdapterInterface,
+  AuthorizedUser,
+} from '@bitwild/rockets-core';
 
 @Injectable()
-export class FirebaseAuthAdapter implements AuthAdapterInterface {
+export class MyAuthAdapter implements AuthAdapterInterface {
   async validateToken(token: string): Promise<AuthorizedUser> {
-    let decoded;
+    let payload: { sub: string; email?: string; roles?: string[] };
     try {
-      decoded = await firebaseAuth().verifyIdToken(token);
-    } catch (err) {
-      throw new UnauthorizedException('Invalid Firebase token');
+      payload = verify(token, process.env.JWT_SECRET!) as typeof payload;
+    } catch {
+      throw new UnauthorizedException('Invalid token');
     }
     return {
-      id: decoded.uid,
-      sub: decoded.uid,
-      email: decoded.email,
-      // userRoles MUST follow this shape; the bearer guard reads .role.name
-      userRoles: (decoded.roles ?? []).map((name: string) => ({ role: { name } })),
-      claims: decoded,
+      id: payload.sub,
+      sub: payload.sub,
+      email: payload.email,
+      // userRoles MUST follow this shape — the bearer guard reads `.role.name`
+      userRoles: (payload.roles ?? []).map((name) => ({ role: { name } })),
+      claims: payload,
     };
   }
 }
 ```
 
-That's the entire IdP integration. Whether the token is Firebase, an
-Auth0 RS256 JWT, or a JWE from your enterprise SSO is invisible to
-everything else in the app.
+That's the entire IdP integration. Whether the token came from
+Auth0, your enterprise SSO, or an in-process JWT issuer is invisible
+to the rest of the app — the adapter normalizes everything into
+`AuthorizedUser`.
+
+> **Using Firebase, Auth0, Okta, or another IdP that ships its own
+> Nest module?** Don't paste their adapter class into `auth:`
+> directly — those adapters depend on tokens/providers that only
+> resolve when the IdP's module is also mounted. Use the
+> `defineXxxAuth(config)` pattern instead. See
+> [How-to: auth adapters with external dependencies](#how-to-auth-adapters-with-external-dependencies-firebase-oauth-).
 
 ---
 
@@ -256,36 +271,65 @@ External IdPs own identity (id, email, roles). Your app still needs to
 store its **own** fields about the user — display name, plan,
 onboarding state, preferences. That's the *metadata* table.
 
+The entity must implement `BaseUserMetadataEntityInterface` — `id`
+(local primary key), `userId` (FK to the external user), and the
+date/version fields. Rockets fills the dates and version on the
+repository layer.
+
 ```typescript
 // src/users/user-metadata.entity.ts
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import type { BaseUserMetadataEntityInterface } from '@bitwild/rockets-core';
 
 @Entity('user_metadata')
-export class UserMetadataEntity {
-  @PrimaryColumn('uuid')
-  userId!: string;          // matches AuthorizedUser.id
+export class UserMetadataEntity implements BaseUserMetadataEntityInterface {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column() userId!: string;                       // matches AuthorizedUser.id
+  @CreateDateColumn() dateCreated!: Date;
+  @UpdateDateColumn() dateUpdated!: Date;
+  @Column({ type: 'datetime', nullable: true }) dateDeleted!: Date | null;
+  @Column({ type: 'int', default: 1 }) version!: number;
 
-  @Column({ nullable: true })
-  displayName?: string;
-
-  @Column({ default: false })
-  onboardingComplete!: boolean;
+  // Your own fields
+  @Column({ nullable: true }) displayName?: string;
+  @Column({ default: false }) onboardingComplete!: boolean;
 }
 ```
+
+The DTOs implement two interfaces with specific required fields:
+
+- `UserMetadataCreatableInterface` — requires `userId: string`.
+- `UserMetadataModelUpdatableInterface` — requires `id: string`.
 
 ```typescript
 // src/users/user-metadata.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import type {
+  UserMetadataCreatableInterface,
+  UserMetadataModelUpdatableInterface,
+} from '@bitwild/rockets-core';
 
-export class UserMetadataCreateDto {
+export class UserMetadataCreateDto implements UserMetadataCreatableInterface {
+  @ApiProperty() @IsString() @IsNotEmpty() userId!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() displayName?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() onboardingComplete?: boolean;
 }
-export class UserMetadataUpdateDto extends UserMetadataCreateDto {}
+
+export class UserMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
+  @ApiProperty() @IsString() @IsNotEmpty() id!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() displayName?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() onboardingComplete?: boolean;
+}
 ```
 
-`GET /me` will return `{ user: AuthorizedUser, metadata: UserMetadataEntity }`.
+`GET /me` returns `{ user: AuthorizedUser, metadata: UserMetadataEntity }`.
 `PATCH /me` validates against `UserMetadataUpdateDto` and upserts.
 
 ---
@@ -414,7 +458,7 @@ Zero controller code. The full file is shown above.
 // src/app.module.ts
 import { Module } from '@nestjs/common';
 import { RocketsModule } from '@bitwild/rockets';
-import { FirebaseAuthAdapter } from './auth/firebase-auth.adapter';
+import { MyAuthAdapter } from './auth/my-auth.adapter';
 import { UserMetadataEntity } from './users/user-metadata.entity';
 import { UserMetadataCreateDto, UserMetadataUpdateDto } from './users/user-metadata.dto';
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
@@ -423,10 +467,13 @@ import { petResource } from './pets/pet.resource';
 @Module({
   imports: [
     RocketsModule.forRoot({
-      // 1. Auth: just the class. Core auto-registers it as a provider
-      //    AND aliases AUTH_ADAPTER_TOKEN to it via useExisting.
-      //    No separate `providers:` entry, no module wrapper.
-      auth: FirebaseAuthAdapter,
+      // 1. Auth: just the class. Rockets auto-registers it as a
+      //    provider AND aliases AUTH_ADAPTER_TOKEN to it via useExisting.
+      //    Works because MyAuthAdapter is self-contained (Step 1).
+      //    For adapters with external Nest module dependencies
+      //    (Firebase, Auth0, …), use defineXxxAuth(config) instead —
+      //    see the cookbook recipe below.
+      auth: MyAuthAdapter,
 
       // 2. Persistence: configuration goes IN, RepositoryBootstrap
       //    comes OUT. Rockets owns the entity list AND the connection.
@@ -466,13 +513,6 @@ nest start
 guard registration, entity registration, controller generation, Swagger
 setup — is owned by a `define*` helper. Adding another feature is
 appending one bundle to `resources[]`.
-
-> The `FirebaseAuthAdapter` above is self-contained (it calls
-> `firebase-admin` directly in `validateToken`). If your adapter depends
-> on its own Nest module (verifier provider, HTTP client, options
-> token), the `auth: SomeClass` shorthand will fail at boot. Use a
-> `defineXxxAuth(config)` helper that returns a `RocketsAuthIntegration`
-> instead — see [auth adapters with external dependencies](#how-to-auth-adapters-with-external-dependencies).
 
 ---
 
@@ -660,24 +700,23 @@ run at the repository layer, so direct (non-HTTP) calls are scoped too.
 
 ### Swap TypeORM for another adapter
 
-Every adapter ships its own `define<Adapter>Repository(config)` helper
-that returns a `RepositoryBootstrap`. The pattern is identical to
-`defineTypeOrmRepository`:
+The `repository:` field accepts any `RepositoryModuleInterface` (just
+`forFeature(entities)`) or `RepositoryBootstrap` (also owns
+`forRoot(entities)`). The convention for any future adapter is the
+same `define<Adapter>Repository(config) → RepositoryBootstrap`
+factory pattern shown in Step 3.
 
-```typescript
-import { defineFirestoreRepository } from '@bitwild/rockets-adapter-firestore';
+Today the only adapter shipped in this repo is TypeORM
+(`@concepta/nestjs-repository-typeorm`). When another adapter ships
+(Firestore, Mongo, etc.), its package will export a matching
+`define<Adapter>Repository(config)` helper and the only change in
+your `AppModule` is the import line and the connection config.
 
-RocketsModule.forRoot({
-  repository: defineFirestoreRepository({
-    projectId: process.env.GCP_PROJECT_ID!,
-    credentials: { /* … */ },
-  }),
-  // …everything else identical
-});
-```
+Domain code depends on `RepositoryInterface` (from
+`@bitwild/rockets-repository` / `@concepta/nestjs-repository`), never
+on the underlying SDK — that's what makes the swap a one-line change.
 
-Domain code depends on `RepositoryInterface`, not on the underlying
-SDK. Mixed stores: pass per-entity `repository:` inside
+Mixed stores in one app: pass per-entity `repository:` inside
 `defineModuleResource({ entities: [{ key, entity, repository }] })`.
 
 ### How-to: auth adapters with external dependencies (Firebase, OAuth, …)
@@ -685,34 +724,59 @@ SDK. Mixed stores: pass per-entity `repository:` inside
 If your adapter ships its own Nest module that provides the adapter
 *along with* its dependencies (a token verifier, an HTTP client, an
 options token), the `auth: AdapterClass` shorthand will fail —
-core would try to re-instantiate the class in its own scope where the
-external dependencies are unreachable.
+Rockets would try to re-instantiate the class in its own scope where
+the external dependencies are unreachable.
 
 The fix: wrap the integration in a `define<Adapter>Auth(config)`
-helper that returns a `RocketsAuthIntegration`. Then pass *that*:
+helper that returns a `RocketsAuthIntegration`. The helper imports
+the adapter's Nest module, references the adapter class, and tells
+Rockets the class is externally managed. Then pass *the helper's
+result* to `auth:`.
+
+Concrete example with `@bitwild/rockets-adapter-firebase` (the only
+external-IdP adapter currently shipped in this repo). The helper
+below lives in your app:
 
 ```typescript
 // src/auth/define-firebase-auth.ts
 import {
   FirebaseAuthAdapter,
   FirebaseAuthModule,
-  type FirebaseTokenVerifier,
+  FirebaseTokenVerifierInterface,
 } from '@bitwild/rockets-adapter-firebase';
-import {
-  defineModuleResource,
-  ROCKETS_AUTH_INTEGRATION_KIND,
-} from '@bitwild/rockets-core';
+import { ROCKETS_AUTH_INTEGRATION_KIND } from '@bitwild/rockets-core';
 import type { RocketsAuthIntegration } from '@bitwild/rockets-core';
 import type { Type } from '@nestjs/common';
 
-export function defineFirebaseAuth(config: {
-  verifier: Type<FirebaseTokenVerifier>;
-}): RocketsAuthIntegration {
+/**
+ * Two ways to configure the verifier (one is required):
+ *  - `firebaseApp`: an initialized `admin.app.App` instance from
+ *    `firebase-admin`. Rockets wraps it with the default verifier
+ *    service. This is the common case.
+ *  - `verifier`: your own class implementing
+ *    `FirebaseTokenVerifierInterface`. Use when you manage
+ *    `firebase-admin` lifecycle elsewhere or need custom logic.
+ */
+export interface DefineFirebaseAuthConfig {
+  readonly firebaseApp?: unknown;
+  readonly verifier?: Type<FirebaseTokenVerifierInterface>;
+}
+
+export function defineFirebaseAuth(
+  config: DefineFirebaseAuthConfig,
+): RocketsAuthIntegration {
   return {
     kind: ROCKETS_AUTH_INTEGRATION_KIND,
-    nestImports: [FirebaseAuthModule.forRoot({ verifier: config.verifier })],
+    nestImports: [
+      FirebaseAuthModule.forRoot({
+        firebaseApp: config.firebaseApp,
+        verifier: config.verifier,
+      }),
+    ],
     authAdapter: FirebaseAuthAdapter,
-    // FirebaseAuthModule already provides the adapter — don't double-register.
+    // FirebaseAuthModule already provides the adapter — Rockets must
+    // NOT double-register it (would create a second instance with
+    // unresolvable dependencies).
     authProviderExternallyManaged: true,
     resources: [],
   };
@@ -723,18 +787,31 @@ Wire it in `AppModule` the same way as the simple case — only the
 `auth:` field changes:
 
 ```typescript
-RocketsModule.forRoot({
-  auth: defineFirebaseAuth({ verifier: ProductionFirebaseVerifier }),
-  repository: defineTypeOrmRepository({ /* … */ }),
-  userMetadata: { entity: UserMetadataEntity, createDto, updateDto },
-  resources: [petResource],
+import * as admin from 'firebase-admin';
+import { defineFirebaseAuth } from './auth/define-firebase-auth';
+
+const firebaseApp = admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
 });
+
+@Module({
+  imports: [
+    RocketsModule.forRoot({
+      auth: defineFirebaseAuth({ firebaseApp }),
+      repository: defineTypeOrmRepository({ /* … */ }),
+      userMetadata: { entity: UserMetadataEntity, createDto, updateDto },
+      resources: [petResource],
+    }),
+  ],
+})
+export class AppModule {}
 ```
 
-The convention: **each external-IdP adapter package ships its own
-`defineXxxAuth(config)` helper**. The app sees configuration; the
-helper hides the `nestImports` / `authProviderExternallyManaged`
-plumbing.
+The convention: **for each external-IdP adapter, you write one
+`defineXxxAuth(config)` helper**. The helper hides the `nestImports`
+and the `authProviderExternallyManaged` flag — your `AppModule`
+keeps seeing configuration only. Today this helper lives in your
+app; future adapter packages may ship it pre-built.
 
 ### Override a single CRUD operation
 

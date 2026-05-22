@@ -14,7 +14,7 @@
 | Task | Guide | Lines |
 |------|-------|-------|
 | **Choose packages** (rockets-server vs rockets-server-auth) | [ROCKETS_PACKAGES_GUIDE.md](./ROCKETS_PACKAGES_GUIDE.md) | 400 |
-| **Configure application** (main.ts, modules, env) | [CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md) | 250 |
+| **Configure application** (final `RocketsModule.forRoot` shape) | [`examples/sample-server/CONFIGURATION.md`](../examples/sample-server/CONFIGURATION.md) + [CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md) | ~ |
 | **Built-in auth via `defineRocketsAuth`** (`RocketsModule` + one `userMetadata`) | [CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md#module-import-order) + [`examples/sample-server-auth/`](../examples/sample-server-auth/) | ~ |
 | **Provide dynamic repo token** (`userMetadata` via `TypeOrmExtModule.forFeature`) | [ROCKETS_PACKAGES_GUIDE.md](./ROCKETS_PACKAGES_GUIDE.md#phase-31-dynamic-repository-tokens-critical) | ~ |
 

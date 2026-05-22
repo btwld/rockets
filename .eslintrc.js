@@ -100,5 +100,53 @@ module.exports = {
         '@darraghor/nestjs-typed/should-specify-forbid-unknown-values': 'off',
       },
     },
+    // ARCH RULE: rockets-core is shared infrastructure — no controllers
+    // (presentation belongs in `rockets-server` / `rockets-server-auth`)
+    // and no JWT- or auth-issuance helpers (those live in server-auth).
+    // This selector catches the most common drift: someone adds an
+    // @Controller class to core "just to expose an internal endpoint"
+    // and the core package starts pulling presentation deps.
+    {
+      files: ['packages/rockets-core/src/**/*.ts'],
+      excludedFiles: [
+        'packages/rockets-core/src/**/*.spec.ts',
+        'packages/rockets-core/src/**/*.e2e-spec.ts',
+        'packages/rockets-core/src/**/*.typetest.ts',
+        'packages/rockets-core/src/**/__tests__/**',
+        'packages/rockets-core/src/**/__fixtures__/**',
+        'packages/rockets-core/src/**/__e2e__/**',
+      ],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector:
+              "Decorator[expression.callee.name='Controller'], Decorator[expression.callee.name='UseGuards'][expression.arguments.0.name=/Jwt/]",
+            message:
+              "rockets-core hosts shared infrastructure only. Controllers " +
+              'and JWT-bound guards belong in rockets-server or ' +
+              'rockets-server-auth. See ' +
+              '.claude/rules/rockets-core-architecture.md (rule #1).',
+          },
+        ],
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: '@bitwild/rockets',
+                message:
+                  'rockets-core must not depend on rockets-server (would create a cycle).',
+              },
+              {
+                name: '@bitwild/rockets-server-auth',
+                message:
+                  'rockets-core must not depend on rockets-server-auth (would create a cycle).',
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
 };

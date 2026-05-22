@@ -112,114 +112,84 @@ bootstrap().catch(error => {
 
 ## 🔧 **Rockets Server Configuration**
 
-### **Basic Setup (External Auth Provider)**
+> **Source of truth:** [`examples/sample-server/CONFIGURATION.md`](../examples/sample-server/CONFIGURATION.md)
+> and [`examples/sample-server/src/app.module.ts`](../examples/sample-server/src/app.module.ts).
+
+### **Final shape (external auth)**
+
+One `RocketsModule.forRoot` at the app root. No sibling `AuthModule`, no
+hand-listed `TypeOrmModule.forRoot({ entities })`.
 
 ```typescript
-// app.module.ts - rockets-server only
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { RocketsServerModule } from '@bitwild/rockets-server';
-import { YourExternalAuthProvider } from './auth/your-external-auth.adapter';
+import { RocketsModule } from '@bitwild/rockets';
+import { defineSampleAuth } from './auth/define-sample-auth';
+import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
+import { UserMetadataEntity } from './entities/user-metadata.entity';
+import { UserMetadataCreateDto, UserMetadataUpdateDto } from './dto/user-metadata.dto';
+import { petResource } from './resources/pet';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ 
-      isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
-    }),
-    
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+    RocketsModule.forRoot({
+      auth: defineSampleAuth(),           // AuthFeatureBundle
+      userMetadata: {
+        entity: UserMetadataEntity,
+        createDto: UserMetadataCreateDto,
+        updateDto: UserMetadataUpdateDto,
+      },
+      repository: defineTypeOrmRepository({
         type: 'postgres',
-        url: configService.get('DATABASE_URL'),
-        autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') === 'development',
-        logging: configService.get('NODE_ENV') === 'development',
+        url: process.env.DATABASE_URL,
+        synchronize: false,
       }),
-    }),
-
-    RocketsServerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        authProvider: YourExternalAuthProvider, // Auth0, Firebase, etc.
-        settings: {
-          metadata: {
-            enabled: true,
-            userMetadataEntity: 'UserMetadataEntity',
-          },
-        },
-      }),
+      resources: [petResource],
     }),
   ],
 })
 export class AppModule {}
 ```
 
-### **External Auth Provider Example**
+Use `forRootAsync` + `ConfigService` when connection options come from env —
+same fields.
+
+### **Auth adapter**
 
 ```typescript
-// auth/auth0.provider.ts
-import { Injectable } from '@nestjs/common';
-import { AuthAdapterInterface } from '@bitwild/rockets-server';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import type { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets';
 
 @Injectable()
-export class Auth0Provider implements AuthAdapterInterface {
-  async validateUser(token: string): Promise<any> {
-    // Validate JWT token with Auth0
-    // Return user object or throw error
-    try {
-      const decoded = jwt.verify(token, process.env.AUTH0_PUBLIC_KEY);
-      return {
-        id: decoded.sub,
-        email: decoded.email,
-        name: decoded.name,
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Invalid token');
-    }
+export class Auth0Adapter implements AuthAdapterInterface {
+  async validateToken(token: string): Promise<AuthorizedUser> {
+    const decoded = await verifyWithAuth0(token); // your IdP SDK
+    return {
+      id: decoded.sub,
+      sub: decoded.sub,
+      email: decoded.email,
+      userRoles: [{ role: { name: 'user' } }],
+    };
   }
 }
 ```
 
-### **Repository adapter + module resources**
+Prefer `defineAuthFeature({ adapter, entities, controllers })` so auth tables
+and routes stay colocated — see `examples/sample-server/src/auth/`.
 
-`RocketsModule.forRootAsync` carries a single top-level
-`repository: RepositoryModuleInterface` (the default persistence adapter)
-and a unified `resources[]` list. Every dynamic-repository row in the app
-flows through that one entry point:
+### **Repository bootstrap + `resources[]`**
 
-- `defineResource()` bundles auto-contribute their entity row.
-- `defineModuleResource({ entities, module })` bundles contribute
-  additional persistence rows **and/or** Nest module slices (controllers,
-  providers, exports, imports) without a separate `@Module` file in
-  `AppModule.imports`.
-- `userMetadata.entity` always registers under `USER_METADATA_MODULE_ENTITY_KEY`.
+- `defineResource()` — CRUD bundle; auto-contributes entity row + routes.
+- `defineModuleResource()` — custom controllers/services; optional `entities[]`.
+- `userMetadata.entity` — metadata row for `/me`.
+- `repository` — `RepositoryModuleInterface` or `RepositoryBootstrap`
+  (`defineTypeOrmRepository` in sample-server).
 
 ```typescript
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
-import { RocketsModule } from '@bitwild/rockets';
-import { defineModuleResource } from '@bitwild/rockets-core';
-import { petResource } from './resources/pet';
-import { auditFeature } from './audit';                  // defineModuleResource()
-import { petTransferFeature } from './resources/pet-transfer'; // entities: [] (CQRS only)
-
-RocketsModule.forRootAsync({
-  inject: [SampleAuthAdapter],
-  useFactory: (authProvider: SampleAuthAdapter) => ({ authProvider }),
-  userMetadata: {
-    entity: UserMetadataEntity,
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
-    // repository: FirestoreRepositoryModule, // optional per-entity override
-  },
-  repository: TypeOrmRepositoryModule, // <-- single root adapter
-  resources: [
-    petResource,         // CRUD bundle
-    auditFeature,        // entities[] + Nest slice (controller + service)
-    petTransferFeature,  // entities: [] — pure Nest slice (CQRS handlers)
-  ],
+RocketsModule.forRoot({
+  auth: defineSampleAuth(),
+  repository: defineTypeOrmRepository({ /* driver options */ }),
+  userMetadata: { entity, createDto, updateDto },
+  resources: [petResource, auditFeature, petTransferFeature],
 });
 ```
 

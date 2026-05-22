@@ -75,6 +75,21 @@ describe('defineModuleResource', () => {
       ]);
     });
 
+    it('derives key on `{ entity, repository }` without explicit key', () => {
+      const bundle = defineModuleResource({
+        entities: [
+          { entity: PetTagEntity, repository: FakeAlternateAdapter },
+        ],
+      });
+      expect(bundle.entities).toEqual([
+        {
+          key: 'petTag',
+          entity: PetTagEntity,
+          repository: FakeAlternateAdapter,
+        },
+      ]);
+    });
+
     it('preserves the explicit `{ key, entity }` form alongside shorthand', () => {
       const FakeAdapter = {
         name: 'X',

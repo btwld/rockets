@@ -2,7 +2,6 @@ export { FirestoreRepositoryModule } from './firestore-repository.module';
 export {
   FirestoreRepository,
   isFirestoreRepository,
-  isPageableRepository,
 } from './repository/firestore-repository';
 export type { FirestoreProviderOptions } from './interfaces/firestore-provider-options.interface';
 export { FIRESTORE_REPOSITORY_MODULE_NAME } from './constants/firestore-repository.constants';

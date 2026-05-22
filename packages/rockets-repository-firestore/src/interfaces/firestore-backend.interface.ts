@@ -2,7 +2,6 @@ import type {
   FirestoreOrderBy,
   FirestoreQueryBranch,
   FirestoreQueryFilter,
-  FirestoreQueryPagePosition,
 } from './firestore-query.interface';
 
 /** @deprecated Use {@link FirestoreQueryFilter} via {@link FirestoreQueryBranch}. */
@@ -16,7 +15,6 @@ export interface FirestoreBranchQueryOptions {
   readonly orderBy?: readonly FirestoreOrderBy[];
   readonly skip?: number;
   readonly take?: number;
-  readonly afterPosition?: FirestoreQueryPagePosition;
 }
 
 export interface FirestoreBackend {
