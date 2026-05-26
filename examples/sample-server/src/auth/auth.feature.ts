@@ -13,8 +13,8 @@ import { SampleAuthAdapter } from './auth.adapter';
  * per-entity adapter override.
  *
  * `SampleAuthAdapter` is in `exports` so it stays globally injectable
- * under `AUTH_ADAPTER_TOKEN` via the `auth: SampleAuthAdapter` field
- * on `RocketsModule.forRoot(...)`.
+ * and can be included in the `AUTH_ADAPTERS_TOKEN` chain via
+ * `auth: SampleAuthAdapter` on `RocketsModule.forRoot(...)`.
  */
 export const authFeature = defineModuleResource({
   entities: [UserEntity],

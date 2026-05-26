@@ -28,7 +28,13 @@ import {
   Where,
 } from '@bitwild/rockets-repository';
 import { sign, verify } from 'jsonwebtoken';
-import type { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+  AuthorizedUser,
+} from '@bitwild/rockets';
+import { extractBearerToken } from '@bitwild/rockets';
 import { UserEntity, UserRole } from './user.entity';
 
 // Hardcoded for demo only — see file header.
@@ -41,32 +47,46 @@ export class SampleAuthAdapter implements AuthAdapterInterface {
     private readonly userRepo: RepositoryInterface<UserEntity>,
   ) {}
 
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
     try {
-      const payload = verify(token, JWT_SECRET) as {
-        sub: string;
-        email: string;
-      };
-
-      const user = await this.userRepo.findOne({
-        where: Where.eq<UserEntity>('id', payload.sub),
-      });
-
-      if (!user) {
-        throw new UnauthorizedException('User not found');
-      }
-
-      return {
-        id: user.id,
-        sub: user.id,
-        email: user.email,
-        userRoles: [{ role: { name: user.role ?? UserRole.USER } }],
-        claims: { email: user.email, name: user.name, role: user.role },
-      };
+      const user = await this.validateToken(token);
+      return { matched: true, user };
     } catch (error) {
-      if (error instanceof UnauthorizedException) throw error;
-      throw new UnauthorizedException('Invalid token');
+      if (error instanceof UnauthorizedException) {
+        return { matched: true, error };
+      }
+      return {
+        matched: true,
+        error: new UnauthorizedException('Authentication failed'),
+      };
     }
+  }
+
+  private async validateToken(token: string): Promise<AuthorizedUser> {
+    const raw = verify(token, JWT_SECRET);
+    if (typeof raw !== 'object' || raw === null || !('sub' in raw)) {
+      throw new UnauthorizedException('Invalid token payload');
+    }
+    const payload = raw as { sub: string; email: string };
+
+    const user = await this.userRepo.findOne({
+      where: Where.eq<UserEntity>('id', payload.sub),
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      id: user.id,
+      sub: user.id,
+      email: user.email,
+      userRoles: [{ role: { name: user.role ?? UserRole.USER } }],
+      claims: { email: user.email, name: user.name, role: user.role },
+    };
   }
 
   async signup(

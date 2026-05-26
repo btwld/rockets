@@ -155,22 +155,71 @@ same fields.
 
 ### **Auth adapter**
 
+Each adapter implements `AuthAdapterInterface.authenticate()` and returns a
+discriminated union:
+
+| Return value | Meaning |
+|---|---|
+| `{ matched: false }` | Adapter does not own this credential (try the next one) |
+| `{ matched: true, user }` | Valid credential — guard stamps `req.user` and stops |
+| `{ matched: true, error }` | Recognised credential but rejected — guard stops with this `HttpException` |
+
 ```typescript
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import type { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '@bitwild/rockets';
+import { extractBearerToken } from '@bitwild/rockets';
 
 @Injectable()
 export class Auth0Adapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
-    const decoded = await verifyWithAuth0(token); // your IdP SDK
-    return {
-      id: decoded.sub,
-      sub: decoded.sub,
-      email: decoded.email,
-      userRoles: [{ role: { name: 'user' } }],
-    };
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };  // not a Bearer request
+
+    try {
+      const decoded = await verifyWithAuth0(token); // your IdP SDK
+      return {
+        matched: true,
+        user: {
+          id: decoded.sub,
+          sub: decoded.sub,
+          email: decoded.email,
+          userRoles: [{ role: { name: 'user' } }],
+          claims: decoded,
+        },
+      };
+    } catch {
+      return { matched: true, error: new UnauthorizedException('Authentication failed') };
+    }
   }
 }
+```
+
+#### **Multiple adapters — chain syntax**
+
+Pass an array to `auth` to try multiple strategies in priority order. The
+guard stops on the first conclusive result (success **or** rejection). A
+`matched: false` result moves to the next adapter.
+
+```typescript
+RocketsModule.forRoot({
+  // Priority order: JWT first, then API-key, then mTLS
+  auth: [JwtAuthAdapter, ApiKeyAuthAdapter, MtlsAuthAdapter],
+  // …
+});
+```
+
+Or with `defineAuthFeature` bundles (each bundle carries its own entity +
+controller):
+
+```typescript
+RocketsModule.forRoot({
+  auth: [jwtFeature, apiKeyFeature],
+  // …
+});
 ```
 
 Prefer `defineAuthFeature({ adapter, entities, controllers })` so auth tables

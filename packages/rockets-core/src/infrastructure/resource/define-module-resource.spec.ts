@@ -77,9 +77,7 @@ describe('defineModuleResource', () => {
 
     it('derives key on `{ entity, repository }` without explicit key', () => {
       const bundle = defineModuleResource({
-        entities: [
-          { entity: PetTagEntity, repository: FakeAlternateAdapter },
-        ],
+        entities: [{ entity: PetTagEntity, repository: FakeAlternateAdapter }],
       });
       expect(bundle.entities).toEqual([
         {

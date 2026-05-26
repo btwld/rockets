@@ -1,5 +1,6 @@
 import { Injectable, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import type { AuthRequest } from '@bitwild/rockets-core';
 
 import {
   FIREBASE_AUTH_MODULE_OPTIONS_TOKEN,
@@ -143,9 +144,14 @@ describe(FirebaseAuthModule.name, () => {
     }).compile();
 
     const adapter = moduleRef.get(FirebaseAuthAdapter);
-    const user = await adapter.validateToken('any.jwt');
-
-    expect(user.id).toBe('custom-id');
+    const req: AuthRequest = {
+      headers: { authorization: 'Bearer any.jwt' },
+      query: {},
+      raw: {},
+    };
+    const result = await adapter.authenticate(req);
+    expect(result).toMatchObject({ matched: true });
+    expect('user' in result && result.user.id).toBe('custom-id');
   });
 
   it('produces a working adapter end-to-end through the module', async () => {
@@ -158,10 +164,15 @@ describe(FirebaseAuthModule.name, () => {
     }).compile();
 
     const adapter = moduleRef.get(FirebaseAuthAdapter);
-    const user = await adapter.validateToken('any.jwt');
-
-    expect(user.id).toBe('fake');
-    expect(user.sub).toBe('fake');
+    const req: AuthRequest = {
+      headers: { authorization: 'Bearer any.jwt' },
+      query: {},
+      raw: {},
+    };
+    const result = await adapter.authenticate(req);
+    expect(result).toMatchObject({ matched: true });
+    expect('user' in result && result.user.id).toBe('fake');
+    expect('user' in result && result.user.sub).toBe('fake');
   });
 
   it('returns a `global: true` dynamic module so downstream modules can inject FirebaseAuthAdapter without importing FirebaseAuthModule directly', () => {

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import type { AuthRequest } from '@bitwild/rockets-core';
 
 import {
   FIREBASE_AUTH_MODULE_OPTIONS_TOKEN,
@@ -20,6 +21,14 @@ import {
 } from '../interfaces/firebase-token-verifier.interface';
 import { FirebaseUserResolverInterface } from '../interfaces/firebase-user-resolver.interface';
 import { DefaultFirebaseUserResolverService } from '../services/default-firebase-user-resolver.service';
+
+function makeRequest(authorization?: string): AuthRequest {
+  return {
+    headers: authorization !== undefined ? { authorization } : {},
+    query: {},
+    raw: {},
+  };
+}
 
 class StubVerifier implements FirebaseTokenVerifierInterface {
   constructor(
@@ -76,30 +85,39 @@ async function makeAdapter(opts: {
 }
 
 describe(FirebaseAuthAdapter.name, () => {
-  describe('input validation', () => {
-    it('rejects empty token without calling verifier', async () => {
+  describe('no credential', () => {
+    it('returns matched: false when no Authorization header is present', async () => {
       const verify = jest.fn();
       const adapter = await makeAdapter({
         verifier: { verifyIdToken: verify } as FirebaseTokenVerifierInterface,
       });
 
-      await expect(adapter.validateToken('')).rejects.toBeInstanceOf(
-        FirebaseTokenInvalidException,
-      );
+      const result = await adapter.authenticate(makeRequest());
+      expect(result).toEqual({ matched: false });
       expect(verify).not.toHaveBeenCalled();
     });
 
-    it('rejects non-string token without calling verifier', async () => {
+    it('returns matched: false when Authorization header uses a non-Bearer scheme', async () => {
       const verify = jest.fn();
       const adapter = await makeAdapter({
         verifier: { verifyIdToken: verify } as FirebaseTokenVerifierInterface,
       });
 
-      // Cast through unknown — the public contract is string, the
-      // guard exists for runtime garbage that bypasses TS.
-      await expect(
-        adapter.validateToken(undefined as unknown as string),
-      ).rejects.toBeInstanceOf(FirebaseTokenInvalidException);
+      const result = await adapter.authenticate(
+        makeRequest('Basic dXNlcjpwYXNz'),
+      );
+      expect(result).toEqual({ matched: false });
+      expect(verify).not.toHaveBeenCalled();
+    });
+
+    it('returns matched: false for an empty Bearer value', async () => {
+      const verify = jest.fn();
+      const adapter = await makeAdapter({
+        verifier: { verifyIdToken: verify } as FirebaseTokenVerifierInterface,
+      });
+
+      const result = await adapter.authenticate(makeRequest('Bearer '));
+      expect(result).toEqual({ matched: false });
       expect(verify).not.toHaveBeenCalled();
     });
   });
@@ -115,9 +133,14 @@ describe(FirebaseAuthAdapter.name, () => {
         }),
       });
 
-      await expect(adapter.validateToken('expired.jwt')).rejects.toBeInstanceOf(
-        FirebaseTokenInvalidException,
+      const result = await adapter.authenticate(
+        makeRequest('Bearer expired.jwt'),
       );
+      expect(result).toMatchObject({ matched: true });
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.error).toBeInstanceOf(FirebaseTokenInvalidException);
+      }
     });
 
     it('maps `auth/id-token-revoked` to FirebaseTokenRevokedException', async () => {
@@ -130,9 +153,14 @@ describe(FirebaseAuthAdapter.name, () => {
         }),
       });
 
-      await expect(adapter.validateToken('revoked.jwt')).rejects.toBeInstanceOf(
-        FirebaseTokenRevokedException,
+      const result = await adapter.authenticate(
+        makeRequest('Bearer revoked.jwt'),
       );
+      expect(result).toMatchObject({ matched: true });
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.error).toBeInstanceOf(FirebaseTokenRevokedException);
+      }
     });
 
     it('handles non-Error rejections from the verifier', async () => {
@@ -143,9 +171,12 @@ describe(FirebaseAuthAdapter.name, () => {
         }),
       });
 
-      await expect(adapter.validateToken('bad.jwt')).rejects.toBeInstanceOf(
-        FirebaseTokenInvalidException,
-      );
+      const result = await adapter.authenticate(makeRequest('Bearer bad.jwt'));
+      expect(result).toMatchObject({ matched: true });
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.error).toBeInstanceOf(FirebaseTokenInvalidException);
+      }
     });
 
     it('forwards `checkRevoked` from module options to the verifier', async () => {
@@ -160,7 +191,7 @@ describe(FirebaseAuthAdapter.name, () => {
         options: { checkRevoked: true },
       });
 
-      await adapter.validateToken('good.jwt');
+      await adapter.authenticate(makeRequest('Bearer good.jwt'));
 
       expect(verifyIdToken).toHaveBeenCalledWith('good.jwt', {
         checkRevoked: true,
@@ -169,7 +200,7 @@ describe(FirebaseAuthAdapter.name, () => {
   });
 
   describe('decoded token validation', () => {
-    it('throws FirebaseTokenMissingSubjectException when decoded token has no uid', async () => {
+    it('returns FirebaseTokenMissingSubjectException when decoded token has no uid', async () => {
       const adapter = await makeAdapter({
         verifier: new StubVerifier({
           kind: 'resolve',
@@ -181,9 +212,16 @@ describe(FirebaseAuthAdapter.name, () => {
         }),
       });
 
-      await expect(adapter.validateToken('no-uid.jwt')).rejects.toBeInstanceOf(
-        FirebaseTokenMissingSubjectException,
+      const result = await adapter.authenticate(
+        makeRequest('Bearer no-uid.jwt'),
       );
+      expect(result).toMatchObject({ matched: true });
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.error).toBeInstanceOf(
+          FirebaseTokenMissingSubjectException,
+        );
+      }
     });
   });
 
@@ -202,19 +240,24 @@ describe(FirebaseAuthAdapter.name, () => {
         }),
       });
 
-      const user = await adapter.validateToken('valid.jwt');
-
-      expect(user.id).toBe('fb-uid-123');
-      expect(user.sub).toBe('fb-uid-123');
-      expect(user.email).toBe('jane@example.com');
-      expect(user.userRoles).toEqual([
-        { role: { name: 'user' } },
-        { role: { name: 'editor' } },
-      ]);
-      expect(user.claims).toMatchObject({
-        uid: 'fb-uid-123',
-        email: 'jane@example.com',
-      });
+      const result = await adapter.authenticate(
+        makeRequest('Bearer valid.jwt'),
+      );
+      expect(result).toMatchObject({ matched: true });
+      expect('user' in result).toBe(true);
+      if ('user' in result) {
+        expect(result.user.id).toBe('fb-uid-123');
+        expect(result.user.sub).toBe('fb-uid-123');
+        expect(result.user.email).toBe('jane@example.com');
+        expect(result.user.userRoles).toEqual([
+          { role: { name: 'user' } },
+          { role: { name: 'editor' } },
+        ]);
+        expect(result.user.claims).toMatchObject({
+          uid: 'fb-uid-123',
+          email: 'jane@example.com',
+        });
+      }
     });
 
     it('omits email when the token does not carry one', async () => {
@@ -225,9 +268,15 @@ describe(FirebaseAuthAdapter.name, () => {
         }),
       });
 
-      const user = await adapter.validateToken('valid.jwt');
-      expect(user).not.toHaveProperty('email');
-      expect(user.userRoles).toEqual([]);
+      const result = await adapter.authenticate(
+        makeRequest('Bearer valid.jwt'),
+      );
+      expect(result).toMatchObject({ matched: true });
+      expect('user' in result).toBe(true);
+      if ('user' in result) {
+        expect(result.user).not.toHaveProperty('email');
+        expect(result.user.userRoles).toEqual([]);
+      }
     });
 
     it('wraps unknown resolver failures in FirebaseAuthException', async () => {
@@ -239,10 +288,17 @@ describe(FirebaseAuthAdapter.name, () => {
         resolver: new ExplodingResolver(),
       });
 
-      const thrown = await adapter.validateToken('valid.jwt').catch((e) => e);
-      expect(thrown).toBeInstanceOf(FirebaseAuthException);
-      // Original cause is preserved for logging/debugging.
-      expect((thrown as FirebaseAuthException).cause).toBeInstanceOf(Error);
+      const result = await adapter.authenticate(
+        makeRequest('Bearer valid.jwt'),
+      );
+      expect(result).toMatchObject({ matched: true });
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.error).toBeInstanceOf(FirebaseAuthException);
+        expect((result.error as FirebaseAuthException).cause).toBeInstanceOf(
+          Error,
+        );
+      }
     });
 
     it('lets FirebaseAuthException from the resolver propagate as-is', async () => {
@@ -265,9 +321,14 @@ describe(FirebaseAuthAdapter.name, () => {
         resolver: new TenantResolver(),
       });
 
-      await expect(adapter.validateToken('valid.jwt')).rejects.toBeInstanceOf(
-        TenantMismatch,
+      const result = await adapter.authenticate(
+        makeRequest('Bearer valid.jwt'),
       );
+      expect(result).toMatchObject({ matched: true });
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.error).toBeInstanceOf(TenantMismatch);
+      }
     });
   });
 });

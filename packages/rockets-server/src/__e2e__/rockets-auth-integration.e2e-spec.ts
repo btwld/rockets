@@ -12,11 +12,13 @@ import { IsString } from 'class-validator';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
-  AUTH_ADAPTER_TOKEN,
+  AUTH_ADAPTERS_TOKEN,
   defineModuleResource,
+  extractBearerToken,
   ROCKETS_AUTH_INTEGRATION_KIND,
   type AuthAdapterInterface,
-  type AuthorizedUser,
+  type AuthAttemptResult,
+  type AuthRequest,
   type RocketsAuthIntegration,
   type UserMetadataCreatableInterface,
   type UserMetadataModelUpdatableInterface,
@@ -41,17 +43,22 @@ class IntegrationUserEntity {
 
 @Injectable()
 class IntegrationAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
     if (token === 'valid-integration-token') {
       return {
-        id: 'user-integration',
-        sub: 'user-integration',
-        email: 'integration@test.com',
-        userRoles: [{ role: { name: 'admin' } }],
-        claims: {},
+        matched: true,
+        user: {
+          id: 'user-integration',
+          sub: 'user-integration',
+          email: 'integration@test.com',
+          userRoles: [{ role: { name: 'admin' } }],
+          claims: {},
+        },
       };
     }
-    throw new UnauthorizedException();
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 
@@ -131,9 +138,12 @@ describe('RocketsModule — auth: RocketsAuthIntegration (e2e)', () => {
     if (app) await app.close();
   });
 
-  it('resolves `AUTH_ADAPTER_TOKEN` to the integration adapter class', () => {
-    const adapter = app.get<AuthAdapterInterface>(AUTH_ADAPTER_TOKEN);
-    expect(adapter).toBeInstanceOf(IntegrationAuthAdapter);
+  it('resolves `AUTH_ADAPTERS_TOKEN` and contains the integration adapter instance', () => {
+    const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
+    expect(adapters).toBeDefined();
+    expect(adapters.some((a) => a instanceof IntegrationAuthAdapter)).toBe(
+      true,
+    );
   });
 
   it('merges integration `resources` into the planner (repo probe returns 200)', async () => {

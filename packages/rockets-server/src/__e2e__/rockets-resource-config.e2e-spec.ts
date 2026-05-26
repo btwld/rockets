@@ -27,10 +27,12 @@ import request from 'supertest';
 import { RepositoryModule } from '@bitwild/rockets-repository';
 import type {
   AuthAdapterInterface,
-  AuthorizedUser,
+  AuthAttemptResult,
+  AuthRequest,
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
+import { extractBearerToken } from '@bitwild/rockets-core';
 import { RocketsModule } from '../rockets.module';
 import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
@@ -109,17 +111,22 @@ class ItemPaginatedDto extends CrudResponsePaginatedDto<ItemResponseDto> {
 
 @Injectable()
 class TestAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
     if (token === 'valid-token') {
       return {
-        id: 'user-1',
-        sub: 'user-1',
-        email: 'test@test.com',
-        userRoles: [{ role: { name: 'admin' } }],
-        claims: {},
+        matched: true,
+        user: {
+          id: 'user-1',
+          sub: 'user-1',
+          email: 'test@test.com',
+          userRoles: [{ role: { name: 'admin' } }],
+          claims: {},
+        },
       };
     }
-    throw new UnauthorizedException();
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 

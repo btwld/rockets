@@ -17,8 +17,12 @@ import {
   type UserMetadataModelUpdatableInterface,
 } from './domain/interfaces/user-metadata.interface';
 import { RocketsModule } from './rockets.module';
-import { AuthAdapterInterface } from './domain/interfaces/auth-adapter.interface';
-import { AuthorizedUser } from './domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '@bitwild/rockets-core';
+import { extractBearerToken } from '@bitwild/rockets-core';
 
 class MetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -56,17 +60,23 @@ class MetadataUpdateNullConstraintsDto
 }
 
 class NoMetadataAuthProvider implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
     if (token === 'no-metadata-token') {
       return {
-        id: 'user-without-metadata',
-        sub: 'user-without-metadata',
-        email: 'nometadata@example.com',
-        userRoles: [{ role: { name: 'user' } }],
-        claims: {
+        matched: true,
+        user: {
+          id: 'user-without-metadata',
           sub: 'user-without-metadata',
           email: 'nometadata@example.com',
-          roles: ['user'],
+          userRoles: [{ role: { name: 'user' } }],
+          claims: {
+            sub: 'user-without-metadata',
+            email: 'nometadata@example.com',
+            roles: ['user'],
+          },
         },
       };
     }

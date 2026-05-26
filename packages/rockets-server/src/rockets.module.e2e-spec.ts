@@ -234,7 +234,7 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'No authentication token provided',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });
@@ -253,7 +253,7 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'Invalid authentication token',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });
@@ -272,7 +272,7 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'No authentication token provided',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });
@@ -381,7 +381,7 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'No authentication token provided',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });
@@ -400,7 +400,7 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'No authentication token provided',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });
@@ -419,7 +419,7 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'No authentication token provided',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });
@@ -438,12 +438,15 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'No authentication token provided',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });
 
-    it('should wrap non-UnauthorizedException errors from auth provider as 401', async () => {
+    it('should return 401 (not 500) when adapter throws an unexpected error', async () => {
+      // FailingAuthAdapterFixture always throws a plain Error (e.g. "DB timeout")
+      // for recognised credentials. The guard must catch it and return a generic
+      // 401 so internal error details are never leaked to the client.
       const moduleRef = await Test.createTestingModule({
         imports: [
           TestModule,
@@ -463,7 +466,7 @@ describe('RocketsModule (e2e)', () => {
         .expect(401);
 
       expect(res.body).toMatchObject({
-        message: 'Invalid authentication token',
+        message: 'Authentication failed',
         statusCode: 401,
       });
     });

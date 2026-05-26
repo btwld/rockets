@@ -34,16 +34,26 @@ export function translateDnfBranch(
 }
 
 /** @deprecated Prefer `toDnf` + {@link translateDnfBranch} in the repository. */
-export function translateWhereClause(clause?: WhereClause): FirestoreQueryBranch[] {
+export function translateWhereClause(
+  clause?: WhereClause,
+): FirestoreQueryBranch[] {
   if (!clause) {
     return [{ filters: [], postFilters: [] }];
   }
 
-  if (isWhereCompound(clause) && clause.operator === WhereCompoundOperator.AND) {
+  if (
+    isWhereCompound(clause) &&
+    clause.operator === WhereCompoundOperator.AND
+  ) {
     return [mergeAndBranch(clause.conditions)];
   }
 
-  if (isWhereCondition(clause) && !isNullaryCondition(clause) && !isArrayCondition(clause) && !isPairCondition(clause)) {
+  if (
+    isWhereCondition(clause) &&
+    !isNullaryCondition(clause) &&
+    !isArrayCondition(clause) &&
+    !isPairCondition(clause)
+  ) {
     return [translateScalarCondition(clause)];
   }
 
@@ -58,7 +68,9 @@ export function translateWhereClause(clause?: WhereClause): FirestoreQueryBranch
   return [{ filters: [], postFilters: [] }];
 }
 
-function mergeAndBranch(conditions: readonly WhereClause[]): FirestoreQueryBranch {
+function mergeAndBranch(
+  conditions: readonly WhereClause[],
+): FirestoreQueryBranch {
   const merged: FirestoreQueryFilter[] = [];
   const postFilters: FirestorePostFilter[] = [];
   let documentId: string | undefined;
@@ -142,7 +154,9 @@ function translateIdCondition(condition: WhereCondition): FirestoreQueryBranch {
         postFilters: [],
       };
     case WhereOperator.IN: {
-      const values = asArray(readArrayValue(condition)).map((value) => String(value));
+      const values = asArray(readArrayValue(condition)).map((value) =>
+        String(value),
+      );
       return {
         documentIds: values,
         filters: [],
@@ -254,7 +268,10 @@ function translateScalarCondition(
 }
 
 /** Prefix range: `field >= value` AND `field < value + suffix`. */
-function buildPrefixBranch(field: string, prefix: string): FirestoreQueryBranch {
+function buildPrefixBranch(
+  field: string,
+  prefix: string,
+): FirestoreQueryBranch {
   return {
     filters: [
       { field, op: '>=', value: prefix },
@@ -264,7 +281,9 @@ function buildPrefixBranch(field: string, prefix: string): FirestoreQueryBranch 
   };
 }
 
-function assertFirestoreFilterRules(filters: readonly FirestoreQueryFilter[]): void {
+function assertFirestoreFilterRules(
+  filters: readonly FirestoreQueryFilter[],
+): void {
   const rangeFields = new Set<string>();
   for (const filter of filters) {
     if (RANGE_OPS.has(filter.op) && filter.op !== '!=') {
@@ -273,14 +292,18 @@ function assertFirestoreFilterRules(filters: readonly FirestoreQueryFilter[]): v
   }
   if (rangeFields.size > 1) {
     throw new Error(
-      `Firestore adapter: range filters on multiple fields (${[...rangeFields].join(', ')}) — use AND on one inequality field per query.`,
+      `Firestore adapter: range filters on multiple fields (${[
+        ...rangeFields,
+      ].join(', ')}) — use AND on one inequality field per query.`,
     );
   }
 }
 
 function asArray(value: unknown): unknown[] {
   if (!Array.isArray(value)) {
-    throw new Error('Firestore adapter: expected an array value for in/nin operator.');
+    throw new Error(
+      'Firestore adapter: expected an array value for in/nin operator.',
+    );
   }
   return value;
 }

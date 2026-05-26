@@ -36,29 +36,29 @@ class PetCreateUniqueRefFields {
 
 @Exclude()
 export class PetDto {
-  @Expose() @ApiProperty() id!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
   @Expose()
-  @ApiProperty()
+  @ApiProperty({ example: 'Buddy' })
   @IsString()
   @IsNotEmpty()
   @MinLength(1)
   @MaxLength(255)
   name!: string;
   @Expose()
-  @ApiProperty()
+  @ApiProperty({ example: 'dog' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   species!: string;
   @Expose()
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'Labrador' })
   @IsString()
   @IsOptional()
   @MaxLength(255)
   breed?: string;
-  @Expose() @ApiProperty() @IsInt() @Min(0) @Max(50) age!: number;
+  @Expose() @ApiProperty({ minimum: 0, maximum: 50 }) @IsInt() @Min(0) @Max(50) age!: number;
   @Expose()
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'golden' })
   @IsString()
   @IsOptional()
   @MaxLength(100)
@@ -72,11 +72,11 @@ export class PetDto {
   @ApiProperty({ enum: PetStatus })
   @IsEnum(PetStatus)
   status!: PetStatus;
-  @Expose() @ApiProperty() @IsString() @IsNotEmpty() userId!: string;
-  @Expose() @ApiProperty() dateCreated!: Date;
-  @Expose() @ApiProperty() dateUpdated!: Date;
-  @Expose() @ApiPropertyOptional() dateDeleted!: Date | null;
-  @Expose() @ApiProperty() version!: number;
+  @Expose() @ApiProperty({ format: 'uuid' }) @IsString() @IsNotEmpty() userId!: string;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateCreated!: Date;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateUpdated!: Date;
+  @Expose() @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) dateDeleted!: Date | null;
+  @Expose() @ApiProperty({ description: 'Optimistic lock version' }) version!: number;
 }
 
 /**

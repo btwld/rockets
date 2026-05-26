@@ -15,8 +15,12 @@ import type {
 import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
 import { Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
-import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '../domain/interfaces/auth-adapter.interface';
+import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import type { RepositoryBootstrap } from '../domain/interfaces/repository-bootstrap.interface';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { defineModuleResource } from '../infrastructure/resource/define-module-resource';
@@ -27,8 +31,10 @@ import { defineModuleResource } from '../infrastructure/resource/define-module-r
 
 @Injectable()
 class StubAuthAdapter implements AuthAdapterInterface {
-  async validateToken(_token: string): Promise<AuthorizedUser> {
-    throw new UnauthorizedException();
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 

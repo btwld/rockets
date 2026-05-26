@@ -4,7 +4,7 @@
  * Why this file exists
  * --------------------
  * `rockets-server` delegates the auth abstraction to `rockets-core`
- * (`AuthAdapterInterface`, `AuthorizedUser`, `AUTH_ADAPTER_TOKEN`). All
+ * (`AuthAdapterInterface`, `AuthorizedUser`, `AUTH_ADAPTERS_TOKEN`). All
  * other e2e specs in this package use fixtures that import from the
  * server's own re-exports — so if someone divergently edits the core
  * types but leaves the server's local re-export untouched, those tests
@@ -29,8 +29,10 @@ import request from 'supertest';
 
 import type {
   AuthAdapterInterface,
-  AuthorizedUser,
+  AuthAttemptResult,
+  AuthRequest,
 } from '@bitwild/rockets-core';
+import { extractBearerToken } from '@bitwild/rockets-core';
 
 import { IsNotEmpty, IsString } from 'class-validator';
 
@@ -58,23 +60,29 @@ class MetadataUpdateDto implements UserMetadataModelUpdatableInterface {
 /**
  * Implements ONLY `@bitwild/rockets-core`'s `AuthAdapterInterface` —
  * no server-side imports. This is exactly the shape a 3rd-party
- * adapter (Firebase, Auth0, custom) ships with.
+ * Bearer-token adapter (Firebase, Auth0, custom) ships with.
  */
 @Injectable()
 class CoreOnlyAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
     if (token !== 'core-contract-token') {
       throw new Error('Invalid token');
     }
     return {
-      id: 'core-contract-user',
-      sub: 'core-contract-user',
-      email: 'contract@core.example',
-      userRoles: [{ role: { name: 'user' } }],
-      claims: {
+      matched: true,
+      user: {
+        id: 'core-contract-user',
         sub: 'core-contract-user',
         email: 'contract@core.example',
-        roles: ['user'],
+        userRoles: [{ role: { name: 'user' } }],
+        claims: {
+          sub: 'core-contract-user',
+          email: 'contract@core.example',
+          roles: ['user'],
+        },
       },
     };
   }

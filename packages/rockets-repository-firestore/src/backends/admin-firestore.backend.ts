@@ -92,9 +92,7 @@ export class AdminFirestoreBackend implements FirestoreBackend {
       query = query.limit(skip + take);
     }
     const snapshot = await query.get();
-    const rows = snapshot.docs.map((doc) =>
-      this.normalise(doc.data(), doc.id),
-    );
+    const rows = snapshot.docs.map((doc) => this.normalise(doc.data(), doc.id));
     return skip > 0 ? rows.slice(skip) : rows;
   }
 
@@ -210,8 +208,7 @@ export class AdminFirestoreBackend implements FirestoreBackend {
   private serialise(data: Record<string, unknown>): Record<string, unknown> {
     const next: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
-      next[key] =
-        value instanceof Date ? value.toISOString() : value;
+      next[key] = value instanceof Date ? value.toISOString() : value;
     }
     return next;
   }

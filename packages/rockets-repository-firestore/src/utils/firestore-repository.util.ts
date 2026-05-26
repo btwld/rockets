@@ -65,7 +65,9 @@ export function createFirestoreFeatureModule(
 
   return {
     module: FirestoreRepositoryModule,
-    providers: entities.map((entity) => createFirestoreProvider(entity, backend)),
+    providers: entities.map((entity) =>
+      createFirestoreProvider(entity, backend),
+    ),
     exports: entities.map((entity) => getDynamicRepositoryToken(entity.key)),
   };
 }

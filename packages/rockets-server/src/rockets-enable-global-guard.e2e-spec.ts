@@ -73,7 +73,7 @@ describe('RocketsModule enableGlobalGuard (e2e)', () => {
       .expect(401);
 
     expect(res.body).toMatchObject({
-      message: 'No authentication token provided',
+      message: 'Authentication failed',
       statusCode: 401,
     });
   });

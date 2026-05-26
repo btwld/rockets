@@ -1,6 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets-core';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+  AuthorizedUser,
+} from '@bitwild/rockets-core';
+import { extractBearerToken } from '@bitwild/rockets-core';
 
 import {
   FIREBASE_AUTH_MODULE_OPTIONS_TOKEN,
@@ -47,7 +53,27 @@ export class FirebaseAuthAdapter implements AuthAdapterInterface {
     private readonly options: FirebaseAuthModuleOptions,
   ) {}
 
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
+    try {
+      const user = await this.validateToken(token);
+      return { matched: true, user };
+    } catch (error) {
+      if (
+        error instanceof FirebaseTokenInvalidException ||
+        error instanceof FirebaseTokenRevokedException ||
+        error instanceof FirebaseTokenMissingSubjectException ||
+        error instanceof FirebaseAuthException
+      ) {
+        return { matched: true, error };
+      }
+      return { matched: true, error: new FirebaseTokenInvalidException() };
+    }
+  }
+
+  private async validateToken(token: string): Promise<AuthorizedUser> {
     if (typeof token !== 'string' || token.length === 0) {
       throw new FirebaseTokenInvalidException();
     }
@@ -84,10 +110,11 @@ export class FirebaseAuthAdapter implements AuthAdapterInterface {
         this.logger.warn('Firebase token rejected: revoked');
         throw new FirebaseTokenRevokedException(error);
       }
-      const detail =
-        error instanceof Error ? error.message : String(error);
+      const detail = error instanceof Error ? error.message : String(error);
       this.logger.warn(
-        `Firebase token verification failed${code ? ` (${code})` : ''}: ${detail}`,
+        `Firebase token verification failed${
+          code ? ` (${code})` : ''
+        }: ${detail}`,
       );
       throw new FirebaseTokenInvalidException(error);
     }

@@ -10,24 +10,24 @@ import {
 
 @Exclude()
 export class TagDto {
-  @Expose() @ApiProperty() id!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
 
   @Expose()
-  @ApiProperty()
+  @ApiProperty({ example: 'vaccinated' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   name!: string;
 
   @Expose()
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '#ff0000' })
   @IsString()
   @IsOptional()
   @MaxLength(20)
   color?: string;
 
-  @Expose() @ApiProperty() dateCreated!: Date;
-  @Expose() @ApiProperty() dateUpdated!: Date;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateCreated!: Date;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateUpdated!: Date;
 }
 
 export class TagCreateDto extends PickType(TagDto, [

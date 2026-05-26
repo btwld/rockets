@@ -5,15 +5,15 @@ import { PetSharePermission } from './pet-share.entity';
 
 @Exclude()
 export class PetShareResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() petId!: string;
-  @Expose() @ApiProperty() userId!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) petId!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) userId!: string;
 
   @Expose()
   @ApiProperty({ enum: PetSharePermission })
   permission!: PetSharePermission;
 
-  @Expose() @ApiProperty() dateCreated!: Date;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateCreated!: Date;
 }
 
 export class PetShareCreateDto {

@@ -36,9 +36,9 @@ export interface FirestoreRepositoryOptions<Entity extends PlainLiteralObject> {
   readonly backend: FirestoreBackend;
 }
 
-export class FirestoreRepository<Entity extends PlainLiteralObject>
-  extends RepositoryAdapter<Entity>
-{
+export class FirestoreRepository<
+  Entity extends PlainLiteralObject,
+> extends RepositoryAdapter<Entity> {
   readonly metadata: RepositoryMetadataInterface<Entity>;
   private readonly softDeleteField?: string;
 
@@ -48,7 +48,9 @@ export class FirestoreRepository<Entity extends PlainLiteralObject>
     this.softDeleteField = resolveSoftDeleteFieldFromMetadata(options.metadata);
   }
 
-  protected async doFind(options?: RepositoryFindOptions<Entity>): Promise<Entity[]> {
+  protected async doFind(
+    options?: RepositoryFindOptions<Entity>,
+  ): Promise<Entity[]> {
     const rows = await runFirestoreQuery(
       this.options.backend,
       this.options.collection,
@@ -64,7 +66,9 @@ export class FirestoreRepository<Entity extends PlainLiteralObject>
     return rows[0] ?? null;
   }
 
-  protected async doCount(options?: RepositoryFindOptions<Entity>): Promise<number> {
+  protected async doCount(
+    options?: RepositoryFindOptions<Entity>,
+  ): Promise<number> {
     const request = this.buildQueryRequest(options);
     return runFirestoreCount(this.options.backend, this.options.collection, {
       branches: request.branches,
@@ -189,7 +193,10 @@ export class FirestoreRepository<Entity extends PlainLiteralObject>
     return { ...entityLike } as Entity;
   }
 
-  merge(mergeIntoEntity: Entity, ...entityLikes: DeepPartial<Entity>[]): Entity {
+  merge(
+    mergeIntoEntity: Entity,
+    ...entityLikes: DeepPartial<Entity>[]
+  ): Entity {
     return Object.assign(mergeIntoEntity, ...entityLikes);
   }
 

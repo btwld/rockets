@@ -12,13 +12,18 @@ import { APP_GUARD } from '@nestjs/core';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import request from 'supertest';
 import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
-import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '../domain/interfaces/auth-adapter.interface';
 import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
+import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { AuthPublic } from '../decorators/auth-public.decorator';
 import {
-  AUTH_ADAPTER_TOKEN,
+  AUTH_ADAPTERS_TOKEN,
   USER_METADATA_MODULE_ENTITY_KEY,
 } from '../rockets-core.constants';
 import { UpsertUserMetadataCommand } from '../application/commands/impl/upsert-user-metadata.command';
@@ -32,19 +37,28 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 
 @Injectable()
 class MockAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
     if (token === 'valid') {
       return {
-        id: 'u1',
-        sub: 'u1',
-        email: 'a@b.com',
-        userRoles: [{ role: { name: 'admin' } }],
+        matched: true,
+        user: {
+          id: 'u1',
+          sub: 'u1',
+          email: 'a@b.com',
+          userRoles: [{ role: { name: 'admin' } }],
+        },
       };
     }
     if (token === 'throws-generic') {
       throw new Error('generic error');
     }
-    throw new UnauthorizedException('bad token');
+    return {
+      matched: true,
+      error: new UnauthorizedException('bad token'),
+    };
   }
 }
 
@@ -272,10 +286,12 @@ describe('RocketsCoreModule (e2e)', () => {
   });
 
   describe('Module exports', () => {
-    it('AUTH_ADAPTER_TOKEN is resolvable', () => {
-      const provider = app.get(AUTH_ADAPTER_TOKEN);
-      expect(provider).toBeDefined();
-      expect(provider).toHaveProperty('validateToken');
+    it('AUTH_ADAPTERS_TOKEN is resolvable and contains the adapter', () => {
+      const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
+      expect(adapters).toBeDefined();
+      expect(Array.isArray(adapters)).toBe(true);
+      expect(adapters.length).toBeGreaterThan(0);
+      expect(adapters[0]).toHaveProperty('authenticate');
     });
 
     it('AuthServerGuard is resolvable', () => {

@@ -30,10 +30,10 @@ export class FirebaseAuthModule {
    * Wire the adapter at the application root. Returns a `global: true`
    * dynamic module so `FirebaseAuthAdapter` is injectable from any
    * other module (notably the root composition where `RocketsModule`
-   * aliases it to `AUTH_ADAPTER_TOKEN`). Without `global`, downstream
-   * modules can't resolve the adapter unless they also import this
-   * module — which leaks Firebase wiring across the app and defeats
-   * the point of the abstraction.
+   * includes it in the `AUTH_ADAPTERS_TOKEN` chain). Without `global`,
+   * downstream modules can't resolve the adapter unless they also
+   * import this module — which leaks Firebase wiring across the app
+   * and defeats the point of the abstraction.
    */
   static forRoot(options: FirebaseAuthModuleOptions): DynamicModule {
     validateOptions(options);

@@ -8,9 +8,7 @@ import {
 
 const DEFAULT_PRIMARY = 'id';
 
-export function buildFirestoreEntityMetadata<
-  Entity extends PlainLiteralObject,
->(
+export function buildFirestoreEntityMetadata<Entity extends PlainLiteralObject>(
   entityType: Type<Entity>,
   collection: string,
   softDeleteFieldOverride?: string,

@@ -7,8 +7,8 @@
 //
 // `SampleAuthAdapter` and `AuthController` stay internal to this folder
 // — nothing outside the auth feature should inject the adapter class
-// directly. Code that needs the authenticated user resolves
-// `AUTH_ADAPTER_TOKEN` (aliased to the adapter by core).
+// directly. Code that needs the authenticated user uses the `@AuthUser()`
+// decorator or resolves it from `AUTH_ADAPTERS_TOKEN` via core.
 //
 // `UserEntity` / `UserRole` remain exported as shared domain types: the
 // pet-transfer handler, the event listeners, and the admin guard all

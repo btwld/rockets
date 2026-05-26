@@ -55,6 +55,28 @@ class LoginDto {
   password!: string;
 }
 
+class SignupResponseDto {
+  @ApiProperty({ description: 'Generated UUID for the new account' })
+  id!: string;
+
+  @ApiProperty({ example: 'user@example.com' })
+  email!: string;
+
+  @ApiPropertyOptional({ example: 'John Doe' })
+  name?: string;
+
+  @ApiProperty({ enum: UserRole, example: UserRole.USER })
+  role!: UserRole;
+
+  @ApiProperty({ description: 'Signed JWT — pass as Bearer token' })
+  accessToken!: string;
+}
+
+class LoginResponseDto {
+  @ApiProperty({ description: 'Signed JWT — pass as Bearer token' })
+  accessToken!: string;
+}
+
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -63,12 +85,9 @@ export class AuthController {
   @Post('signup')
   @AuthPublic()
   @ApiOperation({ summary: 'Create a new account' })
-  @ApiResponse({ status: 201, description: 'Account created, returns JWT' })
-  @ApiResponse({
-    status: 409,
-    description: 'Email is already registered',
-  })
-  async signup(@Body() dto: SignupDto) {
+  @ApiResponse({ status: 201, type: SignupResponseDto, description: 'Account created, returns JWT' })
+  @ApiResponse({ status: 409, description: 'Email is already registered' })
+  async signup(@Body() dto: SignupDto): Promise<SignupResponseDto> {
     const { user, accessToken } = await this.authAdapter.signup(
       dto.email,
       dto.password,
@@ -79,7 +98,7 @@ export class AuthController {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: user.role ?? UserRole.USER,
       accessToken,
     };
   }
@@ -88,9 +107,9 @@ export class AuthController {
   @AuthPublic()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
-  @ApiResponse({ status: 200, description: 'Returns JWT' })
+  @ApiResponse({ status: 200, type: LoginResponseDto, description: 'Returns JWT' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto) {
+  async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authAdapter.login(dto.email, dto.password);
   }
 }

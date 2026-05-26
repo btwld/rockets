@@ -29,8 +29,12 @@ import request from 'supertest';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineModuleResource } from '../infrastructure/resource/define-module-resource';
-import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
-import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '../domain/interfaces/auth-adapter.interface';
+import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
@@ -38,9 +42,12 @@ import type {
 
 @Injectable()
 class FeatureE2eAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
-    if (token === 'valid') return { id: 'u1', sub: 'u1' };
-    throw new UnauthorizedException();
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+    if (token === 'valid')
+      return { matched: true, user: { id: 'u1', sub: 'u1' } };
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 

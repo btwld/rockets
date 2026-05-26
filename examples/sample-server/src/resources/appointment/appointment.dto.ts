@@ -14,16 +14,16 @@ import { AppointmentStatus } from './appointment.entity';
 
 @Exclude()
 export class ReminderResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() appointmentId!: string;
-  @Expose() @ApiProperty() sendAt!: Date;
-  @Expose() @ApiProperty() sent!: boolean;
-  @Expose() @ApiProperty() dateCreated!: Date;
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) appointmentId!: string;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) sendAt!: Date;
+  @Expose() @ApiProperty({ description: 'Whether the reminder was dispatched' }) sent!: boolean;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateCreated!: Date;
 }
 
 @Exclude()
 export class AppointmentDto {
-  @Expose() @ApiProperty() id!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
 
   @Expose()
   @ApiProperty({ format: 'uuid' })
@@ -31,7 +31,7 @@ export class AppointmentDto {
   @IsNotEmpty()
   petId!: string;
 
-  @Expose() @ApiProperty() userId!: string;
+  @Expose() @ApiProperty({ format: 'uuid' }) userId!: string;
 
   @Expose()
   @ApiProperty({ type: String, format: 'date-time' })
@@ -50,7 +50,7 @@ export class AppointmentDto {
   @MaxLength(500)
   notes?: string;
 
-  @Expose() @ApiProperty() dateCreated!: Date;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateCreated!: Date;
 }
 
 export class AppointmentCreateDto extends PickType(AppointmentDto, [

@@ -36,8 +36,12 @@ import { Expose, Type } from 'class-transformer';
 import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import request from 'supertest';
-import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
-import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '../domain/interfaces/auth-adapter.interface';
+import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../rockets-core.constants';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
@@ -50,10 +54,12 @@ import { OwnerStampHook } from '../infrastructure/hooks/owner-stamp.hook';
 
 @Injectable()
 class StubAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
-    if (token === 'u1') return { id: 'u1', sub: 'u1' };
-    if (token === 'u2') return { id: 'u2', sub: 'u2' };
-    throw new UnauthorizedException();
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+    if (token === 'u1') return { matched: true, user: { id: 'u1', sub: 'u1' } };
+    if (token === 'u2') return { matched: true, user: { id: 'u2', sub: 'u2' } };
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 

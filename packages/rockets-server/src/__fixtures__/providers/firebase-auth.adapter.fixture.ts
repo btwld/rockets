@@ -1,20 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { AuthAdapterInterface } from '../../domain/interfaces/auth-adapter.interface';
-import { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '@bitwild/rockets-core';
+import { extractBearerToken } from '@bitwild/rockets-core';
 
 @Injectable()
 export class FirebaseAuthAdapterFixture implements AuthAdapterInterface {
-  async validateToken(_token: string): Promise<AuthorizedUser> {
-    // Simple test implementation - always returns the same user
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
     return {
-      id: 'firebase-user-1',
-      sub: 'firebase-user-1',
-      email: 'firebase@example.com',
-      userRoles: [{ role: { name: 'user' } }],
-      claims: {
+      matched: true,
+      user: {
+        id: 'firebase-user-1',
         sub: 'firebase-user-1',
         email: 'firebase@example.com',
-        roles: ['user'],
+        userRoles: [{ role: { name: 'user' } }],
+        claims: {
+          sub: 'firebase-user-1',
+          email: 'firebase@example.com',
+          roles: ['user'],
+        },
       },
     };
   }

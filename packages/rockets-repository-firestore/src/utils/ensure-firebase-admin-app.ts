@@ -9,7 +9,10 @@ import {
   type ServiceAccount,
 } from 'firebase-admin/app';
 
-function resolveServiceAccountPath(configured: string, packageRoot: string): string {
+function resolveServiceAccountPath(
+  configured: string,
+  packageRoot: string,
+): string {
   if (isAbsolute(configured)) {
     return configured;
   }

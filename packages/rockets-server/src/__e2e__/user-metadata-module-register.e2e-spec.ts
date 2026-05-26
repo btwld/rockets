@@ -23,6 +23,7 @@ import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
 import { IsOptional, IsString } from 'class-validator';
 
 import {
+  AUTH_ADAPTERS_TOKEN,
   USER_METADATA_MODULE_ENTITY_KEY,
   UpsertUserMetadataHandler,
   GetUserMetadataHandler,
@@ -32,7 +33,6 @@ import { UserMetadataRepositoryFixture } from '../__fixtures__/repositories/user
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import type { RocketsOptions } from '../rockets.module-definition';
 import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
-import { RocketsAuthProvider } from '../rockets.constants';
 import {
   RAW_OPTIONS_TOKEN,
   ROCKETS_USER_METADATA_DTO_TOKEN,
@@ -99,7 +99,12 @@ class UserMetadataModuleRegisterE2eHarnessModule {
           provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
           useValue: repo,
         },
-        { provide: RocketsAuthProvider, useClass: ServerAuthAdapterFixture },
+        ServerAuthAdapterFixture,
+        {
+          provide: AUTH_ADAPTERS_TOKEN,
+          useFactory: (adapter: ServerAuthAdapterFixture) => [adapter],
+          inject: [ServerAuthAdapterFixture],
+        },
         Reflector,
         { provide: APP_GUARD, useClass: AuthServerGuard },
         { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay },

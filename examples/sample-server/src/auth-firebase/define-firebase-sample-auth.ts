@@ -13,8 +13,8 @@
  *    Re-providing `FirebaseAuthAdapter` locally would create a second
  *    instance that can't resolve those tokens.
  *  - `RocketsAuthIntegration` accepts arbitrary `nestImports`, so we
- *    pull `FirebaseAuthModule` in as-is. The adapter class is only
- *    referenced via `authAdapter:` (used to alias `AUTH_ADAPTER_TOKEN`).
+ *    pull `FirebaseAuthModule` in as-is. Core automatically treats
+ *    all `RocketsAuthIntegration` adapters as externally managed.
  */
 import {
   FirebaseAuthAdapter,
@@ -41,12 +41,6 @@ export function defineFirebaseSampleAuth(): RocketsAuthIntegration {
       }),
     ],
     authAdapter: FirebaseAuthAdapter,
-    // `FirebaseAuthModule.forRoot()` already provides `FirebaseAuthAdapter`
-    // (and is `global: true`). Core MUST NOT auto-push the class into
-    // its own scope — it would create a second instance there where
-    // `FIREBASE_TOKEN_VERIFIER_TOKEN` isn't reachable, blowing up
-    // `Nest can't resolve dependencies` at boot.
-    authProviderExternallyManaged: true,
     // Register `UserEntity` even in Firebase mode so app-level
     // features (pet-transfer, audit, event listeners) that hold a
     // dynamic-repo handle still resolve. We do NOT register the

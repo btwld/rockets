@@ -14,14 +14,15 @@ import {
 } from '@bitwild/rockets-core';
 import type {
   AuthAdapterInterface,
-  AuthFeatureBundle,
   ResourceInput,
-  RocketsAuthIntegration,
 } from '@bitwild/rockets-core';
 import type { Type } from '@nestjs/common';
 import { MeController } from './gateways/http/me.controller';
 import { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
-import { RocketsOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-options-extras.interface';
+import {
+  RocketsOptionsExtrasInterface,
+  type RocketsAuthInput,
+} from './infrastructure/config/interfaces/rockets-options-extras.interface';
 import { RocketsSettingsInterface } from './infrastructure/config/interfaces/rockets-settings.interface';
 import { rocketsOptionsDefaultConfig } from './infrastructure/config/rockets-options-default.config';
 import {
@@ -79,14 +80,29 @@ function definitionTransform(
 function mergeRocketsAuthIntegrationExtras(
   extras: RocketsOptionsExtrasInterface,
 ): RocketsOptionsExtrasInterface {
-  const auth = extras.auth;
-  if (!isRocketsAuthIntegration(auth)) {
+  // Find the first integration in the chain that contributes
+  // userMetadata / rocketsDefaults. Single-entry `auth` and array
+  // `auth` are normalised the same way; non-integration entries
+  // (bare `Type`, `AuthFeatureBundle`) are skipped.
+  const integrations = toAuthEntries(extras.auth).filter(
+    isRocketsAuthIntegration,
+  );
+  if (integrations.length === 0) {
     return extras;
   }
-  const userMetadata = extras.userMetadata ?? auth.userMetadata;
+
+  const sourceForUserMetadata = integrations.find(
+    (i) => i.userMetadata !== undefined,
+  );
+  const sourceForGuardDefault = integrations.find(
+    (i) => i.rocketsDefaults?.enableGlobalGuard !== undefined,
+  );
+
+  const userMetadata =
+    extras.userMetadata ?? sourceForUserMetadata?.userMetadata;
   const enableGlobalGuard =
-    auth.rocketsDefaults?.enableGlobalGuard !== undefined
-      ? auth.rocketsDefaults.enableGlobalGuard
+    sourceForGuardDefault?.rocketsDefaults?.enableGlobalGuard !== undefined
+      ? sourceForGuardDefault.rocketsDefaults.enableGlobalGuard
       : extras.enableGlobalGuard;
 
   return {
@@ -96,12 +112,31 @@ function mergeRocketsAuthIntegrationExtras(
   };
 }
 
+/**
+ * Normalise `extras.auth` (single entry or array) into a flat list.
+ * Returns an empty array when `auth` is undefined.
+ */
+function toAuthEntries(
+  auth: RocketsOptionsExtrasInterface['auth'],
+): ReadonlyArray<RocketsAuthInput> {
+  if (auth === undefined) return [];
+  // `Array.isArray` widens `ReadonlyArray<T>` to `any[]`, so we narrow
+  // through a typed local instead of relying on the predicate.
+  if (isAuthInputArray(auth)) return auth;
+  return [auth];
+}
+
+function isAuthInputArray(
+  value: RocketsAuthInput | ReadonlyArray<RocketsAuthInput>,
+): value is ReadonlyArray<RocketsAuthInput> {
+  return Array.isArray(value);
+}
+
 export function createRocketsImports(options: {
   imports: NonNullable<DynamicModule['imports']>;
   extras?: RocketsOptionsExtrasInterface;
 }): NonNullable<DynamicModule['imports']> {
-  const { auth, extraResources, authNestImports, authExternallyProvided } =
-    resolveAuthExtras(options.extras?.auth);
+  const resolved = resolveAuthChain(options.extras?.auth);
 
   return [
     ...options.imports,
@@ -110,63 +145,89 @@ export function createRocketsImports(options: {
       useFactory: (opts: RocketsOptionsInterface) => ({
         swagger: opts.swagger,
       }),
-      auth,
-      authExternallyProvided,
+      auth: resolved.adapters,
+      authExternallyProvided: resolved.authExternallyProvided,
       userMetadata: options.extras?.userMetadata,
       repository: options.extras?.repository,
-      resources: [...extraResources, ...(options.extras?.resources ?? [])],
+      resources: [
+        ...resolved.extraResources,
+        ...(options.extras?.resources ?? []),
+      ],
       handlers: options.extras?.handlers,
       global: true,
     }),
-    ...authNestImports,
+    ...resolved.authNestImports,
   ];
 }
 
-function resolveAuthExtras(
-  auth:
-    | Type<AuthAdapterInterface>
-    | AuthFeatureBundle
-    | RocketsAuthIntegration
-    | undefined,
-): {
-  auth: Type<AuthAdapterInterface> | undefined;
-  extraResources: ReadonlyArray<ResourceInput>;
-  authNestImports: ReadonlyArray<DynamicModule>;
-  authExternallyProvided: boolean;
-} {
-  if (isRocketsAuthIntegration(auth)) {
+interface ResolvedAuthChain {
+  readonly adapters: ReadonlyArray<Type<AuthAdapterInterface>>;
+  readonly extraResources: ReadonlyArray<ResourceInput>;
+  readonly authNestImports: ReadonlyArray<DynamicModule>;
+  readonly authExternallyProvided: ReadonlyArray<boolean>;
+}
+
+/**
+ * Expand `extras.auth` (single or array) into the resolved chain
+ * passed down to `RocketsCoreModule`. Per-entry rules:
+ *
+ *  - `RocketsAuthIntegration` — adapter + resources + nestImports
+ *    contributed; adapter is always treated as externally provided
+ *    (it lives in `nestImports`, so core must not duplicate it).
+ *  - `AuthFeatureBundle` — adapter + the bundle's resource contributed;
+ *    auto-provided in core (bundles typically only depend on globals).
+ *  - Bare `Type<AuthAdapterInterface>` — adapter contributed; core
+ *    auto-pushes it as a provider.
+ *
+ * Order is preserved end-to-end — first chain entry wins in the guard.
+ *
+ * Exported for unit testing.
+ */
+export function resolveAuthChain(
+  auth: RocketsOptionsExtrasInterface['auth'],
+): ResolvedAuthChain {
+  const entries = toAuthEntries(auth);
+  if (entries.length === 0) {
     return {
-      auth: auth.authAdapter,
-      extraResources: auth.resources,
-      authNestImports: [...auth.nestImports],
-      // Honor the integration's explicit opt-in. Default (false /
-      // omitted) preserves the historic auto-push so
-      // `defineRocketsAuth` and other existing consumers keep
-      // working unchanged. Adapters whose deps live in a private
-      // module scope (e.g. Firebase) must set this to `true` — see
-      // the field's JSDoc.
-      authExternallyProvided: auth.authProviderExternallyManaged === true,
-    };
-  }
-  if (isAuthFeatureBundle(auth)) {
-    return {
-      auth: auth.provider,
-      extraResources: [auth.resource],
+      adapters: [],
+      extraResources: [],
       authNestImports: [],
-      // The bundle's `resource` already exports the adapter, but the
-      // historic behavior auto-pushed it again in core. Keep that
-      // for back-compat — bundle adapters typically only inject
-      // globally-available providers, so the duplicate is benign.
-      authExternallyProvided: false,
+      authExternallyProvided: [],
     };
   }
+
+  const adapters: Array<Type<AuthAdapterInterface>> = [];
+  const extraResources: ResourceInput[] = [];
+  const authNestImports: DynamicModule[] = [];
+  const authExternallyProvided: boolean[] = [];
+
+  for (const entry of entries) {
+    if (isRocketsAuthIntegration(entry)) {
+      adapters.push(entry.authAdapter);
+      extraResources.push(...entry.resources);
+      authNestImports.push(...entry.nestImports);
+      // Adapter lives inside one of the nestImports modules when the list
+      // is non-empty (real `defineRocketsAuth()` pattern). When nestImports
+      // is empty the adapter is standalone and core must auto-register it.
+      authExternallyProvided.push(entry.nestImports.length > 0);
+      continue;
+    }
+    if (isAuthFeatureBundle(entry)) {
+      adapters.push(entry.provider);
+      extraResources.push(entry.resource);
+      authExternallyProvided.push(false);
+      continue;
+    }
+    // Bare `Type<AuthAdapterInterface>` — core auto-pushes.
+    adapters.push(entry);
+    authExternallyProvided.push(false);
+  }
+
   return {
-    auth,
-    extraResources: [],
-    authNestImports: [],
-    // Bare `Type<AuthAdapterInterface>` — core auto-provides it (the
-    // historic behavior consumers rely on).
-    authExternallyProvided: false,
+    adapters,
+    extraResources,
+    authNestImports,
+    authExternallyProvided,
   };
 }
 

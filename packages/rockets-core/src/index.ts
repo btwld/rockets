@@ -2,16 +2,19 @@
 export { RocketsCoreModule } from './rockets-core.module';
 
 // Auth contracts
-export type { AuthAdapterInterface } from './domain/interfaces/auth-adapter.interface';
 export type {
-  AuthorizeUserInterface,
-  ValidateTokenInterface,
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
 } from './domain/interfaces/auth-adapter.interface';
 export type { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 
+// Auth helpers
+export { extractBearerToken } from './infrastructure/auth/extract-bearer-token';
+
 // Auth tokens & guard
 export {
-  AUTH_ADAPTER_TOKEN,
+  AUTH_ADAPTERS_TOKEN,
   ROCKETS_DISABLE_GUARDS_TOKEN,
 } from './rockets-core.constants';
 export { AuthServerGuard } from './infrastructure/guards/auth-server.guard';

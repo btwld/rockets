@@ -23,9 +23,10 @@ import {
   type AppRegistrationPlan,
 } from './infrastructure/resource/aggregate-resources';
 import {
-  AUTH_ADAPTER_TOKEN,
+  AUTH_ADAPTERS_TOKEN,
   ROCKETS_CORE_SETTINGS_TOKEN,
 } from './rockets-core.constants';
+import type { AuthAdapterInterface } from './domain/interfaces/auth-adapter.interface';
 import { RAW_OPTIONS_TOKEN } from './rockets-core.tokens';
 import { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';
 import { RocketsCoreOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-core-options-extras.interface';
@@ -189,21 +190,14 @@ function createCoreProviders(options: {
     Reflector,
   ];
 
-  if (options.extras?.auth) {
-    // Auto-register the adapter as a provider AND alias the public
-    // token to it via `useExisting`, so consumers do not need a manual
-    // `providers: [...]` step. Skip the class registration when the
-    // caller signals it is provided elsewhere (bundle resource module
-    // or global module from `RocketsAuthIntegration.nestImports`):
-    // re-providing here would create a second instance in core's
-    // scope, which can't see deps that live in the external module.
-    if (!options.extras.authExternallyProvided) {
-      providers.push(options.extras.auth);
-    }
-    providers.push({
-      provide: AUTH_ADAPTER_TOKEN,
-      useExisting: options.extras.auth,
-    });
+  const adapterChain = normalizeAuthChain(options.extras?.auth);
+  if (adapterChain.length > 0) {
+    providers.push(
+      ...buildAuthChainProviders(
+        adapterChain,
+        options.extras?.authExternallyProvided,
+      ),
+    );
   }
 
   return [
@@ -230,7 +224,7 @@ function createCoreExports(options: {
     ...(options.exports ?? []),
     ConfigModule,
     RAW_OPTIONS_TOKEN,
-    AUTH_ADAPTER_TOKEN,
+    AUTH_ADAPTERS_TOKEN,
     ROCKETS_CORE_SETTINGS_TOKEN,
     AuthServerGuard,
   ];
@@ -297,6 +291,88 @@ function extractResourceProviders(
   }
 
   return providers;
+}
+
+/**
+ * Coerce `extras.auth` into a flat, deduplicated chain. Accepts a
+ * bare `Type` (single-adapter wiring) or an array.
+ */
+function normalizeAuthChain(
+  input: RocketsCoreOptionsExtrasInterface['auth'] | undefined,
+): Array<Type<AuthAdapterInterface>> {
+  if (input === undefined) return [];
+  const list = Array.isArray(input) ? input : [input];
+  const seen = new Set<Type<AuthAdapterInterface>>();
+  const chain: Array<Type<AuthAdapterInterface>> = [];
+  for (const adapter of list) {
+    if (seen.has(adapter)) continue;
+    seen.add(adapter);
+    chain.push(adapter);
+  }
+  return chain;
+}
+
+/**
+ * Spread `extras.authExternallyProvided` into a per-adapter boolean
+ * array of length `chainLength`. Accepts:
+ *  - `undefined` / `false` → all false.
+ *  - `true`                → all true.
+ *  - `boolean[]`           → padded with `false` (extra entries ignored).
+ */
+function normalizeExternallyProvidedFlags(
+  input: RocketsCoreOptionsExtrasInterface['authExternallyProvided'],
+  chainLength: number,
+): boolean[] {
+  if (input === undefined) return new Array(chainLength).fill(false);
+  if (typeof input === 'boolean') return new Array(chainLength).fill(input);
+  return Array.from({ length: chainLength }, (_, i) => input[i] === true);
+}
+
+/**
+ * Build the Nest providers for an auth adapter chain:
+ *  - Auto-registers each adapter class unless it's externally provided.
+ *  - Registers `AUTH_ADAPTERS_TOKEN` as the full ordered chain.
+ */
+function buildAuthChainProviders(
+  chain: Array<Type<AuthAdapterInterface>>,
+  externallyProvidedInput: RocketsCoreOptionsExtrasInterface['authExternallyProvided'],
+): Provider[] {
+  const externallyProvided = normalizeExternallyProvidedFlags(
+    externallyProvidedInput,
+    chain.length,
+  );
+
+  const providers: Provider[] = [];
+
+  // Auto-register each adapter class as a Nest provider, unless the
+  // caller signalled it is provided elsewhere (bundle resource module
+  // or global module from `RocketsAuthIntegration.nestImports`).
+  // Re-providing those here would create a second instance in core's
+  // scope, which can't see deps that live in the external module.
+  chain.forEach((cls, index) => {
+    if (!externallyProvided[index]) {
+      providers.push(cls);
+    }
+  });
+
+  // Public token: the chain itself, iterated by `AuthServerGuard`.
+  providers.push({
+    provide: AUTH_ADAPTERS_TOKEN,
+    useFactory: collectAdapters,
+    inject: [...chain],
+  });
+
+  return providers;
+}
+
+/**
+ * Collects all injected adapter instances into a typed array.
+ * Extracted as a named function so it can be unit-tested independently.
+ */
+export function collectAdapters(
+  ...instances: AuthAdapterInterface[]
+): ReadonlyArray<AuthAdapterInterface> {
+  return instances;
 }
 
 /**

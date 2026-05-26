@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { AuthAdapterInterface } from '../../domain/interfaces/auth-adapter.interface';
-import { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '@bitwild/rockets-core';
+import { extractBearerToken } from '@bitwild/rockets-core';
 
 @Injectable()
 export class FailingAuthAdapterFixture implements AuthAdapterInterface {
-  async validateToken(_token: string): Promise<AuthorizedUser> {
-    // This provider always fails authentication for testing error scenarios
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
+    // Always throws an unexpected error for testing error scenarios
     throw new Error('Invalid token');
   }
 }

@@ -19,7 +19,7 @@ export class PetTagDto {
   @IsNotEmpty()
   tagId!: string;
 
-  @Expose() @ApiProperty() dateCreated!: Date;
+  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateCreated!: Date;
 }
 
 /**

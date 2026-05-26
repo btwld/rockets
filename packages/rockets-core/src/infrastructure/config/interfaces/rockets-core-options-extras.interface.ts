@@ -10,28 +10,29 @@ import type { AbstractGetUserMetadataHandler } from '../../../application/querie
 export interface RocketsCoreOptionsExtrasInterface
   extends Pick<DynamicModule, 'global'> {
   /**
-   * Auth adapter class. The class must be registered as a Nest provider
-   * somewhere reachable in DI (typically inside a `defineModuleResource()`
-   * resource that owns the user entity). Core aliases the registered
-   * class to `AUTH_ADAPTER_TOKEN` via `useExisting`.
-   */
-  readonly auth?: Type<AuthAdapterInterface>;
-  /**
-   * Set by `rockets-server` when `auth` was wired through an
-   * `AuthFeatureBundle` or `RocketsAuthIntegration` — both of which
-   * already register the adapter class through their own module
-   * (a resource feature module or a global dynamic module imported
-   * via `nestImports`). When true, core skips its own
-   * `providers: [auth, ...]` push and just creates the
-   * `AUTH_ADAPTER_TOKEN` alias.
+   * One or more auth adapter classes, in priority order. Each class must
+   * be registered as a Nest provider somewhere reachable in DI (typically
+   * inside the `defineModuleResource()` resource that owns the credential
+   * entity, or in a global module pulled in via `nestImports`).
    *
-   * Without this flag, an externally-provided adapter (e.g. the
-   * Firebase adapter, whose constructor needs `FIREBASE_TOKEN_VERIFIER_TOKEN`
-   * provided only by `FirebaseAuthModule`) gets a second instance
-   * created inside core where its deps aren't reachable, throwing
-   * `Nest can't resolve dependencies` at boot.
+   * Core registers the chain as {@link AUTH_ADAPTERS_TOKEN} (the array
+   * the {@link AuthServerGuard} iterates). When a single `Type` is passed
+   * it is normalised to a one-element chain.
    */
-  readonly authExternallyProvided?: boolean;
+  readonly auth?:
+    | Type<AuthAdapterInterface>
+    | ReadonlyArray<Type<AuthAdapterInterface>>;
+  /**
+   * Tells core which adapters in the chain are already provided by a
+   * module reachable in DI (e.g. a `RocketsAuthIntegration` whose
+   * `nestImports` contain the providing module). For those, core skips
+   * its own `providers: [adapter]` auto-push and only wires the DI
+   * token. Computed automatically by `resolveAuthChain` — not for
+   * direct user configuration.
+   *
+   * @internal
+   */
+  readonly authExternallyProvided?: boolean | ReadonlyArray<boolean>;
   /**
    * User-metadata config — single source of truth for the entity, the
    * create/update/response DTOs, and optional adapter override.

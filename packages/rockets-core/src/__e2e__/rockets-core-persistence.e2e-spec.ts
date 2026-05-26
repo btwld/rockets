@@ -21,8 +21,12 @@ import { APP_GUARD } from '@nestjs/core';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
-import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
-import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '../domain/interfaces/auth-adapter.interface';
+import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../rockets-core.constants';
@@ -40,9 +44,12 @@ import type {
 
 @Injectable()
 class MockAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
-    if (token === 'valid') return { id: 'u1', sub: 'u1' };
-    throw new UnauthorizedException();
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+    if (token === 'valid')
+      return { matched: true, user: { id: 'u1', sub: 'u1' } };
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 

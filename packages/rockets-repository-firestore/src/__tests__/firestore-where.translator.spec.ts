@@ -1,6 +1,9 @@
 import { Where, WhereOperator } from '@concepta/nestjs-repository';
 
-import { translateDnfBranch, translateWhereClause } from '../repository/firestore-where.translator';
+import {
+  translateDnfBranch,
+  translateWhereClause,
+} from '../repository/firestore-where.translator';
 
 describe('firestore-where.translator', () => {
   it('maps EQ on id to documentId', () => {

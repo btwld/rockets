@@ -1,8 +1,9 @@
 // ── Re-export core contracts & tokens ──
 export {
-  AUTH_ADAPTER_TOKEN,
+  AUTH_ADAPTERS_TOKEN,
   ROCKETS_DISABLE_GUARDS_TOKEN,
   AuthServerGuard,
+  extractBearerToken,
   AuthPublic,
   RocketsCoreModule,
   UpsertUserMetadataCommand,
@@ -29,9 +30,9 @@ export {
 
 export type {
   AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
   AuthorizedUser,
-  AuthorizeUserInterface,
-  ValidateTokenInterface,
   RepositoryPersistenceConfig,
   RocketsUserMetadataConfig,
   RocketsCoreOptionsInterface,
@@ -57,10 +58,7 @@ export {
 export type { ErrorDetails } from '@bitwild/rockets-common';
 
 // ── Backward compatibility re-exports ──
-export {
-  RocketsAuthProvider,
-  ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-} from './rockets.constants';
+export { ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from './rockets.constants';
 export { ExceptionsFilter } from './infrastructure/filters/exceptions.filter';
 
 // ── Server's own exports ──
@@ -73,6 +71,7 @@ export type { RocketsOptionsInterface } from './infrastructure/config/interfaces
 export type {
   RocketsOptionsExtrasInterface,
   DisableControllerOptionsInterface,
+  RocketsAuthInput,
 } from './infrastructure/config/interfaces/rockets-options-extras.interface';
 export { UserModule } from './user.module';
 export { MeController } from './gateways/http/me.controller';

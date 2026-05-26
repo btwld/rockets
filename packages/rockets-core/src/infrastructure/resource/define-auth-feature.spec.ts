@@ -1,5 +1,8 @@
-import type { AuthAdapterInterface } from '../../domain/interfaces/auth-adapter.interface';
-import type { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '../../domain/interfaces/auth-adapter.interface';
 import { ResourceKind } from '../../domain/interfaces/resource-kind.enum';
 import { defineAuthFeature, isAuthFeatureBundle } from './define-auth-feature';
 
@@ -13,8 +16,11 @@ class TestController {}
 class ExtraProvider {}
 
 class TestAuthAdapter implements AuthAdapterInterface {
-  async validateToken(_token: string): Promise<AuthorizedUser> {
-    return { id: 'u-1', email: 'u@test.dev' } as AuthorizedUser;
+  async authenticate(_request: AuthRequest): Promise<AuthAttemptResult> {
+    return {
+      matched: true,
+      user: { id: 'u-1', email: 'u@test.dev', sub: 'u-1' },
+    };
   }
 }
 

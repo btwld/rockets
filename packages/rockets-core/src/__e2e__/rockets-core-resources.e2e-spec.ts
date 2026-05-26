@@ -15,11 +15,15 @@ import { Expose, Type } from 'class-transformer';
 import { IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
-import type { AuthAdapterInterface } from '../domain/interfaces/auth-adapter.interface';
-import type { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '../domain/interfaces/auth-adapter.interface';
+import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { RocketsCoreModule } from '../rockets-core.module';
 import {
-  AUTH_ADAPTER_TOKEN,
+  AUTH_ADAPTERS_TOKEN,
   USER_METADATA_MODULE_ENTITY_KEY,
 } from '../rockets-core.constants';
 import { APP_GUARD } from '@nestjs/core';
@@ -30,9 +34,11 @@ import { defineResource } from '../infrastructure/resource/define-resource';
 
 @Injectable()
 class SimpleAuthProvider implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
-    if (token === 'ok') return { id: 'u1', sub: 'u1' };
-    throw new UnauthorizedException();
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+    if (token === 'ok') return { matched: true, user: { id: 'u1', sub: 'u1' } };
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 
@@ -163,7 +169,7 @@ describe('RocketsCoreModule.forRootAsync (e2e)', () => {
     if (app) await app.close();
   });
 
-  it('resolves AUTH_ADAPTER_TOKEN via forRootAsync extras', async () => {
+  it('resolves AUTH_ADAPTERS_TOKEN via forRootAsync extras', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         MetaRepoModule,
@@ -181,8 +187,9 @@ describe('RocketsCoreModule.forRootAsync (e2e)', () => {
     app = moduleRef.createNestApplication();
     await app.init();
 
-    const provider = app.get(AUTH_ADAPTER_TOKEN);
-    expect(provider).toBeDefined();
-    expect(provider).toHaveProperty('validateToken');
+    const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
+    expect(adapters).toBeDefined();
+    expect(Array.isArray(adapters)).toBe(true);
+    expect(adapters[0]).toHaveProperty('authenticate');
   });
 });

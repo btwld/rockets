@@ -5,7 +5,13 @@
  * adapters must validate real tokens against an IdP or signed JWT.
  */
 import { Injectable } from '@nestjs/common';
-import { AuthAdapterInterface, AuthorizedUser } from '@bitwild/rockets';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+  AuthorizedUser,
+} from '@bitwild/rockets';
+import { extractBearerToken } from '@bitwild/rockets';
 
 const MOCK_USERS: Record<string, AuthorizedUser> = {
   'token-1': {
@@ -26,15 +32,17 @@ const MOCK_USERS: Record<string, AuthorizedUser> = {
 
 @Injectable()
 export class MockAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
-    return (
-      MOCK_USERS[token] ?? {
-        id: 'default-user',
-        sub: 'default-user',
-        email: 'default@example.com',
-        userRoles: [{ role: { name: 'user' } }],
-        claims: { token, provider: 'mock' },
-      }
-    );
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
+    const user = MOCK_USERS[token] ?? {
+      id: 'default-user',
+      sub: 'default-user',
+      email: 'default@example.com',
+      userRoles: [{ role: { name: 'user' } }],
+      claims: { token, provider: 'mock' },
+    };
+    return { matched: true, user };
   }
 }

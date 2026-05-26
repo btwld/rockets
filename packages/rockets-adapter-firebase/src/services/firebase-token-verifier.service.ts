@@ -22,10 +22,9 @@ export class FirebaseTokenVerifierService
     token: string,
     options?: FirebaseVerifyOptions,
   ): Promise<FirebaseDecodedTokenInterface> {
-    const decoded = await resolveFirebaseAdminAuth(this.firebaseApp).verifyIdToken(
-      token,
-      options?.checkRevoked ?? false,
-    );
+    const decoded = await resolveFirebaseAdminAuth(
+      this.firebaseApp,
+    ).verifyIdToken(token, options?.checkRevoked ?? false);
 
     return {
       ...decoded,

@@ -11,8 +11,8 @@ import { SampleAuthAdapter } from './auth.adapter';
  *  - the adapter class (typed as `Type<SampleAuthAdapter>`)
  *  - the `UserEntity` dynamic-repository registration
  *  - the `/auth` controller (signup + login)
- *  - the adapter as a provider AND as an export so
- *    `AUTH_ADAPTER_TOKEN` can alias it via `useExisting` once
+ *  - the adapter as a provider AND as an export so it is globally
+ *    injectable and included in the `AUTH_ADAPTERS_TOKEN` chain once
  *    `RocketsModule` expands the bundle.
  *
  * Consumed as `RocketsModule.forRoot({ auth: defineSampleAuth(), ... })`.

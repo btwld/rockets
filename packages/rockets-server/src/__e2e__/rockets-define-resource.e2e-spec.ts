@@ -16,9 +16,11 @@ import { IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 import request from 'supertest';
+import { extractBearerToken } from '@bitwild/rockets-core';
 import type {
   AuthAdapterInterface,
-  AuthorizedUser,
+  AuthAttemptResult,
+  AuthRequest,
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
@@ -70,17 +72,22 @@ class GadgetResponseDto {
 
 @Injectable()
 class TestAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
     if (token === 'valid-token') {
       return {
-        id: 'user-1',
-        sub: 'user-1',
-        email: 'test@test.com',
-        userRoles: [{ role: { name: 'admin' } }],
-        claims: {},
+        matched: true,
+        user: {
+          id: 'user-1',
+          sub: 'user-1',
+          email: 'test@test.com',
+          userRoles: [{ role: { name: 'admin' } }],
+          claims: {},
+        },
       };
     }
-    throw new UnauthorizedException();
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 

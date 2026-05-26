@@ -1,7 +1,12 @@
 export const ROCKETS_CORE_SETTINGS_TOKEN =
   'ROCKETS_CORE_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN';
 
-export const AUTH_ADAPTER_TOKEN = Symbol('ROCKETS_AUTH_PROVIDER');
+/**
+ * Injects the full auth chain as `ReadonlyArray<AuthAdapterInterface>`,
+ * in priority order. The {@link AuthServerGuard} iterates this array
+ * and stops on the first conclusive result (success or rejection).
+ */
+export const AUTH_ADAPTERS_TOKEN = Symbol('ROCKETS_AUTH_ADAPTERS');
 
 // Use the same string value as @concepta/nestjs-authentication for backward compatibility
 // with existing @AuthPublic() decorators from concepta packages

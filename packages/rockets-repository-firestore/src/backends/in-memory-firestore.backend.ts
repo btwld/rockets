@@ -10,7 +10,9 @@ import { applyFirestorePostFilters } from '../repository/firestore-post-filter';
 
 const stores = new Map<string, Map<string, Record<string, unknown>>>();
 
-function collectionStore(collection: string): Map<string, Record<string, unknown>> {
+function collectionStore(
+  collection: string,
+): Map<string, Record<string, unknown>> {
   let store = stores.get(collection);
   if (!store) {
     store = new Map();
@@ -51,7 +53,10 @@ export class InMemoryFirestoreBackend implements FirestoreBackend {
     options: FirestoreBranchQueryOptions,
   ): Promise<Record<string, unknown>[]> {
     const rows = await this.loadBranchRows(collection, options.branch);
-    const filtered = applyFirestorePostFilters(rows, options.branch.postFilters);
+    const filtered = applyFirestorePostFilters(
+      rows,
+      options.branch.postFilters,
+    );
     const ordered = sortInMemory(filtered, options.orderBy);
 
     const sliced = ordered.slice(options.skip ?? 0);
@@ -91,7 +96,9 @@ export class InMemoryFirestoreBackend implements FirestoreBackend {
     }
 
     const rows = [...collectionStore(collection).values()];
-    return rows.filter((row) => branch.filters.every((filter) => matchesFilter(row, filter)));
+    return rows.filter((row) =>
+      branch.filters.every((filter) => matchesFilter(row, filter)),
+    );
   }
 }
 

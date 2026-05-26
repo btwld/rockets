@@ -1,37 +1,52 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { AuthAdapterInterface } from '../../domain/interfaces/auth-adapter.interface';
-import { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
+import type {
+  AuthAdapterInterface,
+  AuthAttemptResult,
+  AuthRequest,
+} from '@bitwild/rockets-core';
+import { extractBearerToken } from '@bitwild/rockets-core';
 
 @Injectable()
 export class ServerAuthAdapterFixture implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
-    // Simple test implementation - validate token and return user or throw error
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
+
     if (token === 'valid-token') {
       return {
-        id: 'serverauth-user-1',
-        sub: 'serverauth-user-1',
-        email: 'serverauth@example.com',
-        userRoles: [{ role: { name: 'admin' } }],
-        claims: {
+        matched: true,
+        user: {
+          id: 'serverauth-user-1',
           sub: 'serverauth-user-1',
           email: 'serverauth@example.com',
-          roles: ['admin'],
+          userRoles: [{ role: { name: 'admin' } }],
+          claims: {
+            sub: 'serverauth-user-1',
+            email: 'serverauth@example.com',
+            roles: ['admin'],
+          },
         },
       };
-    } else if (token === 'firebase-token') {
+    }
+    if (token === 'firebase-token') {
       return {
-        id: 'firebase-user-1',
-        sub: 'firebase-user-1',
-        email: 'firebase@example.com',
-        userRoles: [{ role: { name: 'user' } }],
-        claims: {
+        matched: true,
+        user: {
+          id: 'firebase-user-1',
           sub: 'firebase-user-1',
           email: 'firebase@example.com',
-          roles: ['user'],
+          userRoles: [{ role: { name: 'user' } }],
+          claims: {
+            sub: 'firebase-user-1',
+            email: 'firebase@example.com',
+            roles: ['user'],
+          },
         },
       };
-    } else {
-      throw new UnauthorizedException('Invalid authentication token');
     }
+    return {
+      matched: true,
+      error: new UnauthorizedException('Authentication failed'),
+    };
   }
 }

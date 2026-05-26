@@ -12,10 +12,12 @@ import { IsString } from 'class-validator';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
-  AUTH_ADAPTER_TOKEN,
+  AUTH_ADAPTERS_TOKEN,
   defineAuthFeature,
+  extractBearerToken,
   type AuthAdapterInterface,
-  type AuthorizedUser,
+  type AuthAttemptResult,
+  type AuthRequest,
   type UserMetadataCreatableInterface,
   type UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
@@ -45,17 +47,22 @@ class BundleUserEntity {
 
 @Injectable()
 class BundleAuthAdapter implements AuthAdapterInterface {
-  async validateToken(token: string): Promise<AuthorizedUser> {
+  async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
+    const token = extractBearerToken(request);
+    if (token === null) return { matched: false };
     if (token === 'valid-bundle-token') {
       return {
-        id: 'user-bundle',
-        sub: 'user-bundle',
-        email: 'bundle@test.com',
-        userRoles: [{ role: { name: 'admin' } }],
-        claims: {},
+        matched: true,
+        user: {
+          id: 'user-bundle',
+          sub: 'user-bundle',
+          email: 'bundle@test.com',
+          userRoles: [{ role: { name: 'admin' } }],
+          claims: {},
+        },
       };
     }
-    throw new UnauthorizedException();
+    return { matched: true, error: new UnauthorizedException() };
   }
 }
 
@@ -139,9 +146,10 @@ describe('RocketsModule — auth: AuthFeatureBundle (e2e)', () => {
     if (app) await app.close();
   });
 
-  it('expands the bundle — `AUTH_ADAPTER_TOKEN` resolves to the bundle adapter instance', () => {
-    const adapter = app.get<AuthAdapterInterface>(AUTH_ADAPTER_TOKEN);
-    expect(adapter).toBeInstanceOf(BundleAuthAdapter);
+  it('expands the bundle — `AUTH_ADAPTERS_TOKEN` contains the bundle adapter instance', () => {
+    const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
+    expect(adapters).toBeDefined();
+    expect(adapters.some((a) => a instanceof BundleAuthAdapter)).toBe(true);
   });
 
   it('registers the bundle entity in the dynamic-repository plan (controller boots without DI errors)', async () => {

@@ -18,8 +18,7 @@ module.exports = {
     '**/node_modules/**',
     '**/.eslintrc.js',
     '**/.eslintrc.spec.js',
-    '**/tsconfig.json',
-    '**/tsconfig.eslint.json',
+    '**/*.json',
     '**/commitlint.config.js',
   ],
   settings: {
@@ -44,13 +43,6 @@ module.exports = {
     ],
   },
   overrides: [
-    {
-      files: ['*.json'],
-      parser: 'jsonc-eslint-parser',
-      parserOptions: {
-        jsonSyntax: 'JSON',
-      },
-    },
     {
       files: ['*.ts'],
       rules: {
