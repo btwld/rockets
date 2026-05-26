@@ -21,7 +21,6 @@ export function defineFirebaseAuth(): RocketsAuthIntegration {
       }),
     ],
     authAdapter: FirebaseAuthAdapter,
-    authProviderExternallyManaged: true,
     resources: [defineModuleResource({ entities: [UserEntity] })],
   };
 }

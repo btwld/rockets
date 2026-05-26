@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { RocketsModule } from '@bitwild/rockets';
 
 import { defineFirebaseAuth } from './auth-firebase';
+import { defineApiKeyAuth } from './auth-api-key';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
 import {
   UserMetadataCreateDto,
@@ -19,7 +20,7 @@ import { analysisFeature } from './analysis';
       envFilePath: ['.env.local', '.env'],
     }),
     RocketsModule.forRoot({
-      auth: defineFirebaseAuth(),
+      auth: [defineFirebaseAuth(), defineApiKeyAuth()],
       userMetadata: {
         entity: UserMetadataEntity,
         createDto: UserMetadataCreateDto,
