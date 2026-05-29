@@ -4,8 +4,8 @@ process.env.GITHUB_USE_FAKE = 'true';
 process.env.GITHUB_CLIENT_ID = 'e2e-client-id';
 process.env.GITHUB_CLIENT_SECRET = 'e2e-client-secret';
 process.env.GITHUB_OAUTH_CALLBACK_URL = 'http://localhost:3001/github/oauth/callback';
-delete process.env.OPENAI_API_KEY;
-delete process.env.OPEN_API_KEY;
+process.env.OPENAI_API_KEY = '';
+process.env.OPEN_API_KEY = '';
 
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';

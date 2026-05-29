@@ -1,129 +1,164 @@
-# `sample-server`
+# sample-server
 
-**Canonical `@bitwild/rockets` application** — copy this project when wiring a
-new external-auth API. Final configuration is documented in
-[`CONFIGURATION.md`](./CONFIGURATION.md).
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-End-to-end NestJS with declarative resources, dynamic repositories, and **three
-orchestration styles** side by side (CRUD, service + controller, CQRS).
+> Canonical reference app for `@bitwild/rockets` (external-auth composition layer). Demonstrates a working app built on top of two interchangeable auth adapters and the full set of resource bundle shapes.
 
-> Read this as a *menu* of patterns, not a mandatory template. Different
-> resources intentionally use different styles so you can compare them.
+---
 
-## Run it
+## 1. Introduction
+
+`sample-server` is the runnable, e2e-tested reference for `@bitwild/rockets`. It exists to:
+
+- Prove the `AuthAdapterInterface` contract by swapping between an in-process JWT adapter and the Firebase adapter without touching app code.
+- Demonstrate every flavour of `resources[]` bundle: `defineResource()` (CRUD), `defineSubResource()` (nested CRUD), `defineModuleResource()` (Nest slice with controllers + services), and `defineAuthFeature()` (adapter + controllers + entity in one).
+- Show the canonical wiring of a `RepositoryBootstrap` (`defineTypeOrmRepository`) — entities are declared **once**, inside the bundle that owns them, then collected by the planner.
+- Provide a copy-pasteable starting point for new apps.
+
+### Modules demonstrated
+
+| Bundle | Kind | What it shows |
+|---|---|---|
+| `petResource` | `defineResource` | Basic CRUD with `OwnerStampHook` + `OwnerScopeHook`. |
+| `petVaccinationResource` | `defineSubResource` | Nested CRUD (`/pets/:petId/vaccinations`) with path-scoped access. |
+| `tagResource` | `defineResource` | Many-to-many helper via `relation()`. |
+| `appointmentResource` / `reminderResource` | `defineResource` | CRUD + custom hooks for date-window filtering. |
+| `petShareFeature` | `defineModuleResource` | Junction-table feature + custom controller for share/unshare. |
+| `petTransferFeature` | `defineModuleResource` | Cross-resource workflow (transfer ownership). |
+| `adminFeature` | `defineModuleResource` | Admin-only routes guarded by a custom `AdminGuard` exposed via `exports`. |
+| `auditFeature` | `defineModuleResource` | Cross-cutting audit trail consuming `adminFeature`'s exported guard. |
+| `eventsFeature` | `defineModuleResource` | Domain-event listeners. |
+| `authFeature` / `defineSampleAuth` | `defineAuthFeature` | In-process JWT signup + login. |
+| `defineFirebaseSampleAuth` | `RocketsAuthIntegration` | External-IdP wiring without signup/login. |
+
+---
+
+## 2. Get Started
+
+### Install (from the monorepo root)
 
 ```bash
-# from repo root
-yarn workspace sample-server install
-yarn workspace sample-server start:dev
+yarn install
+yarn build
 ```
 
-- HTTP: `http://localhost:3000`
-- Swagger: `http://localhost:3000/api`
+### Run with the JWT adapter (default)
 
 ```bash
-yarn workspace sample-server build
+yarn workspace sample-server start:dev
+# server: http://localhost:3000
+# swagger: http://localhost:3000/api
+```
+
+### Run with the Firebase adapter (fake verifier for local dev)
+
+```bash
+AUTH_PROVIDER=firebase yarn workspace sample-server start:dev
+```
+
+The Firebase wiring uses an in-process fake verifier (`SampleFakeFirebaseVerifier`) so you don't need a Firebase project to exercise the contract. Swap it for `firebaseApp` in production.
+
+### Run the e2e suite
+
+```bash
 yarn workspace sample-server test:e2e
 ```
 
-E2E: `test/sample-server.e2e-spec.ts` (primary behaviour spec). Firebase mode:
-`test/sample-server-firebase.e2e-spec.ts`. QA plan: [`QA_TEST_CASES.md`](./QA_TEST_CASES.md).
+Uses SQLite in-memory and supertest. All resources have at least one e2e test.
 
-## How this app is wired
+---
 
-`AppModule` has **one** import: `RocketsModule.forRoot({ ... })`. No separate
-`AuthModule`, no hand-listed `TypeOrmModule.forRoot({ entities })`.
+## 3. How-to Guides
 
-| Piece | Where |
-|---|---|
-| Composition root | [`src/app.module.ts`](./src/app.module.ts) |
-| Auth (JWT) | [`src/auth/define-sample-auth.ts`](./src/auth/define-sample-auth.ts) |
-| Auth (Firebase) | [`src/auth-firebase/define-firebase-sample-auth.ts`](./src/auth-firebase/define-firebase-sample-auth.ts) |
-| DB bootstrap | [`src/repository/define-typeorm-repository.ts`](./src/repository/define-typeorm-repository.ts) |
-| Features | `resources[]` in `app.module.ts` — see [CONFIGURATION.md](./CONFIGURATION.md) |
-
-Full field-by-field reference: **[`CONFIGURATION.md`](./CONFIGURATION.md)**.
-
-### Swapping auth (`AUTH_PROVIDER`)
-
-| Value | Adapter | Routes |
-|---|---|---|
-| `jwt` (default) | `defineSampleAuth()` | `POST /auth/signup`, `POST /auth/login` |
-| `firebase` | `defineFirebaseSampleAuth()` | None — client SDK issues tokens |
+### Sign up and log in (JWT adapter)
 
 ```bash
-yarn workspace sample-server start:dev
-AUTH_PROVIDER=firebase yarn workspace sample-server start:dev
-curl http://localhost:3000/me -H 'Authorization: Bearer fb-user-token'
+# Signup
+curl -X POST http://localhost:3000/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"u@example.com","password":"Secret123!","name":"User"}'
+
+# Login → access token
+TOKEN=$(curl -sX POST http://localhost:3000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"u@example.com","password":"Secret123!"}' | jq -r .accessToken)
+
+# Use the token
+curl http://localhost:3000/me -H "Authorization: Bearer $TOKEN"
 ```
 
-Fake Firebase tokens: [`src/auth-firebase/sample-fake-firebase-verifier.ts`](./src/auth-firebase/sample-fake-firebase-verifier.ts).
+The `/auth/signup` and `/auth/login` routes live in `src/auth/auth.controller.ts` — they are app code, not framework code. The framework only enforces the chain via `AuthServerGuard`.
 
-## The three patterns
+### Create a pet (owner-scoped resource)
 
-Deep dive: [`src/resources/PATTERNS.md`](./src/resources/PATTERNS.md).
+```bash
+curl -X POST http://localhost:3000/pets \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Loki","species":"cat"}'
 
-| | **C — `defineResource`** | **A — Service + controller** | **B — CQRS** |
-|---|---|---|---|
-| **Used by** | `pet/`, `pet-vaccination/`, `tag/`, `appointment/` | `pet-share/`, `admin/`, `audit/` | `pet-transfer/` |
-| **Routes** | Auto-generated | Hand-written `@Controller` | Controller → `commandBus` |
-| **Best for** | Standard CRUD | Small custom HTTP | Business verbs + events |
-
-```
-Standard CRUD on one entity?  → Pattern C
-Business verb with invariants? → Pattern B
-Otherwise                      → Pattern A
+# List only sees the caller's pets
+curl http://localhost:3000/pets -H "Authorization: Bearer $TOKEN"
 ```
 
-## Module / resource map
+`OwnerStampHook` writes `userId`; `OwnerScopeHook` filters reads.
 
-| Area | Location | Pattern |
+### Add a new CRUD entity in five files
+
+1. `src/resources/<thing>/<thing>.entity.ts` — TypeORM entity (with `userId` if owner-scoped).
+2. `src/resources/<thing>/<thing>.dto.ts` — `Create`, `Update`, `Response` DTOs (every public field needs `@ApiProperty()` / `@ApiPropertyOptional()`).
+3. `src/resources/<thing>/<thing>.resource.ts` — `defineResource({ entity, hooks })`.
+4. `src/resources/<thing>/index.ts` — re-export.
+5. `src/app.module.ts` — add the new resource to the `resources: [...]` array.
+
+Then `yarn workspace sample-server start:dev` and the routes (`GET/POST/PATCH/DELETE /things`) are live with validation, swagger, and ownership scoping.
+
+### Switch auth provider without touching app code
+
+```bash
+AUTH_PROVIDER=jwt      yarn workspace sample-server start:dev    # default
+AUTH_PROVIDER=firebase yarn workspace sample-server start:dev    # external IdP
+```
+
+`src/app.module.ts` reads the env var and picks `defineSampleAuth()` (JWT) or `defineFirebaseSampleAuth()` (Firebase). Both produce something `RocketsModule.forRoot({ auth })` accepts — the rest of the app (resources, hooks, /me, swagger) is identical.
+
+---
+
+## 4. Reference
+
+### Layout
+
+```
+examples/sample-server
+├── src/
+│   ├── auth/                       JWT adapter + AuthFeatureBundle
+│   ├── auth-firebase/              Firebase RocketsAuthIntegration (fake verifier in dev)
+│   ├── repository/                 RepositoryBootstrap wrapper
+│   ├── resources/                  CRUD + sub-resource + module bundles
+│   ├── admin/                      Admin gate (defineModuleResource)
+│   ├── audit/                      Cross-cutting audit (consumes adminFeature)
+│   ├── events/                     Domain-event listeners
+│   ├── dto/                        Shared DTOs (UserMetadata*)
+│   ├── entities/                   Shared entities (UserMetadataEntity)
+│   ├── swagger/                    OpenAPI post-processing helpers
+│   ├── app.module.ts               Single composition root
+│   └── main.ts                     Bootstrap (helmet, validation, swagger, cors)
+└── package.json
+```
+
+### Environment variables
+
+| Var | Default | Purpose |
 |---|---|---|
-| Auth | `src/auth/` | `defineAuthFeature()` via `defineSampleAuth()` |
-| Pet | `src/resources/pet/` | C — hooks, sub-resources, soft-delete |
-| Pet vaccination | `src/resources/pet-vaccination/` | C |
-| Tag | `src/resources/tag/` | C |
-| Appointment + reminder | `src/resources/appointment/` | C ×2 |
-| Pet share | `src/resources/pet-share/` | A — `pet-share.feature.ts` |
-| Pet transfer | `src/resources/pet-transfer/` | B — `pet-transfer.feature.ts`, no entities |
-| Admin | `src/admin/` | A — exports `AdminGuard` |
-| Audit | `src/audit/` | A — hook factories on pet resource |
-| Events | `src/events/` | infrastructure |
+| `AUTH_PROVIDER` | `jwt` | `jwt` or `firebase` — selects the auth wiring in `app.module.ts`. |
+| `PORT` | `3000` | HTTP port. |
+| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowlist. |
+| `SWAGGER_UI_PATH` | `api` | Path where Swagger UI mounts (`http://host/<path>`). |
+| `JWT_SECRET` | (sample fallback) | Set in production. The sample adapter uses an in-process secret for dev. |
 
-## Layout (current)
-
-```text
-resources/pet/
-  pet.entity.ts
-  pet.dto.ts
-  pet.resource.ts              ← defineResource()
-  pet-create.handler.ts
-  pet-unique-ref.hook.ts
-  pet-tag.entity.ts
-  index.ts
-
-resources/pet-share/
-  pet-share.feature.ts         ← defineModuleResource()
-  pet-share.controller.ts
-  pet-share.service.ts
-  pet-owner-or-shared.hook.ts
-  index.ts
-
-resources/pet-transfer/
-  pet-transfer.feature.ts      ← defineModuleResource(), CQRS only
-  pet-transfer.controller.ts
-  commands/...
-  index.ts
-```
-
-## Documentation
-
-- **Final configuration:** [`CONFIGURATION.md`](./CONFIGURATION.md)
-- **Pattern deep-dive:** [`src/resources/PATTERNS.md`](./src/resources/PATTERNS.md)
-- **`@bitwild/rockets` package README:** [`packages/rockets-server/README.md`](../../packages/rockets-server/README.md)
-- **Built-in auth variant:** [`examples/sample-server-auth/`](../sample-server-auth/)
-- **Repo conventions:** [`AGENTS.md`](../../AGENTS.md)
+---
 
 ## License
 
-MIT — demo app; harden before production.
+BSD-3-Clause

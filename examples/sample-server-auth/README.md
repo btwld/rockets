@@ -1,125 +1,170 @@
-# `sample-server-auth`
+# sample-server-auth
 
-End-to-end NestJS app using **[@bitwild/rockets-auth](../../packages/rockets-server-auth/)**.
-Demonstrates the full self-hosted auth story: signup, login, JWT, OTP,
-password recovery, role-based access control, and the invitation flow.
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-## Run it
+> Reference app for `@bitwild/rockets-auth` — built-in user system (signup, login, OTP, password recovery, invitations, admin user CRUD) with role-based access control and ownership-scoped resources.
+
+---
+
+## 1. Introduction
+
+`sample-server-auth` is the runnable reference for the built-in auth path. While `sample-server` shows the **external-auth** wiring (you bring the JWT/Firebase adapter), this app shows the **batteries-included** wiring (the framework owns the user table).
+
+What it demonstrates:
+
+- `defineRocketsAuth()` end-to-end: persistence entities, user-metadata, role CRUD, invitations, access control, mailer wiring.
+- Three-role RBAC (`admin`, `manager`, `user`) defined in `src/app.acl.ts` via the `accesscontrol` library.
+- Per-resource ownership checks via a `CanAccess` query service (`PetAccessQueryService`).
+- Three resources sharing the same access rules (`pet`, `pet-vaccination`, `pet-appointment`).
+- A sample mailer implementation (logger-backed for dev) wired through `services.mailerService`.
+- Custom notification command handlers for recovery and verify flows.
+
+---
+
+## 2. Get Started
+
+### Install (from the monorepo root)
 
 ```bash
-# from repo root
 yarn install
 yarn build
-
-yarn workspace sample-server-auth start
-# → http://localhost:3000
 ```
 
+### Run
+
 ```bash
-# e2e tests
+yarn workspace sample-server-auth start:dev
+# server: http://localhost:3000
+# swagger: http://localhost:3000/api
+```
+
+Data is SQLite in-memory with `dropSchema: true` — every restart begins with an empty database.
+
+### E2E tests
+
+```bash
 yarn workspace sample-server-auth test:e2e
 ```
 
-## What this example shows
+---
 
-| Feature | Where to look |
-|---|---|
-| Signup + login + JWT | `src/app.module.ts` (RocketsAuthModule wiring) |
-| Role-based access control | `src/app.acl.ts` + `src/access-control.service.ts` |
-| Invitation flow with OTP | E2E spec: `test/role-based-access.e2e-spec.ts` |
-| User metadata DTOs | `src/modules/user/dto/user-metadata.dto.ts` |
-| Custom resource (`pet`) protected by RBAC | `src/modules/pet/` |
-| Email templates (Handlebars) | `assets/*.hbs` |
+## 3. How-to Guides
 
-## Walkthrough — three flows you can try
+### Sign up the first admin user
 
-### 1. Signup + login
+By default new accounts get the `user` role (`settings.role.defaultUserRoleName = 'user'`). For a fresh dev DB, sign up and promote manually via the seeded admin route or by writing to the `user_role` join table.
 
 ```bash
+# Signup
 curl -X POST http://localhost:3000/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "username": "user@example.com",
-    "password": "SecureP@ss123",
-    "userMetadata": { "firstName": "John" }
-  }'
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"Secret123!","username":"admin"}'
 
-curl -X POST http://localhost:3000/token/password \
-  -H "Content-Type: application/json" \
-  -d '{ "username": "user@example.com", "password": "SecureP@ss123" }'
-# → { "accessToken": "...", "refreshToken": "..." }
+# Login → access token
+TOKEN=$(curl -sX POST http://localhost:3000/token/password \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"Secret123!"}' | jq -r .accessToken)
+
+# Inspect
+curl http://localhost:3000/me -H "Authorization: Bearer $TOKEN"
 ```
 
-### 2. Admin invites a user
+### Exercise the role hierarchy
 
-```bash
-# Admin creates invitation (with role assignment)
-curl -X POST http://localhost:3000/admin/invitations \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "newuser@example.com",
-    "constraints": { "roleId": "<USER_ROLE_ID>" }
-  }'
+The three roles in `src/app.acl.ts`:
 
-# Recipient accepts (passcode came via email)
-curl -X PATCH http://localhost:3000/invitation-acceptance/<CODE> \
-  -H "Content-Type: application/json" \
-  -d '{
-    "passcode": "<PASSCODE>",
-    "payload": {
-      "password": "NewUserP@ss",
-      "userMetadata": { "firstName": "Jane" }
-    }
-  }'
+| Role | Pet / Vaccination / Appointment |
+|---|---|
+| `admin` | `createAny`, `readAny`, `updateAny`, `deleteAny` |
+| `manager` | `createAny`, `readAny`, `updateAny` (no delete) |
+| `user` | `createOwn`, `readOwn`, `updateOwn`, `deleteOwn` (ownership-checked by `PetAccessQueryService`) |
+
+The `PetAccessQueryService.canAccess()` runs **after** the grant table matches — it refines `:own` rules by comparing `pet.userId` to the requester's id. The same service intentionally denies delete for users carrying both `manager` and `user` roles (manager has no delete grant; the `user` `deleteOwn` would otherwise leak through).
+
+### Add a new resource that follows the same rules
+
+1. Add the resource string to `AppResource` in `src/app.acl.ts` so the grant table covers it.
+2. Implement the entity, DTOs, and `createXxxResource()` like `src/modules/pet/`.
+3. Append the resource to the `resources: [...]` list in `src/app.module.ts`.
+
+If the resource needs custom ownership semantics, copy `pet-access-query.service.ts` and pass it under `accessControl.queryServices` in `defineRocketsAuth({...})`.
+
+### Plug a real mailer
+
+`src/app.module.ts` ships a logger-backed `mailerService`. Replace with an SES / SendGrid / SMTP adapter that implements `EmailServiceInterface`:
+
+```typescript
+services: {
+  mailerService: {
+    sendMail: async (opts) => {
+      await sesClient.sendEmail(buildSesPayload(opts));
+    },
+  },
+}
 ```
 
-### 3. RBAC-protected route
+### Disable parts of the built-in stack
 
-`@Auth({ resource: 'pet', action: 'create' })` consults the rules in
-`src/app.acl.ts`. A user without the `pet.create` grant gets 403; an
-admin (extending `user`) can create any pet.
+Skip controllers your app does not need. Pass `disableController` to the `RocketsAuthModule` portion (via `defineRocketsAuth` config):
 
-## Project layout
-
-```
-src/
-├── app.module.ts              # RocketsAuthModule wiring
-├── app.acl.ts                 # AccessControl rules
-├── access-control.service.ts  # CanAccess query implementation
-├── main.ts                    # bootstrap + Swagger
-└── modules/
-    ├── user/                  # user / metadata / federated entities
-    ├── role/                  # role + user-role entities
-    └── pet/                   # example RBAC-protected resource
-assets/                        # invitation / OTP email templates
-test/                          # e2e specs
+```typescript
+defineRocketsAuth({
+  // ...
+  disableController: { invitation: true, invitationAcceptance: true },
+});
 ```
 
-## Documentation
+---
 
-- **`@bitwild/rockets-auth` reference:**
-  [`packages/rockets-server-auth/README.md`](../../packages/rockets-server-auth/README.md)
-- **Tutorial — first auth server:**
-  [`docs/tutorials/01-first-auth-server.md`](../../docs/tutorials/01-first-auth-server.md)
-- **How-to — invite a user:**
-  [`docs/how-to/auth/invite-user.md`](../../docs/how-to/auth/invite-user.md)
-- **How-to — RBAC rules:**
-  [`docs/how-to/access-control/add-an-acl-rule.md`](../../docs/how-to/access-control/add-an-acl-rule.md)
-- **Local guide — RBAC patterns used here:**
-  [`ROLE_ACCESS_CONTROL_GUIDE.md`](./ROLE_ACCESS_CONTROL_GUIDE.md)
+## 4. Reference
 
-## Production checklist (before deploying any of this)
+### Layout
 
-1. Replace SQLite with PostgreSQL/MySQL.
-2. Replace the mock email service with SendGrid / SES / Postmark.
-3. Move secrets to env vars (`JWT_SECRET`, `JWT_REFRESH_SECRET`).
-4. Enable HTTPS, configure CORS for your frontend.
-5. Add structured logging and health checks.
-6. Review the [security model](../../docs/explanation/security-model.md).
+```
+examples/sample-server-auth
+├── src/
+│   ├── app.module.ts                Single composition root
+│   ├── app.acl.ts                   Role + resource enums + accesscontrol grants
+│   ├── access-control.service.ts    AccessControlServiceInterface impl
+│   ├── main.ts                      Bootstrap (helmet, validation, swagger)
+│   ├── repository/                  defineTypeOrmRepository bootstrap (shared with defineRocketsAuth)
+│   ├── modules/
+│   │   ├── user/                    UserEntity + credential / otp / role-link entities + DTOs
+│   │   ├── role/                    RoleEntity + DTOs
+│   │   └── pet/                     Pet, PetVaccination, PetAppointment resources + access query service
+│   └── notification/                Sample recovery / verify notification command handlers
+└── package.json
+```
+
+### Auth surface (exposed by the bundle)
+
+| Route | Purpose |
+|---|---|
+| `POST /signup` | New user signup. Wired through `userCrud`. |
+| `POST /token/password` | Login (username + password → access + refresh token). |
+| `POST /token/refresh` | Refresh the access token. |
+| `GET /me`, `PATCH /me` | From `@bitwild/rockets`. |
+| `PATCH /me/password` | Password change. |
+| `POST /otp`, `PATCH /otp` | OTP issue / verify. |
+| `POST /recovery/*` | Password recovery flow (wired to notification handlers). |
+| `/admin/users`, `/admin/users/:userId/roles` | Admin user + role mgmt. |
+| `/admin/invitations`, `/invitation-acceptance`, … | Invitation flow. |
+
+### Environment variables
+
+| Var | Default | Purpose |
+|---|---|---|
+| `PORT` | `3000` | HTTP port. |
+| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowlist. |
+| `SWAGGER_UI_PATH` | `api` | Swagger UI mount path. |
+
+### Persistence wiring
+
+A single `defineTypeOrmRepository({...})` bootstrap is shared by `RocketsModule.forRoot({ repository })` and `defineRocketsAuth({ persistence: { module } })`. The planner derives the full entity list from `resources[]`, `userMetadata.entity`, and the auth `persistence.entities` map — there is no top-level `TypeOrmModule.forRoot({ entities: [...] })` to keep in sync. Pet resources omit per-resource `persistence` so they inherit the root adapter.
+
+---
 
 ## License
 
-MIT — see [`../../LICENSE.txt`](../../LICENSE.txt). Sample app, not for
-production without hardening.
+BSD-3-Clause

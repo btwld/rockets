@@ -1,182 +1,260 @@
-# `sample-code-review`
+# sample-code-review
 
-Monorepo **inside rockets**: the layout is inspired by [rockets-starter](https://github.com/btwld/rockets-starter) (`apps/api` + `apps/web`), but the backend uses **`workspace:^`** — local packages in `packages/*`, **not** the starter's npm versions such as `@bitwild/rockets@1.0.0-alpha.7`.
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-```text
-rockets/                          ← SDK monorepo (source of truth)
-├── packages/rockets-core, rockets-server, …
+> Full-stack reference: NestJS API + Vite/React web. External auth via Firebase, two persistence adapters (SQLite + Firestore) in the same app, an LLM-driven code-review feature backed by the GitHub API.
+
+---
+
+## 1. Introduction
+
+`sample-code-review` is the "non-trivial app" reference. While `sample-server` and `sample-server-auth` are focused single-concern demos, this one exercises Rockets under real-world conditions:
+
+- Two-adapter auth chain (Firebase ID token first, server-to-server API key second).
+- Two persistence backends in one app: SQLite for OAuth tokens / user metadata, Firestore for code-review reports.
+- A non-CRUD `defineModuleResource` feature (`analysisFeature`) that calls OpenAI and writes reports through the dynamic-repository contract.
+- A separate React frontend that authenticates with Firebase client SDK and forwards the ID token to the API.
+
+The layout intentionally mirrors [`rockets-starter`](https://github.com/btwld/rockets-starter) (`apps/api` + `apps/web`), but every `@bitwild/*` import resolves to the local `packages/*` via `workspace:^` — so this app is the live integration test for in-development SDK changes.
+
+```
+rockets/                           (SDK monorepo, source of truth)
+├── packages/rockets-{core,server,…}
 └── examples/sample-code-review/
     ├── apps/
-    │   ├── api/    NestJS + local Rockets (`api`)    :3001
-    │   └── web/    Vite + React (`web`)              :3000
-    └── packages/typescript-config/   (shared TS only)
+    │   ├── api/                   NestJS + Rockets         :3001
+    │   └── web/                   Vite + React             :3000
+    └── packages/typescript-config (shared tsconfig)
 ```
 
-## Authentication (Firebase → token → Rockets server)
+### Auth flow
 
-Firebase is **not** the application backend. It only issues the **ID token**; the **Rockets server** validates that token on **every** request.
-
-```text
-Web (Firebase Auth)          API (@bitwild/rockets)
-─────────────────          ───────────────────────
-email/password login  →     (does not participate in login)
-getIdToken()          →     Authorization: Bearer <Firebase JWT>
-                       →     AuthServerGuard (global)
-                       →     FirebaseAuthAdapter.validateToken()
-                       →     request.user = AuthorizedUser (uid, email, roles…)
-                       →     GET /me, /github/*, /analysis/*
 ```
+Web (Firebase client SDK)               API (@bitwild/rockets)
+───────────────────────────             ───────────────────────────
+1. email/password login          →      (no participation)
+2. user.getIdToken()             →      Authorization: Bearer <Firebase JWT>
+                                  →     AuthServerGuard (global)
+                                  →     FirebaseAuthAdapter.authenticate()
+                                  →     request.user = AuthorizedUser
+                                  →     GET /me, /github/*, /analysis/*
+```
+
+Firebase is **not** the application backend — it only issues the ID token. The Rockets server validates that token on every request.
 
 | Layer | Responsibility |
-|-------|----------------|
-| **Firebase (client)** | Web login; `user.getIdToken()` |
-| **`@bitwild/rockets-adapter-firebase`** | Admin SDK / verifier: `verifyIdToken` |
-| **`@bitwild/rockets` (`RocketsModule`)** | `APP_GUARD` + `MeController` + protected routes |
-| **Your controllers** | `@AuthUser()`, `@Ctx()` — user already authenticated |
+|---|---|
+| Firebase (client) | Web login; `user.getIdToken()` |
+| `@bitwild/rockets-adapter-firebase` | Verifies ID token via Firebase Admin SDK |
+| `@bitwild/rockets` | Global `AuthServerGuard` + `MeController` + protected routes |
+| Your controllers | `@AuthUser()`, `@Ctx()` — user already authenticated |
 
-API config: `RocketsModule.forRoot({ auth: defineFirebaseAuth(), … })` with `authProviderExternallyManaged: true` (the user lives in Firebase, not in the local signup table).
+A second adapter, `defineApiKeyAuth()`, runs after Firebase in the chain so server-to-server callers can authenticate with `X-Api-Key`.
 
-**For real tokens to work:** the same `projectId` must be used in web (`VITE_FIREBASE_PROJECT_ID`) and API (`FIREBASE_PROJECT_ID=rockets-review-demo`). The service account JSON is **optional** in development — the Admin SDK can start with only `projectId`. `FIREBASE_USE_FAKE` must stay **disabled** in `apps/api/.env`.
+---
 
-Quick verification after web login (DevTools → Network → any API call) or:
+## 2. Get Started
 
-```bash
-curl -H "Authorization: Bearer <firebase-id-token>" http://localhost:3001/me
-```
+### Prerequisites
 
-## Local SDK (required)
+- Node 18+, Yarn 4.
+- A Firebase project for real auth (or `FIREBASE_USE_FAKE=true` for in-process verification).
+- A GitHub OAuth App if you want the GitHub connect flow to work.
+- An OpenAI API key if you want real code-review output (otherwise the analyzer falls back to a stub).
 
-`apps/api/package.json` declares:
-
-```json
-"@bitwild/rockets": "workspace:^",
-"@bitwild/rockets-core": "workspace:^",
-"@bitwild/rockets-adapter-firebase": "workspace:^"
-```
-
-Yarn resolves these to `packages/rockets-server`, `packages/rockets-core`, and so on — the same codebase used by [`sample-server`](../sample-server/).
-
-**Before the first `dev`**, build the parent monorepo packages:
+### Install (from the monorepo root)
 
 ```bash
-# from the rockets repository root
+yarn install
 yarn build
 ```
 
-## Quick start
+The `build` step compiles every local `@bitwild/*` package — required before the example runs.
 
-### 1. API (`apps/api/.env`)
-
-```bash
-cp apps/api/.env.example apps/api/.env
-```
-
-**GitHub OAuth App → Authorization callback URL:**
-
-```text
-http://localhost:3000/auth/github/callback
-```
-
-It must match `GITHUB_OAUTH_CALLBACK_URL` in the API `.env`.
-
-**Firebase Admin:** `apps/api/secrets/firebase-service-account.json`
-
-### 2. Web (`apps/web/.env`)
+### Configure
 
 ```bash
-cp apps/web/.env.example apps/web/.env
+cp examples/sample-code-review/apps/api/.env.example examples/sample-code-review/apps/api/.env
+cp examples/sample-code-review/apps/web/.env.example examples/sample-code-review/apps/web/.env
 ```
+
+For local-only dev with no external services, set in `apps/api/.env`:
 
 ```env
-VITE_API_URL=http://localhost:3001
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_APP_ID=...
+FIREBASE_USE_FAKE=true
+FIREBASE_FIRESTORE_USE_FAKE=true
 ```
 
-### 3. Run API + Web
+For real Firebase, drop the service-account JSON at `apps/api/secrets/firebase-service-account.json` and set `FIREBASE_PROJECT_ID` to match the web client's `VITE_FIREBASE_PROJECT_ID`.
 
-From the **rockets root** (recommended):
+### Run
 
 ```bash
-yarn build
 yarn workspace sample-code-review dev
+# web: http://localhost:3000
+# api: http://localhost:3001
+# swagger: http://localhost:3001/api
 ```
 
-Or only inside the example:
+`yarn dev` starts both apps in parallel via `concurrently`. Use `yarn dev:api` / `yarn dev:web` to run them separately.
+
+### E2E
 
 ```bash
-cd examples/sample-code-review
-yarn dev
+yarn workspace sample-code-review test:e2e
+# (runs API e2e with fakes enabled by default)
 ```
 
-| App | URL |
-|-----|-----|
-| Web | http://localhost:3000 |
-| API | http://localhost:3001 |
-| Swagger | http://localhost:3001/api |
+---
 
-### 4. Flow
+## 3. How-to Guides
 
-1. Sign in with Firebase (email/password)
-2. Connect GitHub → callback `/auth/github/callback`
-3. Choose a repo → Run code review (GitHub API + OpenAI `gpt-4o-mini` when `OPENAI_API_KEY` or `OPEN_API_KEY` is present in `apps/api/.env`)
-4. Open the report
+### Run the full flow end-to-end
 
-**OpenAI (optional, inexpensive for testing):**
+1. Sign in with Firebase on the web (`/login`).
+2. Connect GitHub (`/github/connect` → callback `http://localhost:3000/auth/github/callback`). The callback URL must match `GITHUB_OAUTH_CALLBACK_URL` in the API `.env`.
+3. Pick a repo, click "Run code review". The API calls the GitHub REST API for the file tree, slices it into prompts, calls OpenAI (`gpt-4o-mini` by default), and writes the report to Firestore.
+4. Open the report. The web pulls it through `GET /analysis/reports/:id`.
+
+### Call the API with a raw Firebase ID token
+
+Useful for debugging without the web:
+
+```bash
+TOKEN=$(firebase login:ci)  # or get a real ID token from your client
+curl http://localhost:3001/me -H "Authorization: Bearer $TOKEN"
+```
+
+`FirebaseAuthAdapter` validates the token; `MeController` returns the user.
+
+### Call the API with an API key (server-to-server)
+
+The second adapter in the chain (`defineApiKeyAuth()`) reads `X-Api-Key`. Useful for CI / cron jobs that don't have a Firebase session.
+
+```bash
+curl http://localhost:3001/analysis/reports \
+  -H "X-Api-Key: $INTERNAL_API_KEY"
+```
+
+The adapter resolves the calling identity from a static config (see `apps/api/src/auth-api-key/api-key.adapter.ts`).
+
+### Filter reports
+
+```bash
+GET /analysis/reports?github=org/repo
+GET /analysis/reports?q=text          # search fullName and summary
+GET /analysis/reports?status=completed
+```
+
+Filters live in the `analysisFeature` controller, not the framework.
+
+### Use the in-memory Firestore (no Firebase project)
+
+```bash
+FIREBASE_FIRESTORE_USE_FAKE=true yarn workspace sample-code-review dev
+```
+
+The fake backend implements the same `FirestoreBackend` interface as the real adapter. All read / write code is identical.
+
+### Run the API against persistent SQLite
 
 ```env
-OPENAI_API_KEY=sk-...   # or OPEN_API_KEY
-OPENAI_MODEL=gpt-4o-mini
+DATABASE_PATH=./data/app.sqlite
 ```
 
-## Two persistence backends
+Default is `:memory:` with `dropSchema: true`. Set `DATABASE_PATH` to keep state across restarts.
 
-| Data | Backend | Config |
-|------|---------|--------|
-| GitHub OAuth / connection, `userMetadata` | **SQLite** (TypeORM via `repository` in `RocketsModule`) | `DATABASE_PATH` or `:memory:` |
-| Code review reports | **Firestore** via `@bitwild/rockets-repository-firestore` | `FIREBASE_FIRESTORE_REPORTS_COLLECTION` (default: `code_review_reports`) |
+---
 
-`CodeReviewReportEntity` declares `repository: FirestoreRepositoryModule` in its bundle — the same per-entity override pattern Rockets uses for TypeORM. Services use `@InjectDynamicRepository` + `RepositoryInterface`, not custom storage code.
+## 4. Reference
 
-Each report is stored as a document in `code_review_reports/{reportId}`. The list endpoint supports API filters:
+### Layout
 
-- `GET /analysis/reports?github=org/repo` — GitHub repository
-- `GET /analysis/reports?q=text` — search in `fullName` and `summary`
-- `GET /analysis/reports?status=completed` — job status
+```
+examples/sample-code-review
+├── apps/
+│   ├── api/
+│   │   └── src/
+│   │       ├── app.module.ts                    Single composition root
+│   │       ├── analysis/                        defineModuleResource (Firestore, OpenAI)
+│   │       ├── auth-firebase/                   FirebaseAuthIntegration
+│   │       ├── auth-api-key/                    Second adapter in the chain
+│   │       ├── github/                          GitHub OAuth + repo browse
+│   │       ├── firebase-firestore/              Firestore registration helpers
+│   │       ├── firebase-storage/                Optional file storage
+│   │       ├── repository/                      defineTypeOrmRepository wrapper
+│   │       ├── entities/                        Shared TypeORM entities (UserMetadata)
+│   │       └── main.ts                          Bootstrap (helmet, validation, swagger)
+│   └── web/
+│       └── src/
+│           ├── App.tsx                          Routes
+│           ├── auth/                            Firebase client SDK wrapper
+│           ├── pages/                           Login / dashboard / report views
+│           ├── components/
+│           └── lib/                             API client (forwards ID token)
+└── packages/typescript-config/                  Shared tsconfig
+```
 
-E2E uses `FIREBASE_FIRESTORE_USE_FAKE=true` (in-memory Firestore). In production, enable **Cloud Firestore** in the Firebase Console (Native mode).
+### Auth chain (declared in `apps/api/src/app.module.ts`)
 
-New monorepo package: `packages/rockets-repository-firestore` (mirrors the role played by `@concepta/nestjs-repository-typeorm`).
+```typescript
+RocketsModule.forRoot({
+  auth: [defineFirebaseAuth(), defineApiKeyAuth()],
+  // ...
+})
+```
 
-## Scripts
+Order is preserved end-to-end — Firebase tries first; API key is the fallback.
+
+### Persistence
+
+| Data | Backend | Configuration |
+|---|---|---|
+| GitHub OAuth tokens, `userMetadata` | SQLite (TypeORM) via root `repository:` | `DATABASE_PATH` or `:memory:` |
+| Code-review reports | Firestore via `@bitwild/rockets-repository-firestore` | `FIREBASE_FIRESTORE_REPORTS_COLLECTION` (default `code_review_reports`) |
+
+`CodeReviewReportEntity` uses `repository: codeReviewReportsRepository` from `defineFirestoreRepository({ entities: [...] })` — a `RepositoryBootstrap` like `defineTypeOrmRepository`; core calls `forFeature` / `forRoot` internally. Services use `@InjectDynamicRepository` + `RepositoryInterface`, no Firestore types leak out of the analysis folder.
+
+### Environment variables
+
+| Var | Purpose |
+|---|---|
+| `PORT` | API HTTP port (default `3001`). |
+| `DATABASE_PATH` | SQLite file path; default `:memory:`. |
+| `FIREBASE_PROJECT_ID` | Required when not using the fake verifier. Must match the web's `VITE_FIREBASE_PROJECT_ID`. |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` / `GOOGLE_APPLICATION_CREDENTIALS` | Path to a Firebase service-account JSON. |
+| `FIREBASE_USE_FAKE` | `'true'` switches Firebase Auth to the in-process fake verifier. |
+| `FIREBASE_FIRESTORE_USE_FAKE` | `'true'` switches Firestore to the in-memory backend. |
+| `FIREBASE_FIRESTORE_REPORTS_COLLECTION` | Firestore collection id for code-review reports. |
+| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` / `GITHUB_OAUTH_CALLBACK_URL` | GitHub OAuth App credentials. |
+| `OPENAI_API_KEY` (also `OPEN_API_KEY`) | Enables real LLM output. Without it, the analyzer returns a stub. |
+| `OPENAI_MODEL` | Override the default `gpt-4o-mini`. |
+| `INTERNAL_API_KEY` | Static key accepted by the API-key adapter. |
+| `VITE_API_URL`, `VITE_FIREBASE_*` | Web client config (see `apps/web/.env.example`). |
+
+### Scripts
 
 | Command | Description |
-|---------|-------------|
-| `yarn dev` | API + Web in parallel (`concurrently`) |
-| `yarn dev:api` | API only |
-| `yarn dev:web` | Web only |
-| `yarn build` | Build both apps |
-| `yarn test:e2e` | API E2E (test fakes enabled) |
+|---|---|
+| `yarn dev` | API + Web in parallel. |
+| `yarn dev:api` / `yarn dev:web` | Single app. |
+| `yarn build` | Build both apps. |
+| `yarn test:e2e` | API e2e with fakes. |
+| `yarn test:e2e:ui` | Web e2e (Playwright). |
 
-From the **rockets** root:
-
-| Command | Description |
-|---------|-------------|
-| `yarn sample-code-review:dev` | `yarn build` (local SDK) + `dev` |
-| `yarn sample-code-review:test:e2e` | build + e2e |
-
-## Difference vs `rockets-starter`
+### Differences vs `rockets-starter`
 
 | `rockets-starter` (GitHub) | This example |
-|----------------------------|--------------|
-| `@bitwild/rockets@1.0.0-alpha.7` from npm | `workspace:^` → local `packages/*` |
+|---|---|
+| `@bitwild/rockets@1.0.0-alpha.X` from npm | `workspace:^` → local `packages/*` |
 | Built-in `@bitwild/rockets-auth` | Firebase via `defineFirebaseAuth()` |
-| Next.js web | Vite + React (same ports 3000/3001) |
-| PostgreSQL | SQLite (like `sample-server`) |
+| Next.js web | Vite + React (same ports `3000` / `3001`) |
+| PostgreSQL | SQLite + Firestore |
 
-## Related
+---
 
-- [`../sample-server/`](../sample-server/) — canonical Rockets config
-- [`apps/api/src/app.module.ts`](apps/api/src/app.module.ts) — `RocketsModule.forRoot`
+## License
+
+BSD-3-Clause

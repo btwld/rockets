@@ -5,6 +5,10 @@
 export { FirebaseAuthModule } from './modules/firebase-auth.module';
 export { FirebaseAuthAdapter } from './adapters/firebase-auth.adapter';
 
+// Integration helper — first-class wiring for `RocketsModule.forRoot({ auth: ... })`.
+export { defineFirebaseAuth } from './integration/define-firebase-auth';
+export type { DefineFirebaseAuthInput } from './integration/define-firebase-auth';
+
 // Tokens — exposed so consumers can override providers in their own
 // modules without re-implementing `FirebaseAuthModule.forRoot()`.
 export {

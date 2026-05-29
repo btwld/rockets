@@ -1,6 +1,3 @@
-// User Module exports
-export * from './user.module';
-
 // Entities
 export * from './entities/user.entity';
 export * from './entities/user-credential.entity';
@@ -15,6 +12,3 @@ export * from './entities/user.interface';
 export * from './dto/user.dto';
 export * from './dto/user-create.dto';
 export * from './dto/user-update.dto';
-
-// Providers
-export { RocketsJwtAuthAdapter } from '@bitwild/rockets-auth';

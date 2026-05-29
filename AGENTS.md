@@ -3,17 +3,18 @@
 Canonical agent instructions for this repository.
 
 `CLAUDE.md` is intentionally a symlink to this file so different agents load the same project guidance.
-Detailed rules live in `.claude/rules/` and are auto-loaded by Claude Code based on file globs.
+Additional scoped rules live in `.claude/rules/`.
 
 ## Start Here
 
-1. Read `development-guides/ROCKETS_AI_INDEX.md` first.
-2. Pick only the one guide needed for the task (avoid loading all guides).
+1. Read this file end-to-end before editing.
+2. Open the `README.md` of the package you are about to change.
+3. If anything in this file conflicts with the actual code in `packages/*/src/`, **the code wins** — and fix this file in the same PR.
 
 ## Hard-Learned Rules (Read Before Editing)
 
-These are lessons from corrections across many sessions. Violating them
-repeats mistakes the user has already had to fix more than once.
+These are lessons from repeated corrections. Violating them repeats mistakes
+the user has already had to fix more than once.
 
 1. **Layer discipline — core vs server.**
    `rockets-core` = shared infrastructure (auth abstraction, guard, CQRS,
@@ -34,9 +35,8 @@ repeats mistakes the user has already had to fix more than once.
    module-local `TypeOrmModule.forFeature()`. The default adapter is the
    single top-level `repository: RepositoryModuleInterface` field.
    `rockets-server-auth` exposes **`defineRocketsAuth()`**, which contributes
-   auth entity rows to the same `resources[]` / planner pipeline as core
-   (see `@bitwild/rockets-auth` README). Do not register the same auth keys
-   twice.
+   auth entity rows to the same `resources[]` / planner pipeline as core.
+   Do not register the same auth keys twice.
 
 3. **Resource config is flat.** `RocketsResourceConfig` extends
    `CrudModuleForFeatureOptionsInterface` directly. No `crud.crud` nesting.
@@ -93,11 +93,11 @@ repeats mistakes the user has already had to fix more than once.
     code, THEN modify. Do not edit blindly based on a diff alone.
 
 13. **Persistence is database-agnostic by default.** The supported contract is
-   `RepositoryInterface` and dynamic repository keys in `@bitwild/rockets-repository`.
-   Concrete backends (TypeORM, Firestore, other adapters) are **selected in module
-   options** and must remain **swappable**. `rockets-core` public design, types, and
-   docs must not hard-require a specific ORM. Example configs may use TypeORM as
-   a common case; that does not make TypeORM the definition of Rockets storage.
+    `RepositoryInterface` and dynamic repository keys in `@bitwild/rockets-repository`.
+    Concrete backends (TypeORM, Firestore, other adapters) are **selected in module
+    options** and must remain **swappable**. `rockets-core` public design, types, and
+    docs must not hard-require a specific ORM. Example configs may use TypeORM as
+    a common case; that does not make TypeORM the definition of Rockets storage.
 
 14. **Module resource exports are a public surface — export the minimum.**
     `defineModuleResource({ module: { providers, exports } })` materialises
@@ -125,9 +125,6 @@ repeats mistakes the user has already had to fix more than once.
     (the symbol the outer `useFactory` injects); `AuthController` and
     the entity stay internal.
 
-See `.claude/rules/rockets-core-architecture.md` for full details and
-code examples.
-
 ## How to work with the project owner
 
 When replying to the project owner or maintainer:
@@ -142,7 +139,7 @@ When replying to the project owner or maintainer:
 ## Scope & Precedence
 
 - This root `AGENTS.md` is the default instruction set for the whole repository.
-- `.claude/rules/*.md` provide scoped, glob-filtered rules (TypeScript, DDD, auth, etc.).
+- `.claude/rules/*.md` provide scoped, glob-filtered rules (TypeScript, build/test/lint, editing).
 - If a future subdirectory adds its own `AGENTS.md`, treat that as a scoped override for files in that subtree.
 - When instructions conflict, prefer the most specific instruction file for the file path being edited.
 
@@ -150,47 +147,39 @@ When replying to the project owner or maintainer:
 
 - `packages/rockets-common`: shared utils, hooks, swagger-ui re-export. Zero framework opinion.
 - `packages/rockets-repository`: abstract dynamic repository API. No TypeORM, no Firestore.
+- `packages/rockets-repository-firestore`: Firestore implementation of the dynamic repository contract.
 - `packages/rockets-crud`: generic CRUD module + configurable builder.
 - `packages/rockets-access-control`: ACL/RBAC primitives.
 - `packages/rockets-core`: **shared server infrastructure** — auth abstraction (`AuthAdapterInterface`, `AuthServerGuard`), CQRS handlers, declarative resources (`defineResource`, `defineModuleResource`, `buildAppRegistrationPlan`), root `repository` adapter + `userMetadata` config, Swagger registration. Imported by both server and auth.
 - `packages/rockets-server` (`@bitwild/rockets`): external-auth integration layer. `MeController` + global guard opt-in. Use when users live in Firebase / Auth0 / another system.
 - `packages/rockets-server-auth`: complete built-in auth system (JWT, signup, login, recovery, otp, oauth, admin).
-- `development-guides/`: implementation patterns and AI-oriented playbooks.
+- `packages/rockets-adapter-firebase`: Firebase auth adapter implementing `AuthAdapterInterface`.
+- `examples/sample-server`: canonical reference app using `rockets-server` with an external auth adapter.
+- `examples/sample-server-auth`: reference app using `rockets-server-auth` (built-in auth).
+- `examples/sample-code-review`: full-stack reference (api + web) used for code review walkthroughs.
 - `.context/`: shared scratchpad for multi-agent collaboration (gitignored).
 
 ## Rules Reference
 
-Modular rules are in `.claude/rules/`:
+Modular rules in `.claude/rules/`:
 
 | Rule file | Scope | Purpose |
 |---|---|---|
 | `typescript-strict.md` | `**/*.ts` | No `any`, proper types, `readonly` |
-| `rockets-core-architecture.md` | `packages/rockets-{core,server,common,repository,crud,access-control}/**`, `examples/sample-server/**` | Core/server layer boundaries, dynamic repository, resource config, context overlay |
-| `ddd-architecture.md` | `rockets-server-auth/src/**` | DDD layers, file placement, mandatory patterns |
-| `upstream-delegation.md` | `rockets-server-auth/src/**` | Delegate to `@concepta/nestjs-*` v8 via CommandBus/QueryBus |
 | `build-test-lint.md` | always | Build/test/lint command order |
-| `auth-integration.md` | `packages/*/src/**` | Module import order, swagger alignment |
 | `editing-guidelines.md` | always | Minimal diffs, source of truth |
 
 ## Testing Policy
 
 - **E2E / integration tests are the default.** New tests must be `*.e2e-spec.ts`
   (real Nest app + supertest + SQLite) unless a unit test is specifically justified.
-- Coverage target: **≥ 80 % statements/lines** via `yarn test:e2e:cov`.
+- Coverage target: **≥ 80% statements/lines** via `yarn test:e2e:cov`.
 - Barrel imports (`domains/*/index`) register CQRS metadata globally; they must
   run **last** in the e2e suite (handled by `scripts/jest-e2e-barrel-last-sequencer.cjs`).
   Never import a barrel inside an e2e file that also boots a Nest app.
 - See `.claude/rules/build-test-lint.md` for full details.
 
-## Guide Index (Use As Needed)
+## Type Safety
 
-- **DDD architecture (read first for any structural work):** `packages/rockets-server-auth/DDD_REFERENCE.md`
-- Setup/config: `development-guides/CONFIGURATION_GUIDE.md`
-- Package choice and bootstrap: `development-guides/ROCKETS_PACKAGES_GUIDE.md`
-- CRUD patterns: `development-guides/CRUD_PATTERNS_GUIDE.md`
-- Auth deep dives: `development-guides/AUTHENTICATION_ADVANCED_GUIDE.md`
-- Access control: `development-guides/ACCESS_CONTROL_GUIDE.md`
-- Testing: `development-guides/TESTING_GUIDE.md`
-
-Avoid casting like as unknown as DynamicModule[],
-never do a work around to avoid a type error, always fix the type error.
+- Never use `any`. Never use `as unknown as Type` or similar casts as a workaround.
+- If you hit a type error, fix the type — don't suppress it.

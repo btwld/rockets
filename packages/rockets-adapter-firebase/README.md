@@ -1,128 +1,251 @@
 # @bitwild/rockets-adapter-firebase
 
-Firebase Authentication adapter for the Rockets SDK. Implements
-`AuthAdapterInterface` from `@bitwild/rockets-core` so apps can use
-Firebase as the source of truth for identity while keeping the rest of
-the Rockets pipeline (CRUD, ACL, hooks, context overlay) untouched.
+[![NPM](https://img.shields.io/npm/v/@bitwild/rockets-adapter-firebase)](https://www.npmjs.com/package/@bitwild/rockets-adapter-firebase)
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-## When to use
+> Firebase Authentication adapter for Rockets. Validates Firebase ID tokens, maps the decoded payload to `AuthorizedUser`, and plugs into the standard `auth` chain.
 
-- Frontend already signs users in with Firebase (web SDK, mobile, etc.).
-- You want a Rockets NestJS backend to trust Firebase ID tokens instead
-  of running its own login / token issuance.
-- You do NOT need the full `@bitwild/rockets-server-auth` package
-  (signup / recovery / OTP / refresh). The adapter only handles the
-  "verify the bearer token" half — issuance stays with Firebase.
+**Status:** preview (`1.0.0-alpha.0`). API expected to stay shape-compatible through 1.0.
 
-If you want Rockets to own the entire auth lifecycle, use
-`@bitwild/rockets-server-auth` instead.
+---
 
-## Install
+## 1. Introduction
+
+`@bitwild/rockets-adapter-firebase` is a self-contained Nest module that implements `AuthAdapterInterface` from `@bitwild/rockets-core`. It owns:
+
+- `FirebaseAuthAdapter` — extracts the bearer token, verifies it with the Firebase Admin SDK, and returns a Rockets `AuthorizedUser`.
+- `FirebaseAuthModule.forRoot()` / `.forRootAsync()` — the Nest module that wires the adapter with its verifier, user resolver, and options.
+- `DefaultFirebaseUserResolverService` — the default mapper from Firebase decoded token → `AuthorizedUser` (uses `uid`, `email`, and custom `roles[]` claim).
+- Typed verification primitives (`FirebaseTokenVerifierInterface`) so tests inject mocks and apps can swap the SDK.
+
+The adapter has **no firebase-admin compile-time dependency**. `firebase-admin` is an optional peer dep; the package types model only the subset of `DecodedIdToken` Rockets reads.
+
+### When to use this package
+
+- Your users sign in through Firebase (Google, Apple, email/password, phone, custom auth providers) and your backend needs to validate Firebase ID tokens.
+- You want to mix Firebase with another credential (API key, JWT) — pair it in the `auth` chain.
+
+### When NOT to use this package
+
+- You authenticate against a non-Firebase provider — write your own `AuthAdapterInterface`, or pick a different adapter.
+- You don't need to verify tokens server-side (pure client-side auth) — you don't need any adapter at all.
+
+---
+
+## 2. Get Started
+
+### Install
 
 ```bash
 yarn add @bitwild/rockets-adapter-firebase firebase-admin
 ```
 
-`firebase-admin` is an **optional peer dependency**. The adapter never
-imports it at compile time — the SDK lives behind a small structural
-interface so consumers can swap in any verifier (mocks in tests,
-multi-project routers, etc).
+`firebase-admin` is an optional peer dependency — required when you let the module wrap the SDK (the common case).
 
-## Quick start
+### Wire it into a Rockets app
 
-```ts
-import * as admin from 'firebase-admin';
-import { Module } from '@nestjs/common';
-import { RocketsCoreModule } from '@bitwild/rockets-core';
-import {
-  FirebaseAuthModule,
-  FirebaseAuthAdapter,
-} from '@bitwild/rockets-adapter-firebase';
+Use the `defineFirebaseAuth()` helper. It returns a `RocketsAuthIntegration` that `RocketsModule.forRoot({ auth })` consumes directly — `RocketsModule` treats every integration as externally provided, so `FirebaseAuthAdapter` is not double-registered.
 
-const firebaseApp = admin.initializeApp({
-  credential: admin.credential.applicationDefault(),
-});
+```typescript
+import { initializeApp, applicationDefault } from 'firebase-admin/app';
+import { defineFirebaseAuth } from '@bitwild/rockets-adapter-firebase';
+import { RocketsModule } from '@bitwild/rockets';
+import { defineModuleResource } from '@bitwild/rockets-core';
+
+import { UserEntity } from './auth/user.entity';
+
+const firebaseApp = initializeApp({ credential: applicationDefault() });
 
 @Module({
   imports: [
-    FirebaseAuthModule.forRoot({ firebaseApp }),
-    RocketsCoreModule.forRootAsync({
-      inject: [FirebaseAuthAdapter],
-      useFactory: (authProvider: FirebaseAuthAdapter) => ({
-        authProvider,
-        repository: TypeOrmRepositoryModule,
-        resources: [/* … */],
+    RocketsModule.forRoot({
+      auth: defineFirebaseAuth({
+        forRoot: { firebaseApp },
+        // Optional: keep a local mirror of the Firebase user so app features
+        // can inject a RepositoryInterface<UserEntity>.
+        resources: [defineModuleResource({ entities: [UserEntity] })],
       }),
+      userMetadata: { /* entity, createDto, updateDto */ },
+      repository,
     }),
   ],
 })
 export class AppModule {}
 ```
 
-If you need async composition, use `forRootAsync()`:
+Pass `forRootAsync` instead of `forRoot` to build options asynchronously (e.g. inject `ConfigService`). See [How-to › Build options asynchronously](#build-options-asynchronously).
 
-```ts
-FirebaseAuthModule.forRootAsync({
-  useFactory: async () => ({
-    firebaseApp: admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-    }),
-  }),
-});
+---
+
+## 3. How-to Guides
+
+### Verify with a custom verifier (e.g. tests, multi-project router)
+
+Supply `verifier: Type<FirebaseTokenVerifierInterface>` instead of `firebaseApp`. The module instantiates it via `ModuleRef`, so it can inject dependencies normally.
+
+```typescript
+@Injectable()
+class FakeVerifier implements FirebaseTokenVerifierInterface {
+  async verifyIdToken(token: string) {
+    return { uid: 'user-1', sub: 'user-1', email: 'u@example.com' };
+  }
+}
+
+FirebaseAuthModule.forRoot({ verifier: FakeVerifier });
 ```
 
-## Customizing user resolution
+When both `firebaseApp` and `verifier` are passed, the custom verifier wins.
 
-The default `DefaultFirebaseUserResolverService` returns the Firebase
-token claims directly. Provide a custom resolver when you need to look
-up local roles, tenants, or feature flags:
+### Enrich the user with local data (roles from your DB, tenant, etc.)
 
-```ts
+Implement `FirebaseUserResolverInterface` and pass it as `userResolver`. The default resolver only reads claims directly from the token.
+
+```typescript
 @Injectable()
-class AppFirebaseUserResolver implements FirebaseUserResolverInterface {
-  constructor(private readonly users: UserRoleLookup) {}
+class MyUserResolver implements FirebaseUserResolverInterface {
+  constructor(private readonly users: UserService) {}
 
   async resolve(token: FirebaseDecodedTokenInterface): Promise<AuthorizedUser> {
-    const roles = await this.users.lookupRoles(token.uid);
+    const local = await this.users.byFirebaseUid(token.uid);
     return {
-      id: token.uid,
+      id: local.id,
       sub: token.uid,
       email: token.email,
-      userRoles: roles.map((name) => ({ role: { name } })),
-      claims: { ...token },
+      userRoles: local.roles.map((name) => ({ role: { name } })),
+      claims: { ...token, tenantId: local.tenantId },
     };
   }
 }
 
-FirebaseAuthModule.forRoot({
-  firebaseApp,
-  userResolver: AppFirebaseUserResolver,
+FirebaseAuthModule.forRoot({ firebaseApp, userResolver: MyUserResolver });
+```
+
+### Reject revoked tokens
+
+`checkRevoked: false` is the default. Enable it for high-security flows — adds a Firebase round-trip per request.
+
+```typescript
+FirebaseAuthModule.forRoot({ firebaseApp, checkRevoked: true });
+```
+
+A revoked token surfaces as `FirebaseTokenRevokedException`, mapped by the adapter into `AuthAttemptResult: { matched: true, error }`.
+
+### Build options asynchronously
+
+`forRootAsync` accepts the standard Nest async shapes:
+
+```typescript
+FirebaseAuthModule.forRootAsync({
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  useFactory: async (cfg: ConfigService) => ({
+    firebaseApp: await buildFirebaseApp(cfg),
+    checkRevoked: cfg.get('FIREBASE_CHECK_REVOKED') === 'true',
+  }),
 });
 ```
 
-## Failure mapping
+`useClass` and `useExisting` are also supported via a `FirebaseAuthModuleOptionsFactory` implementation.
 
-Every failure mode surfaces as HTTP 401 with a specific subclass so
-ops can filter logs and policies can branch:
+### Read the user inside a handler
 
-| Cause                              | Exception                              |
-| ---------------------------------- | -------------------------------------- |
-| Empty / null token                 | `FirebaseTokenInvalidException`        |
-| Verifier throws `auth/*` error     | `FirebaseTokenInvalidException`        |
-| `auth/id-token-revoked` error      | `FirebaseTokenRevokedException`        |
-| Decoded token missing `uid`        | `FirebaseTokenMissingSubjectException` |
-| Custom resolver throws non-auth    | `FirebaseAuthException` (wrapped)      |
+The adapter writes the `AuthorizedUser` onto the request the same way every Rockets adapter does. Use `@AuthUser()` from `@bitwild/rockets-common` in controllers, or `getActor(context)` from `@bitwild/rockets-core` inside CRUD command/query handlers.
 
-## Token revocation
+```typescript
+import { AuthUser } from '@bitwild/rockets-common';
+import type { AuthorizedUser } from '@bitwild/rockets-core';
 
-Pass `checkRevoked: true` to opt into Firebase's revocation check on
-every request. This adds a network round-trip to Google — use sparingly
-(admin endpoints, money flows). Most apps leave it `false` and rely on
-short token TTLs.
+@Controller('profile')
+export class ProfileController {
+  @Get()
+  me(@AuthUser() user: AuthorizedUser) {
+    return user;
+  }
+}
 
-```ts
-FirebaseAuthModule.forRoot({
-  firebaseApp,
-  checkRevoked: true,
-});
-```
+---
+
+## 4. Reference
+
+### Integration helper
+
+| Member | Purpose |
+|---|---|
+| `defineFirebaseAuth(input)` | Returns a `RocketsAuthIntegration` ready to pass to `RocketsModule.forRoot({ auth })`. Accepts `{ forRoot }` for sync or `{ forRootAsync }` for async wiring. Optional `resources` are forwarded to the planner. |
+| `DefineFirebaseAuthInput` | Discriminated input type — pass exactly one of `forRoot` / `forRootAsync`. |
+
+### Module
+
+| Member | Purpose |
+|---|---|
+| `FirebaseAuthModule.forRoot(options)` | Sync registration. Returns a global dynamic module that provides `FirebaseAuthAdapter`. Use directly if you need to import the module outside the `defineFirebaseAuth()` flow. |
+| `FirebaseAuthModule.forRootAsync(options)` | Async variant accepting `useFactory` / `useClass` / `useExisting`. |
+
+### Adapter
+
+| Symbol | Purpose |
+|---|---|
+| `FirebaseAuthAdapter` | Implements `AuthAdapterInterface`. Returns `{ matched: false }` for non-Bearer requests; otherwise verifies and resolves the user. |
+
+### Options
+
+| Field | Type | Required | Purpose |
+|---|---|---|---|
+| `firebaseApp` | `unknown` (`admin.app.App`) | yes (unless `verifier` is set) | An initialised `firebase-admin` app. Typed loosely so the package does not pin a `firebase-admin` major version. |
+| `verifier` | `Type<FirebaseTokenVerifierInterface>` | optional | Custom verifier class — takes precedence over `firebaseApp`. |
+| `userResolver` | `Type<FirebaseUserResolverInterface>` | optional | Custom resolver. Default uses claims from the token only. |
+| `checkRevoked` | `boolean` (default `false`) | optional | Ask Firebase whether the token was revoked on every request. |
+| `imports` | `ModuleMetadata['imports']` | optional | Imports the module pulls in (typical use: a `ConfigModule`). |
+
+### Interfaces
+
+| Type | Purpose |
+|---|---|
+| `FirebaseTokenVerifierInterface` | Contract for token verifiers. `verifyIdToken(token, options?)`. |
+| `FirebaseVerifyOptions` | `{ checkRevoked?: boolean }` passed to the verifier. |
+| `FirebaseUserResolverInterface` | Contract for user resolvers. `resolve(decoded) → AuthorizedUser`. |
+| `FirebaseDecodedTokenInterface` | Minimal shape of a verified Firebase token (`uid`, `sub`, `email?`, `email_verified?`, `name?`, custom claims). |
+| `FirebaseAuthModuleOptions` | Options shape for `forRoot`. |
+| `FirebaseAuthModuleAsyncOptions` | Options shape for `forRootAsync`. |
+| `FirebaseAuthModuleOptionsFactory` | Class form for `useClass` / `useExisting`. |
+
+### Services
+
+| Class | Purpose |
+|---|---|
+| `FirebaseTokenVerifierService` | Default verifier that wraps `admin.auth().verifyIdToken()`. Constructor takes the firebase-admin app. |
+| `DefaultFirebaseUserResolverService` | Default resolver. Reads `uid`, `email`, `roles[]` custom claim. |
+
+### Exceptions
+
+| Class | When |
+|---|---|
+| `FirebaseAuthException` | Thrown when the user resolver fails. Wraps the original error. |
+| `FirebaseTokenInvalidException` | Bad signature, expired, wrong audience, empty token. |
+| `FirebaseTokenRevokedException` | `auth/id-token-revoked` returned by the SDK with `checkRevoked: true`. |
+| `FirebaseTokenMissingSubjectException` | Verified token has no `uid` claim. |
+
+### Tokens
+
+| Token | Purpose |
+|---|---|
+| `FIREBASE_AUTH_MODULE_OPTIONS_TOKEN` | Override the options provider in advanced wiring. |
+| `FIREBASE_TOKEN_VERIFIER_TOKEN` | Replace the verifier in tests or for token caching. |
+| `FIREBASE_USER_RESOLVER_TOKEN` | Replace the user resolver. |
+
+### Failure mapping
+
+| Cause | Adapter result |
+|---|---|
+| Empty / null bearer token | `{ matched: false }` |
+| Verifier throws | `{ matched: true, error: FirebaseTokenInvalidException }` |
+| `auth/id-token-revoked` | `{ matched: true, error: FirebaseTokenRevokedException }` |
+| Token has no `uid` | `{ matched: true, error: FirebaseTokenMissingSubjectException }` |
+| User resolver throws | `{ matched: true, error: FirebaseAuthException }` |
+
+---
+
+## License
+
+BSD-3-Clause

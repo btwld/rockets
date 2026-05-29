@@ -4,7 +4,7 @@ import {
   type CodeReviewFinding,
 } from './code-review-report.types';
 
-/** Firestore document — registered with `repository: FirestoreRepositoryModule`. */
+/** Firestore document — registered via `defineFirestoreRepository` in `repository/code-review-reports.persistence.ts`. */
 export class CodeReviewReportEntity {
   id!: string;
   userId!: string;

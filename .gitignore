@@ -27,6 +27,7 @@ coverage-rockets-*
 # Generated reports
 CODE_SIMPLIFICATION_REPORT.md
 graphify-out/
+code-analysis-out/
 
 # nyc test coverage
 .nyc_output

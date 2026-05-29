@@ -1,131 +1,94 @@
-# `@bitwild/rockets-auth`
+# @bitwild/rockets-auth
 
-[![NPM Latest](https://img.shields.io/npm/v/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
-[![NPM Downloads](https://img.shields.io/npm/dw/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
-[![CI](https://img.shields.io/github/actions/workflow/status/btwld/rockets/ci-merge.yml?branch=main&label=CI)](https://github.com/btwld/rockets/actions/workflows/ci-merge.yml)
 [![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![License](https://img.shields.io/npm/l/@bitwild/rockets-auth)](https://github.com/btwld/rockets/blob/main/LICENSE.txt)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-> **Self-hosted auth, batteries included.** Signup, login, JWT,
-> refresh, password recovery, OTP, invitations, RBAC, admin user CRUD —
-> all wired together, every step overrideable.
+> Complete built-in auth system for Rockets: signup, login, password recovery, OTP, invitations, roles, admin user CRUD — wired as a single `defineRocketsAuth()` integration.
 
----
-
-## Table of contents
-
-- [Introduction](#introduction)
-- [Tutorial — Your first auth server](#tutorial--your-first-auth-server)
-- [How-to guides](#how-to-guides)
-- [Reference](#reference)
-- [Explanation](#explanation)
-- [License](#license)
+**Status:** alpha (`1.0.0-alpha.7`, currently `private` in `package.json` — flipped to public on the first 1.0-track release). API on the `defineRocketsAuth()` surface is stable; the OAuth submodule is parked pending upstream v8 ports (see [Known limitations](#known-limitations)).
 
 ---
 
-## Introduction
+## 1. Introduction
 
-`@bitwild/rockets-auth` ships a complete authentication system for
-NestJS. You provide entity classes; Rockets wires the controllers,
-handlers, JWT issuance, password hashing, OTP delivery, role-based
-access control, invitation workflows, and admin CRUD endpoints around
-them.
+`@bitwild/rockets-auth` is what you reach for when your application owns its users. It is the alternative to `@bitwild/rockets` for the case where you do **not** delegate authentication to an external IdP.
 
-Every step is exposed through one of seven override seams — port
-classes, handler subclasses, per-method hooks, repository
-implementations, controller decorators, settings, and notification
-ports. You can replace anything without forking.
+It composes the v8 line of `@concepta/nestjs-*` **identity motors** (`user`, `password`, `otp`, `role`, `invitation`, `federated`, `email`, `event`, plus `authentication`) into a single configuration shape and exposes them as a `RocketsAuthIntegration` for `RocketsModule.forRoot({ auth: ... })` from `@bitwild/rockets`. It does **not** replace repository/CRUD/hook motors — those still come from core + `@bitwild/rockets-repository` / `crud` / `common`.
+
+### What it gives you
+
+- **HTTP routes** (mounted by the bundle):
+  - `POST /token/password` — login. `POST /token/refresh` — refresh.
+  - `PATCH /me` (password change) and the rest of `/me` from `@bitwild/rockets`.
+  - `POST /otp`, `PATCH /otp` — OTP issue / verify.
+  - `POST /signup` — user signup (wired through `userCrud`).
+  - Admin: `/admin/users`, `/admin/users/:userId/roles`, `/admin/invitations` (+ accept / revoke / reattempt).
+  - `/invitation-acceptance` for invited users.
+- **Provider**: `RocketsJwtAuthAdapter` — Rockets-spec `AuthAdapterInterface` that validates the JWT issued by `/token/password` and produces an `AuthorizedUser` with `userRoles`.
+- **Access control** re-exports from `@concepta/nestjs-access-control` so app code single-sources from this package.
+- **Customisation seams**: per-controller decorator extras (`controller.classDecorators`, `controller.routes[*].decorators`), abstract handler classes for every admin operation, port overrides for every cross-module command/query.
 
 ### When to use this package
 
-| Use this when… | Use a different package when… |
-|---|---|
-| Rockets owns the user table | Users live in Firebase / Auth0 / external IdP → [`@bitwild/rockets`](../rockets-server/) |
-| You want signup / login / OTP / admin out of the box | You want pure infrastructure, no controllers → [`@bitwild/rockets-core`](../rockets-core/) |
-| You need RBAC + invitations as part of the auth surface | You're building a custom composition root |
+- You want a complete user system out of the box (signup, login, OTP, password recovery, roles, invitations, admin endpoints) and you don't want to glue seven modules together yourself.
+- You will deploy in environments where the application owns the identity store.
 
-### Why persistence is compiled at the server boundary
+### When NOT to use this package
 
-Built-in auth still uses a **fixed set of canonical repository keys** inside
-the package (`USER_CRUD_ENTITY_KEY`, …). **`defineRocketsAuth`** accepts the
-same friendly `persistence.entities` map as before and maps it to
-`defineModuleResource` rows for `RocketsModule` / `RocketsCoreModule`, so
-auth tables register in the **same planner** as domain `resources[]` without
-duplicating `repositoryPersistence` on `RocketsAuthModule`. Historical
-discussion: [ADR 0003](../../docs/explanation/adr/0003-auth-persistence-asymmetry.md).
+- Users live in an external IdP (Firebase, Auth0, Okta, custom JWT) → use `@bitwild/rockets` + the matching adapter.
+- You only need login + a custom user table without OTP / invitations / admin → drop to `@bitwild/rockets` and write a small JWT adapter yourself.
 
 ---
 
-## Tutorial — Your first auth server
+## 2. Get Started
 
-You'll get a working auth server in ~15 minutes with `/signup`,
-`/token/password`, `/token/refresh`, `/me/password`, OTP, RBAC, and
-admin user CRUD.
-
-### 1. Install
+### Install
 
 ```bash
 yarn add @bitwild/rockets-auth @bitwild/rockets @bitwild/rockets-core \
-  @concepta/nestjs-repository-typeorm typeorm @nestjs/typeorm \
-  class-transformer class-validator
+  @bitwild/rockets-common @bitwild/rockets-repository @bitwild/rockets-crud \
+  @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger @nestjs/jwt @nestjs/passport \
+  class-transformer class-validator reflect-metadata rxjs
 ```
 
-Requires NestJS `^11`, Node `>=18`, TypeScript `>=5`.
+Bring the upstream `@concepta/nestjs-*` packages and a repository adapter your app supports (e.g. `@concepta/nestjs-repository-typeorm` + `typeorm`).
 
-### 2. Declare your entity classes
-
-```typescript
-// entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-
-@Entity('users')
-export class UserEntity {
-  @PrimaryGeneratedColumn('uuid') id!: string;
-  @Column({ unique: true }) username!: string;
-  @Column({ unique: true }) email!: string;
-  @Column({ default: true }) active!: boolean;
-}
-
-// Similar shape for: UserCredentialEntity, UserMetadataEntity,
-// UserOtpEntity, RoleEntity, UserRoleEntity, InvitationEntity.
-```
-
-The full set of required entities and their fields is listed in
-[`docs/reference/configuration.md`](../../docs/reference/configuration.md).
-
-### 3. Wire `RocketsModule` + `defineRocketsAuth`
-
-`RocketsAuthModule` is loaded **inside** the object returned by
-`defineRocketsAuth` (as `nestImports`). You pass that value to
-`RocketsModule.forRoot({ auth: … })` together with one root `repository`
-adapter and the same `userMetadata` object exposed on the integration (so
-`/me` and upstream user metadata stay aligned).
+### Minimal working example
 
 ```typescript
-// app.module.ts
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { EventModule } from '@concepta/nestjs-event';
 import { RocketsModule } from '@bitwild/rockets';
 import { defineRocketsAuth } from '@bitwild/rockets-auth';
+import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 
 import {
-  UserEntity, UserCredentialEntity, UserMetadataEntity,
-  UserOtpEntity, RoleEntity, UserRoleEntity, InvitationEntity,
-} from './entities';
-import { UserDto, UserCreateDto, UserUpdateDto } from './dto';
-import { UserMetadataCreateDto, UserMetadataUpdateDto } from './dto';
+  UserEntity, UserCredentialEntity, UserOtpEntity,
+  RoleEntity, UserRoleEntity, FederatedEntity, InvitationEntity,
+  UserDto, UserCreateDto, SampleUserUpdateDto,
+} from './user';
+import { UserMetadataEntity, UserMetadataCreateDto, UserMetadataUpdateDto }
+  from './user/metadata';
+import { RoleDto, RoleCreateDto, RoleUpdateDto } from './role';
+
+// One bootstrap instance — same reference on `repository` and `persistence.module`.
+const repo = defineTypeOrmRepository({
+  type: 'sqlite',
+  database: ':memory:',
+  synchronize: true,
+  dropSchema: true,
+});
 
 const rocketsAuth = defineRocketsAuth({
   persistence: {
-    module: TypeOrmRepositoryModule,
+    module: repo,
     entities: {
       user: UserEntity,
       userCredentials: UserCredentialEntity,
-      userMetadata: UserMetadataEntity,
       userOtp: UserOtpEntity,
       role: RoleEntity,
       userRole: UserRoleEntity,
+      federatedIdentity: FederatedEntity,
     },
   },
   invitationEntity: InvitationEntity,
@@ -134,397 +97,241 @@ const rocketsAuth = defineRocketsAuth({
     createDto: UserMetadataCreateDto,
     updateDto: UserMetadataUpdateDto,
   },
+  userCrud: { model: UserDto, dto: { createOne: UserCreateDto, updateOne: SampleUserUpdateDto } },
+  roleCrud: { model: RoleDto, dto: { createOne: RoleCreateDto, updateOne: RoleUpdateDto } },
   useFactory: () => ({
-    settings: {
-      role: { adminRoleName: 'admin' },
-      otp: { assignment: 'auth', category: 'login', type: 'uuid', expiresIn: '1h' },
-      email: {
-        from: 'noreply@example.com',
-        baseUrl: 'http://localhost:3000',
-        templates: {
-          sendOtp: { fileName: 'otp.hbs', subject: 'Your code' },
-          invitation: { fileName: 'inv.hbs', subject: 'Invitation' },
-          invitationAccepted: { fileName: 'acc.hbs', subject: 'Welcome' },
+    services: {
+      mailerService: {
+        sendMail: async (opts) => { /* wire your real SMTP / SES adapter */ },
+      },
+    },
+    authentication: {
+      ports: {
+        recoveryNotification: {
+          sendRecoverLoginNotificationCommand: SendRecoverLoginCmd,
+          sendRecoverPasswordNotificationCommand: SendRecoverPasswordCmd,
+          sendPasswordUpdatedNotificationCommand: SendPasswordUpdatedCmd,
+        },
+        verifyNotification: {
+          sendVerifyNotificationCommand: SendVerifyCmd,
         },
       },
     },
-    services: { mailerService },
+    settings: {
+      role: { adminRoleName: 'admin', defaultUserRoleName: 'user' },
+      email: { from: 'noreply@example.com', baseUrl: 'http://localhost:3000', templates: { /* ... */ } },
+      otp: { assignment: 'userOtp' as const, category: 'auth-login', type: 'uuid' as const, expiresIn: '1h' },
+    },
   }),
+});
+
+@Module({
+  imports: [
+    EventModule.forRoot({}),
+    RocketsModule.forRoot({
+      auth: rocketsAuth,
+      repository: repo,
+      resources: [/* your defineResource bundles */],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+`defineTypeOrmRepository` is the same app-local `RepositoryBootstrap` helper used with `@bitwild/rockets` (wrap `TypeOrmModule.forRoot` + `TypeOrmRepositoryModule.forFeature`). Run `yarn sample-auth:dev` from the monorepo root for a full working app.
+
+---
+
+## 3. How-to Guides
+
+### Reuse the user's roles inside Access Control
+
+`AccessControlServiceInterface` lives in `@bitwild/rockets-auth` (re-exported). Implement `getUserRoles` by reading `userRoles` off the request — `RocketsJwtAuthAdapter` populates that shape from the user-role join automatically.
+
+```typescript
+import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { AccessControlServiceInterface } from '@bitwild/rockets-auth';
+
+@Injectable()
+export class ACService implements AccessControlServiceInterface {
+  async getUser<T>(ctx: ExecutionContext): Promise<T> {
+    return ctx.switchToHttp().getRequest().user as T;
+  }
+
+  async getUserRoles(ctx: ExecutionContext): Promise<string[]> {
+    const user = await this.getUser<{ userRoles?: { role: { name: string } }[] }>(ctx);
+    if (!user) throw new UnauthorizedException();
+    return user.userRoles?.map((ur) => ur.role.name) ?? [];
+  }
+}
+```
+
+Pass it to `accessControl.service` inside `defineRocketsAuth({ ... })`.
+
+### Override a single admin handler (e.g. custom signup logic)
+
+Each admin operation has an abstract base class. Extend, then point the override slot at it.
+
+```typescript
+import { AbstractSignupUserHandler, SignupUserCommand } from '@bitwild/rockets-auth';
+
+@CommandHandler(SignupUserCommand)
+export class SignupWithReferralHandler extends AbstractSignupUserHandler {
+  async execute(cmd: SignupUserCommand) {
+    const user = await super.execute(cmd);
+    await this.referralService.attach(user.id, cmd.referralCode);
+    return user;
+  }
+}
+
+defineRocketsAuth({
+  // ...
   userCrud: {
     model: UserDto,
-    dto: { createOne: UserCreateDto, updateOne: UserUpdateDto },
-  },
-});
-
-@Module({
-  imports: [
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: ':memory:',
-      entities: [
-        UserEntity, UserCredentialEntity, UserMetadataEntity,
-        UserOtpEntity, RoleEntity, UserRoleEntity, InvitationEntity,
-      ],
-      synchronize: true,
-    }),
-    RocketsModule.forRoot({
-      repository: TypeOrmRepositoryModule,
-      auth: rocketsAuth,
-      userMetadata: rocketsAuth.userMetadata,
-      resources: [],
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-### 4. Run it
-
-```bash
-nest start
-```
-
-```bash
-# Sign up
-curl -X POST http://localhost:3000/signup \
-  -H "Content-Type: application/json" \
-  -d '{ "email": "ada@example.com", "username": "ada", "active": true, "password": "TestP@ss123" }'
-
-# Log in
-curl -X POST http://localhost:3000/token/password \
-  -H "Content-Type: application/json" \
-  -d '{ "username": "ada", "password": "TestP@ss123" }'
-# → { "accessToken": "...", "refreshToken": "..." }
-
-# Use the token
-TOKEN="<accessToken>"
-curl -X PATCH http://localhost:3000/me/password \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{ "currentPassword": "TestP@ss123", "newPassword": "NewP@ssw0rd" }'
-```
-
-Working end-to-end app with all features wired (RBAC, invitations,
-metadata): [`examples/sample-server-auth/`](../../examples/sample-server-auth/).
-
----
-
-## How-to guides
-
-### How to override one step of a handler (e.g. log every signup)
-
-```typescript
-import { Injectable } from '@nestjs/common';
-import { AbstractSignupUserHandler } from '@bitwild/rockets-auth';
-
-@Injectable()
-class AuditedSignupHandler extends AbstractSignupUserHandler {
-  protected async afterSave(ctx, agg) {
-    await this.auditLog.write({ userId: agg.id, action: 'signup' });
-  }
-}
-
-RocketsAuthModule.forRoot({
-  // ...
-  user: {
-    extras: {
-      providers: [
-        { provide: SignupUserHandler, useClass: AuditedSignupHandler },
-      ],
-    },
+    dto: { createOne: UserCreateDto, updateOne: SampleUserUpdateDto },
+    handlers: { signupHandler: SignupWithReferralHandler },
   },
 });
 ```
 
-The `Abstract*Handler` pattern exposes 8 protected methods per
-use-case (validate / load / mutate / persist / notify, etc.). Override
-only the step you care about.
+Available slots: `signupHandler`, `adminList`, `adminRead`, `adminUpdate`, `adminDelete` (all under `userCrud.handlers`).
 
-### How to append decorators to a built-in route (e.g. throttling)
+### Disable specific controllers
+
+When you ship your own variant, opt the built-in out via `extras.disableController`:
 
 ```typescript
-RocketsAuthModule.forRoot({
+RocketsModule.forRoot({
+  auth: rocketsAuth,
+  disableController: { admin: true, invitation: true },
+});
+```
+
+Available flags: `otp`, `signup`, `admin`, `adminRoles`, `invitation`, `invitationAcceptance`, `invitationRevocation`, `invitationReattempt`, `mePassword`, `token`. (The `disableController` field on `RocketsAuthModule.forRootAsync` directly accepts the same shape; `defineRocketsAuth` propagates it.)
+
+### Skip the global guard
+
+By default, `RocketsModule` opts in `AuthServerGuard` as `APP_GUARD`. To leave the guard wholly to the upstream `@concepta/nestjs-authentication` (recommended when you use this package's full stack):
+
+```typescript
+defineRocketsAuth({
   // ...
-  invitation: {
-    controllers: {
-      acceptance: {
-        routes: {
-          accept: {
-            decorators: [Throttle({ default: { limit: 3, ttl: 60_000 } })],
-          },
-        },
+  rocketsDefaults: { enableGlobalGuard: false },
+});
+```
+
+The upstream `AuthenticationModule` registers its own `APP_GUARD` (`JwtGuard`). Forward extras through `extras.auth.appGuard: false` if you want zero global guard.
+
+### Customise a controller without subclassing
+
+Every factory-built controller accepts a `controller.classDecorators` array and a `controller.routes[*].decorators` map. Use them to attach throttling, ACL decorators, or rate limits.
+
+```typescript
+defineRocketsAuth({
+  // ...
+  otp: {
+    controller: {
+      routes: {
+        issue:  { decorators: [Throttle({ default: { limit: 3, ttl: 60 } })] },
+        verify: { decorators: [Throttle({ default: { limit: 10, ttl: 60 } })] },
       },
     },
   },
 });
 ```
 
-The decorators are applied **after** the built-in ones, so you can layer
-guards, ACL rules, throttling, OpenAPI tags, etc.
-
-### How to disable a built-in controller
-
-```typescript
-RocketsAuthModule.forRoot({
-  // ...
-  disableController: {
-    otp: true,                 // turn off /otp
-    invitation: true,          // turn off all /admin/invitations + acceptance
-  },
-});
-```
-
-### How to invite a user
-
-```bash
-# Admin creates an invitation
-curl -X POST http://localhost:3000/admin/invitations \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -d '{ "email": "newbie@example.com", "category": "user-invite" }'
-
-# User accepts via emailed code
-curl -X PATCH http://localhost:3000/invitation-acceptance/<CODE> \
-  -d '{ "passcode": "<...>", "newPassword": "P@ss123" }'
-```
-
-Full flow with email templates: [`docs/how-to/auth/invite-user.md`](../../docs/how-to/auth/invite-user.md).
-
-### How to add an ACL rule
-
-```typescript
-import { ACServiceInterface } from '@concepta/nestjs-access-control';
-
-@Injectable()
-export class AppACService implements ACServiceInterface {
-  acRules() {
-    return [
-      { role: 'admin',  resource: 'user',  action: ['read', 'create', 'update', 'delete'], possession: 'any' },
-      { role: 'user',   resource: 'user',  action: ['read', 'update'], possession: 'own' },
-    ];
-  }
-}
-```
-
-Wire `AppACService` via `accessControl.queryServices` in
-`RocketsAuthModule.forRoot`. Full guide:
-[`docs/how-to/access-control/add-an-acl-rule.md`](../../docs/how-to/access-control/add-an-acl-rule.md).
-
-### How to add an app-level resource alongside auth
-
-`RocketsAuthModule` owns the auth entities. For app-level entities,
-add a parallel `RocketsModule.forRootAsync(...)` (or
-`RocketsCoreModule`) and register them via `defineResource()` /
-`defineModuleResource()`:
-
-```typescript
-@Module({
-  imports: [
-    TypeOrmModule.forRoot({ /* includes PetEntity */ }),
-
-    RocketsAuthModule.forRootAsync({ /* auth wiring */ }),
-
-    // Add app resources on top, sharing the same JWT auth.
-    RocketsModule.forRootAsync({
-      inject: [RocketsJwtAuthAdapter],   // exported by RocketsAuthModule
-      useFactory: (auth) => ({ authProvider: auth }),
-      // repository omitted — auth module already registered persistence
-      resources: [petResource],
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-### How to issue your own JWT instead of using the built-in flow
-
-If you want to keep the auth surface but issue tokens differently,
-override the relevant handler:
-
-```typescript
-import { AbstractIssueAuthTokensHandler } from '@bitwild/rockets-auth';
-
-@Injectable()
-class CustomTokenIssuer extends AbstractIssueAuthTokensHandler {
-  protected async issue(ctx, user) {
-    // Your token issuance logic. Return { accessToken, refreshToken }.
-  }
-}
-```
-
-Then plug `useClass: CustomTokenIssuer` into the appropriate domain's
-`extras.providers`. Reference: [`docs/reference/handler-seams.md`](../../docs/reference/handler-seams.md).
+The same pattern applies to `extras.auth.controller` (for `/me/password`), `extras.invitation.controllers.*`, and `extras.role.controller` (admin role mgmt).
 
 ---
 
-## Reference
+## 4. Reference
 
-### Endpoints
+### Upstream engine (identity motors)
 
-| Method | Path | Description | Auth |
+| `@concepta/nestjs-*` motor | Role in `defineRocketsAuth` |
+|---|---|
+| `user` | User CRUD, signup, admin users |
+| `password` | Login, refresh, password change, recovery |
+| `otp` | OTP issue / verify |
+| `role` | Role admin CRUD |
+| `invitation` | Invitations + acceptance |
+| `federated` | Federated identity rows |
+| `email` / `event` | Mailer hooks, domain events |
+| `authentication` | Shared auth types/utilities |
+| `access-control` | RBAC (re-exported from this package for convenience) |
+
+**Shared stack (path A and B):** repository + CRUD + hooks still run through `@bitwild/rockets-core` and the same `repository` / `resources[]` options on `RocketsModule.forRoot`.
+
+**This package does not depend on `@bitwild/rockets`** — your app imports both when you need built-in auth HTTP and `/me`.
+
+### Entry points
+
+| Symbol | Purpose |
+|---|---|
+| `defineRocketsAuth(input)` | Returns a `RocketsAuthIntegration` for `RocketsModule.forRoot({ auth })`. Compiles persistence into core resource rows and wires `RocketsAuthModule` internally. |
+| `RocketsAuthModule.forRoot(options)` / `forRootAsync(options)` | Direct registration. Use only when you need to mount the auth module outside the `RocketsModule` composition. |
+| `RocketsJwtAuthAdapter` | The default JWT adapter validated by the chain. Picked by `defineRocketsAuth` unless `authAdapter` is overridden. |
+
+### `defineRocketsAuth` input
+
+| Field | Type | Required | Purpose |
 |---|---|---|---|
-| `POST` | `/signup` | Register a new user | public |
-| `POST` | `/token/password` | Issue access + refresh tokens | public |
-| `POST` | `/token/refresh` | Refresh access token | public |
-| `POST` | `/auth/recovery/login` | Request username recovery email | public |
-| `POST` | `/auth/recovery/password` | Request password recovery email | public |
-| `PATCH` | `/auth/recovery/password` | Reset password with passcode | public |
-| `PATCH` | `/me/password` | Change own password | required |
-| `POST` | `/otp` | Send OTP via email | public |
-| `PATCH` | `/otp` | Confirm OTP, issue tokens | public |
-| `POST` | `/admin/invitations` | Create + send invitation | admin |
-| `PATCH` | `/invitation-acceptance/:code` | Accept invitation with passcode | public |
-| `POST` | `/admin/invitations/revoke` | Revoke pending invitations | admin |
-| `POST` | `/admin/invitations/:code/reattempt` | Re-send invitation email | admin |
-| `*` | `/admin/users` | Admin user CRUD | admin |
-| `*` | `/admin/roles` | Admin role CRUD | admin |
-| `GET` | `/admin/users/:userId/roles` | List user's roles | admin |
-| `POST` | `/admin/users/:userId/roles` | Assign role | admin |
+| `persistence.module` | `RepositoryModuleInterface` | yes | Same adapter instance as `RocketsModule.forRoot({ repository })` — typically a `defineTypeOrmRepository(...)` bootstrap, not raw `TypeOrmRepositoryModule` alone. |
+| `persistence.entities` | `{ user, userCredentials?, userOtp?, role?, userRole?, federatedIdentity? }` | yes | Entity classes for the auth tables. Provide what you use. |
+| `invitationEntity` | `Type` | optional | Adds an `invitation` repository row + enables invitation routes. |
+| `userMetadata` | `RocketsUserMetadataConfig` | yes | Forwarded to `/me`; also used as the default `userCrud.userMetadataConfig`. |
+| `userCrud` | `UserCrudOptionsExtrasInterface` | yes | `model`, `dto.createOne` / `updateOne`, `handlers`, controller extras. |
+| `roleCrud` | `RoleCrudOptionsExtrasInterface` | optional | Same shape, for the role admin routes. |
+| `authAdapter` | `Type<AuthAdapterInterface>` | optional | Override the JWT adapter (e.g. inject a custom claim transformer). |
+| `rocketsDefaults.enableGlobalGuard` | `boolean` | optional | Hint to `RocketsModule` about the global guard default. |
+| All other fields | inherited from `RocketsAuthOptionsInterface` | optional | `useFactory` / `useExisting`, plus `settings`, `authentication`, `user`, `password`, `otp`, `email`, `crud`, `role`, `invitation`, `federated`, `services`, `accessControl`, `disableController`, `ports`. |
 
-OAuth (`/oauth/*`) is currently parked — see
-[`docs/explanation/upstream-gaps.md`](../../docs/explanation/upstream-gaps.md).
+### `RocketsAuthModule.forRoot(options)` — top-level options
 
-### `defineRocketsAuth(input)`
+| Field | Purpose |
+|---|---|
+| `settings` | Rockets-specific settings (role names, OTP defaults, email templates). |
+| `authentication` | Forwarded to `@concepta/nestjs-authentication`. Includes `settings.{jwt, strategies, mfa, guards}` and `ports.*`. Notification ports must be supplied (no silent default). |
+| `user`, `password`, `otp`, `email`, `crud`, `role`, `federated`, `invitation` | Per-module config blocks, forwarded as-is to upstream modules. |
+| `services.mailerService` | Required mailer adapter. Use a logger fallback for dev. |
+| `services.userAccessQueryService` | Optional `CanAccess` for access-control queries. |
+| `swagger` | Forwarded to `SwaggerUiModule`. |
 
-Returns a **`RocketsAuthIntegration`** for `RocketsModule.forRoot({ auth })`.
-Required input fields include **`persistence`**, **`userMetadata`**, and
-**`userCrud`**; all other keys match `RocketsAuthModule.forRootAsync` async
-options (`useFactory`, `inject`, `imports`, `roleCrud`, `accessControl`, …).
+### Module-level extras
 
-### `RocketsAuthModule.forRoot(options) / forRootAsync(asyncOptions)`
+| Field | Purpose |
+|---|---|
+| `accessControl` | `AccessControlOptionsInterface` + `imports` + `queryServices` — enables the global ACL guard wiring. |
+| `disableController` | Drop built-in controllers (`otp`, `signup`, `admin`, `adminRoles`, `invitation`, `invitationAcceptance`, `invitationRevocation`, `invitationReattempt`, `mePassword`, `token`). |
+| `ports` | `RocketsAuthPortsConfigInterface` — per-handler overrides for cross-module Command/Query plumbing. |
+| `auth.appGuard` | Override the global `APP_GUARD` from `AuthenticationModule`. |
+| `auth.controller` / `otp.controller` / `invitation.controllers.*` / `role.controller` | Per-controller decorator extras (`classDecorators`, `routes[*].decorators`). |
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| *(persistence)* | — | — | **Not on the module.** Supply `persistence` on `defineRocketsAuth` when composing with `RocketsModule`. |
-| `settings` | `{ role, otp, email, ... }` | optional | Tunable defaults per domain. |
-| `services` | `{ mailerService }` | optional (✅ if email used) | Mailer service for OTP and invitations. |
-| `disableController` | `DisableControllerOptionsInterface` | optional | Turn off built-in controllers (`otp`, `signup`, `admin`, …). |
-| `auth.imports` / `auth.controller` | various | optional | Per-domain extras for `/me/password`. |
-| `otp.imports` / `otp.controller` | various | optional | Extras for `/otp`. |
-| `invitation.imports` / `invitation.controllers` | various | optional | Per-controller extras for invitations. |
-| `role.*` | various | optional | Forwarded to `RoleModule`. |
-| `userCrud` | `UserCrudOptionsExtrasInterface` | optional | Admin user CRUD DTOs + handler overrides. |
-| `roleCrud` | `RoleCrudOptionsExtrasInterface` | optional | Admin role CRUD config. |
-| `accessControl` | `AccessControlOptionsInterface & { imports?, queryServices? }` | optional | RBAC rules + ACL services. |
-| `ports` | `RocketsAuthPortsConfigInterface` | optional | Override port-default handlers. |
-| `global` | `boolean` | default `false` | Make module global. |
+### Domain re-exports
 
-### `RocketsAuthRepositoryPersistenceOptions` (`defineRocketsAuth({ persistence })`)
+Every public type and CQRS class from the auth, user, otp, role, and invitation domains is re-exported under the package root:
 
-```typescript
-{
-  module: Type;              // e.g. TypeOrmRepositoryModule
-  entities: {
-    user: Type;              // required
-    userCredentials: Type;   // required
-    userMetadata?: Type;     // recommended
-    userOtp?: Type;          // required if OTP enabled
-    role?: Type;             // required if role module used
-    userRole?: Type;         // required for role assignments
-    federatedIdentity?: Type;// required if OAuth enabled
-  };
-}
-```
+- **Auth**: `SignupUserCommand`, `AbstractSignupUserHandler`, `MePasswordController` factory, `RocketsAuthTokenController`, `RocketsJwtAuthAdapter`.
+- **User**: `AbstractAdminUserListHandler`, `AbstractAdminUserReadHandler`, `AbstractAdminUserUpdateHandler`, `AbstractAdminDeleteUserHandler`, `RocketsAuthUserInterface`, `RocketsAuthUserMetadata*Interface`.
+- **Role**: `RocketsAuthRoleInterface`, role CRUD entities and DTOs.
+- **OTP**: `OtpModule` re-export, OTP controllers and extras.
+- **Invitation**: invitation entities, DTOs, controllers, and the four factory-built controllers (`invitation`, `acceptance`, `revocation`, `reattempt`).
 
-### Override seams
+### Access-control re-exports
 
-Every domain is overrideable through one of seven seams:
+Saved here so consumers don't dual-import from `@concepta/nestjs-access-control`:
 
-| Seam | Where | What it overrides |
-|---|---|---|
-| Port class | `RocketsAuthPortsModule.forRoot({ ports })` | Cross-domain access (user, otp). |
-| Handler subclass | Provide `useClass` for any default `*Handler` | Whole use-case. |
-| Per-method hook | Override one `protected` method on `Abstract*Handler` | Single step (validate / persist / notify). |
-| Repository implementation | Custom repo class via DI | Persistence per entity. |
-| Controller extras | `extras.<domain>.controller.{classDecorators, useHooks, routes[*].decorators, routes[*].handler}` | Guards, ACL, throttling, ApiTags, RepoHooks per controller. |
-| Settings | `forRoot({ <domain>: { settings: ... } })` | Tunables (expiresIn, namespaces). |
-| Notification port | `extras.ports.invitationNotification` | Email templates / channels. |
+`AccessControlModule`, `AccessControlGuard`, `AccessControlFilter`, `AccessControlContext`, `AccessControlService`, every `@AccessControl{Create,Read,Update,Replace,Delete,Recover}*` decorator, `@AccessControlGrant`, `@AccessControlQuery`, `ActionEnum`, `PossessionEnum`, `AccessControlAction`, `CanAccess`, `AccessControlOptionsInterface`, `AccessControlContextInterface`.
 
-Full reference: [`docs/reference/handler-seams.md`](../../docs/reference/handler-seams.md)
+### Known limitations
 
-- [`docs/reference/controller-extras.md`](../../docs/reference/controller-extras.md).
+- **OAuth providers (Apple, Google, GitHub)** are deferred — upstream `@concepta/nestjs-auth-{apple,google,github,router}` have not been ported to v8. The folder `src/domains/oauth/` is parked with the v7 wiring preserved as a comment and `TODO(upstream:)` markers. `extras.auth.guards` exists for forward-compat plumbing but routes resolve only after the upstream ports ship.
+- **Email module** is on v7 (`@concepta/nestjs-email@7.0.0-alpha.10`) and `@concepta/nestjs-access-control@7.0.0-alpha.10` — the cross-version mix is intentional while the v8 port is in flight. No code change required when those land.
 
-### Generated Swagger
-
-Live source of truth for the API: [`SWAGGER.md`](./SWAGGER.md) (generated from
-`swagger/swagger.json`).
-
----
-
-## Explanation
-
-### Architecture (DDD per domain)
-
-```textdomains/
-├── auth/          # /me/password (other auth routes are upstream now)
-├── role/          # admin/roles, admin/users/:id/roles
-├── otp/           # /otp send + confirm
-├── invitation/    # admin/invitations + acceptance
-├── oauth/         # parked — upstream blockers
-└── user/          # admin/users, /signup, user metadata, default reference impl
-```
-
-Each domain follows the canonical layout:
-
-```text<domain>/
-├── domain/                    # zero framework imports
-├── application/               # CQRS commands / queries / listeners
-├── infrastructure/            # DTOs, persistence, services, config
-├── gateways/http/factories/   # build*Controller(extras) factories
-├── interfaces/                # public contracts + extras shapes
-└── modules/                   # forRoot/forRootAsync wiring (when needed)
-```
-
-See [`DDD_REFERENCE.md`](./DDD_REFERENCE.md) for the canonical pattern.
-
-### Persistence and `defineRocketsAuth`
-
-The auth stack still injects repositories by **canonical keys** defined in
-this package. **`defineRocketsAuth`** is the supported composition helper: it
-maps the friendly `persistence.entities` object to those keys when building
-`defineModuleResource` rows, so app code never imports
-`USER_CRUD_ENTITY_KEY` et al. At runtime, `RocketsAuthModule` is nested under
-`RocketsModule` after `RocketsCoreModule` has registered the planner rows.
-
-Background: [ADR 0003](../../docs/explanation/adr/0003-auth-persistence-asymmetry.md).
-
-### Layering
-
-```text
-rockets-core           framework primitives (auth abstraction, CQRS, declarative resources)
-    ▲
-rockets-server         /me + AuthServerGuard for external auth integrations
-    ▲
-rockets-server-auth    ◀── THIS PACKAGE
-                        wires upstream @concepta/nestjs-* v8 packages
-                        (user, password, otp, role, federated, …) into one
-                        coherent JWT auth surface with declarative
-                        per-controller extras
-```
-
-### Related documentation
-
-- **Tutorial — first auth server:** [`docs/tutorials/01-first-auth-server.md`](../../docs/tutorials/01-first-auth-server.md)
-- **Tutorial — override a handler:** [`docs/tutorials/04-override-a-handler.md`](../../docs/tutorials/04-override-a-handler.md)
-- **Reference — full config:** [`docs/reference/configuration.md`](../../docs/reference/configuration.md)
-- **Reference — handler seams:** [`docs/reference/handler-seams.md`](../../docs/reference/handler-seams.md)
-- **Reference — controller extras:** [`docs/reference/controller-extras.md`](../../docs/reference/controller-extras.md)
-- **Reference — port services:** [`docs/reference/port-services.md`](../../docs/reference/port-services.md)
-- **Reference — exceptions catalogue:** [`docs/reference/exceptions.md`](../../docs/reference/exceptions.md)
-- **How-to — invite a user:** [`docs/how-to/auth/invite-user.md`](../../docs/how-to/auth/invite-user.md)
-- **How-to — add an ACL rule:** [`docs/how-to/access-control/add-an-acl-rule.md`](../../docs/how-to/access-control/add-an-acl-rule.md)
-- **Explanation — DDD architecture:** [`docs/explanation/ddd-clean-arch.md`](../../docs/explanation/ddd-clean-arch.md)
-- **Explanation — 7 override seams:** [`docs/explanation/7-override-seams.md`](../../docs/explanation/7-override-seams.md)
-- **Internal — DDD reference for contributors:** [`DDD_REFERENCE.md`](./DDD_REFERENCE.md)
-- **Generated Swagger:** [`SWAGGER.md`](./SWAGGER.md)
-
-### Related packages
-
-- [`@bitwild/rockets-core`](../rockets-core/) — infrastructure only
-- [`@bitwild/rockets`](../rockets-server/) — external auth integration
-- Upstream `@concepta/nestjs-*` v8 — building blocks. Version matrix: [`docs/reference/upstream-versions.md`](../../docs/reference/upstream-versions.md)
+Dump OpenAPI from a running auth app: `yarn generate-swagger` at the monorepo root (uses the `rockets-auth-swagger` CLI bin).
 
 ---
 
 ## License
 
-MIT — see [`../../LICENSE.txt`](../../LICENSE.txt).
+BSD-3-Clause

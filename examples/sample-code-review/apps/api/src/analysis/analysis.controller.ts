@@ -29,7 +29,7 @@ import { AnalysisService } from './analysis.service';
 import { CodeReviewReportEntity } from './code-review-report.entity';
 import { CodeReviewReportExecutionEntity } from './code-review-report-execution.entity';
 import type { CodeReviewReportView } from './code-review-report.view';
-import { CODE_REVIEW_REPORT_COLLECTION } from './register-code-review-firestore';
+import { CODE_REVIEW_REPORT_COLLECTION } from '../repository/code-review-reports.persistence';
 
 @ApiTags('Code review')
 @ApiBearerAuth()

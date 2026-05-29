@@ -1,6 +1,5 @@
 import { defineResource } from '@bitwild/rockets';
 import { Operation } from '@concepta/nestjs-common';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import { PetVaccinationEntity } from './pet-vaccination.entity';
 import { PetEntity } from '../pet/pet.entity';
 import {
@@ -13,8 +12,7 @@ export const petVaccinationResource = defineResource({
   entity: PetVaccinationEntity,
   path: 'pet-vaccinations',
   tags: ['Pet Vaccinations'],
-  // See sister `pet.resource.ts` for why each bundle owns the adapter.
-  persistence: { module: TypeOrmRepositoryModule },
+  // Inherits the root `repository` adapter from `RocketsModule.forRoot`.
   dto: {
     response: PetVaccinationDto,
     create: PetVaccinationCreateDto,

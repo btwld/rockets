@@ -1,116 +1,180 @@
-# `@bitwild/rockets-repository-firestore`
+# @bitwild/rockets-repository-firestore
 
-Official Firestore repository adapter for Rockets dynamic repositories — same
-registration model as `@concepta/nestjs-repository-typeorm`.
+[![NPM](https://img.shields.io/npm/v/@bitwild/rockets-repository-firestore)](https://www.npmjs.com/package/@bitwild/rockets-repository-firestore)
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-## Usage
+> Firestore adapter for the Rockets dynamic-repository contract. Mix Firestore-backed entities with a TypeORM (or any other) default adapter, per entity.
 
-Register the default adapter as TypeORM and override one entity to Firestore:
+**Status:** preview (`1.0.0-alpha.0`). API stable enough to use, but expect refinements before 1.0.
+
+---
+
+## 1. Introduction
+
+`@bitwild/rockets-repository-firestore` implements `RepositoryAdapter` and `DynamicRepositoryModule` from `@concepta/nestjs-repository`, so any Rockets handler that talks to `RepositoryInterface<T>` will work against Firestore without code changes.
+
+The package is **per-entity opt-in**, not a wholesale replacement: register it as the override on a single entity inside `defineModuleResource({ entities: [{ entity, repository: FirestoreRepositoryModule }] })`. Other entities continue on the default adapter (TypeORM, in most apps).
+
+### What it gives you
+
+- `FirestoreRepositoryModule.forFeature(entities)` — Nest dynamic module that materialises Firestore-backed repositories for the entities passed in.
+- `FirestoreRepository<Entity>` — adapter class implementing `RepositoryAdapter<Entity>` (find, create, update, delete, soft-delete, restore).
+- Two backends: real Firestore (`firebase-admin`) and an in-memory backend for tests / local dev (`FIREBASE_FIRESTORE_USE_FAKE=true`).
+- `registerFirestoreCollection(key, collection)` — map an entity key to a Firestore collection id (defaults to the entity key).
+- `ensureFirebaseAdminApp(packageRoot)` — singleton Admin app initialisation, shared with the Firebase auth adapter.
+- Soft-delete support: auto-detects `dateRemoved` / `deletedAt` columns; configurable via `softDeleteField`.
+
+### When to use this package
+
+- You want a single entity (analytics events, large blobs, audit log) on Firestore while the rest of the app stays on SQL.
+- You want a Firebase-first app with Firebase Auth + Firestore storage.
+
+### When NOT to use this package
+
+- You need ACID transactions across multiple entities — Firestore transactions are limited, and this adapter does not implement the upstream `TransactionScope` API end-to-end. Stay on a SQL adapter for cross-entity transactional flows.
+- You only want SQL — install `@concepta/nestjs-repository-typeorm` instead.
+
+---
+
+## 2. Get Started
+
+### Install
+
+```bash
+yarn add @bitwild/rockets-repository-firestore @bitwild/rockets-repository \
+  firebase-admin
+```
+
+`firebase-admin` is an optional peer dependency — only required when `FIREBASE_FIRESTORE_USE_FAKE` is unset.
+
+### Configure credentials
+
+The adapter loads a service account from one of these env vars (first match wins):
+
+- `FIREBASE_SERVICE_ACCOUNT_PATH` — relative or absolute path to a service-account JSON.
+- `GOOGLE_APPLICATION_CREDENTIALS` — Google's standard path env.
+- `FIREBASE_PROJECT_ID` — falls back to project-id-only init (use only in environments where Google ADC fills in the credentials).
+
+For local dev without credentials, set `FIREBASE_FIRESTORE_USE_FAKE=true` to switch to the in-memory backend.
+
+### Use one entity on Firestore
 
 ```typescript
-import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
 import { defineModuleResource } from '@bitwild/rockets-core';
+import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
 
-defineModuleResource({
+import { AnalyticsEventEntity } from './analytics-event.entity';
+
+export const analyticsFeature = defineModuleResource({
   entities: [
-    {
-      entity: CodeReviewReportEntity,
-      repository: FirestoreRepositoryModule,
-    },
+    { entity: AnalyticsEventEntity, repository: FirestoreRepositoryModule },
   ],
-  providers: [AnalysisService],
+  providers: [/* services that inject the dynamic repository */],
 });
 ```
 
-Bootstrap Firebase Admin once (shared with `@bitwild/rockets-adapter-firebase`):
+The rest of `RocketsCoreModule.forRoot({ repository: <default> })` keeps using its default adapter for everything else.
+
+---
+
+## 3. How-to Guides
+
+### Override the collection id
+
+The default collection id equals the entity key (derived from the entity class name). To rename, register the mapping before the module bootstraps.
+
+```typescript
+import { deriveEntityKey } from '@bitwild/rockets-common';
+import { registerFirestoreCollection } from '@bitwild/rockets-repository-firestore';
+
+import { CodeReviewReportEntity } from './code-review-report.entity';
+
+registerFirestoreCollection(
+  deriveEntityKey(CodeReviewReportEntity), // 'codeReviewReport'
+  'code_review_reports',                   // actual Firestore collection id
+);
+```
+
+Place the call in a module-level `register-*.ts` file imported once by the feature.
+
+### Run without a service account in local dev
+
+```bash
+FIREBASE_FIRESTORE_USE_FAKE=true yarn workspace your-app start:dev
+```
+
+The in-memory backend implements the same `FirestoreBackend` interface, so query behaviour matches real Firestore for the operators the adapter translates. Use this for unit / e2e tests and for first-run dev without provisioning a Firebase project.
+
+### Configure soft delete
+
+The adapter auto-detects a `dateRemoved` or `deletedAt` column. To use a different column name, pass `softDeleteField`:
+
+```typescript
+{
+  entity: AuditLogEntity,
+  repository: FirestoreRepositoryModule,
+  softDeleteField: 'removedAt',
+}
+```
+
+### Share the Admin app with Firebase Auth
+
+If the app also uses `@bitwild/rockets-adapter-firebase`, call `ensureFirebaseAdminApp(packageRoot)` once in your bootstrap so both packages share the same Admin instance. Without sharing, you risk `firebase-admin` initialising twice and throwing.
 
 ```typescript
 import { ensureFirebaseAdminApp } from '@bitwild/rockets-repository-firestore';
 
-ensureFirebaseAdminApp(process.cwd());
+ensureFirebaseAdminApp(__dirname);
 ```
 
-Inject in services:
+---
 
-```typescript
-constructor(
-  @InjectDynamicRepository(CodeReviewReportEntity)
-  private readonly reports: RepositoryInterface<CodeReviewReportEntity>,
-) {}
-```
+## 4. Reference
 
-Register collection names (optional — defaults to entity key):
+### Module
 
-```typescript
-import { registerFirestoreCollection } from '@bitwild/rockets-repository-firestore';
+| Member | Purpose |
+|---|---|
+| `FirestoreRepositoryModule.forFeature(entities)` | Returns a `DynamicRepositoryModule` exposing dynamic repositories for the entities passed in. Pass each entry as `{ entity, collection?, softDeleteField? }`. |
 
-registerFirestoreCollection('CodeReviewReportEntity', 'code_review_reports');
-```
+The module does **not** have `forRoot()`. It is wired as a per-entity adapter override, not as the app's default `repository:` field.
 
-## Environment
+### Adapter class
 
-| Variable | Purpose |
-|----------|---------|
-| `FIREBASE_FIRESTORE_USE_FAKE=true` | In-memory backend (e2e / local without GCP) |
-| `FIREBASE_PROJECT_ID` | Admin SDK when no service account JSON |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | Path to service account JSON |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Alternate path to JSON |
+| Member | Purpose |
+|---|---|
+| `FirestoreRepository<Entity>` | Extends `RepositoryAdapter<Entity>` from `@concepta/nestjs-repository`. Implements find / count / create / update / upsert / delete / restore (soft-delete supported). |
+| `isFirestoreRepository(value)` | Type guard for plug-in code that needs to special-case Firestore-backed repositories. |
 
-## Supported repository features
+### Configuration types
 
-| Feature | Support |
-|---------|---------|
-| `find` / `findOne` / `count` / `findAndCount` | Yes |
-| `create` / `update` / `upsert` / `replace` / `delete` | Yes |
-| `softDelete` / `restore` | Yes when entity has `dateRemoved` or `deletedAt` |
-| `withDeleted` on finds | Yes (with soft-delete column) |
-| `skip` / `take` | Yes (offset via slice; prefer narrow `where`) |
-| `order` | Yes (single-field; in-memory when OR branches merge) |
-| `where` AND / OR | OR via DNF (`RepositoryAdapter.toDnf`) |
-| `Where.eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `nin` | Yes (`in` max 30 values) |
-| `Where.isNull`, `notNull`, `contains`, `starts`, `ends`, `between` | Yes (native or post-filter) |
-| `Where.starts` on strings | Prefix range on Firestore |
-| Joins / relations | No — denormalize in documents |
-| SQL `LIKE '%x%'` | No — use `contains` post-filter or external search |
-| Multi-field range (`gt A` + `lt B` on different fields) | No — Firestore index rule |
+| Type | Purpose |
+|---|---|
+| `FirestoreProviderOptions<Entity>` | Per-entity entry shape: `{ entity, collection?, softDeleteField? }`. |
+| `FIRESTORE_DEFAULT_SOFT_DELETE_FIELD` | `'dateRemoved'`. |
+| `FIRESTORE_ALT_SOFT_DELETE_FIELD` | `'deletedAt'`. |
+| `FIRESTORE_REPOSITORY_MODULE_NAME` | The module name set on the dynamic module returned by `forFeature`. |
 
-## Soft delete
+### Helpers
 
-Add `dateRemoved: Date | null` (or `deletedAt`) on the entity class. The adapter
-sets an ISO timestamp on `softDelete()` and clears it on `restore()`. Default
-queries exclude rows where the field is set.
+| Symbol | Purpose |
+|---|---|
+| `registerFirestoreCollection(key, collection)` | Map an entity key to a Firestore collection id. Call at module-load time. |
+| `resolveFirestoreCollection(key)` | Reverse lookup, returns `undefined` if not registered. |
+| `ensureFirebaseAdminApp(packageRoot)` | Singleton Admin app initialiser. Reads `FIREBASE_SERVICE_ACCOUNT_PATH` / `GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_PROJECT_ID`. |
 
-## Firestore indexes
+### Environment variables
 
-Composite queries (`where` + `orderBy` on different fields, multiple inequalities)
-require composite indexes in the Firebase console. The emulator logs a creation
-link when a query is missing an index.
+| Var | Purpose |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Absolute or relative path to a service-account JSON. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Standard Google ADC path. |
+| `FIREBASE_PROJECT_ID` | Project id when ADC is set externally. |
+| `FIREBASE_FIRESTORE_USE_FAKE` | `'true'` switches every repository to the in-memory backend. |
 
-## Pagination
+---
 
-The adapter honours the standard `RepositoryInterface` contract — `find({ skip, take, order, where })`
-plus `findAndCount` / `count`. No cursor type is exposed; CRUD modules and any
-other consumer of `RepositoryInterface` work identically against TypeORM and Firestore.
+## License
 
-Reads are O(skip + take): the adapter pushes `orderBy` + `limit(skip + take)` to the
-Firestore Admin SDK and slices `[skip, skip + take]` locally. For typical CRUD pages
-(1–10), cost is negligible; deep pagination (page 500+) scales linearly with the
-offset, which is the inherent cost of emulating SQL `OFFSET` on Firestore.
-
-```typescript
-const reports = repo.find({
-  where: Where.eq('userId', userId),
-  order: [{ field: 'dateCreated', order: SortOrder.DESC }],
-  skip: 40,
-  take: 20,
-});
-```
-
-Sort fields combined with `where` may require a composite index — the Admin SDK
-logs a creation link when one is missing.
-
-## Limitations (Firestore platform)
-
-- No cross-collection joins.
-- Deep `skip` costs O(skip + take) reads (no native OFFSET).
-- `nin` and some string matchers run as post-filters after the Firestore query.
+BSD-3-Clause

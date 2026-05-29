@@ -1,8 +1,7 @@
 import { defineModuleResource } from '@bitwild/rockets-core';
-import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
 
 import { OpenaiConfig } from '../config/openai.config';
-import './register-code-review-firestore';
+import { codeReviewReportsRepository } from '../repository/code-review-reports.persistence';
 import { AnalysisReviewProgressStore } from './analysis-review-progress.store';
 import { AnalysisController } from './analysis.controller';
 import { CodeReviewReportExecutionEntity } from './code-review-report-execution.entity';
@@ -16,7 +15,7 @@ export const analysisFeature = defineModuleResource({
     CodeReviewReportExecutionEntity,
     {
       entity: CodeReviewReportEntity,
-      repository: FirestoreRepositoryModule,
+      repository: codeReviewReportsRepository,
     },
   ],
   controllers: [AnalysisController],

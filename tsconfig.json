@@ -40,6 +40,9 @@
     },
     {
       "path": "packages/rockets-adapter-firebase"
+    },
+    {
+      "path": "packages/rockets-repository-firestore"
     }
   ]
 }

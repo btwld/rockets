@@ -1,7 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { defineResource } from '@bitwild/rockets';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   AccessControlQuery,
   AccessControlReadMany,
@@ -40,10 +39,11 @@ export const petResource = defineResource({
   entity: PetEntity,
   path: 'pets',
   tags: ['Pets'],
-  // Per-resource adapter: no root `repository` on `RocketsModule.forRoot`
-  // in this app (see app.module.ts), so each pet bundle supplies its own
-  // so `aggregate-resources` registers `DYNAMIC_REPOSITORY_TOKEN_pet`.
-  persistence: { module: TypeOrmRepositoryModule },
+  // No per-resource `persistence`: the bundle inherits the root
+  // `repository` adapter declared on `RocketsModule.forRoot` in
+  // `app.module.ts` (a single `defineTypeOrmRepository` bootstrap shared
+  // with `defineRocketsAuth`). The planner still registers
+  // `DYNAMIC_REPOSITORY_TOKEN_pet` for `PetEntity`.
   dto: {
     response: PetResponseDto,
     create: PetCreateDto,
