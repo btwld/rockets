@@ -44,6 +44,7 @@ import {
 } from '../domain/interfaces/user-metadata.interface';
 import type { RocketsOptions } from '../rockets.module-definition';
 import { RocketsModule } from '../rockets.module';
+import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class MetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -96,7 +97,7 @@ describe('Core ↔ Server auth-adapter contract (e2e)', () => {
     // `auth:` field must accept a class implementing the CORE
     // `AuthAdapterInterface`. If TypeScript ever rejects this
     // assignment, server has drifted from core.
-    auth: CoreOnlyAuthAdapter,
+    auth: e2eAuthBootstrap(CoreOnlyAuthAdapter),
     userMetadata: {
       entity: StubUserMetadataEntity,
       createDto: MetadataCreateDto,

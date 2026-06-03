@@ -1,7 +1,10 @@
 import { defineModuleResource } from '@bitwild/rockets-core';
 
 import { OpenaiConfig } from '../config/openai.config';
-import { codeReviewReportsRepository } from '../repository/code-review-reports.persistence';
+import {
+  codeReviewReportsRepository,
+  CODE_REVIEW_REPORT_COLLECTION,
+} from '../repository/code-review-reports.persistence';
 import { AnalysisReviewProgressStore } from './analysis-review-progress.store';
 import { AnalysisController } from './analysis.controller';
 import { CodeReviewReportExecutionEntity } from './code-review-report-execution.entity';
@@ -16,6 +19,7 @@ export const analysisFeature = defineModuleResource({
     {
       entity: CodeReviewReportEntity,
       repository: codeReviewReportsRepository,
+      collection: CODE_REVIEW_REPORT_COLLECTION,
     },
   ],
   controllers: [AnalysisController],

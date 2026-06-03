@@ -1,5 +1,8 @@
 export { RocketsAuthModule } from './rockets-auth.module';
-export { defineRocketsAuth } from './define-rockets-auth';
+export {
+  buildRocketsAuthResources,
+  defineRocketsAuth,
+} from './define-rockets-auth';
 export type { DefineRocketsAuthInput } from './define-rockets-auth';
 
 export * from './domains/auth';

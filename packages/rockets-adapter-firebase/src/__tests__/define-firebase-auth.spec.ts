@@ -1,9 +1,3 @@
-import {
-  ROCKETS_AUTH_INTEGRATION_KIND,
-  defineModuleResource,
-  isRocketsAuthIntegration,
-} from '@bitwild/rockets-core';
-
 import { FirebaseAuthAdapter } from '../adapters/firebase-auth.adapter';
 import { defineFirebaseAuth } from '../integration/define-firebase-auth';
 import { FirebaseAuthModule } from '../modules/firebase-auth.module';
@@ -16,45 +10,29 @@ class FakeVerifier implements FirebaseTokenVerifierInterface {
   }
 }
 
-class FakeEntity {}
-
 describe('defineFirebaseAuth', () => {
-  it('produces a RocketsAuthIntegration with the FirebaseAuthAdapter and a single global nestImport (sync path)', () => {
-    const integration = defineFirebaseAuth({
+  it('returns AuthBootstrap with FirebaseAuthAdapter and forRoot (sync path)', () => {
+    const bootstrap = defineFirebaseAuth({
       forRoot: { verifier: FakeVerifier },
     });
 
-    expect(isRocketsAuthIntegration(integration)).toBe(true);
-    expect(integration.kind).toBe(ROCKETS_AUTH_INTEGRATION_KIND);
-    expect(integration.authAdapter).toBe(FirebaseAuthAdapter);
-    expect(integration.nestImports).toHaveLength(1);
-    // `FirebaseAuthModule.forRoot` always returns `global: true`; this
-    // guards against accidental regressions in the helper that strip it.
-    expect(integration.nestImports[0]?.global).toBe(true);
-    expect(integration.nestImports[0]?.module).toBe(FirebaseAuthModule);
-    expect(integration.resources).toEqual([]);
+    expect(bootstrap.adapter).toBe(FirebaseAuthAdapter);
+    expect(bootstrap.forRoot).toBeDefined();
+
+    const dynamicModule = bootstrap.forRoot!();
+    expect(dynamicModule.global).toBe(true);
+    expect(dynamicModule.module).toBe(FirebaseAuthModule);
   });
 
   it('accepts async options and forwards them to FirebaseAuthModule.forRootAsync', () => {
-    const integration = defineFirebaseAuth({
+    const bootstrap = defineFirebaseAuth({
       forRootAsync: {
         useFactory: () => ({ verifier: FakeVerifier }),
       },
     });
 
-    expect(integration.kind).toBe(ROCKETS_AUTH_INTEGRATION_KIND);
-    expect(integration.authAdapter).toBe(FirebaseAuthAdapter);
-    expect(integration.nestImports).toHaveLength(1);
-    expect(integration.nestImports[0]?.module).toBe(FirebaseAuthModule);
-  });
-
-  it('forwards caller-supplied resources verbatim', () => {
-    const userResource = defineModuleResource({ entities: [FakeEntity] });
-    const integration = defineFirebaseAuth({
-      forRoot: { verifier: FakeVerifier },
-      resources: [userResource],
-    });
-
-    expect(integration.resources).toEqual([userResource]);
+    expect(bootstrap.adapter).toBe(FirebaseAuthAdapter);
+    const dynamicModule = bootstrap.forRoot!();
+    expect(dynamicModule.module).toBe(FirebaseAuthModule);
   });
 });

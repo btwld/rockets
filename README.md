@@ -17,8 +17,7 @@
 - [1. Introduction](#1-introduction)
 - [What problem each layer solves](#what-problem-each-layer-solves)
 - [The two paths](#the-two-paths)
-  - [Many micro apps, one identity](#many-micro-apps-one-identity)
-  - [OPS micro-apps pattern (doc)](#ops-micro-apps-pattern-doc)
+  - [Stargate, micro apps, and shared auth](#stargate-micro-apps-and-shared-auth)
   - [The three contracts](#the-three-contracts)
   - [What you do NOT need to write](#what-you-do-not-need-to-write)
   - [What you still write](#what-you-still-write)
@@ -73,7 +72,7 @@ Be explicit about **who owns which problem** — Rockets is not one monolith.
 |---|---|---|
 | **Motor** | `@concepta/nestjs-*` (via `@bitwild/rockets-repository`, `rockets-crud`, …) | Reimplementing repository access, CRUD shape, hooks, and ACL primitives on every NestJS project. |
 | **Composition** | `@bitwild/rockets-core` | Manually stitching Nest modules, entity registration, guard + adapter chain, and swagger for every new service — even when you already use Concepta motors. |
-| **Path A — external identity** | `@bitwild/rockets` | Users live outside the app (Firebase, Auth0, central JWT issuer, API keys); you still want `/me`, a global guard, and the same resource shell without Passport glue each time. See [packages/rockets-server/README.md](packages/rockets-server/README.md). |
+| **Path A — external identity** | `@bitwild/rockets` | **Micro app runtime** — shared guard, `/me`, auth chain, declarative `resources[]`. Users live outside the app (Firebase, Auth0, central JWT). Primary choice for Stargate-provisioned workflow APIs. See [packages/rockets-server/README.md](packages/rockets-server/README.md). |
 | **Path B — built-in identity** | `@bitwild/rockets-auth` | The app **is** the user system (signup, login, OTP, roles, invitations) and you do not want to wire seven Concepta identity modules yourself. |
 
 **Honest scope:** Rockets removes repeated **infrastructure** work on new backends (auth wiring, CRUD registration, persistence plumbing). Most calendar time on a real product is still domain logic, integrations, and operations — not something any framework eliminates.
@@ -88,40 +87,54 @@ There are two ways to run a Rockets app, and the choice depends on **where your 
 
 The two paths share the same lower layers (resource planner, dynamic repository, hooks, swagger), so a feature added to one runs identically on the other.
 
-#### Many micro apps, one identity
+#### Stargate, micro apps, and shared auth
 
-A common shape: **one primary identity model per product**; **many small micro apps** share that login and differ in `resources[]` (and optionally **repository** — TypeORM, Firestore, or a custom adapter per app or per entity).
+Enterprise shape: **Stargate** (workflow platform, n8n-like) connects systems and provisions **micro apps**; each micro app is a small Nest API on **`@bitwild/rockets`** with **one shared identity** across the product.
 
-**Multiple adapters** in `auth: [...]` are supported — use them only when each credential resolves to the **same** `AuthorizedUser.id` (e.g. Firebase for users + API key for automation on the same account).
+| Piece | Role |
+|-------|------|
+| **Stargate** | Design cross-system workflows, call micro apps over HTTP, register URLs — orchestration, not domain CRUD |
+| **Identity (once)** | Firebase / Okta / one `@bitwild/rockets-auth` deployment — login, tokens, shared **user id** |
+| **Micro app** | `@bitwild/rockets` — global guard, `/me`, `userMetadata`, `resources[]` for one domain (billing, CRM, code review…) |
+| **Stargate workflow** | Automation in Stargate (webhook → transform → call API → notify) |
+| **Micro app workflow** | Business rules inside the API (hooks, services, CQRS) |
 
-Pick **one primary identity model** per product (who owns the user id). Mixing unrelated logins for the same person (Firebase uid vs enterprise row id) needs an explicit link table you own:
+```
+  Users / integrators
+         │
+         ▼
+  ┌──────────────┐     HTTP / provision     ┌──────────────────────────┐
+  │   Stargate   │ ───────────────────────▶│  Micro apps (Rockets)    │
+  │  (workflows) │                           │  Billing · CRM · Review  │
+  └──────────────┘                           └────────────┬─────────────┘
+         │                                                  │
+         ▼                                                  ▼
+  External systems                              ┌──────────────────────────┐
+  (email, CRM, webhooks)                        │  Identity (once)         │
+                                                │  same token · same user  │
+                                                └──────────────────────────┘
+```
 
-| Deployment | Identity (once) | Workflow APIs (many) |
+**Do**
+
+- One issuer (IdP or central `rockets-auth`); every micro app uses an `AuthBootstrap` pointing at the **same** project/secret so `AuthorizedUser.id` matches everywhere.
+- Same `userMetadata` contract in each micro app (profile row keyed by auth id, exposed on `/me`).
+- Each squad owns only `repository` + `resources[]` for its domain (optional Firestore override per entity).
+
+**Do not**
+
+- Scaffold `defineRocketsAuth()` with a separate user DB in every Stargate-generated micro app — breaks SSO.
+- Treat Stargate as the token issuer unless it actually is; micro apps must trust the real identity layer.
+- Put domain persistence and CRUD inside Stargate — Stargate orchestrates; micro apps execute.
+
+| Deployment | Identity (once) | Micro apps (many) |
 |---|---|---|
-| **A — external IdP** | Firebase / Auth0 / Okta (one tenant) | `@bitwild/rockets` — adapter validates IdP token; user id = IdP `sub` |
-| **B — built-in** | `@bitwild/rockets-auth` — signup, login, JWT | `@bitwild/rockets` — adapter validates same JWT; user id = your user row |
+| **Path A — external IdP** | Firebase / Auth0 / Okta | `@bitwild/rockets` — adapter validates IdP token; user id = IdP `sub` |
+| **Path B — built-in** | `@bitwild/rockets-auth` (signup, login, JWT) | `@bitwild/rockets` — same JWT; user id = your user row |
 
-```
-        ┌─────────────────────────┐
-        │  ONE primary identity  │  ← Path A IdP  OR  Path B login API
-        └───────────┬─────────────┘
-                    │  same token / same user id
-        ┌───────────┼───────────┐
-        ▼           ▼           ▼
-     Billing      CRM       Code review   …  Path A micro apps
-```
+**Multiple adapters** in `auth: [...]` are supported when each credential resolves to the **same** `AuthorizedUser.id` (e.g. Firebase for users + API key for automation — see [sample-code-review](examples/sample-code-review)).
 
-**Do:** one issuer or one `rockets-auth` deployment; every micro app uses an adapter with the **same** secret/project so `AuthorizedUser.id` matches everywhere. **`userMetadata`** (not a separate “profile” concept) is keyed by that auth id — exposed on `/me`.
-
-**Do not:** `defineRocketsAuth()` in every micro with separate user DBs (duplicate accounts, not SSO).
-
-**Do not:** chain adapters that map the same person to **different** ids unless you implement **federated** links to one canonical user row.
-
-See [Run multiple auth credentials (chain)](#run-multiple-auth-credentials-chain) and [Mix two persistence adapters](#mix-two-persistence-adapters) (per-micro default store + entity override).
-
-#### OPS micro-apps pattern (doc)
-
-Platform keeps **auth + userMetadata**; each squad adds `repository` + `resources[]`. See [`docs/ops-micro-apps-pattern.md`](docs/ops-micro-apps-pattern.md) and [`docs/architecture-diagram.html`](docs/architecture-diagram.html). Mixed DB reference: [sample-code-review](examples/sample-code-review).
+See also [Run multiple auth credentials (chain)](#run-multiple-auth-credentials-chain) and [Mix two persistence adapters](#mix-two-persistence-adapters).
 
 ### The three contracts
 
@@ -362,11 +375,11 @@ You wrote one adapter, one entity, one resource definition. The controllers, the
 
 Install the same packages as above plus `@bitwild/rockets-auth` and the upstream `@concepta/nestjs-*` line (most are transitive dependencies; `yarn install` will pull them).
 
-Compose with `defineRocketsAuth()`. Reuse the same `defineTypeOrmRepository` helper from path A and pass the **same instance** to both `defineRocketsAuth({ persistence: { module: repo } })` and `RocketsModule.forRoot({ repository: repo })`:
+Compose with `defineRocketsAuth()`. Reuse the same `defineTypeOrmRepository` helper from path A and pass the **same instance** to both `defineRocketsAuth({ persistence: { module: repo } })` and `RocketsModule.forRoot({ repository: repo })`. Register auth persistence rows via `buildRocketsAuthResources()` on `resources`:
 
 ```typescript
 import { Module } from '@nestjs/common';
-import { defineRocketsAuth } from '@bitwild/rockets-auth';
+import { defineRocketsAuth, buildRocketsAuthResources } from '@bitwild/rockets-auth';
 import { RocketsModule } from '@bitwild/rockets';
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 
@@ -377,7 +390,7 @@ const repo = defineTypeOrmRepository({
   dropSchema: true,
 });
 
-const rocketsAuth = defineRocketsAuth({
+const rocketsAuthInput = {
   persistence: {
     module: repo,
     entities: {
@@ -403,14 +416,20 @@ const rocketsAuth = defineRocketsAuth({
     },
     settings: { /* role names, otp config, email templates */ },
   }),
-});
+};
+
+const rocketsAuth = defineRocketsAuth(rocketsAuthInput);
+const rocketsAuthResources = buildRocketsAuthResources(
+  rocketsAuthInput.persistence,
+  rocketsAuthInput.invitationEntity,
+);
 
 @Module({
   imports: [
     RocketsModule.forRoot({
       auth: rocketsAuth,
       repository: repo,
-      resources: [/* your defineResource bundles */],
+      resources: [...rocketsAuthResources, /* your defineResource bundles */],
     }),
   ],
 })
@@ -427,32 +446,35 @@ The monorepo ships runnable sample apps for both paths (`yarn sample:dev` and `y
 
 ### Run multiple auth credentials (chain)
 
-`auth` accepts a single entry or an array. Each entry is one of:
+`auth` accepts a single `AuthBootstrap` or an array. Each entry is one of:
 
-- `Type<AuthAdapterInterface>` — bare adapter class (core auto-registers it).
-- `AuthFeatureBundle` — from `defineAuthFeature()` (`@bitwild/rockets-core`); merges its `resource` into the planner.
-- `RocketsAuthIntegration` — from `defineFirebaseAuth()` (`@bitwild/rockets-adapter-firebase`), `defineRocketsAuth()` (`@bitwild/rockets-auth`), or your own integration object.
+- `defineFirebaseAuth({ forRoot | forRootAsync })` — Firebase Admin + `FirebaseAuthAdapter` (`@bitwild/rockets-adapter-firebase`).
+- `defineRocketsAuth(...)` — built-in signup/login stack (`@bitwild/rockets-auth`); pair with `buildRocketsAuthResources()` on `resources`.
+- App-local `AuthBootstrap` — `{ adapter, forRoot? }` for custom adapters (see `defineApiKeyAuth()` in sample-code-review).
+
+Entity rows for auth-owned tables belong on `resources[]`, not inside the auth helper.
 
 ```typescript
 import { defineFirebaseAuth } from '@bitwild/rockets-adapter-firebase';
-import { defineAuthFeature, defineModuleResource } from '@bitwild/rockets-core';
+import { defineModuleResource } from '@bitwild/rockets-core';
 import { RocketsModule } from '@bitwild/rockets';
+
+import { defineApiKeyAuth, apiKeyAuthResource } from './auth-api-key';
+import { UserEntity } from './auth/user.entity';
 
 RocketsModule.forRoot({
   auth: [
     defineFirebaseAuth({
-      forRoot: { firebaseApp: adminApp },
-      resources: [defineModuleResource({ entities: [UserEntity] })],
+      forRootAsync: { useFactory: resolveFirebaseAuthModuleOptions },
     }),
-    defineAuthFeature({
-      entities: [ApiKeyEntity],
-      adapter: ApiKeyAuthAdapter,
-      controllers: [ApiKeyController],
-    }),
-    JwtAdapter,
+    defineApiKeyAuth(),
   ],
   userMetadata: { entity, createDto, updateDto },
   repository,
+  resources: [
+    defineModuleResource({ entities: [UserEntity] }),
+    apiKeyAuthResource,
+  ],
 });
 ```
 
@@ -594,11 +616,17 @@ The default adapter goes in `repository:`. Override per entity inside a bundle:
 
 ```typescript
 import { defineModuleResource } from '@bitwild/rockets';
-import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
+import { defineFirestoreRepository } from '@bitwild/rockets-repository-firestore';
+
+const firestoreRepository = defineFirestoreRepository();
 
 defineModuleResource({
   entities: [
-    { entity: AnalyticsEventEntity, repository: FirestoreRepositoryModule },
+    {
+      entity: AnalyticsEventEntity,
+      repository: firestoreRepository,
+      collection: 'analytics_events',
+    },
   ],
   providers: [AnalyticsService],
 });
@@ -740,9 +768,9 @@ Rockets **does not reimplement** that behaviour. It **configures and registers**
 |---|---|
 | `@bitwild/rockets-core` | **Planner and contracts**: `defineResource`, `buildAppRegistrationPlan`, `AuthServerGuard`, owner/path hooks, swagger registration |
 | `@bitwild/rockets` (server) | **External-auth presentation**: `MeController`, default `APP_GUARD`, `auth` chain merge |
-| `@bitwild/rockets-auth` | **Built-in identity bundle**: `defineRocketsAuth()` → `RocketsAuthIntegration` (persistence entities + `RocketsAuthModule`) |
+| `@bitwild/rockets-auth` | **Built-in identity bundle**: `defineRocketsAuth()` + `buildRocketsAuthResources()` |
 
-**Path B uses both** `@bitwild/rockets` and `@bitwild/rockets-auth`: `defineRocketsAuth()` supplies the integration object; `RocketsModule.forRoot({ auth: rocketsAuth, repository, resources })` still comes from the server package. They are sibling packages over core, not parent/child.
+**Path B uses both** `@bitwild/rockets` and `@bitwild/rockets-auth`: `defineRocketsAuth()` supplies the auth bootstrap; spread `buildRocketsAuthResources()` into `resources`; `RocketsModule.forRoot({ auth, repository, resources })` still comes from the server package. They are sibling packages over core, not parent/child.
 
 **Repository injection (upstream contract, Rockets-local decorator):**
 
@@ -751,7 +779,7 @@ Rockets **does not reimplement** that behaviour. It **configures and registers**
 
 **Override a default CRUD handler:** set `operations.<op>.commandHandler` or `queryHandler` on the resource config — upstream `CrudModule` uses your class instead of the default; the defaults exist for convenience only.
 
-**Docs:** [`architecture-diagram.html`](docs/architecture-diagram.html) (nodes: login, micro apps, databases) · [`ops-micro-apps-pattern.md`](docs/ops-micro-apps-pattern.md).
+**Docs:** [`architecture-diagram.html`](docs/architecture-diagram.html) (Stargate · identity · micro apps) · [`ops-micro-apps-pattern.md`](docs/ops-micro-apps-pattern.md).
 
 ### Upstream contributors and integration scope
 
@@ -774,7 +802,7 @@ If you maintain `@concepta/nestjs-*` modules, Rockets is a **consumer and config
 |---|---|---|---|---|
 | `packages/rockets-common` | `@bitwild/rockets-common` | Curated re-exports of `@concepta/nestjs-{hook,common,authentication,swagger-ui}` + 6 local helpers (`deriveEntityKey`, `whitelistedFromDto`, `stripUndefined`, `createRepositoryContext`, `getErrorDetails`, `logAndGetErrorDetails`). | [README](packages/rockets-common/README.md) | stable |
 | `packages/rockets-repository` | `@bitwild/rockets-repository` | Abstract data-access contract: `RepositoryInterface`, `Where`/`OrderBy`/`Join` helpers, transactions, hooks. Local class-or-string variant of `InjectDynamicRepository`. | [README](packages/rockets-repository/README.md) | stable |
-| `packages/rockets-repository-firestore` | `@bitwild/rockets-repository-firestore` | Firestore adapter implementing `RepositoryAdapter`. Per-entity opt-in via `defineModuleResource`. In-memory backend for dev. | [README](packages/rockets-repository-firestore/README.md) | preview |
+| `packages/rockets-repository-firestore` | `@bitwild/rockets-repository-firestore` | Firestore adapter implementing `RepositoryAdapter`. Per-entity opt-in via `defineFirestoreRepository()` + `collection` on the entity row. Tests inject `InMemoryFirestoreBackend` explicitly. | [README](packages/rockets-repository-firestore/README.md) | preview |
 | `packages/rockets-crud` | `@bitwild/rockets-crud` | Generic CRUD module + `ConfigurableCrudBuilder`. Base CQRS handler classes (`CrudCreateHandler`, etc.) and the `Crud*Command` / `Crud*Query` pairs. | [README](packages/rockets-crud/README.md) | stable |
 | `packages/rockets-access-control` | `@bitwild/rockets-access-control` | RBAC: `AccessControlModule`, `AccessControlGuard`, operation decorators, `CanAccess` query checks. | [README](packages/rockets-access-control/README.md) | stable (upstream still on v7) |
 | `packages/rockets-core` | `@bitwild/rockets-core` | Composition planner (not the data/CRUD motor). Auth chain, `buildAppRegistrationPlan`, `defineResource` / `defineModuleResource` / `defineSubResource`, owner / audit / path-scope hooks, swagger registration. | [README](packages/rockets-core/README.md) | stable |

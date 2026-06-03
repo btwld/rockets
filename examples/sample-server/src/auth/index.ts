@@ -1,9 +1,8 @@
 // Public surface of the sample auth feature.
 //
-// `defineSampleAuth()` is the ONLY symbol Rockets consumers need to wire
-// auth into `RocketsModule.forRoot({ auth: ... })`. It returns a
-// self-contained `AuthFeatureBundle` carrying the adapter class, the
-// auth controller, and the user entity registration in one shot.
+// `defineSampleAuth()` wires auth into `RocketsModule.forRoot({ auth })`.
+// It returns an `AuthBootstrap` (`adapter` + `forRoot()` for controller wiring).
+// Pair it with `sampleAuthUserResource` on `resources[]` for the user entity row.
 //
 // `SampleAuthAdapter` and `AuthController` stay internal to this folder
 // — nothing outside the auth feature should inject the adapter class
@@ -14,4 +13,4 @@
 // pet-transfer handler, the event listeners, and the admin guard all
 // hold a dynamic-repo handle to `UserEntity` and read `UserRole` values.
 export { UserEntity, UserRole } from './user.entity';
-export { defineSampleAuth } from './define-sample-auth';
+export { defineSampleAuth, sampleAuthUserResource } from './define-sample-auth';

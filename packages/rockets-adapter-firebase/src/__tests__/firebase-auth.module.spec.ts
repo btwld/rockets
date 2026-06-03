@@ -181,7 +181,7 @@ describe(FirebaseAuthModule.name, () => {
     // NOT import FirebaseAuthModule. If `global` is dropped, the
     // alias provider fails to resolve `FirebaseAuthAdapter` at boot
     // with `Nest can't resolve dependencies` — surfaced live in the
-    // sample-server e2e suite (`sample-server-firebase.e2e-spec.ts`).
+    // sample-code-review e2e (`examples/sample-code-review/apps/api`).
     const dynModule = FirebaseAuthModule.forRoot({ verifier: FakeVerifier });
     expect(dynModule.global).toBe(true);
   });

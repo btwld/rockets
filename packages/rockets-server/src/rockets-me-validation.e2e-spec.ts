@@ -23,6 +23,7 @@ import type {
   AuthRequest,
 } from '@bitwild/rockets-core';
 import { extractBearerToken } from '@bitwild/rockets-core';
+import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class MetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -86,7 +87,7 @@ class NoMetadataAuthProvider implements AuthAdapterInterface {
 
 const baseOptions: RocketsOptions = {
   settings: {},
-  auth: ServerAuthAdapterFixture,
+  auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
   userMetadata: {
     entity: StubUserMetadataEntity,
     createDto: MetadataCreateDto,
@@ -133,7 +134,7 @@ describe('MeController contract (e2e)', () => {
       imports: [
         RocketsModule.forRoot({
           ...baseOptions,
-          auth: FailingAuthAdapterFixture,
+          auth: e2eAuthBootstrap(FailingAuthAdapterFixture),
         }),
       ],
     }).compile();
@@ -152,7 +153,7 @@ describe('MeController contract (e2e)', () => {
       imports: [
         RocketsModule.forRoot({
           ...baseOptions,
-          auth: NoMetadataAuthProvider,
+          auth: e2eAuthBootstrap(NoMetadataAuthProvider),
         }),
       ],
     }).compile();

@@ -25,6 +25,7 @@ import {
 import { IsString, IsOptional, IsNotEmpty, MinLength } from 'class-validator';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ExceptionsFilter } from '../infrastructure/filters/exceptions.filter';
+import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class CustomUserMetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -116,7 +117,7 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
 
   const baseOptions: RocketsOptions = {
     settings: {},
-    auth: ServerAuthAdapterFixture,
+    auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
     userMetadata: {
       entity: StubUserMetadataEntity,
       createDto: CustomUserMetadataCreateDto,
@@ -227,7 +228,7 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
     it('should work with different DTO structures', async () => {
       const differentOptions: RocketsOptions = {
         settings: {},
-        auth: ServerAuthAdapterFixture,
+        auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
         userMetadata: {
           entity: StubUserMetadataEntity,
           createDto: CustomUserMetadataCreateDto,
@@ -320,7 +321,7 @@ describe('RocketsModule - Dynamic UserMetadata Service (e2e)', () => {
           DynamicUserMetadataE2eControllersModule,
           RocketsModule.forRoot({
             settings: {},
-            auth: ServerAuthAdapterFixture,
+            auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
             userMetadata: {
               entity: StubUserMetadataEntity,
               createDto: CustomUserMetadataCreateDto,

@@ -6,6 +6,7 @@ import {
 } from '@concepta/nestjs-repository';
 import type { RepositoryInterface } from '@concepta/nestjs-repository';
 
+import { InMemoryFirestoreBackend } from '../backends/in-memory-firestore.backend';
 import { FirestoreRepositoryModule } from '../firestore-repository.module';
 
 class WidgetEntity {
@@ -21,36 +22,42 @@ class SoftWidgetEntity {
 }
 
 describe(FirestoreRepositoryModule.name, () => {
-  const originalEnv = process.env.FIREBASE_FIRESTORE_USE_FAKE;
+  const backend = new InMemoryFirestoreBackend();
 
-  beforeEach(() => {
-    process.env.FIREBASE_FIRESTORE_USE_FAKE = 'true';
+  it('forRoot returns a global module after resolving the backend', () => {
+    const root = FirestoreRepositoryModule.forRoot({
+      entities: [WidgetEntity],
+      backend: new InMemoryFirestoreBackend(),
+    });
+
+    expect(root.global).toBe(true);
+    expect(root.module).toBe(FirestoreRepositoryModule);
   });
 
-  afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.FIREBASE_FIRESTORE_USE_FAKE;
-      return;
-    }
-    process.env.FIREBASE_FIRESTORE_USE_FAKE = originalEnv;
+  it('forRoot fails fast when Firebase Admin is not initialized', () => {
+    expect(() =>
+      FirestoreRepositoryModule.forRoot({ entities: [WidgetEntity] }),
+    ).toThrow(/initialize Firebase Admin/);
   });
 
   it('registers a global dynamic module', () => {
-    const dynModule = FirestoreRepositoryModule.forFeature([
-      { key: 'widget', entity: WidgetEntity },
-    ]);
+    const dynModule = FirestoreRepositoryModule.forFeature(
+      [{ key: 'widget', entity: WidgetEntity }],
+      { backend },
+    );
 
     expect(dynModule.module).toBe(FirestoreRepositoryModule);
     expect(dynModule.providers).toHaveLength(1);
     expect(dynModule.exports).toHaveLength(1);
   });
 
-  it('persists and reads through the in-memory backend when the fake backend is enabled', async () => {
+  it('persists and reads through an explicit in-memory backend', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        FirestoreRepositoryModule.forFeature([
-          { key: 'widget', entity: WidgetEntity, collection: 'widgets-test' },
-        ]),
+        FirestoreRepositoryModule.forFeature(
+          [{ key: 'widget', entity: WidgetEntity, collection: 'widgets-test' }],
+          { backend: new InMemoryFirestoreBackend() },
+        ),
       ],
     }).compile();
 
@@ -83,9 +90,10 @@ describe(FirestoreRepositoryModule.name, () => {
   it('applies take and skip', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        FirestoreRepositoryModule.forFeature([
-          { key: 'widget', entity: WidgetEntity, collection: 'widgets-paging' },
-        ]),
+        FirestoreRepositoryModule.forFeature(
+          [{ key: 'widget', entity: WidgetEntity, collection: 'widgets-paging' }],
+          { backend: new InMemoryFirestoreBackend() },
+        ),
       ],
     }).compile();
 
@@ -110,14 +118,17 @@ describe(FirestoreRepositoryModule.name, () => {
   it('soft-deletes and restores when dateRemoved is present on the entity', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        FirestoreRepositoryModule.forFeature([
-          {
-            key: 'soft-widget',
-            entity: SoftWidgetEntity,
-            collection: 'soft-widgets',
-            softDeleteField: 'dateRemoved',
-          },
-        ]),
+        FirestoreRepositoryModule.forFeature(
+          [
+            {
+              key: 'soft-widget',
+              entity: SoftWidgetEntity,
+              collection: 'soft-widgets',
+              softDeleteField: 'dateRemoved',
+            },
+          ],
+          { backend: new InMemoryFirestoreBackend() },
+        ),
       ],
     }).compile();
 
@@ -151,9 +162,10 @@ describe(FirestoreRepositoryModule.name, () => {
   it('findAndCount returns total without take', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        FirestoreRepositoryModule.forFeature([
-          { key: 'widget', entity: WidgetEntity, collection: 'widgets-count' },
-        ]),
+        FirestoreRepositoryModule.forFeature(
+          [{ key: 'widget', entity: WidgetEntity, collection: 'widgets-count' }],
+          { backend: new InMemoryFirestoreBackend() },
+        ),
       ],
     }).compile();
 

@@ -14,16 +14,16 @@
 
 `@bitwild/rockets-repository-firestore` implements `RepositoryAdapter` and `DynamicRepositoryModule` from `@concepta/nestjs-repository`, so any Rockets handler that talks to `RepositoryInterface<T>` will work against Firestore without code changes.
 
-The package is **per-entity opt-in**, not a wholesale replacement: register it as the override on a single entity inside `defineModuleResource({ entities: [{ entity, repository: FirestoreRepositoryModule }] })`. Other entities continue on the default adapter (TypeORM, in most apps).
+The package is **per-entity opt-in**, not a wholesale replacement: register it as the override on a single entity inside `defineModuleResource({ entities: [{ entity, repository, collection? }] })`. Other entities continue on the default adapter (TypeORM, in most apps).
 
 ### What it gives you
 
-- `FirestoreRepositoryModule.forFeature(entities)` — Nest dynamic module that materialises Firestore-backed repositories for the entities passed in.
-- `FirestoreRepository<Entity>` — adapter class implementing `RepositoryAdapter<Entity>` (find, create, update, delete, soft-delete, restore).
-- Two backends: real Firestore (`firebase-admin`) and an in-memory backend for tests / local dev (`FIREBASE_FIRESTORE_USE_FAKE=true`).
-- `registerFirestoreCollection(key, collection)` — map an entity key to a Firestore collection id (defaults to the entity key).
-- `ensureFirebaseAdminApp(packageRoot)` — singleton Admin app initialisation, shared with the Firebase auth adapter.
-- Soft-delete support: auto-detects `dateRemoved` / `deletedAt` columns; configurable via `softDeleteField`.
+- `FirestoreRepositoryModule.forRoot({ entities, backend? })` — validates Firebase Admin (or test backend) and returns a global module; same shape as `TypeOrmModule.forRoot({ ...connection, entities })`.
+- `FirestoreRepositoryModule.forFeature(entities, options?)` — registers dynamic repository providers per entity row.
+- `defineFirestoreRepository()` — `RepositoryBootstrap` with the same shape as app-local `defineTypeOrmRepository` (thin delegate, no env sniffing).
+- `FirestoreRepository<Entity>` — adapter class implementing `RepositoryAdapter<Entity>`.
+- `ensureFirebaseAdminApp(packageRoot)` — singleton Admin initialisation for apps that wire Firebase outside `defineFirebaseAuth`.
+- `InMemoryFirestoreBackend` — explicit test double; inject via `forFeature(..., { backend })` or `defineFirestoreRepository({ backend })` in test harnesses only.
 
 ### When to use this package
 
@@ -32,7 +32,7 @@ The package is **per-entity opt-in**, not a wholesale replacement: register it a
 
 ### When NOT to use this package
 
-- You need ACID transactions across multiple entities — Firestore transactions are limited, and this adapter does not implement the upstream `TransactionScope` API end-to-end. Stay on a SQL adapter for cross-entity transactional flows.
+- You need ACID transactions across multiple entities — stay on a SQL adapter for cross-entity transactional flows.
 - You only want SQL — install `@concepta/nestjs-repository-typeorm` instead.
 
 ---
@@ -46,35 +46,51 @@ yarn add @bitwild/rockets-repository-firestore @bitwild/rockets-repository \
   firebase-admin
 ```
 
-`firebase-admin` is an optional peer dependency — only required when `FIREBASE_FIRESTORE_USE_FAKE` is unset.
+### Initialise Firebase Admin in the app (required)
 
-### Configure credentials
+Production apps must initialise Firebase Admin **once**, centrally — the same way TypeORM connection options live in `defineTypeOrmRepository`:
 
-The adapter loads a service account from one of these env vars (first match wins):
+- via `defineFirebaseAuth({ forRootAsync: ... })` (recommended when using Firebase Auth), or
+- via `ensureFirebaseAdminApp(packageRoot)` before Rockets boots.
 
-- `FIREBASE_SERVICE_ACCOUNT_PATH` — relative or absolute path to a service-account JSON.
-- `GOOGLE_APPLICATION_CREDENTIALS` — Google's standard path env.
-- `FIREBASE_PROJECT_ID` — falls back to project-id-only init (use only in environments where Google ADC fills in the credentials).
+The repository package does **not** read credentials, flip env flags, or fall back to an in-memory store.
 
-For local dev without credentials, set `FIREBASE_FIRESTORE_USE_FAKE=true` to switch to the in-memory backend.
+Credential paths (`FIREBASE_SERVICE_ACCOUNT_PATH`, `GOOGLE_APPLICATION_CREDENTIALS`, `FIREBASE_PROJECT_ID`) are resolved by `ensureFirebaseAdminApp` when the **app** calls it — not inside `defineFirestoreRepository`.
 
 ### Use one entity on Firestore
 
 ```typescript
 import { defineModuleResource } from '@bitwild/rockets-core';
-import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
+import { defineFirestoreRepository } from '@bitwild/rockets-repository-firestore';
 
 import { AnalyticsEventEntity } from './analytics-event.entity';
 
+const firestoreRepository = defineFirestoreRepository();
+
 export const analyticsFeature = defineModuleResource({
   entities: [
-    { entity: AnalyticsEventEntity, repository: FirestoreRepositoryModule },
+    {
+      entity: AnalyticsEventEntity,
+      repository: firestoreRepository,
+      collection: 'analytics_events',
+    },
   ],
   providers: [/* services that inject the dynamic repository */],
 });
 ```
 
-The rest of `RocketsCoreModule.forRoot({ repository: <default> })` keeps using its default adapter for everything else.
+The rest of `RocketsCoreModule.forRoot({ repository: <default> })` keeps using its default SQL adapter. Core calls `forRoot` / `forFeature` on each bootstrap adapter in the registration plan.
+
+### Bootstrap: `forRoot` vs `forFeature`
+
+Same **API shape** as `defineTypeOrmRepository`, different behaviour:
+
+| Call | Firestore behaviour |
+|------|---------------------|
+| **`forRoot({ entities, backend? })`** | Validates Firebase Admin is ready (or uses test `backend`). Returns a global module shell. The `entities` list mirrors the Rockets planner contract — Firestore does not register metadata on entities here (unlike TypeORM connection metadata). |
+| **`forFeature(entities, options?)`** | Creates `@InjectDynamicRepository` providers for each entity row. This is where repositories actually materialise. |
+
+Rockets core always invokes **both** once per `RepositoryBootstrap` in the plan. Do not skip `forFeature` or register repos only in `forRoot`.
 
 ---
 
@@ -82,50 +98,47 @@ The rest of `RocketsCoreModule.forRoot({ repository: <default> })` keeps using i
 
 ### Override the collection id
 
-The default collection id equals the entity key (derived from the entity class name). To rename, register the mapping before the module bootstraps.
+The default collection id equals the entity key (derived from the entity class name). Set `collection` on the entity registration row:
 
 ```typescript
-import { deriveEntityKey } from '@bitwild/rockets-common';
-import { registerFirestoreCollection } from '@bitwild/rockets-repository-firestore';
-
-import { CodeReviewReportEntity } from './code-review-report.entity';
-
-registerFirestoreCollection(
-  deriveEntityKey(CodeReviewReportEntity), // 'codeReviewReport'
-  'code_review_reports',                   // actual Firestore collection id
-);
+defineModuleResource({
+  entities: [
+    {
+      entity: CodeReviewReportEntity,
+      repository: firestoreRepository,
+      collection: 'code_review_reports',
+    },
+  ],
+});
 ```
 
-Place the call in a module-level `register-*.ts` file imported once by the feature.
+### Tests
 
-### Run without a service account in local dev
+Do not use environment flags. Inject the in-memory backend explicitly:
 
-```bash
-FIREBASE_FIRESTORE_USE_FAKE=true yarn workspace your-app start:dev
+```typescript
+import {
+  defineFirestoreRepository,
+  InMemoryFirestoreBackend,
+} from '@bitwild/rockets-repository-firestore';
+
+const testRepository = defineFirestoreRepository({
+  backend: new InMemoryFirestoreBackend(),
+});
 ```
 
-The in-memory backend implements the same `FirestoreBackend` interface, so query behaviour matches real Firestore for the operators the adapter translates. Use this for unit / e2e tests and for first-run dev without provisioning a Firebase project.
+Or call `FirestoreRepositoryModule.forFeature(entities, { backend: new InMemoryFirestoreBackend() })` directly in unit tests.
 
 ### Configure soft delete
 
-The adapter auto-detects a `dateRemoved` or `deletedAt` column. To use a different column name, pass `softDeleteField`:
+Pass `softDeleteField` on the provider row when auto-detection is not enough:
 
 ```typescript
 {
   entity: AuditLogEntity,
-  repository: FirestoreRepositoryModule,
+  repository: firestoreRepository,
   softDeleteField: 'removedAt',
 }
-```
-
-### Share the Admin app with Firebase Auth
-
-If the app also uses `@bitwild/rockets-adapter-firebase`, call `ensureFirebaseAdminApp(packageRoot)` once in your bootstrap so both packages share the same Admin instance. Without sharing, you risk `firebase-admin` initialising twice and throwing.
-
-```typescript
-import { ensureFirebaseAdminApp } from '@bitwild/rockets-repository-firestore';
-
-ensureFirebaseAdminApp(__dirname);
 ```
 
 ---
@@ -136,42 +149,16 @@ ensureFirebaseAdminApp(__dirname);
 
 | Member | Purpose |
 |---|---|
-| `FirestoreRepositoryModule.forFeature(entities)` | Returns a `DynamicRepositoryModule` exposing dynamic repositories for the entities passed in. Pass each entry as `{ entity, collection?, softDeleteField? }`. |
-
-The module does **not** have `forRoot()`. It is wired as a per-entity adapter override, not as the app's default `repository:` field.
-
-### Adapter class
-
-| Member | Purpose |
-|---|---|
-| `FirestoreRepository<Entity>` | Extends `RepositoryAdapter<Entity>` from `@concepta/nestjs-repository`. Implements find / count / create / update / upsert / delete / restore (soft-delete supported). |
-| `isFirestoreRepository(value)` | Type guard for plug-in code that needs to special-case Firestore-backed repositories. |
-
-### Configuration types
-
-| Type | Purpose |
-|---|---|
-| `FirestoreProviderOptions<Entity>` | Per-entity entry shape: `{ entity, collection?, softDeleteField? }`. |
-| `FIRESTORE_DEFAULT_SOFT_DELETE_FIELD` | `'dateRemoved'`. |
-| `FIRESTORE_ALT_SOFT_DELETE_FIELD` | `'deletedAt'`. |
-| `FIRESTORE_REPOSITORY_MODULE_NAME` | The module name set on the dynamic module returned by `forFeature`. |
+| `FirestoreRepositoryModule.forRoot({ entities, backend? })` | Global bootstrap — validates Firebase Admin in production (or accepts `{ backend }` in tests). Receives the planner-derived entity list, like `TypeOrmModule.forRoot({ entities })`. |
+| `FirestoreRepositoryModule.forFeature(entities, options?)` | Returns a `DynamicRepositoryModule` with `@InjectDynamicRepository` providers. Production omits `options`; tests may pass `{ backend: InMemoryFirestoreBackend }`. |
+| `defineFirestoreRepository(options?)` | Returns a `RepositoryBootstrap` — delegates to `FirestoreRepositoryModule.forRoot` / `forFeature`, same contract as `defineTypeOrmRepository`. |
 
 ### Helpers
 
 | Symbol | Purpose |
 |---|---|
-| `registerFirestoreCollection(key, collection)` | Map an entity key to a Firestore collection id. Call at module-load time. |
-| `resolveFirestoreCollection(key)` | Reverse lookup, returns `undefined` if not registered. |
-| `ensureFirebaseAdminApp(packageRoot)` | Singleton Admin app initialiser. Reads `FIREBASE_SERVICE_ACCOUNT_PATH` / `GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_PROJECT_ID`. |
-
-### Environment variables
-
-| Var | Purpose |
-|---|---|
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | Absolute or relative path to a service-account JSON. |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Standard Google ADC path. |
-| `FIREBASE_PROJECT_ID` | Project id when ADC is set externally. |
-| `FIREBASE_FIRESTORE_USE_FAKE` | `'true'` switches every repository to the in-memory backend. |
+| `ensureFirebaseAdminApp(packageRoot)` | App-level Admin singleton (call from auth bootstrap). |
+| `InMemoryFirestoreBackend` | Explicit test double — not selected by env vars. |
 
 ---
 

@@ -1,7 +1,7 @@
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import type { ResourceInput } from '../../resource/aggregate-resources';
-import type { AuthAdapterInterface } from '../../../domain/interfaces/auth-adapter.interface';
+import type { AuthBootstrap } from '../../../domain/interfaces/auth-bootstrap.interface';
 import type { RepositoryBootstrap } from '../../../domain/interfaces/repository-bootstrap.interface';
 import type { RocketsUserMetadataConfig } from '../../../domain/interfaces/rockets-user-metadata-config.interface';
 import type { AbstractUpsertUserMetadataHandler } from '../../../application/commands/handlers/abstract-upsert-user-metadata.handler';
@@ -10,29 +10,12 @@ import type { AbstractGetUserMetadataHandler } from '../../../application/querie
 export interface RocketsCoreOptionsExtrasInterface
   extends Pick<DynamicModule, 'global'> {
   /**
-   * One or more auth adapter classes, in priority order. Each class must
-   * be registered as a Nest provider somewhere reachable in DI (typically
-   * inside the `defineModuleResource()` resource that owns the credential
-   * entity, or in a global module pulled in via `nestImports`).
-   *
-   * Core registers the chain as {@link AUTH_ADAPTERS_TOKEN} (the array
-   * the {@link AuthServerGuard} iterates). When a single `Type` is passed
-   * it is normalised to a one-element chain.
+   * One or more {@link AuthBootstrap} entries in guard priority order.
+   * Light auth entries carry `forRoot()` (imported by core after repos).
+   * Built-in auth contributes adapter tokens only — the module mounts on
+   * the server after core.
    */
-  readonly auth?:
-    | Type<AuthAdapterInterface>
-    | ReadonlyArray<Type<AuthAdapterInterface>>;
-  /**
-   * Tells core which adapters in the chain are already provided by a
-   * module reachable in DI (e.g. a `RocketsAuthIntegration` whose
-   * `nestImports` contain the providing module). For those, core skips
-   * its own `providers: [adapter]` auto-push and only wires the DI
-   * token. Computed automatically by `resolveAuthChain` — not for
-   * direct user configuration.
-   *
-   * @internal
-   */
-  readonly authExternallyProvided?: boolean | ReadonlyArray<boolean>;
+  readonly auth?: AuthBootstrap | ReadonlyArray<AuthBootstrap>;
   /**
    * User-metadata config — single source of truth for the entity, the
    * create/update/response DTOs, and optional adapter override.

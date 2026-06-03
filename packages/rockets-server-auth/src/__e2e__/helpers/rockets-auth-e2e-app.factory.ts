@@ -30,7 +30,10 @@ import { RocketsAuthUserMetadataDto } from '../../domains/user/infrastructure/dt
 import { RocketsAuthUserCreateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-create.dto';
 import { RocketsAuthUserUpdateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-update.dto';
 import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../../shared/constants/rockets-auth.constants';
-import { defineRocketsAuth } from '../../define-rockets-auth';
+import {
+  buildRocketsAuthResources,
+  defineRocketsAuth,
+} from '../../define-rockets-auth';
 import type { DefineRocketsAuthInput } from '../../define-rockets-auth';
 import {
   E2E_NOTIFICATION_HANDLERS,
@@ -222,6 +225,10 @@ export async function createRocketsAuthStandardE2eTestingModule(
   };
 
   const rocketsAuth = defineRocketsAuth(mergedInput);
+  const authResources = buildRocketsAuthResources(
+    mergedInput.persistence,
+    mergedInput.invitationEntity,
+  );
 
   const imports: DynamicModule['imports'] = [
     RocketsAuthE2eMockConfigModule,
@@ -242,7 +249,9 @@ export async function createRocketsAuthStandardE2eTestingModule(
     ]),
     RocketsModule.forRoot({
       auth: rocketsAuth,
+      userMetadata: mergedInput.userMetadata,
       repository: TypeOrmRepositoryModule,
+      resources: [...authResources],
     }),
   ];
 

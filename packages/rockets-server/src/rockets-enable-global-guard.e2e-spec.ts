@@ -12,6 +12,7 @@ import {
   type UserMetadataModelUpdatableInterface,
 } from './domain/interfaces/user-metadata.interface';
 import { RocketsModule } from './rockets.module';
+import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class GuardE2eMetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -45,7 +46,7 @@ describe('RocketsModule enableGlobalGuard (e2e)', () => {
 
   const baseOptions: RocketsOptions = {
     settings: {},
-    auth: ServerAuthAdapterFixture,
+    auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
     userMetadata: {
       entity: StubUserMetadataEntity,
       createDto: GuardE2eMetadataCreateDto,

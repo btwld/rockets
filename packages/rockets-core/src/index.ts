@@ -82,20 +82,9 @@ export {
 } from './infrastructure/resource/define-module-resource';
 export type { DefineModuleResourceInput } from './infrastructure/resource/define-module-resource';
 
-// Auth feature bundle (provider + module resource colocated)
-export {
-  defineAuthFeature,
-  isAuthFeatureBundle,
-} from './infrastructure/resource/define-auth-feature';
-export type {
-  AuthFeatureConfig,
-  AuthFeatureBundle,
-} from './infrastructure/resource/define-auth-feature';
-export {
-  ROCKETS_AUTH_INTEGRATION_KIND,
-  isRocketsAuthIntegration,
-} from './infrastructure/resource/rockets-auth-integration';
-export type { RocketsAuthIntegration } from './infrastructure/resource/rockets-auth-integration';
+// Auth bootstrap (light / external auth wiring)
+export type { AuthBootstrap } from './domain/interfaces/auth-bootstrap.interface';
+export { createStubAuthBootstrap } from './infrastructure/auth/create-stub-auth-bootstrap';
 
 // Resource config & definition API
 export type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';

@@ -8,7 +8,7 @@ import type {
   AuthAttemptResult,
   AuthRequest,
 } from '@bitwild/rockets-core';
-import { extractBearerToken } from '@bitwild/rockets-core';
+import { createStubAuthBootstrap, extractBearerToken } from '@bitwild/rockets-core';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
@@ -146,7 +146,7 @@ function buildApp(adapter: Type<AuthAdapterInterface>) {
   return Test.createTestingModule({
     imports: [
       RocketsModule.forRoot({
-        auth: adapter,
+        auth: createStubAuthBootstrap(adapter),
         userMetadata: {
           entity: StubUserMetadataEntity,
           createDto: UserMetadataCreateDto,
@@ -162,7 +162,7 @@ function buildChainApp(adapters: ReadonlyArray<Type<AuthAdapterInterface>>) {
   return Test.createTestingModule({
     imports: [
       RocketsModule.forRoot({
-        auth: adapters,
+        auth: adapters.map((entry) => createStubAuthBootstrap(entry)),
         userMetadata: {
           entity: StubUserMetadataEntity,
           createDto: UserMetadataCreateDto,

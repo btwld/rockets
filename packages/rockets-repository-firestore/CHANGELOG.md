@@ -14,5 +14,6 @@
 
 ### Changed
 
+- `FirestoreRepositoryModule.forRoot({ entities, backend? })` — global bootstrap with Admin validation (mirrors `TypeOrmModule.forRoot({ entities })` shape). `defineFirestoreRepository().forRoot()` delegates here.
 - Backend API: `query()` replaced by `queryBranch()` / `countBranch()` with structured query plans.
 - README documents supported features and Firestore platform limits.

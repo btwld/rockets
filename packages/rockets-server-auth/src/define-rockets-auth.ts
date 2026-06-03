@@ -4,13 +4,11 @@ import { FEDERATED_MODULE_DEFAULT_ENTITY_KEY } from '@concepta/nestjs-federated'
 import { OtpModule } from '@concepta/nestjs-otp';
 import type {
   AuthAdapterInterface,
-  RocketsAuthIntegration,
+  AuthBootstrap,
+  ResourceInput,
   RocketsUserMetadataConfig,
 } from '@bitwild/rockets-core';
-import {
-  defineModuleResource,
-  ROCKETS_AUTH_INTEGRATION_KIND,
-} from '@bitwild/rockets-core';
+import { defineModuleResource } from '@bitwild/rockets-core';
 
 import { RocketsJwtAuthAdapter } from './provider/rockets-jwt-auth.adapter';
 import type { RocketsAuthAsyncOptions } from './rockets-auth.module-definition';
@@ -50,10 +48,14 @@ function toUserMetadataConfig(
   };
 }
 
-function buildAuthPersistenceResources(
+/**
+ * Planner rows for auth persistence tables. Pass on `RocketsModule.forRoot({ resources })`
+ * together with {@link defineRocketsAuth}.
+ */
+export function buildRocketsAuthResources(
   persistence: RocketsAuthRepositoryPersistenceOptions,
-  invitationEntity: Type<PlainLiteralObject> | undefined,
-): ReturnType<typeof defineModuleResource>[] {
+  invitationEntity?: Type<PlainLiteralObject>,
+): ReadonlyArray<ResourceInput> {
   const { module: repositoryModule, entities } = persistence;
   const entityRows: Array<{
     readonly key: string;
@@ -119,10 +121,8 @@ function buildAsyncOptionsForAuthModule(
 }
 
 /**
- * Full-stack built-in auth: compiles persistence into Rockets core
- * `resources[]`, wires {@link RocketsAuthModule} without internal
- * `repositoryPersistence`, and returns a {@link RocketsAuthIntegration} for
- * `RocketsModule.forRoot({ auth: ... })`.
+ * Built-in auth: returns an {@link AuthBootstrap} for `RocketsModule.forRoot({ auth })`.
+ * Also pass {@link buildRocketsAuthResources} on `resources` and `userMetadata` explicitly.
  */
 export type DefineRocketsAuthInput = RocketsAuthAsyncOptions & {
   /**
@@ -130,11 +130,9 @@ export type DefineRocketsAuthInput = RocketsAuthAsyncOptions & {
    * not passed to `RocketsAuthModule`).
    */
   readonly persistence: RocketsAuthRepositoryPersistenceOptions;
-  /** Single source for core `/me` metadata + upstream `UserModule` wiring. */
+  /** Used by core `/me` and upstream `UserModule` (`userCrud.userMetadataConfig`). */
   readonly userMetadata: RocketsUserMetadataConfig;
-  /** User CRUD extras (model, DTOs, handlers, …) — required for the full auth stack. */
   readonly userCrud: NonNullable<RocketsAuthAsyncOptions['userCrud']>;
-  /** Optional `invitation` repository key (adds one planner row). */
   readonly invitationEntity?: Type<PlainLiteralObject>;
   readonly rocketsDefaults?: Readonly<{ readonly enableGlobalGuard?: boolean }>;
   readonly authAdapter?: Type<AuthAdapterInterface>;
@@ -142,20 +140,11 @@ export type DefineRocketsAuthInput = RocketsAuthAsyncOptions & {
 
 export function defineRocketsAuth(
   input: DefineRocketsAuthInput,
-): RocketsAuthIntegration {
-  const resources = buildAuthPersistenceResources(
-    input.persistence,
-    input.invitationEntity,
-  );
-
+): AuthBootstrap {
   const asyncOptions = buildAsyncOptionsForAuthModule(input);
 
   return {
-    kind: ROCKETS_AUTH_INTEGRATION_KIND,
-    resources,
-    nestImports: [RocketsAuthModule.forRootAsync(asyncOptions)],
-    authAdapter: input.authAdapter ?? RocketsJwtAuthAdapter,
-    userMetadata: input.userMetadata,
-    rocketsDefaults: input.rocketsDefaults,
+    adapter: input.authAdapter ?? RocketsJwtAuthAdapter,
+    forRoot: () => RocketsAuthModule.forRootAsync(asyncOptions),
   };
 }

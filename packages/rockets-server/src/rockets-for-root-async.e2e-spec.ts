@@ -11,6 +11,7 @@ import {
   type UserMetadataModelUpdatableInterface,
 } from './domain/interfaces/user-metadata.interface';
 import { RocketsModule } from './rockets.module';
+import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class AsyncE2eMetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -51,7 +52,7 @@ describe('RocketsModule.forRootAsync (e2e)', () => {
       imports: [
         RocketsModule.forRootAsync({
           useFactory: (): RocketsOptionsInterface => ({ settings: {} }),
-          auth: ServerAuthAdapterFixture,
+          auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
           userMetadata,
           repository: E2eFakeRepositoryModule,
         }),
@@ -85,7 +86,7 @@ describe('RocketsModule.forRootAsync (e2e)', () => {
       imports: [
         RocketsModule.forRootAsync({
           useFactory: (): RocketsOptionsInterface => ({ settings: {} }),
-          auth: ServerAuthAdapterFixture,
+          auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
           userMetadata,
           repository: E2eFakeRepositoryModule,
         }),

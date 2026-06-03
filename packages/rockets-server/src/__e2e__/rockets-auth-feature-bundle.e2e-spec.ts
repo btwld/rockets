@@ -13,10 +13,11 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   AUTH_ADAPTERS_TOKEN,
-  defineAuthFeature,
+  defineModuleResource,
   extractBearerToken,
   type AuthAdapterInterface,
   type AuthAttemptResult,
+  type AuthBootstrap,
   type AuthRequest,
   type UserMetadataCreatableInterface,
   type UserMetadataModelUpdatableInterface,
@@ -30,12 +31,6 @@ import { RocketsModule } from '../rockets.module';
 import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 
-/**
- * Bundle subject under test. The user entity, the auth controller, and
- * the adapter all live inside the bundle — no separate `resources[]`
- * entry, no separate `auth: AuthAdapter` field. The factory is
- * zero-arg by convention (matches the sample-server pattern).
- */
 @Entity('bundle_users')
 class BundleUserEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -74,13 +69,6 @@ class BundleAuthController {
     private readonly userRepo: RepositoryInterface<BundleUserEntity>,
   ) {}
 
-  /**
-   * Probe endpoint: forces DI to resolve the dynamic-repo token under the
-   * key the bundle's entity claims (`bundleUser`). If the bundle's
-   * `entities[]` row was not registered, this controller fails to boot
-   * with a Nest DI error — exactly the regression we want this e2e to
-   * catch.
-   */
   @Get('probe')
   @ApiOkResponse({
     description:
@@ -98,15 +86,23 @@ class BundleMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
   @IsString() id!: string;
 }
 
-function defineBundleAuth() {
-  return defineAuthFeature({
-    entities: [BundleUserEntity],
+const bundleAuthResource = defineModuleResource({
+  entities: [BundleUserEntity],
+});
+
+function defineBundleAuth(): AuthBootstrap {
+  return {
     adapter: BundleAuthAdapter,
-    controllers: [BundleAuthController],
-  });
+    forRoot: () => ({
+      module: class BundleAuthHostModule {},
+      providers: [BundleAuthAdapter],
+      controllers: [BundleAuthController],
+      exports: [BundleAuthAdapter],
+    }),
+  };
 }
 
-describe('RocketsModule — auth: AuthFeatureBundle (e2e)', () => {
+describe('RocketsModule — auth: AuthBootstrap (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -120,20 +116,15 @@ describe('RocketsModule — auth: AuthFeatureBundle (e2e)', () => {
           dropSchema: true,
         }),
         RocketsModule.forRoot({
-          // Bundle is the ONLY auth-related field. We do NOT pass the
-          // feature in `resources[]` and we do NOT pass the adapter
-          // separately — the server expands the bundle.
           auth: defineBundleAuth(),
           userMetadata: {
             entity: StubUserMetadataEntity,
             createDto: BundleMetadataCreateDto,
             updateDto: BundleMetadataUpdateDto,
-            // user-metadata uses the in-memory fake; the bundle's user
-            // entity uses TypeORM via the root adapter.
             repository: E2eFakeRepositoryModule,
           },
           repository: TypeOrmRepositoryModule,
-          resources: [],
+          resources: [bundleAuthResource],
         }),
       ],
     }).compile();
@@ -146,18 +137,13 @@ describe('RocketsModule — auth: AuthFeatureBundle (e2e)', () => {
     if (app) await app.close();
   });
 
-  it('expands the bundle — `AUTH_ADAPTERS_TOKEN` contains the bundle adapter instance', () => {
+  it('resolves AUTH_ADAPTERS_TOKEN with the bootstrap adapter instance', () => {
     const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
     expect(adapters).toBeDefined();
     expect(adapters.some((a) => a instanceof BundleAuthAdapter)).toBe(true);
   });
 
-  it('registers the bundle entity in the dynamic-repository plan (controller boots without DI errors)', async () => {
-    // The probe endpoint depends on `@InjectDynamicRepository("bundleUser")`.
-    // If the bundle's `entities[]` row was lost during expansion, Nest
-    // would have thrown during `app.init()` — so reaching this assertion
-    // already proves the registration happened. We additionally hit the
-    // route to confirm the repo really is bound.
+  it('registers the entity row and binds the dynamic repo', async () => {
     const res = await request(app.getHttpServer())
       .get('/bundle-auth/probe')
       .set('Authorization', 'Bearer valid-bundle-token');
@@ -165,10 +151,7 @@ describe('RocketsModule — auth: AuthFeatureBundle (e2e)', () => {
     expect(res.body).toEqual({ repoBound: true });
   });
 
-  it('routes the bundle controller (proves `bundle.resource` was prepended to `resources[]`)', async () => {
-    // Same controller, but now we are checking that the route exists at
-    // all (no 404). 401 is acceptable too — what matters is that the
-    // path is mounted by the bundle, not by us.
+  it('mounts the controller from the bootstrap forRoot module', async () => {
     const res = await request(app.getHttpServer()).get('/bundle-auth/probe');
     expect([200, 401]).toContain(res.status);
   });

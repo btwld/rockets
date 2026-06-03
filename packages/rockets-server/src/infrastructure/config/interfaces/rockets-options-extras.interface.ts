@@ -3,27 +3,22 @@ import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 import type {
   AbstractUpsertUserMetadataHandler,
   AbstractGetUserMetadataHandler,
-  AuthAdapterInterface,
-  AuthFeatureBundle,
+  AuthBootstrap,
   RepositoryBootstrap,
   ResourceInput,
   RocketsUserMetadataConfig,
-  RocketsAuthIntegration,
 } from '@bitwild/rockets-core';
 
 export interface DisableControllerOptionsInterface {
   me?: boolean;
 }
 
-/**
- * One entry accepted by `RocketsOptionsExtrasInterface.auth`. The
- * `auth` option also accepts a `ReadonlyArray<RocketsAuthInput>` to
- * build an authentication chain (see the field's JSDoc).
- */
-export type RocketsAuthInput =
-  | Type<AuthAdapterInterface>
-  | AuthFeatureBundle
-  | RocketsAuthIntegration;
+export type RocketsAuthOption =
+  | AuthBootstrap
+  | ReadonlyArray<AuthBootstrap>;
+
+/** @deprecated Prefer {@link RocketsAuthOption}. */
+export type RocketsAuthInput = RocketsAuthOption;
 
 export interface RocketsOptionsExtrasInterface
   extends Pick<DynamicModule, 'global' | 'controllers'> {
@@ -31,24 +26,10 @@ export interface RocketsOptionsExtrasInterface
   disableController?: DisableControllerOptionsInterface;
 
   /**
-   * Authentication wiring. Must be provided — a Rockets app always
-   * requires at least one auth adapter.
-   *
-   * Accepts a single entry or an array (chain). Per-entry shapes:
-   *  - `Type<AuthAdapterInterface>` — bare adapter; core auto-pushes as provider.
-   *  - `AuthFeatureBundle` — from `defineAuthFeature()`; its resource is
-   *    merged into `resources[]`.
-   *  - `RocketsAuthIntegration` — from `defineRocketsAuth()` /
-   *    `defineFirebaseAuth()` / etc.; `nestImports` append after core;
-   *    `resources` merged into the planner.
-   *
-   * When an array is passed, every entry's wiring is merged and the
-   * resulting chain is iterated by `AuthServerGuard` in declaration
-   * order. The first adapter that returns `matched: true` wins; if it
-   * returned a rejection error, the chain stops and that error is
-   * thrown — by design, to avoid surprising credential passthroughs.
+   * Authentication wiring. Accepts a single entry or an array (chain):
+   *  - `AuthBootstrap` — from `defineFirebaseAuth()`, `defineSampleAuth()`, etc.
    */
-  auth?: RocketsAuthInput | ReadonlyArray<RocketsAuthInput>;
+  auth?: RocketsAuthOption;
 
   /**
    * User-metadata config — entity + DTOs (+ optional response DTO / adapter).

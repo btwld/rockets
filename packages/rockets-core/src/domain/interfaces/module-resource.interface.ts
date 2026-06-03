@@ -22,6 +22,8 @@ export interface ModuleResourceEntityEntry {
   readonly entity: Type<PlainLiteralObject>;
   /** Override the root adapter for this entity only. Defaults to the root `repository`. */
   readonly repository?: RepositoryModuleInterface;
+  /** Firestore collection id when the adapter reads `collection` from provider rows. */
+  readonly collection?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export interface ModuleResourceEntityEntryInput {
   readonly key?: string;
   readonly entity: Type<PlainLiteralObject>;
   readonly repository?: RepositoryModuleInterface;
+  readonly collection?: string;
 }
 
 /**

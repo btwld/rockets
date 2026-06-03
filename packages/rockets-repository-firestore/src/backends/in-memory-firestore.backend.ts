@@ -21,7 +21,7 @@ function collectionStore(
   return store;
 }
 
-/** Process-local Firestore stub for e2e (`FIREBASE_FIRESTORE_USE_FAKE=true`). */
+/** In-memory Firestore backend for unit tests and explicit test harnesses. */
 export class InMemoryFirestoreBackend implements FirestoreBackend {
   async get(
     collection: string,

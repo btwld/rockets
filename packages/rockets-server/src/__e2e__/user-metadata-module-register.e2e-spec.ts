@@ -46,6 +46,7 @@ import {
   UserMetadataModelUpdatableInterface,
 } from '../domain/interfaces/user-metadata.interface';
 import { ExceptionsFilter } from '../infrastructure/filters/exceptions.filter';
+import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class E2eUserMetadataCreateDto
   extends BaseUserMetadataCreateDto
@@ -140,7 +141,7 @@ describe('UserModule.register via standalone wiring (e2e)', () => {
 
   const baseOptions: RocketsOptions = {
     settings: {},
-    auth: ServerAuthAdapterFixture,
+    auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
     userMetadata: {
       entity: StubUserMetadataEntity,
       createDto: E2eUserMetadataCreateDto,

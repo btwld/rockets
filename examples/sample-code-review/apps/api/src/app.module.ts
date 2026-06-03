@@ -6,7 +6,7 @@ import { defineModuleResource } from '@bitwild/rockets-core';
 
 import { resolveFirebaseAuthModuleOptions } from './auth-firebase';
 import { UserEntity } from './auth/user.entity';
-import { defineApiKeyAuth } from './auth-api-key';
+import { defineApiKeyAuth, apiKeyAuthResource } from './auth-api-key';
 import { UserMetadataEntity } from './entities/user-metadata.entity';
 import {
   UserMetadataCreateDto,
@@ -20,8 +20,6 @@ import { analysisFeature } from './analysis';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // E2E runs under Jest: skip `.env` so a developer's real OPENAI_API_KEY
-      // does not change review-engine assertions in the test suite.
       ...(process.env.JEST_WORKER_ID !== undefined
         ? { ignoreEnvFile: true }
         : { envFilePath: ['.env.local', '.env'] }),
@@ -30,7 +28,6 @@ import { analysisFeature } from './analysis';
       auth: [
         defineFirebaseAuth({
           forRootAsync: { useFactory: resolveFirebaseAuthModuleOptions },
-          resources: [defineModuleResource({ entities: [UserEntity] })],
         }),
         defineApiKeyAuth(),
       ],
@@ -45,7 +42,12 @@ import { analysisFeature } from './analysis';
         synchronize: true,
         dropSchema: process.env.DATABASE_PATH ? false : true,
       }),
-      resources: [githubFeature, analysisFeature],
+      resources: [
+        defineModuleResource({ entities: [UserEntity] }),
+        apiKeyAuthResource,
+        githubFeature,
+        analysisFeature,
+      ],
     }),
   ],
 })

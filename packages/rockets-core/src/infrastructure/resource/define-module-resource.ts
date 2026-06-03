@@ -27,12 +27,13 @@ import { ResourceKind } from '../../domain/interfaces/resource-kind.enum';
  * normaliseModuleResourceEntity({ key: 'audit', entity: AuditEntity })
  * // → { key: 'audit', entity: AuditEntity }
  *
- * // Adapter override without explicit key → key derived from entity
+ * // RepositoryBootstrap override without explicit key → key derived from entity
  * normaliseModuleResourceEntity({
  *   entity: AnalyticsEntity,
- *   repository: FirestoreRepositoryModule,
+ *   repository: defineFirestoreRepository(),
+ *   collection: 'analytics_events',
  * })
- * // → { key: 'analytics', entity: AnalyticsEntity, repository: FirestoreRepositoryModule }
+ * // → { key: 'analytics', entity: AnalyticsEntity, repository: <bootstrap>, collection: 'analytics_events' }
  * ```
  */
 function normaliseModuleResourceEntity(
@@ -43,13 +44,17 @@ function normaliseModuleResourceEntity(
   }
 
   const key = input.key ?? resolveEntityKey(input.entity);
-  const entry: ModuleResourceEntityEntry = {
+  let entry: ModuleResourceEntityEntry = {
     key,
     entity: input.entity,
   };
 
   if (input.repository !== undefined) {
-    return { ...entry, repository: input.repository };
+    entry = { ...entry, repository: input.repository };
+  }
+
+  if (input.collection !== undefined) {
+    entry = { ...entry, collection: input.collection };
   }
 
   return entry;

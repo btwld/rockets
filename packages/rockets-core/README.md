@@ -155,20 +155,28 @@ The hooks run at the repository layer, so direct (non-HTTP) calls are scoped too
 
 ### Mix two persistence adapters
 
-The default adapter goes in `repository:`. Override per entity inside `defineModuleResource`:
+The default adapter goes in `repository:`. Override per entity inside `defineModuleResource` with a `RepositoryBootstrap` (same pattern as TypeORM):
 
 ```typescript
 import { defineModuleResource } from '@bitwild/rockets-core';
-import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
+import { defineFirestoreRepository } from '@bitwild/rockets-repository-firestore';
+
+const firestoreRepository = defineFirestoreRepository();
 
 defineModuleResource({
   entities: [
-    { entity: AnalyticsEventEntity, repository: FirestoreRepositoryModule },
+    {
+      entity: AnalyticsEventEntity,
+      repository: firestoreRepository,
+      collection: 'analytics_events',
+    },
   ],
 });
 ```
 
-The default bootstrap owns its entity set; the override-only entities go to the override's module.
+The default bootstrap owns SQL entities; Firestore override entities get their own `forRoot` / `forFeature` cycle. See [sample-code-review](../../examples/sample-code-review).
+
+**Boot order (mixed store):** for each distinct `RepositoryBootstrap` in the plan, core imports `bootstrap.forRoot(entities)` first, then one `RepositoryModule.forFeature(entry)` import per adapter group. SQL connection and Firestore Admin validation therefore run before repository tokens materialise.
 
 ### Inject a dynamic repository
 
@@ -248,8 +256,7 @@ Core **does not** fork upstream behaviour — it only expands `resources[]`, `us
 
 | Option | Type | Required | Description |
 |---|---|---|---|
-| `auth` | `Type<AuthAdapterInterface>` or array | optional† | Adapter class (or chain). Auto-registered as provider; `AUTH_ADAPTERS_TOKEN` aliased via `useExisting`. |
-| `authExternallyProvided` | `boolean` (default `false`) | optional | Set `true` when the adapter is already provided by an external Nest module (e.g. `FirebaseAuthModule`). |
+| `auth` | `AuthBootstrap` or array | optional† | Auth wiring from `defineFirebaseAuth()`, `defineRocketsAuth()`, or app-local helpers. Each entry supplies `adapter` and optional `forRoot()` for external Nest modules. Entity rows belong in `resources[]`, not on the auth helper. |
 | `repository` | `RepositoryModuleInterface` or `RepositoryBootstrap` | optional | Default persistence adapter. A bootstrap owns both `forRoot(entities)` and `forFeature(entities)`. |
 | `userMetadata` | `RocketsUserMetadataConfig` | optional | Entity + DTOs for the metadata table joined to external users. |
 | `resources` | `ReadonlyArray<ResourceInput>` | optional | Mix of `defineResource`, `defineModuleResource`, and manual `RocketsResourceConfig`. |
@@ -289,7 +296,6 @@ The guard iterates adapters in order. `{ matched: false }` → try next. `{ matc
 | `defineResource(input)` | CRUD bundle: entity + DTOs + operations + hooks → auto-controller. |
 | `defineModuleResource(input)` | Non-CRUD bundle: entities + Nest module slice. |
 | `defineSubResource(input)` | Nested resource (e.g. `/pets/:petId/tags`) with path-scope guard. |
-| `defineAuthFeature(input)` | Adapter + entities + controllers in one bundle. |
 | `relation(target, prop, opts?)` | Type-safe cross-resource relation. |
 | `extractBearerToken(request)` | RFC 7235 Bearer parser for adapter implementations. |
 | `getActor(ctx)` | Read authenticated user from a CRUD context. |

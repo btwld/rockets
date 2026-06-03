@@ -30,6 +30,7 @@ import { UpsertUserMetadataCommand } from '../application/commands/impl/upsert-u
 import { GetUserMetadataQuery } from '../application/queries/impl/get-user-metadata.query';
 import { AuthUser } from '@bitwild/rockets-common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
 
 // ────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -170,7 +171,7 @@ describe('RocketsCoreModule (e2e)', () => {
       imports: [
         TestMetadataRepoModule,
         RocketsCoreModule.forRoot({
-          auth: MockAuthAdapter,
+          auth: createStubAuthBootstrap(MockAuthAdapter),
           providers: [MockAuthAdapter],
           global: true,
         }),

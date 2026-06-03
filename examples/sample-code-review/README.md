@@ -84,8 +84,9 @@ For local-only dev with no external services, set in `apps/api/.env`:
 
 ```env
 FIREBASE_USE_FAKE=true
-FIREBASE_FIRESTORE_USE_FAKE=true
 ```
+
+E2E tests inject an in-memory Firestore backend via a Jest stub (`test/stubs/code-review-reports.persistence.stub.ts`), not an env flag.
 
 For real Firebase, drop the service-account JSON at `apps/api/secrets/firebase-service-account.json` and set `FIREBASE_PROJECT_ID` to match the web client's `VITE_FIREBASE_PROJECT_ID`.
 
@@ -150,13 +151,9 @@ GET /analysis/reports?status=completed
 
 Filters live in the `analysisFeature` controller, not the framework.
 
-### Use the in-memory Firestore (no Firebase project)
+### Firestore in production vs tests
 
-```bash
-FIREBASE_FIRESTORE_USE_FAKE=true yarn workspace sample-code-review dev
-```
-
-The fake backend implements the same `FirestoreBackend` interface as the real adapter. All read / write code is identical.
+Production requires Firebase Admin initialised by the app (`defineFirebaseAuth` or `ensureFirebaseAdminApp`). E2E tests swap in `InMemoryFirestoreBackend` through an explicit test stub — see `apps/api/test/stubs/`.
 
 ### Run the API against persistent SQLite
 
@@ -179,12 +176,10 @@ examples/sample-code-review
 │   │   └── src/
 │   │       ├── app.module.ts                    Single composition root
 │   │       ├── analysis/                        defineModuleResource (Firestore, OpenAI)
-│   │       ├── auth-firebase/                   FirebaseAuthIntegration
-│   │       ├── auth-api-key/                    Second adapter in the chain
+│   │       ├── auth-firebase/                   defineFirebaseAuth wiring
+│   │       ├── auth-api-key/                    Second AuthBootstrap in the chain
 │   │       ├── github/                          GitHub OAuth + repo browse
-│   │       ├── firebase-firestore/              Firestore registration helpers
-│   │       ├── firebase-storage/                Optional file storage
-│   │       ├── repository/                      defineTypeOrmRepository wrapper
+│   │       ├── repository/                      defineTypeOrmRepository + defineFirestoreRepository
 │   │       ├── entities/                        Shared TypeORM entities (UserMetadata)
 │   │       └── main.ts                          Bootstrap (helmet, validation, swagger)
 │   └── web/
@@ -201,8 +196,17 @@ examples/sample-code-review
 
 ```typescript
 RocketsModule.forRoot({
-  auth: [defineFirebaseAuth(), defineApiKeyAuth()],
-  // ...
+  auth: [
+    defineFirebaseAuth({
+      forRootAsync: { useFactory: resolveFirebaseAuthModuleOptions },
+    }),
+    defineApiKeyAuth(),
+  ],
+  resources: [
+    defineModuleResource({ entities: [UserEntity] }),
+    apiKeyAuthResource,
+    // ...
+  ],
 })
 ```
 
@@ -215,7 +219,7 @@ Order is preserved end-to-end — Firebase tries first; API key is the fallback.
 | GitHub OAuth tokens, `userMetadata` | SQLite (TypeORM) via root `repository:` | `DATABASE_PATH` or `:memory:` |
 | Code-review reports | Firestore via `@bitwild/rockets-repository-firestore` | `FIREBASE_FIRESTORE_REPORTS_COLLECTION` (default `code_review_reports`) |
 
-`CodeReviewReportEntity` uses `repository: codeReviewReportsRepository` from `defineFirestoreRepository({ entities: [...] })` — a `RepositoryBootstrap` like `defineTypeOrmRepository`; core calls `forFeature` / `forRoot` internally. Services use `@InjectDynamicRepository` + `RepositoryInterface`, no Firestore types leak out of the analysis folder.
+`CodeReviewReportEntity` uses `repository: codeReviewReportsRepository` from `defineFirestoreRepository()` with `collection` on the entity row — same bootstrap pattern as `defineTypeOrmRepository`. Services use `@InjectDynamicRepository` + `RepositoryInterface`; no Firestore types leak out of the analysis folder.
 
 ### Environment variables
 
@@ -226,7 +230,6 @@ Order is preserved end-to-end — Firebase tries first; API key is the fallback.
 | `FIREBASE_PROJECT_ID` | Required when not using the fake verifier. Must match the web's `VITE_FIREBASE_PROJECT_ID`. |
 | `FIREBASE_SERVICE_ACCOUNT_PATH` / `GOOGLE_APPLICATION_CREDENTIALS` | Path to a Firebase service-account JSON. |
 | `FIREBASE_USE_FAKE` | `'true'` switches Firebase Auth to the in-process fake verifier. |
-| `FIREBASE_FIRESTORE_USE_FAKE` | `'true'` switches Firestore to the in-memory backend. |
 | `FIREBASE_FIRESTORE_REPORTS_COLLECTION` | Firestore collection id for code-review reports. |
 | `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` / `GITHUB_OAUTH_CALLBACK_URL` | GitHub OAuth App credentials. |
 | `OPENAI_API_KEY` (also `OPEN_API_KEY`) | Enables real LLM output. Without it, the analyzer returns a stub. |

@@ -24,6 +24,7 @@ import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.m
 import type { RocketsOptions } from './rockets.module-definition';
 import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
 import { RocketsModule } from './rockets.module';
+import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 @ApiTags('test')
 @Controller('test')
@@ -123,7 +124,7 @@ describe('RocketsModule (e2e)', () => {
 
   const baseOptions: RocketsOptions = {
     settings: {},
-    auth: ServerAuthAdapterFixture,
+    auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
     userMetadata: {
       entity: StubUserMetadataEntity,
       createDto: TestUserMetadataCreateDto,
@@ -163,7 +164,7 @@ describe('RocketsModule (e2e)', () => {
         imports: [
           RocketsModule.forRoot({
             ...baseOptions,
-            auth: FirebaseAuthAdapterFixture,
+            auth: e2eAuthBootstrap(FirebaseAuthAdapterFixture),
           }),
         ],
       }).compile();
@@ -345,7 +346,7 @@ describe('RocketsModule (e2e)', () => {
           TestModule,
           RocketsModule.forRoot({
             ...baseOptions,
-            auth: FirebaseAuthAdapterFixture,
+            auth: e2eAuthBootstrap(FirebaseAuthAdapterFixture),
           }),
         ],
       }).compile();
@@ -452,7 +453,7 @@ describe('RocketsModule (e2e)', () => {
           TestModule,
           RocketsModule.forRoot({
             ...baseOptions,
-            auth: FailingAuthAdapterFixture,
+            auth: e2eAuthBootstrap(FailingAuthAdapterFixture),
           }),
         ],
       }).compile();

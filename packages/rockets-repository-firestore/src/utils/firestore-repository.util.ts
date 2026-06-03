@@ -1,29 +1,28 @@
+import type { Provider } from '@nestjs/common';
 import { getApp, getApps } from 'firebase-admin/app';
 import {
   getDynamicRepositoryToken,
   type DynamicRepositoryModule,
 } from '@concepta/nestjs-repository';
-import type { Provider } from '@nestjs/common';
 
 import { AdminFirestoreBackend } from '../backends/admin-firestore.backend';
-import { InMemoryFirestoreBackend } from '../backends/in-memory-firestore.backend';
 import { FirestoreRepositoryModule } from '../firestore-repository.module';
 import type { FirestoreBackend } from '../interfaces/firestore-backend.interface';
 import type { FirestoreProviderOptions } from '../interfaces/firestore-provider-options.interface';
 import { buildFirestoreEntityMetadata } from '../repository/firestore-entity-metadata';
 import { FirestoreRepository } from '../repository/firestore-repository';
-import { resolveFirestoreCollection } from './firestore-collection.registry';
 
-function resolveBackend(): FirestoreBackend {
-  if (process.env.FIREBASE_FIRESTORE_USE_FAKE === 'true') {
-    return new InMemoryFirestoreBackend();
+export function resolveFirestoreBackend(
+  backend?: FirestoreBackend,
+): FirestoreBackend {
+  if (backend) {
+    return backend;
   }
 
   if (getApps().length === 0) {
     throw new Error(
-      'Firestore: initialize Firebase Admin before boot ' +
-        '(call ensureFirebaseAdminApp() from @bitwild/rockets-repository-firestore, ' +
-        'or set FIREBASE_FIRESTORE_USE_FAKE=true).',
+      'Firestore: initialize Firebase Admin before RepositoryModule.forRoot ' +
+        '(call ensureFirebaseAdminApp() or wire defineFirebaseAuth() in the app).',
     );
   }
 
@@ -35,10 +34,7 @@ export function createFirestoreProvider(
   options: FirestoreProviderOptions,
   backend: FirestoreBackend,
 ): Provider {
-  const collection =
-    options.collection ??
-    resolveFirestoreCollection(options.key) ??
-    options.key;
+  const collection = options.collection ?? options.key;
 
   return {
     provide: getDynamicRepositoryToken(options.key),
@@ -60,13 +56,14 @@ export function createFirestoreProvider(
 
 export function createFirestoreFeatureModule(
   entities: FirestoreProviderOptions[],
+  backend?: FirestoreBackend,
 ): DynamicRepositoryModule {
-  const backend = resolveBackend();
+  const resolvedBackend = resolveFirestoreBackend(backend);
 
   return {
     module: FirestoreRepositoryModule,
     providers: entities.map((entity) =>
-      createFirestoreProvider(entity, backend),
+      createFirestoreProvider(entity, resolvedBackend),
     ),
     exports: entities.map((entity) => getDynamicRepositoryToken(entity.key)),
   };

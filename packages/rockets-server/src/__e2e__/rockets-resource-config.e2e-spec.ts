@@ -36,6 +36,7 @@ import { extractBearerToken } from '@bitwild/rockets-core';
 import { RocketsModule } from '../rockets.module';
 import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
+import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 // ────────────────────────────────────────────────────────────────────
 // Test Entity
@@ -162,7 +163,7 @@ describe('RocketsModule — Resource Config (e2e)', () => {
           entities: [{ key: 'item', entity: ItemEntity }],
         }),
         RocketsModule.forRoot({
-          auth: TestAuthAdapter,
+          auth: e2eAuthBootstrap(TestAuthAdapter),
           userMetadata: {
             entity: StubUserMetadataEntity,
             createDto: TestMetadataCreateDto,

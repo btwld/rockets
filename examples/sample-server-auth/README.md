@@ -9,7 +9,7 @@
 
 ## 1. Introduction
 
-`sample-server-auth` is the runnable reference for the built-in auth path. While `sample-server` shows the **external-auth** wiring (you bring the JWT/Firebase adapter), this app shows the **batteries-included** wiring (the framework owns the user table).
+`sample-server-auth` is the runnable reference for the built-in auth path. While `sample-server` shows **Path A** (in-app JWT adapter + signup/login controller), this app shows **Path B** (the framework owns the user table). For Firebase / external IdP, see [sample-code-review](../sample-code-review).
 
 What it demonstrates:
 

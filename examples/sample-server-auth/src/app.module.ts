@@ -1,6 +1,10 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import { EventModule } from '@concepta/nestjs-event';
-import { defineRocketsAuth } from '@bitwild/rockets-auth';
+import {
+  buildRocketsAuthResources,
+  defineRocketsAuth,
+  type DefineRocketsAuthInput,
+} from '@bitwild/rockets-auth';
 import { RocketsModule } from '@bitwild/rockets';
 import type { EmailSendOptionsInterface } from '@concepta/nestjs-common/dist/domain/email/interfaces/email-send-options.interface';
 
@@ -119,7 +123,7 @@ function buildSampleMailerService() {
   };
 }
 
-const rocketsAuth = defineRocketsAuth({
+const rocketsAuthInput: DefineRocketsAuthInput = {
   persistence: {
     module: repo,
     entities: {
@@ -164,8 +168,13 @@ const rocketsAuth = defineRocketsAuth({
     imports: [PetModule],
     queryServices: [PetAccessQueryService],
   },
-  rocketsDefaults: { enableGlobalGuard: false },
-});
+};
+
+const rocketsAuth = defineRocketsAuth(rocketsAuthInput);
+const rocketsAuthResources = buildRocketsAuthResources(
+  rocketsAuthInput.persistence,
+  rocketsAuthInput.invitationEntity,
+);
 
 @Global()
 @Module({
@@ -174,8 +183,11 @@ const rocketsAuth = defineRocketsAuth({
     PetModule,
     RocketsModule.forRoot({
       auth: rocketsAuth,
+      userMetadata: rocketsAuthInput.userMetadata,
+      enableGlobalGuard: false,
       repository: repo,
       resources: [
+        ...rocketsAuthResources,
         createPetResource(),
         createPetVaccinationResource(),
         createPetAppointmentResource(),

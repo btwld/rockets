@@ -28,7 +28,7 @@ What it adds on top of core:
 
 - A `MeController` (`GET /me`, `PATCH /me`) that reads the authenticated user and the local `userMetadata` row joined by external id.
 - Auto-opt-in for `AuthServerGuard` as the `APP_GUARD` (disable per-instance with `enableGlobalGuard: false`).
-- An `auth` option that accepts a bare adapter class, a `defineAuthFeature(...)` bundle (`@bitwild/rockets-core`), a `defineRocketsAuth(...)` integration (`@bitwild/rockets-auth`), a `defineFirebaseAuth(...)` integration (`@bitwild/rockets-adapter-firebase`), or an **array** mixing any of those to build a credential chain.
+- An `auth` option that accepts an `AuthBootstrap` (or array) from `defineFirebaseAuth()`, `defineRocketsAuth()`, or app-local helpers such as `defineSampleAuth()` / `defineApiKeyAuth()`. Each entry may include `forRoot()` when the adapter needs its own Nest module slice.
 
 Everything else (`defineResource`, `defineModuleResource`, hooks, dynamic repositories, swagger registration) is re-exported from core.
 
@@ -42,22 +42,34 @@ Everything else (`defineResource`, `defineModuleResource`, hooks, dynamic reposi
 - You want a **complete built-in auth system** (signup, login, password recovery, OTP, oauth, admin user CRUD) → use `@bitwild/rockets-server-auth`.
 - You want full composition control (no `/me`, no global guard) → drop to `@bitwild/rockets-core`.
 
-### Many workflow APIs, one identity (enterprise)
+### Stargate micro apps (this package)
 
-**Multiple adapters** in `auth: [...]` are fine when each resolves to the **same user id**. Pick one **primary identity model** per product (Firebase/Okta **or** central `@bitwild/rockets-auth`); unrelated IdPs for the same person need your own link table.
+When **Stargate** (or your platform team) provisions workflow APIs, each one is a **micro app** on this package:
 
-| Service | Package | Role |
-|---|---|---|
-| **Identity (once)** | Firebase/Okta **or** `@bitwild/rockets-auth` | Issues tokens; owns the user id namespace for that deployment |
-| **Workflow APIs (many)** | `@bitwild/rockets` (this package) | Path A — verify the same issuer; differ only in `resources[]` |
+| Layer | Owner | Rockets surface |
+|-------|--------|-----------------|
+| Cross-system workflows | Stargate | HTTP steps → your micro app base URL |
+| Identity | Once per product (IdP or `@bitwild/rockets-auth`) | `auth: AuthBootstrap` → **same issuer** in every micro app |
+| Domain | Squad per micro app | `resources[]`, `repository`, optional Firestore override |
 
-Each workflow app is Path A: an adapter validates the shared JWT or IdP token (`RocketsJwtAuthAdapter` pattern: same `JWT_SECRET` / Firebase project → same `AuthorizedUser.id`). `userMetadata` is one row per person in that namespace.
+**What `@bitwild/rockets` adds** on top of core (so every micro app shares the same shell):
 
-**Anti-pattern:** `defineRocketsAuth()` in every workflow with its own user DB.
+- `MeController` — `GET /me`, `PATCH /me` + local `userMetadata` row
+- `APP_GUARD` → `AuthServerGuard` (opt out with `enableGlobalGuard: false`)
+- `auth` chain — `defineFirebaseAuth()`, app-local `AuthBootstrap`, or array of both
 
-Example: [sample-code-review](../../examples/sample-code-review/apps/api) — Firebase + API key, both tied to the same user. See [Run an authentication chain](#run-an-authentication-chain-multiple-adapters).
+Stargate orchestrates; **this package runs the API**. Do not duplicate signup/login DB per generated app.
 
-Diagram: [`docs/architecture-diagram.html`](../../docs/architecture-diagram.html).
+```
+  Stargate (workflows) ──HTTP──▶ Micro app (@bitwild/rockets)
+                                        │
+                                        ▼
+                                 Identity (shared issuer)
+```
+
+Example micro app: [sample-code-review](../../examples/sample-code-review/apps/api) (Firebase + API key, mixed SQL/Firestore).
+
+Diagram: [`docs/architecture-diagram.html`](../../docs/architecture-diagram.html). Full pattern: [root README — Stargate, micro apps, and shared auth](../../README.md#stargate-micro-apps-and-shared-auth).
 
 ---
 
@@ -155,23 +167,25 @@ Pass an array. The guard iterates in order. The first adapter that returns `matc
 
 ```typescript
 import { defineFirebaseAuth } from '@bitwild/rockets-adapter-firebase';
-import { defineAuthFeature, defineModuleResource } from '@bitwild/rockets-core';
+import { defineModuleResource } from '@bitwild/rockets-core';
+import { RocketsModule } from '@bitwild/rockets';
+
+import { defineApiKeyAuth, apiKeyAuthResource } from './auth-api-key';
+import { UserEntity } from './auth/user.entity';
 
 RocketsModule.forRoot({
   auth: [
     defineFirebaseAuth({
-      forRoot: { firebaseApp: adminApp },
-      resources: [defineModuleResource({ entities: [UserEntity] })],
+      forRootAsync: { useFactory: resolveFirebaseAuthModuleOptions },
     }),
-    defineAuthFeature({
-      entities: [ApiKeyEntity],
-      adapter: ApiKeyAuthAdapter,
-      controllers: [ApiKeyController],
-    }),
-    JwtAdapter,
+    defineApiKeyAuth(),
   ],
   userMetadata: { entity, createDto, updateDto },
   repository,
+  resources: [
+    defineModuleResource({ entities: [UserEntity] }),
+    apiKeyAuthResource,
+  ],
 });
 ```
 
@@ -244,15 +258,15 @@ import { defineModuleResource } from '@bitwild/rockets-core';
 RocketsModule.forRoot({
   auth: defineFirebaseAuth({
     forRoot: { firebaseApp: admin.initializeApp({ credential: applicationDefault() }) },
-  // forRootAsync: { useFactory: resolveFirebaseOptions, inject: [ConfigService] },
-    resources: [defineModuleResource({ entities: [UserEntity] })],
+    // forRootAsync: { useFactory: resolveFirebaseOptions, inject: [ConfigService] },
   }),
   userMetadata,
   repository,
+  resources: [defineModuleResource({ entities: [UserEntity] })],
 });
 ```
 
-`RocketsModule` automatically marks integrations with non-empty `nestImports` as externally provided, so `FirebaseAuthAdapter` is not registered twice by core.
+When `forRoot()` is set, core imports the returned module and injects `FirebaseAuthAdapter` from it — the adapter is not double-registered.
 
 ### Mix two persistence adapters
 
@@ -260,11 +274,17 @@ Default adapter at the root; per-entity override inside `defineModuleResource`:
 
 ```typescript
 import { defineModuleResource } from '@bitwild/rockets';
-import { FirestoreRepositoryModule } from '@bitwild/rockets-repository-firestore';
+import { defineFirestoreRepository } from '@bitwild/rockets-repository-firestore';
+
+const firestoreRepository = defineFirestoreRepository();
 
 defineModuleResource({
   entities: [
-    { entity: AnalyticsEventEntity, repository: FirestoreRepositoryModule },
+    {
+      entity: AnalyticsEventEntity,
+      repository: firestoreRepository,
+      collection: 'analytics_events',
+    },
   ],
 });
 ```
@@ -288,7 +308,7 @@ Path B: `RocketsModule.forRoot({ auth: defineRocketsAuth(...), repository, resou
 
 | Option | Type | Required | Description |
 |---|---|---|---|
-| `auth` | `Type<AuthAdapterInterface> \| AuthFeatureBundle \| RocketsAuthIntegration` (or array of any) | yes | Single adapter, feature bundle, integration, or chain. |
+| `auth` | `AuthBootstrap \| ReadonlyArray<AuthBootstrap>` | yes | From `defineFirebaseAuth()`, `defineRocketsAuth()`, or app-local helpers. Pair entity rows on `resources[]`. |
 | `userMetadata` | `RocketsUserMetadataConfig` | yes when `/me` is enabled | `{ entity, createDto, updateDto, responseDto?, repository? }`. Used by `MeController` and the default metadata handlers. |
 | `repository` | `RepositoryModuleInterface \| RepositoryBootstrap` | optional | Default persistence adapter forwarded to core. Omit if the auth integration registers everything. |
 | `resources` | `ReadonlyArray<ResourceInput>` | optional | Bundles from `defineResource` / `defineModuleResource` / hand-built `RocketsResourceConfig`. |

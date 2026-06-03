@@ -13,7 +13,7 @@
 
 `@bitwild/rockets-auth` is what you reach for when your application owns its users. It is the alternative to `@bitwild/rockets` for the case where you do **not** delegate authentication to an external IdP.
 
-It composes the v8 line of `@concepta/nestjs-*` **identity motors** (`user`, `password`, `otp`, `role`, `invitation`, `federated`, `email`, `event`, plus `authentication`) into a single configuration shape and exposes them as a `RocketsAuthIntegration` for `RocketsModule.forRoot({ auth: ... })` from `@bitwild/rockets`. It does **not** replace repository/CRUD/hook motors — those still come from core + `@bitwild/rockets-repository` / `crud` / `common`.
+It composes the v8 line of `@concepta/nestjs-*` **identity motors** (`user`, `password`, `otp`, `role`, `invitation`, `federated`, `email`, `event`, plus `authentication`) into a single configuration shape and exposes them as an `AuthBootstrap` for `RocketsModule.forRoot({ auth: ... })` from `@bitwild/rockets`. It does **not** replace repository/CRUD/hook motors — those still come from core + `@bitwild/rockets-repository` / `crud` / `common`.
 
 ### What it gives you
 
@@ -59,7 +59,7 @@ Bring the upstream `@concepta/nestjs-*` packages and a repository adapter your a
 import { Module } from '@nestjs/common';
 import { EventModule } from '@concepta/nestjs-event';
 import { RocketsModule } from '@bitwild/rockets';
-import { defineRocketsAuth } from '@bitwild/rockets-auth';
+import { defineRocketsAuth, buildRocketsAuthResources } from '@bitwild/rockets-auth';
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 
 import {
@@ -79,7 +79,7 @@ const repo = defineTypeOrmRepository({
   dropSchema: true,
 });
 
-const rocketsAuth = defineRocketsAuth({
+const rocketsAuthInput = {
   persistence: {
     module: repo,
     entities: {
@@ -123,7 +123,13 @@ const rocketsAuth = defineRocketsAuth({
       otp: { assignment: 'userOtp' as const, category: 'auth-login', type: 'uuid' as const, expiresIn: '1h' },
     },
   }),
-});
+};
+
+const rocketsAuth = defineRocketsAuth(rocketsAuthInput);
+const rocketsAuthResources = buildRocketsAuthResources(
+  rocketsAuthInput.persistence,
+  rocketsAuthInput.invitationEntity,
+);
 
 @Module({
   imports: [
@@ -131,7 +137,7 @@ const rocketsAuth = defineRocketsAuth({
     RocketsModule.forRoot({
       auth: rocketsAuth,
       repository: repo,
-      resources: [/* your defineResource bundles */],
+      resources: [...rocketsAuthResources, /* your defineResource bundles */],
     }),
   ],
 })
@@ -268,7 +274,8 @@ The same pattern applies to `extras.auth.controller` (for `/me/password`), `extr
 
 | Symbol | Purpose |
 |---|---|
-| `defineRocketsAuth(input)` | Returns a `RocketsAuthIntegration` for `RocketsModule.forRoot({ auth })`. Compiles persistence into core resource rows and wires `RocketsAuthModule` internally. |
+| `defineRocketsAuth(input)` | Returns an `AuthBootstrap` for `RocketsModule.forRoot({ auth })`. Pair with `buildRocketsAuthResources()` on `resources` for auth persistence rows; `RocketsAuthModule` mounts via the bootstrap's adapter wiring. |
+| `buildRocketsAuthResources(persistence, invitationEntity?)` | Converts auth `persistence` config into `defineModuleResource` rows for `resources[]`. |
 | `RocketsAuthModule.forRoot(options)` / `forRootAsync(options)` | Direct registration. Use only when you need to mount the auth module outside the `RocketsModule` composition. |
 | `RocketsJwtAuthAdapter` | The default JWT adapter validated by the chain. Picked by `defineRocketsAuth` unless `authAdapter` is overridden. |
 

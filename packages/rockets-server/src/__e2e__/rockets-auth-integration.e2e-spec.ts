@@ -15,11 +15,10 @@ import {
   AUTH_ADAPTERS_TOKEN,
   defineModuleResource,
   extractBearerToken,
-  ROCKETS_AUTH_INTEGRATION_KIND,
   type AuthAdapterInterface,
   type AuthAttemptResult,
+  type AuthBootstrap,
   type AuthRequest,
-  type RocketsAuthIntegration,
   type UserMetadataCreatableInterface,
   type UserMetadataModelUpdatableInterface,
 } from '@bitwild/rockets-core';
@@ -89,21 +88,25 @@ class IntegrationMetadataUpdateDto
   @IsString() id!: string;
 }
 
-function buildRocketsAuthIntegration(): RocketsAuthIntegration {
+function buildAuthBootstrap(): AuthBootstrap {
   return {
-    kind: ROCKETS_AUTH_INTEGRATION_KIND,
-    authAdapter: IntegrationAuthAdapter,
-    nestImports: [],
-    resources: [
-      defineModuleResource({
-        entities: [IntegrationUserEntity],
-        controllers: [IntegrationAuthController],
-      }),
-    ],
+    adapter: IntegrationAuthAdapter,
+    forRoot: () => ({
+      module: class IntegrationAuthHostModule {},
+      providers: [IntegrationAuthAdapter],
+      exports: [IntegrationAuthAdapter],
+    }),
   };
 }
 
-describe('RocketsModule — auth: RocketsAuthIntegration (e2e)', () => {
+const integrationUserMetadata = {
+  entity: StubUserMetadataEntity,
+  createDto: IntegrationMetadataCreateDto,
+  updateDto: IntegrationMetadataUpdateDto,
+  repository: E2eFakeRepositoryModule,
+};
+
+describe('RocketsModule — auth: AuthBootstrap (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -117,15 +120,15 @@ describe('RocketsModule — auth: RocketsAuthIntegration (e2e)', () => {
           dropSchema: true,
         }),
         RocketsModule.forRoot({
-          auth: buildRocketsAuthIntegration(),
-          userMetadata: {
-            entity: StubUserMetadataEntity,
-            createDto: IntegrationMetadataCreateDto,
-            updateDto: IntegrationMetadataUpdateDto,
-            repository: E2eFakeRepositoryModule,
-          },
+          auth: buildAuthBootstrap(),
+          userMetadata: integrationUserMetadata,
           repository: TypeOrmRepositoryModule,
-          resources: [],
+          resources: [
+            defineModuleResource({
+              entities: [IntegrationUserEntity],
+              controllers: [IntegrationAuthController],
+            }),
+          ],
         }),
       ],
     }).compile();
@@ -138,7 +141,7 @@ describe('RocketsModule — auth: RocketsAuthIntegration (e2e)', () => {
     if (app) await app.close();
   });
 
-  it('resolves `AUTH_ADAPTERS_TOKEN` and contains the integration adapter instance', () => {
+  it('resolves AUTH_ADAPTERS_TOKEN and contains the integration adapter instance', () => {
     const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
     expect(adapters).toBeDefined();
     expect(adapters.some((a) => a instanceof IntegrationAuthAdapter)).toBe(
@@ -146,7 +149,7 @@ describe('RocketsModule — auth: RocketsAuthIntegration (e2e)', () => {
     );
   });
 
-  it('merges integration `resources` into the planner (repo probe returns 200)', async () => {
+  it('registers module-resource entities (repo probe returns 200)', async () => {
     const res = await request(app.getHttpServer())
       .get('/integration-auth/probe')
       .set('Authorization', 'Bearer valid-integration-token');
@@ -154,7 +157,7 @@ describe('RocketsModule — auth: RocketsAuthIntegration (e2e)', () => {
     expect(res.body).toEqual({ repoBound: true });
   });
 
-  it('mounts the controller from the merged module resource', async () => {
+  it('mounts the controller from the module resource', async () => {
     const res = await request(app.getHttpServer()).get(
       '/integration-auth/probe',
     );

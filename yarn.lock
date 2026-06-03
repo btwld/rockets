@@ -637,6 +637,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-repository-firestore@workspace:packages/rockets-repository-firestore"
   dependencies:
+    "@bitwild/rockets-common": "workspace:^"
+    "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-repository": "workspace:^"
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.5"
     "@nestjs/common": "npm:11.1.18"
@@ -17369,7 +17371,6 @@ __metadata:
   dependencies:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-access-control": "workspace:^"
-    "@bitwild/rockets-adapter-firebase": "workspace:^"
     "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-crud": "workspace:^"

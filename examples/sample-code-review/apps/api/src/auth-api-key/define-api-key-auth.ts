@@ -1,24 +1,24 @@
-import { defineAuthFeature } from '@bitwild/rockets-core';
-import type { AuthFeatureBundle } from '@bitwild/rockets-core';
+import { defineModuleResource } from '@bitwild/rockets-core';
+import type { AuthBootstrap } from '@bitwild/rockets-core';
 import { ApiKeyAuthAdapter } from './api-key.adapter';
 import { ApiKeyController } from './api-key.controller';
 import { ApiKeyEntity } from './api-key.entity';
 
+export const apiKeyAuthResource = defineModuleResource({
+  entities: [ApiKeyEntity],
+});
+
 /**
- * Auth feature bundle that enables API key authentication.
- *
- * Wire alongside your primary adapter in `RocketsModule.forRoot`:
- * ```ts
- * auth: [defineFirebaseAuth(), defineApiKeyAuth()]
- * ```
- *
- * Clients authenticate by sending the `X-API-Key` header.
- * Manage keys via the `/api-keys` endpoints.
+ * API key auth chain entry. Pair with `apiKeyAuthResource` in `resources[]`.
  */
-export function defineApiKeyAuth(): AuthFeatureBundle<ApiKeyAuthAdapter> {
-  return defineAuthFeature({
-    entities: [ApiKeyEntity],
+export function defineApiKeyAuth(): AuthBootstrap<ApiKeyAuthAdapter> {
+  return {
     adapter: ApiKeyAuthAdapter,
-    controllers: [ApiKeyController],
-  });
+    forRoot: () => ({
+      module: class ApiKeyAuthHostModule {},
+      providers: [ApiKeyAuthAdapter],
+      controllers: [ApiKeyController],
+      exports: [ApiKeyAuthAdapter],
+    }),
+  };
 }

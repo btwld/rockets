@@ -33,6 +33,7 @@ import { USER_METADATA_MODULE_ENTITY_KEY } from '../rockets-core.constants';
 import { defineModuleResource } from '../infrastructure/resource/define-module-resource';
 import { UpsertUserMetadataCommand } from '../application/commands/impl/upsert-user-metadata.command';
 import { GetUserMetadataQuery } from '../application/queries/impl/get-user-metadata.query';
+import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
@@ -168,7 +169,7 @@ describe('RocketsCoreModule — top-level repository + module resources (e2e)', 
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
-          auth: MockAuthAdapter,
+          auth: createStubAuthBootstrap(MockAuthAdapter),
           providers: [MockAuthAdapter],
           userMetadata: coreE2eUserMetadataConfig,
           repository: FakeRepositoryModule,
@@ -198,7 +199,7 @@ describe('RocketsCoreModule — top-level repository + module resources (e2e)', 
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
-          auth: MockAuthAdapter,
+          auth: createStubAuthBootstrap(MockAuthAdapter),
           providers: [MockAuthAdapter],
           userMetadata: coreE2eUserMetadataConfig,
           repository: FakeRepositoryModule,
@@ -230,7 +231,7 @@ describe('RocketsCoreModule — top-level repository + module resources (e2e)', 
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
-          auth: MockAuthAdapter,
+          auth: createStubAuthBootstrap(MockAuthAdapter),
           providers: [MockAuthAdapter],
           userMetadata: coreE2eUserMetadataConfig,
           repository: FakeRepositoryModule,

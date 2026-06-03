@@ -24,6 +24,7 @@ import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token'
 import type { RepositoryBootstrap } from '../domain/interfaces/repository-bootstrap.interface';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { defineModuleResource } from '../infrastructure/resource/define-module-resource';
+import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
 
 // ────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -167,7 +168,7 @@ describe('RocketsCoreModule — RepositoryBootstrap.forRoot wiring (e2e)', () =>
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
-          auth: StubAuthAdapter,
+          auth: createStubAuthBootstrap(StubAuthAdapter),
           repository: fakeBootstrap,
           userMetadata: metadataConfig,
         }),
@@ -191,7 +192,7 @@ describe('RocketsCoreModule — RepositoryBootstrap.forRoot wiring (e2e)', () =>
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
-          auth: StubAuthAdapter,
+          auth: createStubAuthBootstrap(StubAuthAdapter),
           repository: fakeBootstrap,
           userMetadata: metadataConfig,
           resources: [widgetFeature, gadgetFeature],
@@ -230,7 +231,7 @@ describe('RocketsCoreModule — RepositoryBootstrap.forRoot wiring (e2e)', () =>
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
-          auth: StubAuthAdapter,
+          auth: createStubAuthBootstrap(StubAuthAdapter),
           repository: fakeBootstrap,
           userMetadata: metadataConfig,
           resources: [widgetFeature, analyticsFeature],
@@ -250,13 +251,66 @@ describe('RocketsCoreModule — RepositoryBootstrap.forRoot wiring (e2e)', () =>
     expect(entitiesArg).toHaveLength(2);
   });
 
+  it('calls `forRoot` on a per-entity RepositoryBootstrap override (mixed-store Firestore)', async () => {
+    const { fakeBootstrap, forRoot, metadataConfig } = createFixture();
+
+    @Global()
+    @Module({})
+    class AltRootModule {}
+
+    const altForRoot = jest.fn(
+      (_entities: ReadonlyArray<Type<PlainLiteralObject>>): DynamicModule => ({
+        module: AltRootModule,
+        global: true,
+      }),
+    );
+
+    const firestoreBootstrap: RepositoryBootstrap = {
+      name: 'firestore-bootstrap',
+      forFeature: jest.fn(
+        (entities: RepositoryProviderOptions[]): DynamicRepositoryModule =>
+          buildAdapterDynamicModule(entities, 'FirestoreBootstrap'),
+      ),
+      forRoot: altForRoot,
+    };
+
+    const widgetFeature = defineModuleResource({ entities: [WidgetEntity] });
+    const analyticsFeature = defineModuleResource({
+      entities: [
+        {
+          key: 'analytics',
+          entity: AnalyticsEntity,
+          repository: firestoreBootstrap,
+        },
+      ],
+    });
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        RocketsCoreModule.forRoot({
+          auth: createStubAuthBootstrap(StubAuthAdapter),
+          repository: fakeBootstrap,
+          userMetadata: metadataConfig,
+          resources: [widgetFeature, analyticsFeature],
+        }),
+      ],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    await app.init();
+    await app.close();
+
+    expect(forRoot).toHaveBeenCalledTimes(1);
+    expect(altForRoot).toHaveBeenCalledTimes(1);
+    expect(altForRoot).toHaveBeenCalledWith([AnalyticsEntity]);
+  });
+
   it('does NOT call `forRoot` when the root adapter is a plain `RepositoryModuleInterface` (no bootstrap method)', async () => {
     const { altAdapter, altForFeature, metadataConfig } = createFixture();
 
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
-          auth: StubAuthAdapter,
+          auth: createStubAuthBootstrap(StubAuthAdapter),
           repository: altAdapter,
           userMetadata: metadataConfig,
         }),

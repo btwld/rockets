@@ -19,6 +19,7 @@ import {
   UpsertUserMetadataCommand,
 } from '@bitwild/rockets-core';
 import { RocketsModule } from './rockets.module';
+import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class OverrideMetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -79,7 +80,7 @@ describe('RocketsModule user metadata handler overrides (e2e)', () => {
 
   const baseOptions: RocketsOptions = {
     settings: {},
-    auth: ServerAuthAdapterFixture,
+    auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
     userMetadata: {
       entity: UserMetadataEntityFixture,
       createDto: OverrideMetadataCreateDto,

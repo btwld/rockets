@@ -13,6 +13,7 @@ import type { RocketsOptions } from '../rockets.module-definition';
 import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { RocketsModule } from '../rockets.module';
 
+import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 import {
   BaseUserMetadataCreateDto,
   BaseUserMetadataUpdateDto,
@@ -106,7 +107,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
 
   const baseOptions: RocketsOptions = {
     settings: {},
-    auth: ServerAuthAdapterFixture,
+    auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
     userMetadata: {
       entity: StubUserMetadataEntity,
       createDto: TestUserMetadataCreateDto,
@@ -196,7 +197,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
           UserE2eControllersModule,
           RocketsModule.forRoot({
             settings: {},
-            auth: ServerAuthAdapterFixture,
+            auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
             userMetadata: {
               entity: StubUserMetadataEntity,
               createDto: TestUserMetadataCreateDto,

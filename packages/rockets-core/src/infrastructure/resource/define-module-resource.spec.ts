@@ -200,7 +200,7 @@ describe('buildAppRegistrationPlan with defineModuleResource', () => {
     });
 
     expect(() => buildAppRegistrationPlan({ resources: [bundle] })).toThrow(
-      /has no adapter/,
+      /no persistence adapter/i,
     );
   });
 

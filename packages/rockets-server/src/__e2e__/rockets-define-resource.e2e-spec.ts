@@ -29,6 +29,7 @@ import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metad
 import { defineResource } from '@bitwild/rockets-core';
 import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
+import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 // ────────────────────────────────────────────────────────────────────
 // Test Entity — a stand-alone "gadget" resource for this suite.
@@ -128,7 +129,7 @@ describe('RocketsModule — defineResource() bundle (e2e)', () => {
           dropSchema: true,
         }),
         RocketsModule.forRoot({
-          auth: TestAuthAdapter,
+          auth: e2eAuthBootstrap(TestAuthAdapter),
           userMetadata: {
             entity: StubUserMetadataEntity,
             createDto: TestMetadataCreateDto,

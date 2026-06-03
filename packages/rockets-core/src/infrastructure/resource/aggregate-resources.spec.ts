@@ -112,6 +112,7 @@ describe('buildAppRegistrationPlan', () => {
       });
       const result = buildAppRegistrationPlan({
         resources: [pet],
+        repository: TypeOrmRepositoryModule,
       });
       expect(result.crudResources).toHaveLength(1);
       expect(result.crudResources[0]).toBe(pet.core);
@@ -169,6 +170,7 @@ describe('buildAppRegistrationPlan', () => {
       };
       const result = buildAppRegistrationPlan({
         resources: [pet, raw],
+        repository: TypeOrmRepositoryModule,
       });
 
       expect(result.crudResources[0]).toBe(pet.core);
@@ -330,7 +332,10 @@ describe('buildAppRegistrationPlan', () => {
         relations: [relation(PetEntity, VaccinationEntity, 'vaccinations')],
       });
       expect(() =>
-        buildAppRegistrationPlan({ resources: [pet, vac] }),
+        buildAppRegistrationPlan({
+          resources: [pet, vac],
+          repository: TypeOrmRepositoryModule,
+        }),
       ).not.toThrow();
     });
 
@@ -373,7 +378,10 @@ describe('buildAppRegistrationPlan', () => {
         ],
       });
       expect(() =>
-        buildAppRegistrationPlan({ resources: [pet, vac] }),
+        buildAppRegistrationPlan({
+          resources: [pet, vac],
+          repository: TypeOrmRepositoryModule,
+        }),
       ).not.toThrow();
     });
 
@@ -386,7 +394,10 @@ describe('buildAppRegistrationPlan', () => {
         relations: [relation(PetEntity, PetEntity, 'parent')],
       });
       expect(() =>
-        buildAppRegistrationPlan({ resources: [pet] }),
+        buildAppRegistrationPlan({
+          resources: [pet],
+          repository: TypeOrmRepositoryModule,
+        }),
       ).not.toThrow();
     });
 
@@ -398,7 +409,12 @@ describe('buildAppRegistrationPlan', () => {
         tags: ['pet'],
         relations: [relation(PetEntity, AuditEntity, 'history')],
       });
-      expect(() => buildAppRegistrationPlan({ resources: [pet] })).toThrow(
+      expect(() =>
+        buildAppRegistrationPlan({
+          resources: [pet],
+          repository: TypeOrmRepositoryModule,
+        }),
+      ).toThrow(
         /relation "history".*targets entity `AuditEntity` which is not registered/,
       );
     });
@@ -777,7 +793,7 @@ describe('buildAppRegistrationPlan', () => {
           resources: [standaloneFeature],
           // no `repository`, no per-entity `repository`
         }),
-      ).toThrow(/no adapter/i);
+      ).toThrow(/no persistence adapter/i);
     });
   });
 
@@ -846,7 +862,7 @@ describe('buildAppRegistrationPlan', () => {
       ]);
     });
 
-    it('skips registration silently when CRUD has no `persistence.module` and no root `repository` is supplied (upstream-registered case)', () => {
+    it('throws when CRUD has no `persistence.module` and no root `repository` is supplied', () => {
       const pet = defineResource({
         key: 'pet',
         entity: PetEntity,
@@ -854,18 +870,14 @@ describe('buildAppRegistrationPlan', () => {
         tags: ['pet'],
       });
 
-      const plan = buildAppRegistrationPlan({
-        resources: [pet],
-        // no repository — assume an upstream module owns PetEntity
-      });
-
-      expect(plan.entityRegistrations).toEqual([]);
-      // entity index is still fed (so a relation pointing at PetEntity
-      // would resolve), but no `RepositoryModule.forFeature(...)` row is
-      // emitted.
+      expect(() =>
+        buildAppRegistrationPlan({
+          resources: [pet],
+        }),
+      ).toThrow(/no persistence adapter/i);
     });
 
-    it('a CRUD bundle still indexes its entity for relation validation even when no adapter is registered', () => {
+    it('validates relations when root `repository` is supplied', () => {
       const pet = defineResource({
         key: 'pet',
         entity: PetEntity,
@@ -880,10 +892,11 @@ describe('buildAppRegistrationPlan', () => {
         relations: [relation(VaccinationEntity, PetEntity, 'pet' as never)],
       });
 
-      // No `repository` provided — the aggregator skips repository rows
-      // but still resolves the relation target via the entity index.
       expect(() =>
-        buildAppRegistrationPlan({ resources: [pet, vac] }),
+        buildAppRegistrationPlan({
+          resources: [pet, vac],
+          repository: TypeOrmRepositoryModule,
+        }),
       ).not.toThrow();
     });
   });

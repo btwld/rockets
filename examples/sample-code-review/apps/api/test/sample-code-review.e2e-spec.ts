@@ -1,5 +1,4 @@
 process.env.FIREBASE_USE_FAKE = 'true';
-process.env.FIREBASE_FIRESTORE_USE_FAKE = 'true';
 process.env.GITHUB_USE_FAKE = 'true';
 process.env.GITHUB_CLIENT_ID = 'e2e-client-id';
 process.env.GITHUB_CLIENT_SECRET = 'e2e-client-secret';

@@ -45,7 +45,7 @@ yarn add @bitwild/rockets-adapter-firebase firebase-admin
 
 ### Wire it into a Rockets app
 
-Use the `defineFirebaseAuth()` helper. It returns a `RocketsAuthIntegration` that `RocketsModule.forRoot({ auth })` consumes directly — `RocketsModule` treats every integration as externally provided, so `FirebaseAuthAdapter` is not double-registered.
+Use the `defineFirebaseAuth()` helper. It returns an `AuthBootstrap` that `RocketsModule.forRoot({ auth })` consumes directly. When `forRoot()` / `forRootAsync()` is set, core imports `FirebaseAuthModule` and injects `FirebaseAuthAdapter` from that module — the adapter is not double-registered.
 
 ```typescript
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
@@ -62,12 +62,10 @@ const firebaseApp = initializeApp({ credential: applicationDefault() });
     RocketsModule.forRoot({
       auth: defineFirebaseAuth({
         forRoot: { firebaseApp },
-        // Optional: keep a local mirror of the Firebase user so app features
-        // can inject a RepositoryInterface<UserEntity>.
-        resources: [defineModuleResource({ entities: [UserEntity] })],
       }),
       userMetadata: { /* entity, createDto, updateDto */ },
       repository,
+      resources: [defineModuleResource({ entities: [UserEntity] })],
     }),
   ],
 })
@@ -172,7 +170,7 @@ export class ProfileController {
 
 | Member | Purpose |
 |---|---|
-| `defineFirebaseAuth(input)` | Returns a `RocketsAuthIntegration` ready to pass to `RocketsModule.forRoot({ auth })`. Accepts `{ forRoot }` for sync or `{ forRootAsync }` for async wiring. Optional `resources` are forwarded to the planner. |
+| `defineFirebaseAuth(input)` | Returns an `AuthBootstrap` for `RocketsModule.forRoot({ auth })`. Accepts `{ forRoot }` for sync or `{ forRootAsync }` for async wiring. Auth-owned entities belong on app `resources[]`, not on this helper. |
 | `DefineFirebaseAuthInput` | Discriminated input type — pass exactly one of `forRoot` / `forRootAsync`. |
 
 ### Module

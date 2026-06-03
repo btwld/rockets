@@ -48,6 +48,7 @@ import { USER_METADATA_MODULE_ENTITY_KEY } from '../rockets-core.constants';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineResource } from '../infrastructure/resource/define-resource';
 import { defineModuleResource } from '../infrastructure/resource/define-module-resource';
+import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
 import {
   EntityHook,
   type EntityHookContext,
@@ -241,7 +242,7 @@ describe('@EntityHook({ entity }) — runtime binding (e2e)', () => {
         }),
         MetaModule,
         RocketsCoreModule.forRoot({
-          auth: StubAuthAdapter,
+          auth: createStubAuthBootstrap(StubAuthAdapter),
           providers: [StubAuthAdapter],
           repository: TypeOrmRepositoryModule,
           resources: [widgetResource, gadgetResource, widgetLogFeature],

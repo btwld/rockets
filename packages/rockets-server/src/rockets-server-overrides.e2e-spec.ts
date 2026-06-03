@@ -11,6 +11,7 @@ import {
   type UserMetadataModelUpdatableInterface,
 } from './domain/interfaces/user-metadata.interface';
 import { RocketsModule } from './rockets.module';
+import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
 class MinimalMetadataCreateDto implements UserMetadataCreatableInterface {
   @IsNotEmpty()
@@ -30,7 +31,7 @@ class MinimalMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
 
 const baseOptions: RocketsOptions = {
   settings: {},
-  auth: ServerAuthAdapterFixture,
+  auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
   userMetadata: {
     entity: StubUserMetadataEntity,
     createDto: MinimalMetadataCreateDto,

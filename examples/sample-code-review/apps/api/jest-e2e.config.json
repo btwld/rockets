@@ -8,5 +8,8 @@
   "maxWorkers": 1,
   "transform": {
     "^.+\\.ts$": ["ts-jest", { "tsconfig": "<rootDir>/tsconfig.json" }]
+  },
+  "moduleNameMapper": {
+    "^../repository/code-review-reports\\.persistence$": "<rootDir>/test/stubs/code-review-reports.persistence.stub.ts"
   }
 }

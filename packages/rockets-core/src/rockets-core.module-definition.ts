@@ -16,7 +16,7 @@ import { RepositoryModule } from '@bitwild/rockets-repository';
 import { CrudModule, CrudContextOverlay } from '@bitwild/rockets-crud';
 import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
 import type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';
-import { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.interface';
+import { collectBootstrapForRootImports } from './infrastructure/repository/collect-bootstrap-for-root-imports';
 import { SafeCrudContextInterceptor } from './infrastructure/interceptors/safe-crud-context.interceptor';
 import {
   buildAppRegistrationPlan,
@@ -26,6 +26,7 @@ import {
   AUTH_ADAPTERS_TOKEN,
   ROCKETS_CORE_SETTINGS_TOKEN,
 } from './rockets-core.constants';
+import type { AuthBootstrap } from './domain/interfaces/auth-bootstrap.interface';
 import type { AuthAdapterInterface } from './domain/interfaces/auth-adapter.interface';
 import { RAW_OPTIONS_TOKEN } from './rockets-core.tokens';
 import { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';
@@ -116,17 +117,10 @@ function createCoreImports(
     RepositoryModule.forRoot({}),
   ];
 
-  // Bootstrap-aware adapter: when the root `repository` knows how to
-  // create its own connection (e.g. wraps `TypeOrmModule.forRoot`), pull
-  // every entity it owns from the registration plan and forward them.
-  // Per-entity adapter overrides on bundles are filtered out, so a
-  // mixed-store app only bootstraps the entities that actually live
-  // under the root adapter.
-  if (isRepositoryBootstrap(extras.repository)) {
-    const rootEntities = plan.entityRegistrations
-      .filter((entry) => entry.module === extras.repository)
-      .flatMap((entry) => entry.entities.map((row) => row.entity));
-    imports.push(extras.repository.forRoot(rootEntities));
+  // Bootstrap-aware adapters: call `forRoot` once per distinct bootstrap
+  // that owns entities in the plan (root SQL + per-entity Firestore, etc.).
+  for (const bootstrapImport of collectBootstrapForRootImports(plan)) {
+    imports.push(bootstrapImport);
   }
 
   // Single registration pipeline: every dynamic-repository row (from
@@ -165,6 +159,12 @@ function createCoreImports(
     }),
   );
 
+  for (const bootstrap of normalizeAuthBootstraps(extras.auth)) {
+    if (bootstrap.forRoot !== undefined) {
+      imports.push(bootstrap.forRoot());
+    }
+  }
+
   return imports;
 }
 
@@ -190,14 +190,9 @@ function createCoreProviders(options: {
     Reflector,
   ];
 
-  const adapterChain = normalizeAuthChain(options.extras?.auth);
-  if (adapterChain.length > 0) {
-    providers.push(
-      ...buildAuthChainProviders(
-        adapterChain,
-        options.extras?.authExternallyProvided,
-      ),
-    );
+  const authBootstraps = normalizeAuthBootstraps(options.extras?.auth);
+  if (authBootstraps.length > 0) {
+    providers.push(...buildAuthChainProviders(authBootstraps));
   }
 
   return [
@@ -293,76 +288,29 @@ function extractResourceProviders(
   return providers;
 }
 
-/**
- * Coerce `extras.auth` into a flat, deduplicated chain. Accepts a
- * bare `Type` (single-adapter wiring) or an array.
- */
-function normalizeAuthChain(
+function normalizeAuthBootstraps(
   input: RocketsCoreOptionsExtrasInterface['auth'] | undefined,
-): Array<Type<AuthAdapterInterface>> {
+): ReadonlyArray<AuthBootstrap> {
   if (input === undefined) return [];
-  const list = Array.isArray(input) ? input : [input];
-  const seen = new Set<Type<AuthAdapterInterface>>();
-  const chain: Array<Type<AuthAdapterInterface>> = [];
-  for (const adapter of list) {
-    if (seen.has(adapter)) continue;
-    seen.add(adapter);
-    chain.push(adapter);
-  }
-  return chain;
+  const entries = Array.isArray(input) ? input : [input];
+  return entries;
 }
 
 /**
- * Spread `extras.authExternallyProvided` into a per-adapter boolean
- * array of length `chainLength`. Accepts:
- *  - `undefined` / `false` → all false.
- *  - `true`                → all true.
- *  - `boolean[]`           → padded with `false` (extra entries ignored).
- */
-function normalizeExternallyProvidedFlags(
-  input: RocketsCoreOptionsExtrasInterface['authExternallyProvided'],
-  chainLength: number,
-): boolean[] {
-  if (input === undefined) return new Array(chainLength).fill(false);
-  if (typeof input === 'boolean') return new Array(chainLength).fill(input);
-  return Array.from({ length: chainLength }, (_, i) => input[i] === true);
-}
-
-/**
- * Build the Nest providers for an auth adapter chain:
- *  - Auto-registers each adapter class unless it's externally provided.
- *  - Registers `AUTH_ADAPTERS_TOKEN` as the full ordered chain.
+ * Wire `AUTH_ADAPTERS_TOKEN` — adapter instances must be exported from
+ * modules core imported (`forRoot`) or reachable globally (built-in auth).
  */
 function buildAuthChainProviders(
-  chain: Array<Type<AuthAdapterInterface>>,
-  externallyProvidedInput: RocketsCoreOptionsExtrasInterface['authExternallyProvided'],
+  bootstraps: ReadonlyArray<AuthBootstrap>,
 ): Provider[] {
-  const externallyProvided = normalizeExternallyProvidedFlags(
-    externallyProvidedInput,
-    chain.length,
-  );
-
-  const providers: Provider[] = [];
-
-  // Auto-register each adapter class as a Nest provider, unless the
-  // caller signalled it is provided elsewhere (bundle resource module
-  // or global module from `RocketsAuthIntegration.nestImports`).
-  // Re-providing those here would create a second instance in core's
-  // scope, which can't see deps that live in the external module.
-  chain.forEach((cls, index) => {
-    if (!externallyProvided[index]) {
-      providers.push(cls);
-    }
-  });
-
-  // Public token: the chain itself, iterated by `AuthServerGuard`.
-  providers.push({
-    provide: AUTH_ADAPTERS_TOKEN,
-    useFactory: collectAdapters,
-    inject: [...chain],
-  });
-
-  return providers;
+  const chain = bootstraps.map((bootstrap) => bootstrap.adapter);
+  return [
+    {
+      provide: AUTH_ADAPTERS_TOKEN,
+      useFactory: collectAdapters,
+      inject: [...chain],
+    },
+  ];
 }
 
 /**
