@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { DeepPartial } from '@concepta/nestjs-common';
+import type { DeepPartial } from '@bitwild/rockets-app';
 import {
   isWhereCondition,
   RepositoryAdapter,
@@ -13,7 +13,7 @@ import {
   type RepositoryUpdateOptions,
   type RepositoryUpsertOptions,
   type WhereClause,
-} from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
 import type { PlainLiteralObject } from '@nestjs/common';
 
 import {
@@ -137,7 +137,7 @@ export class FirestoreRepository<
   protected async doReplace(
     entity: Entity,
     data: DeepPartial<Entity>,
-    options?: RepositoryUpdateOptions,
+    _options?: RepositoryUpdateOptions,
   ): Promise<Entity> {
     const id = this.resolveId(entity);
     const stored = this.toStore({ ...data, id });

@@ -1,6 +1,7 @@
 import * as sqlite3 from 'sqlite3';
 import { PlainLiteralObject } from '@nestjs/common';
-import { DeepPartial, ModelQueryException } from '@concepta/nestjs-common';
+import { DeepPartial } from '@bitwild/rockets-app';
+import { ModelQueryException } from '@concepta/nestjs-common';
 
 /**
  * Local definition of repository internals for SQLite adapter.

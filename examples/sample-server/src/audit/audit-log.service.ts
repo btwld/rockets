@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AppContextInterface } from '@concepta/nestjs-common';
+import type { AppContextInterface } from '@bitwild/rockets-app';
 import {
   InjectDynamicRepository,
   RepositoryInterface,

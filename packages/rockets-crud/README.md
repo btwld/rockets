@@ -1,215 +1,947 @@
-# @bitwild/rockets-crud
+# @concepta/rockets-crud
 
-[![NPM](https://img.shields.io/npm/v/@bitwild/rockets-crud)](https://www.npmjs.com/package/@bitwild/rockets-crud)
-[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+Decorator-driven CRUD module for NestJS. Generates REST endpoints from
+configuration, with per-method option customization and three controller
+build modes: fully generated, pre-decorated, and hybrid.
 
-> Generic CRUD module + CQRS handlers — Rockets facade over `@concepta/nestjs-crud` (the CRUD motor `defineResource()` wires).
+## Project
 
-**Status:** stable.
+[![NPM Latest](https://img.shields.io/npm/v/@concepta/rockets-crud)](https://www.npmjs.com/package/@concepta/rockets-crud)
+[![NPM Downloads](https://img.shields.io/npm/dw/@concepta/rockets-crud)](https://www.npmjs.com/package/@concepta/rockets-crud)
+[![GH Last Commit](https://img.shields.io/github/last-commit/conceptadev/rockets?logo=github)](https://github.com/conceptadev/rockets)
+[![GH Contrib](https://img.shields.io/github/contributors/conceptadev/rockets?logo=github)](https://github.com/conceptadev/rockets/graphs/contributors)
+[![NestJS Dep](https://img.shields.io/github/package-json/dependency-version/conceptadev/rockets/@nestjs/common?label=NestJS&logo=nestjs&filename=packages%2Fnestjs-core%2Fpackage.json)](https://www.npmjs.com/package/@nestjs/common)
 
----
+## Table of Contents
 
-## 1. Introduction
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Module Registration](#module-registration)
+- [Architecture Overview](#architecture-overview)
+- [Controller Build Modes](#controller-build-modes)
+- [Operation Decorators](#operation-decorators)
+- [Route Option Decorators](#route-option-decorators)
+- [Query String Parameters](#query-string-parameters)
+- [Paginated Response](#paginated-response)
+- [Serialization and Validation](#serialization-and-validation)
+- [Resolvers](#resolvers)
+- [CQRS Integration](#cqrs-integration)
+- [Specifications and Hooks](#specifications-and-hooks)
+- [Exceptions](#exceptions)
+- [Entry Points](#entry-points)
 
-`@bitwild/rockets-crud` is the Rockets import path for the **CRUD motor**: `@concepta/nestjs-crud@8.0.0-alpha.5`, plus one local decorator and a handful of handler base classes upstream does not surface on its public barrel yet.
+## Installation
 
-It owns the CRUD primitive: `CrudModule`, `CrudAdapter`, the `Crud*` operation decorators, the `Crud*Command` / `Crud*Query` CQRS pairs and their default handlers, and `ConfigurableCrudBuilder` for hand-rolled controllers.
-
-You usually don't import from this package directly. `@bitwild/rockets-core` consumes it via `defineResource()` and re-exports the few symbols app code needs (`Operation`, `CrudListQuery`, etc.). Reach for `@bitwild/rockets-crud` when:
-
-- You replace a default operation handler (e.g. custom `Create` logic for one entity).
-- You compose your own CRUD controller with `ConfigurableCrudBuilder` instead of letting `defineResource` generate it.
-- You implement a `CrudAdapter<T>` (rare — built-ins cover TypeORM / Firestore).
-
-### When NOT to use this package
-
-- You want auto-generated REST CRUD with one bundle definition → use `defineResource()` from `@bitwild/rockets-core` (or transitively from `@bitwild/rockets` / `@bitwild/rockets-auth`).
-- You don't need CRUD semantics at all — plain Nest controllers, no CrudModule, no overhead.
-
----
-
-## 2. Get Started
-
-### Install
-
-```bash
-yarn add @bitwild/rockets-crud @bitwild/rockets-repository @bitwild/rockets-common \
-  @nestjs/common @nestjs/cqrs class-transformer class-validator reflect-metadata
+```sh
+yarn add @concepta/rockets-crud
 ```
 
-### Use a default CRUD handler
+### Dependencies
 
-Most apps never instantiate handlers manually — they pass them into a `defineResource` call:
+| Package | Notes |
+| --- | --- |
+| `@concepta/rockets-app` | Core interfaces and utilities |
+| `@concepta/rockets-repository` | Repository abstraction layer |
+| `@concepta/rockets-app` | Hook system integration |
+| `@nestjs/common` | NestJS core |
+| `@nestjs/core` | Module reference and reflection |
+| `@nestjs/swagger` | OpenAPI decorator support |
 
-```typescript
-import { Operation } from '@bitwild/rockets-crud';
-import {
-  defineResource,
-  // these are re-exported from @bitwild/rockets-crud
-  CrudListQuery,
-  CrudCreateCommand,
-  CrudListHandler,
-  CrudCreateHandler,
-} from '@bitwild/rockets-core';
+### Peer Dependencies
 
-defineResource({
-  entity: PetEntity,
+| Package | Required | Notes |
+| --- | --- | --- |
+| `class-transformer` | Yes | Response serialization and DTO transformation |
+| `class-validator` | Yes | Request body validation |
+| `rxjs` | Yes | Interceptor pipeline |
+| `@concepta/rockets-repository-typeorm` | No | TypeORM repository driver |
+| `@nestjs/cqrs` | No | Only when using `CrudCqrsResolver` |
+
+## Quick Start
+
+Define an entity, DTOs, and register a fully generated CRUD endpoint.
+
+### Entity
+
+```ts
+import { Entity, PrimaryGeneratedColumn, Column, DeleteDateColumn } from 'typeorm';
+
+@Entity()
+export class PhotoEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  name!: string;
+
+  @Column()
+  description!: string;
+
+  @Column({ default: 0 })
+  views!: number;
+
+  @DeleteDateColumn({ nullable: true })
+  deletedAt!: Date | null;
+}
+```
+
+### DTOs
+
+```ts
+import { Exclude, Expose, Type } from 'class-transformer';
+import { IsString, IsUUID, IsNumber, IsOptional } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { CrudResponsePaginatedDto } from '@concepta/rockets-crud';
+
+@Exclude()
+export class PhotoDto {
+  @ApiProperty() @Expose() @IsUUID()
+  id: string = '';
+
+  @ApiProperty() @Expose() @IsString()
+  name: string = '';
+
+  @ApiProperty() @Expose() @IsString()
+  description: string = '';
+
+  @ApiProperty() @Expose() @IsNumber()
+  views: number = 0;
+}
+
+@Exclude()
+export class PhotoCreateDto {
+  @ApiProperty() @Expose() @IsString()
+  name: string = '';
+
+  @ApiProperty() @Expose() @IsString() @IsOptional()
+  description: string = '';
+}
+
+@Exclude()
+export class PhotoPaginatedDto extends CrudResponsePaginatedDto<PhotoDto> {
+  @ApiProperty({ type: [PhotoDto], isArray: true })
+  @Expose()
+  @Type(() => PhotoDto)
+  data: PhotoDto[] = [];
+}
+```
+
+### Feature Module
+
+```ts
+import { Module } from '@nestjs/common';
+import { Operation } from '@concepta/rockets-app';
+import { RepositoryModule } from '@concepta/rockets-repository';
+import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
+import { CrudModule } from '@concepta/rockets-crud';
+
+@Module({
+  imports: [
+    RepositoryModule.forFeature({
+      module: TypeOrmRepositoryModule,
+      entities: [{ key: 'photo', entity: PhotoEntity }],
+    }),
+    CrudModule.forFeature<PhotoEntity>({
+      crud: {
+        controller: {
+          path: 'photos',
+          entity: 'photo',
+          request: { body: PhotoDto },
+          response: {
+            resource: PhotoDto,
+            paginated: PhotoPaginatedDto,
+          },
+        },
+        operations: [
+          { operation: Operation.List },
+          { operation: Operation.Read },
+          { operation: Operation.Create, request: { body: PhotoCreateDto } },
+          { operation: Operation.Update },
+          { operation: Operation.Delete },
+        ],
+      },
+    }),
+  ],
+})
+export class PhotoModule {}
+```
+
+### App Module
+
+```ts
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { RepositoryModule } from '@concepta/rockets-repository';
+import { CrudModule } from '@concepta/rockets-crud';
+
+@Module({
+  imports: [
+    TypeOrmModule.forRoot({ /* ... */ }),
+    RepositoryModule.forRoot({}),
+    CrudModule.forRoot({}),
+    PhotoModule,
+  ],
+})
+export class AppModule {}
+```
+
+### Generated Endpoints
+
+| Method | Path | Operation |
+| --- | --- | --- |
+| GET | `/photos` | List (paginated) |
+| GET | `/photos/:id` | Read |
+| POST | `/photos` | Create |
+| PATCH | `/photos/:id` | Update |
+| DELETE | `/photos/:id` | Delete |
+
+## Module Registration
+
+### forRoot / forRootAsync
+
+Global registration. Required once per application.
+
+```ts
+CrudModule.forRoot({})
+
+// Async with factory
+CrudModule.forRootAsync({
+  useFactory: async () => ({}),
+})
+```
+
+### forFeature
+
+Per-entity registration. Generates a controller, adapter provider, and
+(optionally) CQRS query/command handlers from the configuration object.
+
+```ts
+CrudModule.forFeature<PhotoEntity>({
+  crud: {
+    controller: {
+      path: 'photos',
+      entity: 'photo',
+      request: { body: PhotoDto },
+      response: { resource: PhotoDto, paginated: PhotoPaginatedDto },
+    },
+    operations: [
+      { operation: Operation.List },
+      { operation: Operation.Read },
+      { operation: Operation.Create, request: { body: PhotoCreateDto } },
+      { operation: Operation.Update, request: { body: PhotoUpdateDto } },
+      { operation: Operation.Delete },
+      { operation: Operation.SoftDelete, path: 'soft/:id' },
+      { operation: Operation.Restore, path: 'restore/:id' },
+    ],
+  },
+})
+```
+
+### register / registerAsync
+
+Non-global variants of `forRoot`. Identical options, scoped to the importing
+module.
+
+## Architecture Overview
+
+```text
+HTTP Request
+  |
+Controller (generated or hand-written)
+  |  @CrudController + @CrudList / @CrudCreate / ...
+  |
+CrudContextOverlay
+  |  Parses params, query string into CrudContextInterface
+  |
+CrudResolver (dispatches operation)
+  |
+  +-- CrudAdapterResolver  (direct adapter call — default)
+  +-- CrudOperationResolver (handler call, no CQRS bus)
+  +-- CrudCqrsResolver      (QueryBus / CommandBus)
+  |
+CrudAdapter
+  |  Wraps RepositoryInterface for CRUD semantics
+  |
+RepositoryAdapter (@concepta/rockets-repository)
+  |
+Database Driver (TypeORM, etc.)
+```
+
+- **Controller** — Decorated class with operation methods. Can be fully
+  generated, hand-written, or a hybrid of both.
+- **CrudContextOverlay** — Parses the HTTP request into a
+  `CrudContextInterface` (entity name, route params, query string, options)
+  and defines it as an overlay on the request context.
+- **Resolver** — Dispatches the operation to the adapter directly, through
+  a handler, or through the CQRS bus.
+- **CrudAdapter** — Wraps a `RepositoryInterface` and adds pagination,
+  field filtering, where-clause building, and entity preparation.
+
+### Operation-to-Repository Mapping
+
+| Operation | Adapter Method | Repository Method |
+| --- | --- | --- |
+| List | `list()` | `findAndCount()` |
+| Read | `read()` | `findOne()` |
+| Create | `create()` | `create()` |
+| CreateBatch | `createBatch()` | `createMany()` |
+| Update | `update()` | `update()` |
+| Replace | `replace()` | `replace()` |
+| Delete | `delete()` | `delete()` |
+| SoftDelete | `softDelete()` | `softDelete()` |
+| Restore | `restore()` | `restore()` |
+
+## Controller Build Modes
+
+`ConfigurableCrudBuilder` supports three controller build paths.
+
+### Fully Generated
+
+Zero hand-written controller code. Pass controller options and an operations
+array — the builder generates the controller class, methods, and providers.
+
+```ts
+import { Operation } from '@concepta/rockets-app';
+import { ConfigurableCrudBuilder } from '@concepta/rockets-crud';
+
+const builder = new ConfigurableCrudBuilder<PhotoEntity>({
+  controller: {
+    path: 'photos',
+    entity: 'photo',
+    request: { body: PhotoDto },
+    response: { resource: PhotoDto, paginated: PhotoPaginatedDto },
+  },
   operations: [
-    {
-      operation: Operation.List,
-      query: CrudListQuery,
-      queryHandler: CrudListHandler,
-    },
-    {
-      operation: Operation.Create,
-      request: { body: PetCreateDto },
-      command: CrudCreateCommand,
-      commandHandler: CrudCreateHandler,
-    },
+    { operation: Operation.List },
+    { operation: Operation.Read },
+    { operation: Operation.Create, request: { body: PhotoCreateDto } },
+    { operation: Operation.Update, request: { body: PhotoUpdateDto } },
+    { operation: Operation.Delete },
   ],
 });
+
+const { controllers, providers } = builder.build();
 ```
 
-The handler classes are framework-provided; nothing custom to write yet.
+Or use `CrudModule.forFeature()` which wraps the builder internally
+(see [Module Registration](#module-registration)).
 
----
+### Pre-Decorated
 
-## 3. How-to Guides
+Full control. You write the controller class with all decorators and method
+implementations. The builder extracts handler metadata for provider registration.
 
-### Override one operation with a custom handler
-
-Extend the base class for the operation you replace. The base does adapter resolution, hook execution, and event publishing — your subclass only changes the part you care about.
-
-```typescript
-import { CommandHandler, EventBus } from '@nestjs/cqrs';
+```ts
+import { Inject } from '@nestjs/common';
+import { Ctx } from '@concepta/rockets-app';
 import {
-  CrudCreateCommand,
-  CrudWithBodyCommandHandler,
-} from '@bitwild/rockets-crud';
+  CrudController,
+  CrudList,
+  CrudRead,
+  CrudCreate,
+  CrudBody,
+  CrudAdapterResolver,
+  CrudResolverInterface,
+  CrudContextInterface,
+} from '@concepta/rockets-crud';
 
-@CommandHandler(CrudCreateCommand)
-export class PetCreateHandler extends CrudWithBodyCommandHandler {
-  async execute(cmd: CrudCreateCommand) {
-    const created = await super.execute(cmd);
-    this.eventBus.publish(new PetWelcomedEvent(created.id));
-    return created;
+@CrudController({
+  path: 'photos',
+  entity: 'photo',
+  request: { body: PhotoDto },
+  response: { resource: PhotoDto, paginated: PhotoPaginatedDto },
+})
+export class PhotoController {
+  constructor(
+    @Inject(CrudAdapterResolver)
+    private readonly resolver: CrudResolverInterface,
+  ) {}
+
+  @CrudList()
+  async list(@Ctx() ctx: CrudContextInterface<PhotoEntity>) {
+    return this.resolver.list(ctx);
+  }
+
+  @CrudRead()
+  async read(@Ctx() ctx: CrudContextInterface<PhotoEntity>) {
+    return this.resolver.read(ctx);
+  }
+
+  @CrudCreate({ request: { body: PhotoCreateDto } })
+  async create(
+    @Ctx() ctx: CrudContextInterface<PhotoEntity>,
+    @CrudBody() dto: PhotoCreateDto,
+  ) {
+    return this.resolver.create(ctx, dto);
+  }
+}
+
+// Register:
+CrudModule.forFeature<PhotoEntity>({
+  crud: { controller: { class: PhotoController } },
+})
+```
+
+### Hybrid
+
+Provide a base class and an operations array. Existing methods are augmented
+with decorator metadata; missing methods are generated.
+
+```ts
+@CrudController({
+  path: 'photos',
+  entity: 'photo',
+  request: { body: PhotoDto },
+  response: { resource: PhotoDto, paginated: PhotoPaginatedDto },
+})
+export class PhotoController {
+  constructor(
+    @Inject(CrudAdapterResolver)
+    private readonly resolver: CrudResolverInterface,
+  ) {}
+
+  @CrudList()
+  async list(@Ctx() ctx: CrudContextInterface<PhotoEntity>) {
+    // Custom list logic
+    return this.resolver.list(ctx);
+  }
+}
+
+// list is augmented; read and create are generated
+CrudModule.forFeature<PhotoEntity>({
+  crud: {
+    controller: { class: PhotoController },
+    operations: [
+      { operation: Operation.List },
+      { operation: Operation.Read },
+      { operation: Operation.Create, request: { body: PhotoCreateDto } },
+    ],
+  },
+})
+```
+
+### Comparison
+
+| | Fully Generated | Pre-Decorated | Hybrid |
+| --- | --- | --- | --- |
+| Controller class | Auto-generated | You write it | You write base |
+| Method implementations | Auto-generated | You write them | Mix of both |
+| Decorator application | Automatic | Manual | Automatic for new |
+| Best for | Standard CRUD | Full customization | Partial customization |
+
+## Operation Decorators
+
+Applied at method level. Each decorator sets the HTTP method, default path,
+and operation metadata.
+
+| Decorator | HTTP | Default Path | Operation |
+| --- | --- | --- | --- |
+| `@CrudList()` | GET | `/` | `Operation.List` |
+| `@CrudRead()` | GET | `/:id` | `Operation.Read` |
+| `@CrudCreate()` | POST | `/` | `Operation.Create` |
+| `@CrudCreateBatch()` | POST | `/bulk` | `Operation.CreateBatch` |
+| `@CrudUpdate()` | PATCH | `/:id` | `Operation.Update` |
+| `@CrudReplace()` | PUT | `/:id` | `Operation.Replace` |
+| `@CrudDelete()` | DELETE | `/:id` | `Operation.Delete` |
+| `@CrudSoftDelete()` | DELETE | `/:id` | `Operation.SoftDelete` |
+| `@CrudRestore()` | PATCH | `/restore/:id` | `Operation.Restore` |
+
+### Operation Options
+
+All operation decorators accept a common options object:
+
+```ts
+{
+  path?: string | string[];
+  request?: {
+    body?: Type;                          // DTO for body validation
+    bodyBatch?: Type;                     // DTO for batch body (CreateBatch)
+    validation?: CrudValidationOptions;
+  };
+  response?: {
+    serialization?: CrudSerializationOptions;
+    returnDeleted?: boolean;              // Delete/SoftDelete only
+    returnRestored?: boolean;             // Restore only
+  };
+  transactional?: boolean | TransactionalOptions;
+  api?: {
+    operation?: ApiOperationOptions;
+    query?: ApiQueryOptions[];
+    params?: ApiParamOptions;
+    body?: ApiBodyOptions;
+    response?: ApiResponseOptions;
+  };
+}
+```
+
+### Delete/Restore Response Behavior
+
+By default, Delete, SoftDelete, and Restore return `204 No Content`. Set
+`returnDeleted: true` or `returnRestored: true` to return `200 OK` with the
+entity body:
+
+```ts
+{ operation: Operation.Delete, response: { returnDeleted: true } }
+{ operation: Operation.SoftDelete, response: { returnDeleted: true } }
+{ operation: Operation.Restore, response: { returnRestored: true } }
+```
+
+## Route Option Decorators
+
+Route option decorators configure query behavior on a per-method basis.
+Method-level settings override controller-level defaults.
+
+| Decorator | Description |
+| --- | --- |
+| `@CrudFilter(filter)` | Server-side default filter conditions |
+| `@CrudSort(sort)` | Default sort order |
+| `@CrudJoin(join)` | Relations to join |
+| `@CrudLimit(n)` | Default page size |
+| `@CrudMaxLimit(n)` | Maximum allowed page size |
+| `@CrudAllow(columns)` | Whitelist query-accessible columns |
+| `@CrudExclude(columns)` | Blacklist columns from queries |
+| `@CrudPersist(columns)` | Always include these columns in select |
+| `@CrudCache(seconds)` | Cache duration (pass `false` to disable) |
+| `@CrudSerialize(options)` | Serialization options (class-transformer) |
+| `@CrudValidate(options)` | Validation pipe options |
+| `@CrudReturnDeleted(bool)` | Return entity body on delete |
+| `@CrudReturnRestored(bool)` | Return entity body on restore |
+
+### Per-Method Example
+
+```ts
+@CrudController({
+  path: 'photos',
+  entity: 'photo',
+  request: { body: PhotoDto },
+  response: { resource: PhotoDto, paginated: PhotoPaginatedDto },
+})
+export class PhotoController {
+  @CrudList()
+  @CrudLimit(20)
+  @CrudMaxLimit(100)
+  @CrudSort([{ field: 'createdAt', order: 'DESC' }])
+  @CrudAllow(['name', 'description', 'createdAt'])
+  async list(@Ctx() ctx: CrudContextInterface<PhotoEntity>) {
+    return this.resolver.list(ctx);
+  }
+
+  @CrudDelete()
+  @CrudReturnDeleted(true)
+  async delete(@Ctx() ctx: CrudContextInterface<PhotoEntity>) {
+    return this.resolver.delete(ctx);
   }
 }
 ```
 
-Wire it via `operations[].commandHandler: PetCreateHandler` in the resource definition. `defineResource` will auto-extract it as a provider.
+### CrudQueryOptionsInterface
 
-### Inject the per-entity CRUD adapter
+These decorators map to `CrudQueryOptionsInterface<T>`:
 
-`InjectCrudAdapter` (local override) accepts a class or a string key. Same algorithm as `InjectDynamicRepository`.
+```ts
+interface CrudQueryOptionsInterface<T> {
+  allow?: EntityColumn<T>[];
+  exclude?: EntityColumn<T>[];
+  persist?: EntityColumn<T>[];
+  filter?: QueryFilterOption<T>;
+  sort?: OrderSortKey<T>[];
+  limit?: number;
+  maxLimit?: number;
+  cache?: number | false;
+  join?: JoinClause[];
+}
+```
 
-```typescript
-import { CrudAdapter, InjectCrudAdapter } from '@bitwild/rockets-crud';
+## Query String Parameters
+
+The CRUD module parses HTTP query parameters into `CrudParsedQueryInterface`
+via `CrudQueryParser`.
+
+### Parameters
+
+| Parameter | Format | Example |
+| --- | --- | --- |
+| `select` | `field1,field2` | `?select=name,description` |
+| `filter` | `field\|\|$op\|\|value` | `?filter=status\|\|$eq\|\|active` |
+| `or` | `field\|\|$op\|\|value` | `?or=status\|\|$eq\|\|archived` |
+| `sort` | `field,ASC\|DESC` | `?sort=createdAt,DESC` |
+| `limit` | number | `?limit=25` |
+| `offset` | number | `?offset=50` |
+| `page` | number (1-indexed) | `?page=3` |
+| `cache` | number (seconds) | `?cache=0` |
+| `includeDeleted` | `1` or `0` | `?includeDeleted=1` |
+| `s` | JSON search object | `?s={"name":{"$contains":"sunset"}}` |
+
+### Comparison Operators
+
+| Operator | Description |
+| --- | --- |
+| `$eq` | Equal |
+| `$ne` | Not equal |
+| `$gt` | Greater than |
+| `$gte` | Greater than or equal |
+| `$lt` | Less than |
+| `$lte` | Less than or equal |
+| `$starts` | Starts with |
+| `$nstarts` | Does not start with |
+| `$ends` | Ends with |
+| `$nends` | Does not end with |
+| `$contains` | Contains substring |
+| `$ncontains` | Does not contain |
+| `$in` | In list (comma-separated) |
+| `$nin` | Not in list |
+| `$null` | Is null (no value needed) |
+| `$nnull` | Not null (no value needed) |
+| `$between` | Between two values (comma-separated) |
+
+### Filter Combination Rules
+
+- Multiple `filter` params are AND-combined
+- Multiple `or` params provide an alternative set
+- When both present: `(AND of filters) OR (AND of ors)`
+- The `s` (search) parameter supersedes `filter` and `or`
+
+### Multiple Filters
+
+```
+GET /photos?filter[0]=status||$eq||active&filter[1]=views||$gt||100
+```
+
+### Relation Filters
+
+Use dot notation to filter by related entity fields:
+
+```
+GET /photos?filter=author.name||$eq||Alice
+```
+
+## Paginated Response
+
+List operations return a paginated response:
+
+```ts
+interface CrudResponsePaginatedInterface<T> {
+  data: T[];        // Items on current page
+  limit: number;    // Items per page
+  count: number;    // Items on current page (data.length)
+  total: number;    // Total items across all pages
+  page: number;     // Current page (1-indexed)
+  pageCount: number; // Total number of pages
+}
+```
+
+### Creating a Paginated DTO
+
+Extend `CrudResponsePaginatedDto` and override the `data` property with your
+resource DTO type:
+
+```ts
+import { Exclude, Expose, Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
+import { CrudResponsePaginatedDto } from '@concepta/rockets-crud';
+
+@Exclude()
+export class PhotoPaginatedDto extends CrudResponsePaginatedDto<PhotoDto> {
+  @ApiProperty({ type: [PhotoDto], isArray: true })
+  @Expose()
+  @Type(() => PhotoDto)
+  data: PhotoDto[] = [];
+}
+```
+
+## Serialization and Validation
+
+### Serialization
+
+The CRUD module uses `class-transformer` with an exclude-all strategy. Only
+properties marked with `@Expose()` are included in responses.
+
+```ts
+@Exclude()
+export class PhotoDto {
+  @Expose() @IsUUID()
+  id: string = '';
+
+  @Expose() @IsString()
+  name: string = '';
+
+  // Not @Expose() — excluded from response
+  internalField: string = '';
+}
+```
+
+`CrudSerializeInterceptor` applies the transform automatically. The resource
+DTO is resolved from `@CrudResponseResource()` (or the controller-level
+`response.resource`).
+
+### Validation
+
+Request bodies are validated via `class-validator`. The DTO specified in
+`request.body` is passed to NestJS's `ValidationPipe`.
+
+Override validation options per-route:
+
+```ts
+@CrudCreate({
+  request: {
+    body: PhotoCreateDto,
+    validation: { whitelist: true, forbidNonWhitelisted: true },
+  },
+})
+```
+
+Or with the route decorator:
+
+```ts
+@CrudValidate({ whitelist: true, forbidNonWhitelisted: true })
+```
+
+## Resolvers
+
+Resolvers control how operations are dispatched from the controller to the
+adapter.
+
+| Resolver | Dispatch | When to Use |
+| --- | --- | --- |
+| `CrudAdapterResolver` | Calls `CrudAdapter` directly | Default. Simple CRUD |
+| `CrudOperationResolver` | Resolves handler via `ModuleRef` | Custom handler logic without CQRS |
+| `CrudCqrsResolver` | Dispatches via `QueryBus` / `CommandBus` | Full CQRS with sagas and events |
+
+### Setting the Default Resolver
+
+Globally:
+
+```ts
+CrudModule.forRoot({
+  defaultResolver: CrudOperationResolver,
+})
+```
+
+Per-controller:
+
+```ts
+@CrudController({
+  path: 'photos',
+  entity: 'photo',
+  resolver: CrudCqrsResolver,
+  ...
+})
+```
+
+## CQRS Integration
+
+Optional integration with `@nestjs/cqrs` for saga, event, and cross-module
+routing support.
+
+### Setup
+
+```sh
+yarn add @nestjs/cqrs
+```
+
+```ts
+import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
+import { CrudModule, CrudCqrsResolver } from '@concepta/rockets-crud';
+
+@Module({
+  imports: [
+    CqrsModule.forRoot(),
+    CrudModule.forRoot({
+      defaultResolver: CrudCqrsResolver,
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Built-in Queries and Commands
+
+| Operation | Class | Handler |
+| --- | --- | --- |
+| List | `CrudListQuery` | `CrudListHandler` |
+| Read | `CrudReadQuery` | `CrudReadHandler` |
+| Create | `CrudCreateCommand` | `CrudCreateHandler` |
+| CreateBatch | `CrudCreateBatchCommand` | `CrudCreateBatchHandler` |
+| Update | `CrudUpdateCommand` | `CrudUpdateHandler` |
+| Replace | `CrudReplaceCommand` | `CrudReplaceHandler` |
+| Delete | `CrudDeleteCommand` | `CrudDeleteHandler` |
+| SoftDelete | `CrudSoftDeleteCommand` | `CrudSoftDeleteHandler` |
+| Restore | `CrudRestoreCommand` | `CrudRestoreHandler` |
+
+### Custom Handlers
+
+Override the handler for a specific operation:
+
+```ts
+{ operation: Operation.Create, commandHandler: CustomCreateHandler }
+```
+
+Or with the decorator:
+
+```ts
+@CrudCreate()
+@CrudCommandHandler(CustomCreateHandler)
+async create(@Ctx() ctx, @CrudBody() dto) { ... }
+```
+
+## Specifications and Hooks
+
+`CrudSpec` provides factory methods for matching CRUD operations. Specifications
+act as boolean gates — a hook method only runs when its spec is satisfied by the
+current `CrudContextInterface`.
+
+### CrudSpec Methods
+
+| Method | Description |
+| --- | --- |
+| `CrudSpec.operation(op)` | Match a specific operation |
+| `CrudSpec.action(action)` | Match an action category |
+| `CrudSpec.isCreate()` | CREATE action |
+| `CrudSpec.isRead()` | READ action |
+| `CrudSpec.isUpdate()` | UPDATE action |
+| `CrudSpec.isDelete()` | DELETE action |
+| `CrudSpec.isQuery()` | List + Read operations |
+| `CrudSpec.isWrite()` | Create + CreateBatch + Update + Replace |
+| `CrudSpec.isMutation()` | All state-changing operations |
+| `CrudSpec.and(...)` | All specifications must match |
+| `CrudSpec.or(...)` | Any specification must match |
+| `CrudSpec.not(spec)` | Negate a specification |
+| `CrudSpec.always()` | Always matches (default) |
+| `CrudSpec.never()` | Never matches |
+
+### Defining a Hook
+
+Use `@RepoHook()` from `@concepta/rockets-repository` to mark a class as a
+repository hook. Decorate methods with lifecycle decorators (`@BeforeCreate`,
+`@AfterFind`, etc.) and optionally pass a `CrudSpec` to restrict when the
+method runs:
+
+```ts
+import { Injectable } from '@nestjs/common';
+import {
+  RepoHook,
+  BeforeFind,
+  AfterCreate,
+  AfterUpdate,
+} from '@concepta/rockets-repository';
+import { CrudSpec } from '@concepta/rockets-crud';
 
 @Injectable()
-export class PetReporter {
-  constructor(
-    @InjectCrudAdapter(PetEntity)
-    private readonly pets: CrudAdapter<PetEntity>,
-  ) {}
-}
-```
+@RepoHook()
+export class AuditHook {
+  // Runs on ALL find operations (no spec restriction)
+  @BeforeFind()
+  async addTenantFilter(options, ctx) {
+    const tenantId = ctx.locals?.tenantId;
+    if (tenantId) {
+      // add tenant filter to query options
+    }
+    return options;
+  }
 
-### Build a custom CRUD controller with `ConfigurableCrudBuilder`
+  // Runs ONLY when the CRUD operation is a Create
+  @AfterCreate(CrudSpec.isCreate())
+  async logCreation(entity, ctx) {
+    console.log(`Created ${ctx.operation}:`, entity.id);
+    return entity;
+  }
 
-When `defineResource` is too high-level (you want custom routes side-by-side with CRUD on the same controller), drop down to the builder.
-
-```typescript
-import {
-  ConfigurableCrudBuilder,
-  Operation,
-} from '@bitwild/rockets-crud';
-
-const pets = new ConfigurableCrudBuilder()
-  .entity(PetEntity)
-  .path('pets')
-  .operation(Operation.List)
-  .operation(Operation.Read)
-  .operation(Operation.Create, { request: { body: PetCreateDto } })
-  .build();
-
-@Controller(pets.controller.path)
-@pets.decorators.controller
-export class PetController {
-  // ... custom routes alongside generated CRUD operations
-}
-```
-
-Read the upstream `ConfigurableCrudBuilder` source for the full options surface (deep `/dist/` import is acceptable here — the builder is a public API, only its config-shape types lag on the barrel).
-
-### Read CRUD context inside a handler
-
-Operation decorators attach a `CrudContextInterface` (parsed query, params, request user via overlay, etc.). `CrudCtx` is the parameter decorator.
-
-```typescript
-import {
-  CrudContextInterface,
-  CrudCtx,
-  CrudReadQuery,
-} from '@bitwild/rockets-crud';
-
-@QueryHandler(CrudReadQuery)
-export class PetReadHandler {
-  execute(query: CrudReadQuery, @CrudCtx() ctx: CrudContextInterface) {
-    // ctx.parsed, ctx.params, ctx.options, ctx.request
+  // Runs ONLY on write operations (Create, Update, Replace)
+  @AfterUpdate(CrudSpec.isWrite())
+  async logModification(entity, ctx) {
+    console.log(`Modified via ${ctx.operation}:`, entity.id);
+    return entity;
   }
 }
 ```
 
-In CRUD-generated controllers you do not own the method signature; use `getActor(ctx)` from `@bitwild/rockets-core` to read the authenticated user instead.
+### Registering Hooks
 
----
+Attach hooks to a controller with `@UseHooks()` from `@concepta/rockets-app`.
+Hooks can be plain classes or `{ hook, spec }` objects:
 
-## 4. Reference
+```ts
+import { UseHooks } from '@concepta/rockets-app';
+import { CrudSpec } from '@concepta/rockets-crud';
 
-### Upstream engine
+// Simple: hook runs for all operations on this controller
+@UseHooks(AuditHook)
+@CrudController({ ... })
+export class PhotoController { ... }
 
-**Motor:** `@concepta/nestjs-crud` — `CrudModule`, CQRS commands/queries, default handlers, `ConfigurableCrudBuilder`.
+// With spec: hook only runs for mutations
+@UseHooks({ hook: AuditHook, spec: CrudSpec.isMutation() })
+@CrudController({ ... })
+export class PhotoController { ... }
 
-**This package:** `@bitwild/rockets-crud` re-export + `InjectCrudAdapter` + handler base classes for custom `operations.*.commandHandler` overrides.
+// Method-level: adds to class-level hooks
+@UseHooks(AuditHook)
+@CrudController({ ... })
+export class PhotoController {
+  @CrudDelete()
+  @UseHooks({ hook: AdminAuditHook, spec: CrudSpec.isDelete() })
+  async delete(@Ctx() ctx) { ... }
+}
+```
 
-**Wiring:** `@bitwild/rockets-core` `defineResource()` / `buildAppRegistrationPlan` — you rarely import this package directly in apps.
+### Spec Resolution Priority
 
-### Local override
+When multiple specs are defined, the most specific wins:
 
-| Symbol | Purpose |
-|---|---|
-| `InjectCrudAdapter(keyOrClass)` | Class-or-string variant of upstream's decorator. Mirrors `InjectDynamicRepository`. |
+1. Hook method parameter: `@BeforeCreate(spec)` — highest
+2. Class-level: `@RepoHook(spec)`
+3. `@UseHooks({ hook, spec })` registration
+4. Default: `CrudSpec.always()` — lowest
 
-### Local re-exports (not on upstream barrel today)
+### Composing Specifications
 
-| Symbol | Purpose |
-|---|---|
-| `CrudQueryHandler` (class) | Base class for custom query handlers. Upstream's public `CrudQueryHandler` is a decorator with the same name. |
-| `CrudCommandHandler` (class) | Same pattern, for command handlers. |
-| `CrudWithBodyCommandHandler` (class) | Base for create / update / replace handlers (commands that carry a request body). |
-| `CrudMetaview` | Service that exposes parsed CRUD metadata at runtime (filters, joins, sort). |
-| `CrudRequestConfig`, `CrudResponseConfig`, `CrudParamOptionInterface`, `CrudParamsOptionsInterface` | Config shapes consumed by `defineResource` overrides. |
+```ts
+// Write operations that are NOT deletes
+CrudSpec.and(CrudSpec.isWrite(), CrudSpec.not(CrudSpec.isDelete()))
 
-These are tracked TODOs against upstream; the deep `/dist/` import goes away once the symbols ship on the public barrel.
+// List or Read
+CrudSpec.or(
+  CrudSpec.operation(Operation.List),
+  CrudSpec.operation(Operation.Read),
+)
 
-### Re-exports — `@concepta/nestjs-crud`
+// Specific operation
+CrudSpec.operation(Operation.Create)
+```
 
-- **Module / adapter**: `CrudModule`, `CrudAdapter`, `CrudAdapterProvider`, `InjectCrudAdapter` (upstream variant — shadowed by the local one above).
-- **Controller / decorators**: `CrudController`, every `Crud{List,Read,Create,CreateBatch,Update,Replace,Delete,SoftDelete,Restore}` operation decorator. Route decorators: `CrudAllow`, `CrudCache`, `CrudCommand`, `CrudCommandHandler` (upstream decorator), `CrudExclude`, `CrudFilter`, `CrudJoin`, `CrudLimit`, `CrudMaxLimit`, `CrudEntity`, `CrudName`, `CrudParams`, `CrudPersist`, `CrudQuery`, `CrudQueryHandler` (upstream decorator), `CrudRequestBody`, `CrudRequestBodyBatch`, `CrudResponseResource`, `CrudResponsePaginated`, `CrudReturnDeleted`, `CrudReturnRestored`, `CrudSerialize`, `CrudSort`, `CrudValidate`, `CrudResolver`. Param decorators: `CrudBody`, `CrudCtx`, `CrudContextOverlay`. OpenAPI: `CrudApiBody`, `CrudApiOperation`, `CrudApiParam`, `CrudApiQuery`, `CrudApiResponse`.
-- **Builder**: `ConfigurableCrudBuilder`, `ConfigurableCrudOptions`, `ConfigurableCrudClassOptions`, `ConfigurableCrudHybridOptions`, `ConfigurableCrudGeneratedOptions`, `ConfigurableCrudClassesMap`, `ConfigurableCrudHost`, `ConfigurableCrudOptionsTransformer`, `CrudOperationOptions`, `CrudControllerClassOptionsInterface`, `CrudControllerOptionsInterface`, `CrudModuleForFeatureOptionsInterface`.
-- **DTOs**: `CrudResponsePaginatedDto`, `CrudCreateBatchDto`. Interfaces: `CrudContextInterface`, `CrudParsedQueryInterface`, `CrudResponsePaginatedInterface`, `CrudResponseMetrics`, `CrudCreateBatchInterface`.
-- **CQRS commands**: `CrudCreateCommand`, `CrudCreateBatchCommand`, `CrudUpdateCommand`, `CrudReplaceCommand`, `CrudDeleteCommand`, `CrudSoftDeleteCommand`, `CrudRestoreCommand`, `CrudWithBodyCommand`.
-- **CQRS queries**: `CrudListQuery`, `CrudReadQuery`.
-- **Default handlers**: `CrudListHandler`, `CrudReadHandler`, `CrudCreateHandler`, `CrudCreateBatchHandler`, `CrudUpdateHandler`, `CrudReplaceHandler`, `CrudDeleteHandler`, `CrudSoftDeleteHandler`, `CrudRestoreHandler`.
-- **Resolvers**: `CrudAdapterResolver`, `CrudOperationResolver`, `CrudCqrsResolver`, `CrudResolverInterface`.
-- **Specifications**: `CrudSpec`, `OperationSpecification`, `ActionSpecification`, `CrudSpecContextInterface`.
-- **Exceptions**: `CrudException`, `CrudContextException`, `CrudDecoratorException`, `CrudQueryException`.
-- **Enums**: `Operation` (re-exported from `@concepta/nestjs-common`).
+### Available Hook Decorators
 
----
+Hook method decorators from `@concepta/rockets-repository`:
 
-## License
+| Decorator | Fires on |
+| --- | --- |
+| `@BeforeRead` / `@AfterRead` | Any read (find, findOne, count, findAndCount) |
+| `@BeforeWrite` / `@AfterWrite` | Any write (create, update, replace) |
+| `@BeforeTransition` / `@AfterTransition` | Lifecycle changes (softDelete, restore) |
+| `@BeforeDestroy` / `@AfterDestroy` | Hard delete |
+| `@BeforeFind` / `@AfterFind` | `find()` |
+| `@BeforeFindOne` / `@AfterFindOne` | `findOne()` |
+| `@BeforeFindAndCount` / `@AfterFindAndCount` | `findAndCount()` |
+| `@BeforeCreate` / `@AfterCreate` | `create()` |
+| `@BeforeCreateMany` / `@AfterCreateMany` | `createMany()` |
+| `@BeforeUpdate` / `@AfterUpdate` | `update()` |
+| `@BeforeReplace` / `@AfterReplace` | `replace()` |
+| `@BeforeDelete` / `@AfterDelete` | `delete()` |
+| `@BeforeSoftDelete` / `@AfterSoftDelete` | `softDelete()` |
+| `@BeforeRestore` / `@AfterRestore` | `restore()` |
 
-BSD-3-Clause
+## Exceptions
+
+| Exception | Description |
+| --- | --- |
+| `CrudException` | Base CRUD exception |
+| `CrudContextException` | Error during context building (interceptor) |
+| `CrudDecoratorException` | Invalid decorator configuration |
+| `CrudQueryException` | Error executing a query or command |
+
+## Entry Points
+
+| Import Path | Contents |
+| --- | --- |
+| `@concepta/rockets-crud` | Module, adapter, decorators, resolvers, CQRS queries/commands/handlers, DTOs, specifications, exceptions |

@@ -1,6 +1,6 @@
 import type { PlainLiteralObject, Provider } from '@nestjs/common';
 import { applyDecorators } from '@nestjs/common';
-import { Operation, UseHooks } from '@bitwild/rockets-common';
+import { Operation, UseHooks } from '@bitwild/rockets-app';
 import {
   CrudListQuery,
   CrudReadQuery,
@@ -15,7 +15,7 @@ import {
   type CrudRequestConfig,
   type CrudResponseConfig,
 } from '@bitwild/rockets-crud';
-import type { JoinClause } from '@concepta/nestjs-repository';
+import type { JoinClause } from '@bitwild/rockets-repository';
 import type {
   ResourceDtoConfig,
   ResourceHandlerOverrides,

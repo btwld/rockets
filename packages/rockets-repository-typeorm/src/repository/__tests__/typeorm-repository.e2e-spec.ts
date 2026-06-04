@@ -5,7 +5,7 @@ import {
   getDynamicRepositoryToken,
   RepositoryQueryException,
   Where,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 import { SeedingSource } from '@concepta/typeorm-seeding';
 
 import { TEST_ENTITY_TOKEN } from '../../__fixtures__/repository/config/test.constants.fixture';

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Injectable } from '@nestjs/common';
 
 import { PasswordCreationService } from '@concepta/nestjs-password';
-import { TransactionScope } from '@concepta/nestjs-repository';
+import { TransactionScope } from '@bitwild/rockets-repository';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import {
   RocketsAuthUserPortService,
@@ -17,7 +17,7 @@ import {
   InvitationAcceptedEvent,
   InvitationInterface,
 } from '@concepta/nestjs-invitation';
-import { ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 import {
   INVITATION_ACCEPTANCE_LISTENER_TOKEN,
   RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN,

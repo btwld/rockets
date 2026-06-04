@@ -21,7 +21,7 @@ import type {
   InvitationUserPortSettings,
 } from '@concepta/nestjs-invitation';
 
-import { CrudModule } from '@concepta/nestjs-crud';
+import { CrudModule } from '@bitwild/rockets-crud';
 import { RoleOptionsInterface } from '@concepta/nestjs-role';
 import type {
   UserOptionsInterface,
@@ -33,7 +33,7 @@ import { RocketsAuthSettingsInterface } from './rockets-auth-settings.interface'
 /**
  * Options accepted by `CrudModule.forRoot()` (the upstream interface
  * `CrudModuleOptionsInterface` is not exported publicly in
- * `@concepta/nestjs-crud@v8.0.0-alpha.5`, so we extract it via TS
+ * `@bitwild/rockets-crud@v8.0.0-alpha.5`, so we extract it via TS
  * inference instead of deep-importing).
  */
 type CrudModuleOptions = Parameters<typeof CrudModule.forRoot>[0];

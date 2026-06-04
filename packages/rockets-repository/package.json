@@ -1,48 +1,41 @@
 {
   "name": "@bitwild/rockets-repository",
-  "version": "1.0.0-alpha.7",
-  "description": "Rockets Repository - abstract repository pattern abstraction",
-  "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
-  "license": "BSD-3-Clause",
+  "version": "0.0.1-alpha.0",
+  "description": "Rockets NestJS Repository",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.js"
+      "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
   },
-  "sideEffects": false,
+  "license": "BSD-3-Clause",
   "publishConfig": {
     "access": "public"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/btwld/rockets.git",
-    "directory": "packages/rockets-repository"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
   "files": [
-    "dist/**/!(*.spec|*.e2e-spec|*.fixture).{js,d.ts}",
-    "README.md",
-    "LICENSE.txt",
-    "CHANGELOG.md"
+    "dist/**/!(*.spec|*.e2e-spec|*.fixture|*.mock).{js,d.ts}",
+    "!dist/**/__tests__/**",
+    "!dist/**/__fixtures__/**"
   ],
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "build:watch": "tsc -p tsconfig.json --watch"
-  },
   "dependencies": {
-    "@bitwild/rockets-common": "workspace:^",
-    "@concepta/nestjs-repository": "8.0.0-alpha.5"
+    "@bitwild/rockets-app": "workspace:^",
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@tsyche/membrane": "^0.7.0"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.9",
+    "jest-mock-extended": "^4.0.0"
   },
   "peerDependencies": {
-    "@nestjs/common": "^11.0.0",
-    "reflect-metadata": "^0.1.13 || ^0.2.0"
+    "class-transformer": "*",
+    "class-validator": "*",
+    "rxjs": "^7.8.1"
   }
 }

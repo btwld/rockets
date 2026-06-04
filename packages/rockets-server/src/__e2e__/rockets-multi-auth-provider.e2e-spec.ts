@@ -8,7 +8,10 @@ import type {
   AuthAttemptResult,
   AuthRequest,
 } from '@bitwild/rockets-core';
-import { createStubAuthBootstrap, extractBearerToken } from '@bitwild/rockets-core';
+import {
+  createStubAuthBootstrap,
+  extractBearerToken,
+} from '@bitwild/rockets-core';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,

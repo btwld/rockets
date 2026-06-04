@@ -131,8 +131,8 @@ export type {
 } from './domain/interfaces/rockets-resource-definition.interface';
 export type { CrudResource } from './domain/interfaces/rockets-resource-bundle.interface';
 
-// Swagger (re-exported so consumers don't need @bitwild/rockets-common directly)
-export type { SwaggerUiOptionsInterface } from '@bitwild/rockets-common';
+// Swagger (re-exported so consumers don't need @bitwild/rockets-app directly)
+export type { SwaggerUiOptionsInterface } from '@bitwild/rockets-app';
 
 // Options interfaces
 export type { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';

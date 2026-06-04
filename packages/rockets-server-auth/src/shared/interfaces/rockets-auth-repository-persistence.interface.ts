@@ -9,7 +9,7 @@ import type {
   RoleAssignmentEntityInterface,
 } from '@concepta/nestjs-role';
 import type { IdentityEntityInterface } from '@concepta/nestjs-federated';
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 
 /**
  * Entity classes that Rockets Auth needs for repository persistence.

@@ -20,7 +20,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AuthUser, JwtGuard } from '@concepta/nestjs-authentication';
-import { getAppContext } from '@concepta/nestjs-common';
+import { getAppContext } from '@bitwild/rockets-app';
 import type { Request } from 'express';
 
 import { ChangeMyPasswordCommand } from '../../../application/commands/impl/change-my-password.command';

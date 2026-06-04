@@ -4,7 +4,7 @@ import type {
   Provider,
   Type,
 } from '@nestjs/common';
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 import type { ResourceKind } from './resource-kind.enum';
 
 /**

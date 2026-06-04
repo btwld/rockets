@@ -1,6 +1,5 @@
 import type { Type } from '@nestjs/common';
-import { Operation } from '@bitwild/rockets-common';
-import type { CrudResponseConfig } from '@bitwild/rockets-crud';
+import { Operation } from '@bitwild/rockets-app';
 import type {
   ResourceDtoConfig,
   ResourceHandlerOverrides,

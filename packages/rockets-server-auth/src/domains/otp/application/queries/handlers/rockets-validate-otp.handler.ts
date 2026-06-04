@@ -4,7 +4,7 @@ import {
   QueryBus,
   CommandBus,
 } from '@nestjs/cqrs';
-import { AssigneeRelationInterface } from '@concepta/nestjs-common';
+import { AssigneeRelationInterface } from '@bitwild/rockets-app';
 import { ValidateOtpQuery, ConsumeOtpCommand } from '@concepta/nestjs-otp';
 import { RocketsValidateOtpQuery } from '../impl/rockets-validate-otp.query';
 

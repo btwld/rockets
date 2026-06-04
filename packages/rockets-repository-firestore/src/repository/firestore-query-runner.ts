@@ -5,7 +5,6 @@ import type {
   FirestoreQueryBranch,
   FirestoreQueryRequest,
 } from '../interfaces/firestore-query.interface';
-import { applyFirestorePostFilters } from './firestore-post-filter';
 
 export async function runFirestoreQuery(
   backend: FirestoreBackend,

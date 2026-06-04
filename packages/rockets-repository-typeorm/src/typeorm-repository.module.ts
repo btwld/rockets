@@ -3,7 +3,7 @@ import { Global, Module, Provider } from '@nestjs/common';
 import {
   getDynamicRepositoryToken,
   DynamicRepositoryModule,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 
 import { TypeOrmProviderOptionsInterface } from './repository/typeorm-provider-options.interface';
 import {

@@ -1,5 +1,5 @@
 {
-  "name": "@concepta/rockets-repository-typeorm",
+  "name": "@bitwild/rockets-repository-typeorm",
   "version": "0.0.1-alpha.0",
   "description": "Rockets NestJS TypeORM Repository Module",
   "main": "dist/index.js",
@@ -14,8 +14,8 @@
     "!dist/**/__fixtures__/**"
   ],
   "dependencies": {
-    "@concepta/rockets-app": "^0.0.1-alpha.0",
-    "@concepta/rockets-repository": "0.0.1-alpha.0",
+    "@bitwild/rockets-app": "workspace:^",
+    "@bitwild/rockets-repository": "0.0.1-alpha.0",
     "@nestjs/common": "^11.1.9",
     "@nestjs/typeorm": "^11.0.0",
     "@tsyche/membrane": "^0.7.0"

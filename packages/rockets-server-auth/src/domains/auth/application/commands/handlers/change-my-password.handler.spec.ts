@@ -4,7 +4,7 @@ import {
   UpdateUserPasswordCommand,
   UserPasswordCurrentInvalidException,
 } from '@concepta/nestjs-user';
-import { AppContextHost } from '@concepta/nestjs-common';
+import { AppContextHost } from '@bitwild/rockets-app';
 
 import { ChangeMyPasswordCommand } from '../impl/change-my-password.command';
 import { ChangeMyPasswordHandler } from './change-my-password.handler';

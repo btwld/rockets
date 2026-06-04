@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { RepositoryModule } from '@concepta/rockets-repository';
+import { RepositoryModule } from '@bitwild/rockets-repository';
 
 import { relationOrmConfig } from '../config/relation-ormconfig.fixture';
 

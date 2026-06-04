@@ -20,7 +20,7 @@ import {
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { APP_GUARD } from '@nestjs/core';
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 import {
   getDynamicRepositoryToken,
   InjectDynamicRepository,

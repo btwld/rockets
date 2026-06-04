@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@bitwild/rockets-access-control": "workspace:^",
-    "@bitwild/rockets-common": "workspace:^",
+    "@bitwild/rockets-app": "workspace:^",
     "@bitwild/rockets-crud": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",
     "@concepta/nestjs-authentication": "8.0.0-alpha.5",
@@ -54,6 +54,8 @@
     "pluralize": "^8.0.0"
   },
   "devDependencies": {
+    "@bitwild/rockets-repository": "workspace:^",
+    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@concepta/nestjs-repository": "8.0.0-alpha.5",
     "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.5",
     "@nestjs/testing": "11.1.18",

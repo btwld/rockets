@@ -1,4 +1,4 @@
-import { Where, WhereOperator } from '@concepta/nestjs-repository';
+import { Where } from '@bitwild/rockets-repository';
 
 import {
   translateDnfBranch,

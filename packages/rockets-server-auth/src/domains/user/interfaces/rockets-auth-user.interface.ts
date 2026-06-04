@@ -1,4 +1,4 @@
-import { ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 import { UserInterface } from '@concepta/nestjs-user';
 import { RocketsAuthUserMetadataEntityInterface } from './rockets-auth-user-metadata-entity.interface';
 

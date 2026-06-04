@@ -16,7 +16,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { Ctx, type AppContextInterface } from '@concepta/nestjs-common';
+import { Ctx, type AppContextInterface } from '@bitwild/rockets-app';
 import { PetEntity } from '../resources/pet/pet.entity';
 import { AdminGuard } from './admin.guard';
 import { AdminPetService, ListResult } from './admin-pet.service';

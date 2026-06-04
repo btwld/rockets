@@ -9,7 +9,7 @@ import {
   RepositoryInterface,
   Where,
 } from '@bitwild/rockets-repository';
-import type { AppContextInterface } from '@bitwild/rockets-common';
+import type { AppContextInterface } from '@bitwild/rockets-app';
 import { GithubConfig } from '../config/github.config';
 import { GithubConnectionEntity } from './github-connection.entity';
 import { GithubOAuthStateService } from './github-oauth-state.service';

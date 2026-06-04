@@ -3,7 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import { ExceptionsFilter } from '@bitwild/rockets';
-import { SwaggerUiService } from '@bitwild/rockets-common';
+import { SwaggerUiService } from '@bitwild/rockets-app';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';

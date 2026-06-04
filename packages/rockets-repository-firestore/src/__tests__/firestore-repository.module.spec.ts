@@ -3,8 +3,8 @@ import {
   SortOrder,
   Where,
   getDynamicRepositoryToken,
-} from '@concepta/nestjs-repository';
-import type { RepositoryInterface } from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
+import type { RepositoryInterface } from '@bitwild/rockets-repository';
 
 import { InMemoryFirestoreBackend } from '../backends/in-memory-firestore.backend';
 import { FirestoreRepositoryModule } from '../firestore-repository.module';
@@ -91,7 +91,13 @@ describe(FirestoreRepositoryModule.name, () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         FirestoreRepositoryModule.forFeature(
-          [{ key: 'widget', entity: WidgetEntity, collection: 'widgets-paging' }],
+          [
+            {
+              key: 'widget',
+              entity: WidgetEntity,
+              collection: 'widgets-paging',
+            },
+          ],
           { backend: new InMemoryFirestoreBackend() },
         ),
       ],
@@ -163,7 +169,13 @@ describe(FirestoreRepositoryModule.name, () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         FirestoreRepositoryModule.forFeature(
-          [{ key: 'widget', entity: WidgetEntity, collection: 'widgets-count' }],
+          [
+            {
+              key: 'widget',
+              entity: WidgetEntity,
+              collection: 'widgets-count',
+            },
+          ],
           { backend: new InMemoryFirestoreBackend() },
         ),
       ],

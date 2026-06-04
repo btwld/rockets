@@ -1,5 +1,5 @@
 import type { PlainLiteralObject } from '@nestjs/common';
-import type { AppContextInterface } from '@bitwild/rockets-common';
+import type { AppContextInterface } from '@bitwild/rockets-app';
 import type { Actor } from '../domain/interfaces/actor.interface';
 import type { RocketsCrudContext } from '../domain/interfaces/rockets-crud-context.interface';
 import { ActorCtx } from '../infrastructure/interceptors/actor.overlay';

@@ -18,10 +18,13 @@
   "files": [],
   "references": [
     {
-      "path": "packages/rockets-common"
+      "path": "packages/rockets-app"
     },
     {
       "path": "packages/rockets-repository"
+    },
+    {
+      "path": "packages/rockets-repository-typeorm"
     },
     {
       "path": "packages/rockets-crud"

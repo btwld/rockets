@@ -15,14 +15,14 @@ import { FirebaseAuthModule } from '../modules/firebase-auth.module';
  * Auth-owned entities belong in app `resources[]`, not here.
  */
 export type DefineFirebaseAuthInput =
-  | (Readonly<{
+  | Readonly<{
       forRoot: FirebaseAuthModuleOptions;
       forRootAsync?: never;
-    }>)
-  | (Readonly<{
+    }>
+  | Readonly<{
       forRootAsync: FirebaseAuthModuleAsyncOptions;
       forRoot?: never;
-    }>);
+    }>;
 
 /**
  * Build an {@link AuthBootstrap} that wires `FirebaseAuthModule` into core.

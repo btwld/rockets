@@ -3,7 +3,7 @@ import {
   ContextOverlayInterceptor,
   getAppContext,
   OverlayRef,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-app';
 import type { Actor } from '../../domain/interfaces/actor.interface';
 import type { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
 

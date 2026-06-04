@@ -1,4 +1,4 @@
-import type { SwaggerUiOptionsInterface } from '@bitwild/rockets-common';
+import type { SwaggerUiOptionsInterface } from '@bitwild/rockets-app';
 import type { RocketsCoreSettingsInterface } from './rockets-core-settings.interface';
 
 export interface RocketsCoreOptionsInterface {

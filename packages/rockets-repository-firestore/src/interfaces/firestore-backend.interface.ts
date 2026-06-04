@@ -1,7 +1,6 @@
 import type {
   FirestoreOrderBy,
   FirestoreQueryBranch,
-  FirestoreQueryFilter,
 } from './firestore-query.interface';
 
 /** @deprecated Use {@link FirestoreQueryFilter} via {@link FirestoreQueryBranch}. */

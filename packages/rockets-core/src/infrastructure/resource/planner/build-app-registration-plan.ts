@@ -1,4 +1,4 @@
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 import type { RocketsResourceConfig } from '../../../domain/interfaces/rockets-resource.interface';
 import type { RocketsUserMetadataConfig } from '../../../domain/interfaces/rockets-user-metadata-config.interface';
 import { validateRocketsUserMetadataConfig } from '../../user-metadata/validate-rockets-user-metadata-config';

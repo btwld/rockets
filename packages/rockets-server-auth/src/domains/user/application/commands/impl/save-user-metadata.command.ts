@@ -1,4 +1,4 @@
-import { ReferenceId } from '@concepta/nestjs-common';
+import { ReferenceId } from '@bitwild/rockets-app';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../../interfaces/rockets-auth-user-metadata-updatable.interface';
 
 export class SaveUserMetadataCommand {

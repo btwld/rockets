@@ -145,10 +145,11 @@ When replying to the project owner or maintainer:
 
 ## Repository Map
 
-- `packages/rockets-common`: shared utils, hooks, swagger-ui re-export. Zero framework opinion.
-- `packages/rockets-repository`: abstract dynamic repository API. No TypeORM, no Firestore.
+- `packages/rockets-app` (`@bitwild/rockets-app`): **foundation / domain kernel** — context overlay (`AppContextHost`, `getAppContext`, `OverlayRef`, `Ctx`, `ContextOverlayInterceptor`), exceptions (`RuntimeException`), hooks (`HookResolverService`, `Spec`, specifications), references, audit, `DomainAggregate`, `AuthUser`, Swagger UI module, and shared utils (`deriveEntityKey`/`resolveEntityKey`, `createRepositoryContext`, `whitelistedFromDto`, `stripUndefined`). Self-contained: depends only on `@nestjs/*` + `class-transformer`/`class-validator`/`rxjs` — **no `@concepta/nestjs-*`**. Replaced the former `rockets-common` (deleted; merged here). It is the lowest layer — `repository`/`crud` depend on it for shared `AppContextHost`/`RuntimeException` identity.
+- `packages/rockets-repository` (`@bitwild/rockets-repository`): self-contained dynamic repository implementation (module, adapter, transactions, federation, hooks, query helpers). DB-agnostic — no TypeORM/Firestore. Depends on `rockets-app`. `@InjectDynamicRepository(string | Type)`. (Was a thin wrapper over upstream `@concepta/nestjs-repository`; now owns the code.)
+- `packages/rockets-repository-typeorm` (`@bitwild/rockets-repository-typeorm`): TypeORM implementation of the dynamic repository contract.
 - `packages/rockets-repository-firestore`: Firestore implementation of the dynamic repository contract.
-- `packages/rockets-crud`: generic CRUD module + configurable builder.
+- `packages/rockets-crud` (`@bitwild/rockets-crud`): self-contained generic CRUD module + configurable builder + CQRS handlers + interceptors. Depends on `rockets-repository` + `rockets-app`. `@InjectCrudAdapter(string | Type)`. (Was a wrapper over upstream `@concepta/nestjs-crud`; now owns the code.)
 - `packages/rockets-access-control`: ACL/RBAC primitives.
 - `packages/rockets-core`: **shared server infrastructure** — auth abstraction (`AuthAdapterInterface`, `AuthServerGuard`), CQRS handlers, declarative resources (`defineResource`, `defineModuleResource`, `buildAppRegistrationPlan`), root `repository` adapter + `userMetadata` config, Swagger registration. Imported by both server and auth.
 - `packages/rockets-server` (`@bitwild/rockets`): external-auth integration layer. `MeController` + global guard opt-in. Use when users live in Firebase / Auth0 / another system.

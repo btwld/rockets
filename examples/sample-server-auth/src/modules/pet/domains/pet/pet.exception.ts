@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import {
   RuntimeException,
   RuntimeExceptionOptions,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-app';
 
 export class PetException extends RuntimeException {
   constructor(message: string, options?: RuntimeExceptionOptions) {

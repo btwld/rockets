@@ -40,7 +40,8 @@
   },
   "dependencies": {
     "@bitwild/rockets-core": "workspace:^",
-    "@nestjs/common": "^11.1.18"
+    "@nestjs/common": "^11.1.18",
+    "@nestjs/core": "^11.1.18"
   },
   "devDependencies": {
     "@nestjs/testing": "11.1.18",

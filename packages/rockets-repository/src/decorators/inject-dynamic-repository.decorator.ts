@@ -1,15 +1,16 @@
 import { Inject } from '@nestjs/common';
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { resolveEntityKey } from '@bitwild/rockets-common';
+import { resolveEntityKey } from '@bitwild/rockets-app';
+
+import { getDynamicRepositoryToken } from '../utils/get-dynamic-repository-token';
 
 /**
  * Inject a dynamic repository by entity class **or** string key.
  *
  * Class form is the recommended idiom — the key is derived via
  * `deriveEntityKey()` (strip trailing `Entity`, lowercase first char) so
- * the registration in `defineResource({ entity })` and the injection
- * site agree without a separate `*_ENTITY_KEY` constant.
+ * the registration and the injection site agree without a separate
+ * `*_ENTITY_KEY` constant.
  *
  * String form is the escape hatch for namespaced or non-derived keys
  * (e.g. `'billing/invoice'`).

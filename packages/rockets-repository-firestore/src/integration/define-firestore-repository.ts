@@ -3,7 +3,7 @@ import type { RepositoryBootstrap } from '@bitwild/rockets-core';
 import type {
   DynamicRepositoryModule,
   RepositoryProviderOptions,
-} from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
 
 import { FirestoreRepositoryModule } from '../firestore-repository.module';
 import type { DefineFirestoreRepositoryOptions } from './define-firestore-repository.config';
@@ -22,15 +22,11 @@ export function defineFirestoreRepository(
   return {
     name: 'firestore-bootstrap',
 
-    forFeature(
-      entities: RepositoryProviderOptions[],
-    ): DynamicRepositoryModule {
+    forFeature(entities: RepositoryProviderOptions[]): DynamicRepositoryModule {
       return FirestoreRepositoryModule.forFeature(entities, options);
     },
 
-    forRoot(
-      entities: ReadonlyArray<Type<PlainLiteralObject>>,
-    ): DynamicModule {
+    forRoot(entities: ReadonlyArray<Type<PlainLiteralObject>>): DynamicModule {
       return FirestoreRepositoryModule.forRoot({
         ...options,
         entities: [...entities],

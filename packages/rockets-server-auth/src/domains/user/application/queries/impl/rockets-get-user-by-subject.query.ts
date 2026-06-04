@@ -1,6 +1,6 @@
 import { PlainLiteralObject } from '@nestjs/common';
 import { Query } from '@nestjs/cqrs';
-import { ReferenceSubject } from '@concepta/nestjs-common';
+import { ReferenceSubject } from '@bitwild/rockets-app';
 import {
   AuthenticationUserResult,
   GetUserBySubjectQueryInterface,

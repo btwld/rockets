@@ -6,7 +6,7 @@ import {
   getDynamicRepositoryToken,
   Where,
   RepositoryModule,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 import { SeedingSource } from '@concepta/typeorm-seeding';
 
 import { relationOrmConfig } from '../../__fixtures__/repository/config/relation-ormconfig.fixture';

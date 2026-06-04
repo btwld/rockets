@@ -10,7 +10,7 @@
   "include": ["src/**/*.ts"],
   "exclude": ["**/*.spec.ts"],
   "references": [
-    { "path": "../rockets-common" },
+    { "path": "../rockets-app" },
     { "path": "../rockets-core" },
     { "path": "../rockets-repository" }
   ]

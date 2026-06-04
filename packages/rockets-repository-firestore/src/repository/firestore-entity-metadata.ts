@@ -1,5 +1,5 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import type { RepositoryMetadataInterface } from '@concepta/nestjs-repository';
+import type { RepositoryMetadataInterface } from '@bitwild/rockets-repository';
 
 import {
   FIRESTORE_ALT_SOFT_DELETE_FIELD,

@@ -1,4 +1,4 @@
-import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 
 export function resolvePersistenceAdapter(
   override: RepositoryModuleInterface | undefined,

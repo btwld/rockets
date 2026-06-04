@@ -1,7 +1,7 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import type { CrudContextInterface } from '@bitwild/rockets-crud';
 // CrudLocalInterface is not part of the public barrel — deep import required
-import type { CrudLocalInterface } from '@concepta/nestjs-crud/dist/infrastructure/interceptors/interfaces/crud-local.interface';
+import type { CrudLocalInterface } from '@bitwild/rockets-crud/dist/infrastructure/interceptors/interfaces/crud-local.interface';
 
 /**
  * Shape of `request.user` after JWT validation ({@link RocketsJwtAuthAdapter}).

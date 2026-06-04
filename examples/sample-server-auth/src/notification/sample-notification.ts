@@ -1,6 +1,6 @@
 import { Logger, PlainLiteralObject } from '@nestjs/common';
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import type { ReferenceEmail } from '@concepta/nestjs-common';
+import type { ReferenceEmail } from '@bitwild/rockets-app';
 import type {
   SendPasswordUpdatedNotificationCommandInterface,
   SendRecoverLoginNotificationCommandInterface,

@@ -19,7 +19,7 @@ import {
   WhereClause,
   WhereCondition,
   WhereOperator,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 
 import { TypeOrmRepository } from '../typeorm-repository';
 

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CrudAdapter } from '@concepta/nestjs-crud';
-import { RepositoryInterface } from '@concepta/nestjs-repository';
+import { CrudAdapter } from '@bitwild/rockets-crud';
+import { RepositoryInterface } from '@bitwild/rockets-repository';
 import { RocketsAuthUserMetadataEntityInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-entity.interface';
 import { UserMetadataEntityFixture } from '../user/user-metadata.entity.fixture';
 

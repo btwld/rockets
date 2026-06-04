@@ -1,8 +1,8 @@
 import {
   createSettingsProvider,
-  HookModule,
+  RocketsAppModule,
   SwaggerUiModule,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-app';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,
@@ -112,8 +112,9 @@ function createCoreImports(
     CqrsModule.forRoot(),
     ConfigModule.forFeature(rocketsCoreDefaultConfig),
     // Register hooks *before* repositories, otherwise repository-level hooks
-    // won’t be wired and will quietly do nothing.
-    HookModule.forRoot({}),
+    // won’t be wired and will quietly do nothing. RocketsAppModule provides
+    // the hook feature (HookResolverService) globally.
+    RocketsAppModule.forRoot(),
     RepositoryModule.forRoot({}),
   ];
 

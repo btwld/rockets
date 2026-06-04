@@ -37,7 +37,7 @@
     "test": "cd ../.. && jest --testPathPattern=rockets-repository-firestore"
   },
   "dependencies": {
-    "@bitwild/rockets-common": "workspace:^",
+    "@bitwild/rockets-app": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",
     "@concepta/nestjs-repository": "8.0.0-alpha.5"

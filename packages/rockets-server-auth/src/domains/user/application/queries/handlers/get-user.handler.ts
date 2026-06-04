@@ -5,7 +5,7 @@ import {
   User,
 } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
-import { createRepositoryContext } from '@bitwild/rockets-common';
+import { createRepositoryContext } from '@bitwild/rockets-app';
 import { userAggregateToEntity } from '../../../../../shared/utils/aggregate-mappers';
 
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';

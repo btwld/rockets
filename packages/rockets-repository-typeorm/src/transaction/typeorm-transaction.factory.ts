@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import {
   TransactionInterface,
   TransactionFactoryInterface,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 
 import { TypeOrmTransaction } from './typeorm-transaction';
 

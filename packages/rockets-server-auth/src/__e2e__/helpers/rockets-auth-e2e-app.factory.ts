@@ -1,8 +1,9 @@
 import './patch-crud-module-for-e2e.bootstrap';
 
-import { EmailSendInterface, ExceptionsFilter } from '@concepta/nestjs-common';
+import { ExceptionsFilter } from '@bitwild/rockets-app';
+import { EmailSendInterface } from '@concepta/nestjs-common';
 import { EventModule } from '@concepta/nestjs-event';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
 import {
   DynamicModule,
   INestApplication,

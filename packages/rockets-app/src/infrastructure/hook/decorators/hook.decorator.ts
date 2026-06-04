@@ -85,7 +85,7 @@ export function Hook(options: HookDecoratorOptions): ClassDecorator {
   // Apply base decorators first, then scan methods
   const baseDecorator = applyDecorators(...decorators);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+  // eslint-disable-next-line @typescript-eslint/ban-types
   return (target: Function) => {
     // Apply Injectable, SetMetadata, etc.
     baseDecorator(target);
@@ -102,7 +102,7 @@ export function Hook(options: HookDecoratorOptions): ClassDecorator {
  * Pre-computes resolved specifications for O(1) runtime lookup.
  */
 function scanHookMethods(
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+  // eslint-disable-next-line @typescript-eslint/ban-types
   target: Function,
 ): Map<HookMethodKeyType, HookMethodMapInterface[]> {
   const methods = new Map<HookMethodKeyType, HookMethodMapInterface[]>();

@@ -12,7 +12,7 @@ import type {
   AuthorizationPayloadInterface,
   Token,
 } from '@concepta/nestjs-authentication';
-import type { ReferenceEmail } from '@concepta/nestjs-common';
+import type { ReferenceEmail } from '@bitwild/rockets-app';
 
 import { RocketsAuthUserPortGetByUsernameQuery } from '../../domains/user/application/queries/impl/rockets-auth-user-port-get-by-username.query';
 import { RocketsGetUserBySubjectQuery } from '../../domains/user/application/queries/impl/rockets-get-user-by-subject.query';

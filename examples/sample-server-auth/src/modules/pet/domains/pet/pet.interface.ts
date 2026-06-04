@@ -1,4 +1,4 @@
-import { ByIdInterface, ReferenceIdInterface } from '@bitwild/rockets-common';
+import { ByIdInterface, ReferenceIdInterface } from '@bitwild/rockets-app';
 import { PetVaccinationEntityInterface } from '../pet-vaccination/pet-vaccination.interface';
 import { PetAppointmentEntityInterface } from '../pet-appointment/pet-appointment.interface';
 

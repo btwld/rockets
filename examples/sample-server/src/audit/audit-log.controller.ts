@@ -5,7 +5,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { Ctx, type AppContextInterface } from '@concepta/nestjs-common';
+import { Ctx, type AppContextInterface } from '@bitwild/rockets-app';
 import { AdminGuard } from '../admin/admin.guard';
 import { AuditAction } from './audit-log.entity';
 import { AuditListResult, AuditLogService } from './audit-log.service';

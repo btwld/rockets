@@ -1,5 +1,5 @@
 import { Entity, ManyToOne } from 'typeorm';
-import { ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 import { FederatedSqliteEntity } from '@concepta/nestjs-typeorm-ext';
 import { UserFixture } from '../user/user.entity.fixture';
 

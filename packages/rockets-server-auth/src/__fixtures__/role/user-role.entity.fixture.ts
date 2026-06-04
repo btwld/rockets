@@ -1,5 +1,5 @@
 import { Entity, ManyToOne } from 'typeorm';
-import { ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 import { RoleInterface } from '@concepta/nestjs-role';
 import { RoleAssignmentSqliteEntity } from '@concepta/nestjs-typeorm-ext';
 

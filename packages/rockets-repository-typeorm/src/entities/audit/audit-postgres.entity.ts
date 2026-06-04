@@ -11,7 +11,7 @@ import {
   AuditDateUpdated,
   AuditInterface,
   AuditVersion,
-} from '@concepta/rockets-app';
+} from '@bitwild/rockets-app';
 
 /**
  * Audit Postgres

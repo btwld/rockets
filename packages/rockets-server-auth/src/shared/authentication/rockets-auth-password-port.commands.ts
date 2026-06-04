@@ -1,6 +1,6 @@
 import { PlainLiteralObject } from '@nestjs/common';
 import { Command } from '@nestjs/cqrs';
-import { ReferenceId, ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceId, ReferenceIdInterface } from '@bitwild/rockets-app';
 import type {
   SetPasswordCommandInterface,
   ValidatePasswordCommandInterface,

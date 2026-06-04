@@ -1,4 +1,4 @@
-import { createSettingsProvider } from '@bitwild/rockets-common';
+import { createSettingsProvider } from '@bitwild/rockets-app';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,

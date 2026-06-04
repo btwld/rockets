@@ -4,7 +4,7 @@ import {
   CrudListQuery,
   CrudResponsePaginatedInterface,
   InjectCrudAdapter,
-} from '@concepta/nestjs-crud';
+} from '@bitwild/rockets-crud';
 import { USER_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 import { AbstractAdminUserListHandler } from '../../commands/handlers/abstract-admin-user-list.handler';

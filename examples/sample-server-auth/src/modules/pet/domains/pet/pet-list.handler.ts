@@ -6,9 +6,9 @@ import {
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
 import { getActor } from '@bitwild/rockets-core';
-// TODO: deep imports — move to barrel when @concepta/nestjs-crud exports these
-import { CrudQueryHandler } from '@concepta/nestjs-crud/dist/application/queries/handlers/crud-query.handler';
-import type { CrudQueryInterface } from '@concepta/nestjs-crud/dist/application/queries/interfaces/crud-query.interface';
+// TODO: deep imports — move to barrel when @bitwild/rockets-crud exports these
+import { CrudQueryHandler } from '@bitwild/rockets-crud/dist/application/queries/handlers/crud-query.handler';
+import type { CrudQueryInterface } from '@bitwild/rockets-crud/dist/application/queries/interfaces/crud-query.interface';
 import { WhereOperator, type EntityColumn } from '@bitwild/rockets-repository';
 import { PetEntity } from './pet.entity';
 

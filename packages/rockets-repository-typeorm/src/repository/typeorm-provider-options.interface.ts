@@ -2,7 +2,7 @@ import { DataSource, Repository } from 'typeorm';
 
 import { PlainLiteralObject } from '@nestjs/common';
 
-import { RepositoryProviderOptions } from '@concepta/rockets-repository';
+import { RepositoryProviderOptions } from '@bitwild/rockets-repository';
 
 import { TypeOrmDataSourceToken } from '../typeorm-repository.types';
 

@@ -10,16 +10,16 @@ import {
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
 import { getActor } from '@bitwild/rockets-core';
-// TODO: deep imports — move to barrel when @concepta/nestjs-crud exports these
-import { CrudCommandHandler } from '@concepta/nestjs-crud/dist/application/commands/handlers/crud-command.handler';
-import type { CrudCommandInterface } from '@concepta/nestjs-crud/dist/application/commands/interfaces/crud-command.interface';
+// TODO: deep imports — move to barrel when @bitwild/rockets-crud exports these
+import { CrudCommandHandler } from '@bitwild/rockets-crud/dist/application/commands/handlers/crud-command.handler';
+import type { CrudCommandInterface } from '@bitwild/rockets-crud/dist/application/commands/interfaces/crud-command.interface';
 import { PetEntity } from './pet.entity';
 import { PetCreatableInterface } from './pet.interface';
 
 /**
  * Stamps `userId` from the authenticated actor that `ActorOverlay`
  * publishes on the CRUD context. Replaces the v7 `UseCrudLocals` flow,
- * which is broken in v8 `@concepta/nestjs-crud`
+ * which is broken in v8 `@bitwild/rockets-crud`
  * (`CrudLocalsInterceptor.reflectionService.getLocals` is no longer a
  * method).
  *

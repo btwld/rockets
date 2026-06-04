@@ -18,7 +18,7 @@ import {
   AuthUser,
   Ctx,
   type AppContextInterface,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-app';
 import type { AuthorizedUser } from '@bitwild/rockets';
 import { PetEntity } from '../pet/pet.entity';
 import { TransferPetOwnershipDto } from './dto/transfer-pet-ownership.dto';

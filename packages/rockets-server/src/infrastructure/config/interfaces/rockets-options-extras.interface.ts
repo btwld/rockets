@@ -13,9 +13,7 @@ export interface DisableControllerOptionsInterface {
   me?: boolean;
 }
 
-export type RocketsAuthOption =
-  | AuthBootstrap
-  | ReadonlyArray<AuthBootstrap>;
+export type RocketsAuthOption = AuthBootstrap | ReadonlyArray<AuthBootstrap>;
 
 /** @deprecated Prefer {@link RocketsAuthOption}. */
 export type RocketsAuthInput = RocketsAuthOption;

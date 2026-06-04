@@ -3,7 +3,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
   AssigneeRelationInterface,
   ReferenceAssignment,
-} from '@concepta/nestjs-common';
+} from '@bitwild/rockets-app';
 import { OtpInterface } from '@concepta/nestjs-otp';
 
 import { RocketsCreateOtpCommand } from '../../domains/otp/application/commands/impl/rockets-create-otp.command';

@@ -43,7 +43,7 @@ export interface HookMethodMapInterface {
    * Pre-resolved method function from prototype.
    * Stored at decoration time to avoid runtime property lookup.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+  // eslint-disable-next-line @typescript-eslint/ban-types
   method: Function;
 }
 

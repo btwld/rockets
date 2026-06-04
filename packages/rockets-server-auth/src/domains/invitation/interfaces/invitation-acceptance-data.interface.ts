@@ -1,4 +1,5 @@
-import { LiteralObject, ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
+import { LiteralObject } from '@concepta/nestjs-common';
 import { InvitationInterface } from '@concepta/nestjs-invitation';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../user/interfaces/rockets-auth-user-metadata-updatable.interface';
 

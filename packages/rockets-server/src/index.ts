@@ -51,11 +51,8 @@ export type {
 } from '@bitwild/rockets-core';
 
 // ── Re-export common utilities ──
-export {
-  logAndGetErrorDetails,
-  getErrorDetails,
-} from '@bitwild/rockets-common';
-export type { ErrorDetails } from '@bitwild/rockets-common';
+export { logAndGetErrorDetails, getErrorDetails } from '@bitwild/rockets-app';
+export type { ErrorDetails } from '@bitwild/rockets-app';
 
 // ── Backward compatibility re-exports ──
 export { ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from './rockets.constants';

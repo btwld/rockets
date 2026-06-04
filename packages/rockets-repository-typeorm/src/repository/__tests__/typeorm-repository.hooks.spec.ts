@@ -7,7 +7,7 @@ import {
   DeepPartial,
   RocketsAppModule,
   HooksCtx,
-} from '@concepta/rockets-app';
+} from '@bitwild/rockets-app';
 import {
   RepositoryModule,
   RepoHook,
@@ -88,7 +88,7 @@ import {
   getDynamicRepositoryToken,
   TrxCtx,
   TransactionContextInterface,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 import { SeedingSource } from '@concepta/typeorm-seeding';
 
 import { ormConfig } from '../../__fixtures__/repository/config/ormconfig.fixture';

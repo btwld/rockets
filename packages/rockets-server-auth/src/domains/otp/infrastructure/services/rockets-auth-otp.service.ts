@@ -1,7 +1,4 @@
-import {
-  ReferenceIdInterface,
-  RuntimeException,
-} from '@concepta/nestjs-common';
+import { ReferenceIdInterface, RuntimeException } from '@bitwild/rockets-app';
 import {
   RocketsAuthOtpPortService,
   ROCKETS_AUTH_OTP_PORT_TOKEN,

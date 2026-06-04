@@ -11,7 +11,7 @@ import {
   SortOrder,
   Where,
 } from '@bitwild/rockets-repository';
-import type { AppContextInterface } from '@bitwild/rockets-common';
+import type { AppContextInterface } from '@bitwild/rockets-app';
 
 import {
   GITHUB_API_CLIENT,

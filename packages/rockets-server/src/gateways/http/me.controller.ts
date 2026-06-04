@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Body, Inject } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { AuthUser, whitelistedFromDto } from '@bitwild/rockets-common';
+import { AuthUser, whitelistedFromDto } from '@bitwild/rockets-app';
 import {
   ApiTags,
   ApiOperation,

@@ -38,7 +38,7 @@
     "build:watch": "tsc -p tsconfig.json --watch"
   },
   "dependencies": {
-    "@bitwild/rockets-common": "workspace:^",
+    "@bitwild/rockets-app": "workspace:^",
     "@concepta/nestjs-access-control": "7.0.0-alpha.10"
   }
 }

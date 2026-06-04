@@ -1,12 +1,12 @@
 import { Inject, Optional } from '@nestjs/common';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
-import { AppContextHost } from '@concepta/nestjs-common';
+import { AppContextHost } from '@bitwild/rockets-app';
 import { UserCredentialEntityInterface } from '@concepta/nestjs-user';
 import {
   RepositoryInterface,
   getDynamicRepositoryToken,
   Where,
-} from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
 
 import { USER_CREDENTIALS_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { GetActiveCredentialQuery } from '../impl/get-active-credential.query';

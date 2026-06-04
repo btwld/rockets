@@ -1,5 +1,5 @@
 import { Global, Module, type DynamicModule } from '@nestjs/common';
-import type { DynamicRepositoryModule } from '@concepta/nestjs-repository';
+import type { DynamicRepositoryModule } from '@bitwild/rockets-repository';
 
 import { FIRESTORE_REPOSITORY_MODULE_NAME } from './constants/firestore-repository.constants';
 import type { FirestoreProviderOptions } from './interfaces/firestore-provider-options.interface';

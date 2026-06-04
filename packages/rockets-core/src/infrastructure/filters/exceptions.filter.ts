@@ -2,7 +2,7 @@ import {
   ExceptionInterface,
   mapHttpStatus,
   RuntimeException,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-app';
 import {
   Catch,
   ArgumentsHost,

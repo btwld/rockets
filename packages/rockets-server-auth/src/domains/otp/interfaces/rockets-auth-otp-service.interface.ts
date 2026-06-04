@@ -1,4 +1,4 @@
-import { ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 
 export interface RocketsAuthOtpServiceInterface {
   sendOtp(email: string): Promise<void>;

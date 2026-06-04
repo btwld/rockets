@@ -5,7 +5,7 @@ import {
   ReferenceIdInterface,
   RemoveOneInterface,
   UpdateOneInterface,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-app';
 
 /**
  * Pet Appointment Status Enumeration

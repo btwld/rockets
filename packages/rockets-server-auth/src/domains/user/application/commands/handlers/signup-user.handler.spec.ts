@@ -1,6 +1,6 @@
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { TransactionScope } from '@concepta/nestjs-repository';
-import type { CrudContextInterface } from '@concepta/nestjs-crud';
+import { TransactionScope } from '@bitwild/rockets-repository';
+import type { CrudContextInterface } from '@bitwild/rockets-crud';
 import {
   CreateUserCommand,
   GetUserByEmailQuery,

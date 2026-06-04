@@ -3,8 +3,8 @@ import { DataSource, Repository } from 'typeorm';
 
 import { getDataSourceToken } from '@nestjs/typeorm';
 
-import { HookResolverService } from '@concepta/rockets-app';
-import { getDynamicRepositoryToken } from '@concepta/rockets-repository';
+import { HookResolverService } from '@bitwild/rockets-app';
+import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
 
 import { TypeOrmProviderOptionsInterface } from './repository/typeorm-provider-options.interface';
 import { TypeOrmRepository } from './repository/typeorm-repository';

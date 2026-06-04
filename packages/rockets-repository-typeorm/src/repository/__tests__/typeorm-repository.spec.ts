@@ -8,7 +8,7 @@ import {
   getDynamicRepositoryToken,
   RepositoryInterface,
   RepositoryModule,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 
 import { ormConfig } from '../../__fixtures__/repository/config/ormconfig.fixture';
 import { TestEntityFixture } from '../../__fixtures__/repository/entity/test.entity.fixture';

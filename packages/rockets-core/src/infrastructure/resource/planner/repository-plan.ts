@@ -2,7 +2,7 @@ import type { PlainLiteralObject, Type } from '@nestjs/common';
 import type {
   RepositoryModuleInterface,
   RepositoryProviderOptions,
-} from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
 import type { RepositoryPersistenceConfig } from '../../../domain/interfaces/repository-persistence.interface';
 import type { CrudResource } from '../../../domain/interfaces/rockets-resource-bundle.interface';
 import type { ModuleResource } from '../../../domain/interfaces/module-resource.interface';

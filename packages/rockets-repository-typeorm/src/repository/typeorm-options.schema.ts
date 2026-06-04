@@ -9,7 +9,7 @@ import {
   RepositoryColumnMetadataInterface,
   RepositoryRelationMetadataInterface,
   RelationActionConfig,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 
 /**
  * Type guard that validates EntityTarget satisfies Type<Entity>.

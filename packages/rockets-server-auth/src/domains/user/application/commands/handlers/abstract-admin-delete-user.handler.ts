@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CrudDeleteCommand } from '@concepta/nestjs-crud';
+import { CrudDeleteCommand } from '@bitwild/rockets-crud';
 
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 

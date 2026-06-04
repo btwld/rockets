@@ -1,4 +1,4 @@
-import type { RuntimeExceptionOptions } from '@concepta/nestjs-common';
+import type { RuntimeExceptionOptions } from '@bitwild/rockets-app';
 import { OtpException } from '@concepta/nestjs-otp';
 
 /**

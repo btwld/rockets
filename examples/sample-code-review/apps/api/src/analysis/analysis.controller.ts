@@ -14,7 +14,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthUser, Ctx, type AppContextInterface } from '@bitwild/rockets-common';
+import { AuthUser, Ctx, type AppContextInterface } from '@bitwild/rockets-app';
 import type { AuthorizedUser } from '@bitwild/rockets';
 
 import {

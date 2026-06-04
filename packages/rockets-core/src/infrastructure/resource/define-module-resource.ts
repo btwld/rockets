@@ -1,5 +1,5 @@
 import type { DynamicModule, Provider } from '@nestjs/common';
-import { resolveEntityKey } from '@bitwild/rockets-common';
+import { resolveEntityKey } from '@bitwild/rockets-app';
 import type {
   ModuleResource,
   ModuleResourceEntityEntry,

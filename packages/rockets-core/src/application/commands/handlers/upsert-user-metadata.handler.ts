@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { stripUndefined } from '@bitwild/rockets-common';
+import { stripUndefined } from '@bitwild/rockets-app';
 import {
   InjectDynamicRepository,
   RepositoryInterface,

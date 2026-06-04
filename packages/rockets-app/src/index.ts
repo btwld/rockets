@@ -130,3 +130,31 @@ export { Hook } from './infrastructure/hook/decorators/hook.decorator';
 export { Specification } from './infrastructure/hook/decorators/specification.decorator';
 export { createHookMethodDecorator } from './infrastructure/hook/decorators/hook-method.decorator';
 export { HooksCtx } from './infrastructure/hook/hook.context.overlay';
+
+// Auth decorators
+export { AuthUser } from './infrastructure/decorators/auth-user.decorator';
+
+// Model interfaces
+export { ByIdInterface } from './domain/model/interfaces/by-id.interface';
+export { CreateOneInterface } from './domain/model/interfaces/create-one.interface';
+export { RemoveOneInterface } from './domain/model/interfaces/remove-one.interface';
+export { UpdateOneInterface } from './domain/model/interfaces/update-one.interface';
+
+// Shared utilities
+export {
+  logAndGetErrorDetails,
+  getErrorDetails,
+} from './infrastructure/utils/error-logging.helper';
+export type { ErrorDetails } from './infrastructure/utils/error-logging.helper';
+export { createRepositoryContext } from './infrastructure/utils/repository-context.helper';
+export type { RepositoryContextInterface } from './infrastructure/utils/repository-context.helper';
+export { stripUndefined } from './infrastructure/utils/strip-undefined.helper';
+export { whitelistedFromDto } from './infrastructure/utils/whitelisted-from-dto.util';
+export { deriveEntityKey } from './infrastructure/utils/derive-entity-key.util';
+export { resolveEntityKey } from './infrastructure/utils/resolve-entity-key.util';
+
+// Swagger UI
+export { SwaggerUiModule } from './infrastructure/swagger-ui/swagger-ui.module';
+export { SwaggerUiService } from './infrastructure/swagger-ui/swagger-ui.service';
+export type { SwaggerUiOptionsInterface } from './infrastructure/swagger-ui/interfaces/swagger-ui-options.interface';
+export type { SwaggerUiSettingsInterface } from './infrastructure/swagger-ui/interfaces/swagger-ui-settings.interface';

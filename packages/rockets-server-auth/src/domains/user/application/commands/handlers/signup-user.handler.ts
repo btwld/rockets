@@ -1,7 +1,7 @@
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Injectable } from '@nestjs/common';
-import { TransactionScope } from '@concepta/nestjs-repository';
-import { RepositoryContextInterface } from '@bitwild/rockets-common';
+import { TransactionScope } from '@bitwild/rockets-repository';
+import { RepositoryContextInterface } from '@bitwild/rockets-app';
 import {
   CreateUserCommand,
   GetUserByEmailQuery,

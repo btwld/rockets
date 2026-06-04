@@ -33,7 +33,7 @@ export type ActorType = 'user' | 'system' | 'service';
 
 /**
  * Marker that a context carries an `actor` field. CRUD context types from
- * `@concepta/nestjs-crud` are open shapes (`extends PlainLiteralObject`),
+ * `@bitwild/rockets-crud` are open shapes (`extends PlainLiteralObject`),
  * so this intersection lets hooks type their `ctx?` parameter as
  * `CrudContextLike & WithActor` and read `ctx.actor` without casts.
  */

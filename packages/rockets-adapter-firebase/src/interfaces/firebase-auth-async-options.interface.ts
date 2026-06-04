@@ -1,4 +1,9 @@
-import { ModuleMetadata, Type } from '@nestjs/common';
+import {
+  InjectionToken,
+  ModuleMetadata,
+  OptionalFactoryDependency,
+  Type,
+} from '@nestjs/common';
 
 import { FirebaseAuthModuleOptions } from './firebase-auth-options.interface';
 
@@ -15,5 +20,5 @@ export interface FirebaseAuthModuleAsyncOptions
   readonly useFactory?: (
     ...args: readonly unknown[]
   ) => Promise<FirebaseAuthModuleOptions> | FirebaseAuthModuleOptions;
-  readonly inject?: any[];
+  readonly inject?: Array<InjectionToken | OptionalFactoryDependency>;
 }

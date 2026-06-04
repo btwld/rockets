@@ -1,4 +1,4 @@
-import { ReferenceIdInterface } from '@concepta/nestjs-common';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 import { Injectable } from '@nestjs/common';
 import { RocketsAuthOtpServiceInterface } from '../../domains/otp/interfaces/rockets-auth-otp-service.interface';
 

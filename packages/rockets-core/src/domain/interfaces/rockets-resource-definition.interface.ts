@@ -1,6 +1,6 @@
 import type { PlainLiteralObject, Provider, Type } from '@nestjs/common';
 import type { RocketsEntityHookForResource } from '../../infrastructure/hooks/entity-hook';
-import type { Operation } from '@bitwild/rockets-common';
+import type { Operation } from '@bitwild/rockets-app';
 import type { ResourceKind } from './resource-kind.enum';
 import type {
   CrudRequestConfig,
@@ -9,7 +9,7 @@ import type {
 import type {
   RepositoryModuleInterface,
   WhereCondition,
-} from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
 
 /**
  * Names of CRUD operations supported by the declarative resource definition.
@@ -509,7 +509,7 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
   readonly decorators?: readonly ClassDecorator[];
   /**
    * Controller-level CRUD request config. Sets the URL `params` shape
-   * that upstream `@concepta/nestjs-crud` validates against the route's
+   * that upstream `@bitwild/rockets-crud` validates against the route's
    * `:tokens`. Default:
    *
    * ```ts

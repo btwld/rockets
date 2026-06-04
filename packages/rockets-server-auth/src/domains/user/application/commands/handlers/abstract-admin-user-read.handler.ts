@@ -3,7 +3,7 @@ import {
   CrudAdapter,
   CrudReadQuery,
   CrudResponsePaginatedInterface,
-} from '@concepta/nestjs-crud';
+} from '@bitwild/rockets-crud';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 
 /**

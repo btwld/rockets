@@ -1,7 +1,7 @@
 import {
   RuntimeException,
   RuntimeExceptionOptions,
-} from '@concepta/rockets-app';
+} from '@bitwild/rockets-app';
 
 /**
  * Exception thrown when entity name cannot be resolved from TypeORM metadata.

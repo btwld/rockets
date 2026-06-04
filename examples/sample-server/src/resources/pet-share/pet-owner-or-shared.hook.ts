@@ -7,7 +7,7 @@ import {
   Where,
   type WhereClause,
 } from '@bitwild/rockets-repository';
-import { Operation } from '@concepta/nestjs-common';
+import { Operation } from '@bitwild/rockets-app';
 import {
   EntityHook,
   type EntityHookContext,

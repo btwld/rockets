@@ -27,7 +27,7 @@ import {
   DeepPartial,
   RuntimeException,
   HookResolverService,
-} from '@concepta/rockets-app';
+} from '@bitwild/rockets-app';
 import {
   isWhereCondition,
   JoinClause,
@@ -45,7 +45,7 @@ import {
   WhereClause,
   WhereCondition,
   WhereOperator,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 
 import { TypeOrmEntityNameException } from '../exceptions/typeorm-entity-name.exception';
 
@@ -378,13 +378,14 @@ export class TypeOrmRepository<
     const repo = await this.getRepo(options?.ctx);
     this.markDirty(options?.ctx);
     const conflictPaths = this.getPrimaryColumns();
-    const insertResult = await repo.upsert(entity, conflictPaths);
+    const toUpsert = repo.create(entity);
+    const insertResult = await repo.upsert(toUpsert, conflictPaths);
 
     const identifiers = insertResult.identifiers[0] ?? {};
     const primaryKeys: Partial<Record<keyof Entity, Entity[keyof Entity]>> = {};
 
     for (const col of conflictPaths) {
-      const value = identifiers[col] ?? entity[col];
+      const value = identifiers[col] ?? toUpsert[col];
 
       if (value === undefined) {
         throw new Error(`Upsert requires primary key "${col}" to be set`);

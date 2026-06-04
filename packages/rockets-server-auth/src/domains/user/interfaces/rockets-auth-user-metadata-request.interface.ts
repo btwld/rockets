@@ -1,4 +1,4 @@
-import { CrudParsedQueryInterface as CrudRequestInterface } from '@concepta/nestjs-crud';
+import { CrudParsedQueryInterface as CrudRequestInterface } from '@bitwild/rockets-crud';
 import { RocketsAuthUserMetadataEntityInterface } from './rockets-auth-user-metadata-entity.interface';
 
 /**

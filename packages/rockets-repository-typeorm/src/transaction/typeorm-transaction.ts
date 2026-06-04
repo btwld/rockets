@@ -1,6 +1,6 @@
 import { DataSource, QueryRunner, EntityManager } from 'typeorm';
 
-import { TransactionInterface } from '@concepta/rockets-repository';
+import { TransactionInterface } from '@bitwild/rockets-repository';
 
 /**
  * TypeORM implementation of a transaction.

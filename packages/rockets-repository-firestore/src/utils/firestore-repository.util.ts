@@ -3,7 +3,7 @@ import { getApp, getApps } from 'firebase-admin/app';
 import {
   getDynamicRepositoryToken,
   type DynamicRepositoryModule,
-} from '@concepta/nestjs-repository';
+} from '@bitwild/rockets-repository';
 
 import { AdminFirestoreBackend } from '../backends/admin-firestore.backend';
 import { FirestoreRepositoryModule } from '../firestore-repository.module';

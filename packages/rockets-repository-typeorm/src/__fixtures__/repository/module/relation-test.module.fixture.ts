@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { RepositoryModule } from '@concepta/rockets-repository';
+import { RepositoryModule } from '@bitwild/rockets-repository';
 
 import { TypeOrmRepositoryModule } from '../../../typeorm-repository.module';
 import {

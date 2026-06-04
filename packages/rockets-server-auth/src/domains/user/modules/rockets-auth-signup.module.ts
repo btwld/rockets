@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
-import { Operation } from '@concepta/nestjs-common';
+import { Operation } from '@bitwild/rockets-app';
 import { CqrsModule } from '@nestjs/cqrs';
-import { CrudModule, CrudOperationResolver } from '@concepta/nestjs-crud';
+import { CrudModule, CrudOperationResolver } from '@bitwild/rockets-crud';
 import { AuthPublic } from '@concepta/nestjs-authentication';
 import { ApiTags } from '@nestjs/swagger';
 

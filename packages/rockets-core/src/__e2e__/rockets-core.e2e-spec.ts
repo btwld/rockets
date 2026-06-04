@@ -28,7 +28,7 @@ import {
 } from '../rockets-core.constants';
 import { UpsertUserMetadataCommand } from '../application/commands/impl/upsert-user-metadata.command';
 import { GetUserMetadataQuery } from '../application/queries/impl/get-user-metadata.query';
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser } from '@bitwild/rockets-app';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
 

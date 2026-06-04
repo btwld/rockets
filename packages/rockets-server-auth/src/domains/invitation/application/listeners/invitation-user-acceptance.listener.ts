@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { whitelistedFromDto } from '@bitwild/rockets-common';
+import { whitelistedFromDto } from '@bitwild/rockets-app';
 import { PasswordCreationService } from '@concepta/nestjs-password';
-import { TransactionScope } from '@concepta/nestjs-repository';
+import { TransactionScope } from '@bitwild/rockets-repository';
 import { AssignRoleCommand } from '@concepta/nestjs-role';
 import { InvitationAcceptedEvent } from '@concepta/nestjs-invitation';
 

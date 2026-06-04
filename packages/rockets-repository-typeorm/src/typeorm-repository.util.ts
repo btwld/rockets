@@ -8,11 +8,11 @@ import {
 } from '@nestjs/typeorm';
 import { EntityClassOrSchema } from '@nestjs/typeorm/dist/interfaces/entity-class-or-schema.type';
 
-import { HookResolverService } from '@concepta/rockets-app';
+import { HookResolverService } from '@bitwild/rockets-app';
 import {
   getDynamicRepositoryToken,
   RelationActionConfig,
-} from '@concepta/rockets-repository';
+} from '@bitwild/rockets-repository';
 
 import { TypeOrmProviderOptionsInterface } from './repository/typeorm-provider-options.interface';
 import { TypeOrmRepository } from './repository/typeorm-repository';
@@ -31,7 +31,7 @@ export function resolveDataSourceName(
   }
   return typeof dataSource === 'string'
     ? dataSource
-    : (dataSource.name ?? TYPEORM_DEFAULT_DATA_SOURCE_NAME);
+    : dataSource.name ?? TYPEORM_DEFAULT_DATA_SOURCE_NAME;
 }
 
 /**

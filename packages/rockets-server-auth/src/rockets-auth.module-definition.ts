@@ -17,8 +17,8 @@ import {
   AuthenticationModule,
   AuthenticationOptionsInterface,
 } from '@concepta/nestjs-authentication';
-import { createSettingsProvider } from '@concepta/nestjs-common';
-import { CrudContextOverlay, CrudModule } from '@concepta/nestjs-crud';
+import { createSettingsProvider } from '@bitwild/rockets-app';
+import { CrudContextOverlay, CrudModule } from '@bitwild/rockets-crud';
 import { EmailModule } from '@concepta/nestjs-email';
 import {
   FederatedModule,
@@ -46,7 +46,7 @@ import {
   ValidateCurrentPasswordCommand,
   ValidatePasswordHistoryCommand,
 } from '@concepta/nestjs-password';
-import { RepositoryModule } from '@concepta/nestjs-repository';
+import { RepositoryModule } from '@bitwild/rockets-repository';
 import { RoleModule } from '@concepta/nestjs-role';
 import { SwaggerUiModule } from '@concepta/nestjs-swagger-ui';
 import {

@@ -1,20 +1,22 @@
 import { applyDecorators, type PlainLiteralObject } from '@nestjs/common';
-import { deriveEntityKey } from '@bitwild/rockets-common';
+import { deriveEntityKey } from '@bitwild/rockets-app';
 import {
   CrudOperationResolver,
   type ConfigurableCrudGeneratedOptions,
   type CrudControllerOptionsInterface,
   type CrudOperationOptions,
 } from '@bitwild/rockets-crud';
-import type { RepositoryProviderOptions } from '@concepta/nestjs-repository';
+import type { RepositoryProviderOptions } from '@bitwild/rockets-repository';
 import type { RocketsResourceConfig } from '../../../domain/interfaces/rockets-resource.interface';
 import type { RocketsResourceDefinition } from '../../../domain/interfaces/rockets-resource-definition.interface';
-import type {
-  CrudResource,
-} from '../../../domain/interfaces/rockets-resource-bundle.interface';
+import type { CrudResource } from '../../../domain/interfaces/rockets-resource-bundle.interface';
 import type { RocketsSubResourceDefinition } from '../../../domain/interfaces/rockets-resource-definition.interface';
 import { ResourceKind } from '../../../domain/interfaces/resource-kind.enum';
-import { DEFAULT_OPERATIONS, defaultPathFromKey, defaultTagFromKey } from './defaults';
+import {
+  DEFAULT_OPERATIONS,
+  defaultPathFromKey,
+  defaultTagFromKey,
+} from './defaults';
 import { validateDefinition } from './validate-definition';
 import { resolveRelations } from './resolve-relations';
 import { normalizeOperationsInput } from './normalize-operations';

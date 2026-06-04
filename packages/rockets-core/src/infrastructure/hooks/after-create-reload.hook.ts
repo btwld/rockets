@@ -4,7 +4,7 @@ import {
   type RepositoryInterface,
   Where,
 } from '@bitwild/rockets-repository';
-import { deriveEntityKey } from '@bitwild/rockets-common';
+import { deriveEntityKey } from '@bitwild/rockets-app';
 import { EntityHook, PassthroughEntityHookBase } from './entity-hook';
 
 /**

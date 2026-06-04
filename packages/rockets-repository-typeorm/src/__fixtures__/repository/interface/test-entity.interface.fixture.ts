@@ -1,4 +1,4 @@
-import { AuditInterface, ReferenceIdInterface } from '@concepta/rockets-app';
+import { AuditInterface, ReferenceIdInterface } from '@bitwild/rockets-app';
 
 export interface TestInterfaceFixture
   extends ReferenceIdInterface,

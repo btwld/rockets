@@ -28,7 +28,7 @@ export function collectBootstrapForRootImports(
     ]);
   }
 
-  return Array.from(entitiesByBootstrap.entries()).map(([bootstrap, entities]) =>
-    bootstrap.forRoot(entities),
+  return Array.from(entitiesByBootstrap.entries()).map(
+    ([bootstrap, entities]) => bootstrap.forRoot(entities),
   );
 }

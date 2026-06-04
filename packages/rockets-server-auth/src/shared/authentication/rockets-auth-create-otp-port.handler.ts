@@ -1,6 +1,6 @@
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import type { AuthenticationOtpInterface } from '@concepta/nestjs-authentication';
-import type { ReferenceId } from '@concepta/nestjs-common';
+import type { ReferenceId } from '@bitwild/rockets-app';
 import {
   CreateOtpCommand,
   type Otp,

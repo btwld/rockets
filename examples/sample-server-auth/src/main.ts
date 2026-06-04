@@ -6,7 +6,7 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { ExceptionsFilter } from '@bitwild/rockets';
-import { SwaggerUiService } from '@bitwild/rockets-common';
+import { SwaggerUiService } from '@bitwild/rockets-app';
 import {
   ROLE_CRUD_ENTITY_KEY,
   USER_ROLE_ENTITY_KEY,

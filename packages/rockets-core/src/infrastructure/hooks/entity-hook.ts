@@ -19,7 +19,7 @@ import {
   type RepositoryFindOneOptions,
   type RepositoryFindOptions,
 } from '@bitwild/rockets-repository';
-import { Specification, deriveEntityKey } from '@bitwild/rockets-common';
+import { Specification, deriveEntityKey } from '@bitwild/rockets-app';
 import type { RocketsCrudContext } from '../../domain/interfaces/rockets-crud-context.interface';
 
 /**
