@@ -27,8 +27,14 @@ the user has already had to fix more than once.
    core** (both server and auth need API docs from a single registration).
 
 2. **Dynamic repository, not `@InjectRepository`.** In new code, use
-   `@InjectDynamicRepository(KEY)` + `RepositoryInterface<Entity>` from
-   `@bitwild/rockets-repository`. Register entities through bundles inside
+   `@InjectDynamicRepository(KEY)` + `RepositoryInterface<Entity>`. **Features
+   built on top of core import these from `@bitwild/rockets-core`** (it
+   re-exports the repository abstraction — `InjectDynamicRepository`,
+   `RepositoryInterface`, `RepositoryModuleInterface`, `Where`,
+   `getDynamicRepositoryToken` — so feature/server code never depends on
+   `@bitwild/rockets-repository` directly). The symbols originate in
+   `@bitwild/rockets-repository`; only core and lower-level packages import them
+   from there. Register entities through bundles inside
    `resources[]` (`defineResource()` auto-contributes its entity row;
    `defineModuleResource({ entities: [...] })` contributes additional
    rows) plus `userMetadata.entity` for the metadata row — never via a
@@ -105,10 +111,14 @@ the user has already had to fix more than once.
     (because core is `global: true`). That makes every entry in `exports`
     injectable from anywhere in the app — including the
     `inject: [...]` factory of `RocketsModule.forRootAsync`. Powerful,
-    but also dangerous: two module resources exporting classes with the
-    same name (`PriceFormatter`, `AuditService`, `Logger`) collide
-    silently in the DI container — Nest accepts both, the last one
-    wins, and the bug surfaces in production.
+    but also dangerous: collisions are by **injection token**. Two module
+    resources exporting the **same token** — the same class reference, or
+    the same string/symbol token value — shadow each other in the DI
+    container (Nest accepts both, the last one wins, and the bug surfaces
+    in production). Two *distinct* classes that merely share a name
+    (`PriceFormatter`, `AuditService`, `Logger`) are *different* tokens
+    and don't hard-collide, but they are a real readability/foot-gun
+    hazard — treat them the same way.
 
     **Exposure rule:**
     - Provider/service crosses a feature boundary (injected by another

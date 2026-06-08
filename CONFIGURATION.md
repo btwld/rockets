@@ -751,6 +751,8 @@ do not present join as the parent-child association mechanism.
 // Only `entity` is required in every factory; everything else derives or defaults.
 
 // ── operations: key present = exposed; {} = defaults; {…} = configured ──
+// Top-level resources also accept the array shorthand `operations: [List, Read, …]`
+// (no per-op config). The keyed object below is preferred; sub-resources require it.
 type OperationsConfig = {
   list?:    { output?: Type; paginated?: Type; handler?: Type; hooks?: Hook[]; ... };
   read?:    { output?: Type; handler?: Type; hooks?: Hook[]; ... };
