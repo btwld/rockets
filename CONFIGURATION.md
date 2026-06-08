@@ -210,12 +210,12 @@ flowchart LR
 - String form (`@InjectDynamicRepository('billing/invoice')`) is the escape
   hatch for namespaced keys.
 
-> ⚠️ **Refinement note (pending migration).** Today the class-aware
-> `InjectDynamicRepository` and `RepositoryModuleInterface` come from the
-> `@bitwild/rockets-repository` wrapper. The planned migration moves the
-> decorator into `rockets-core` and points the rest at
-> `@concepta/nestjs-repository` directly. The contract above is unchanged by
-> that move — only import paths change.
+> **Branch note.** `InjectDynamicRepository` and `RepositoryModuleInterface` are
+> provided by `@bitwild/rockets-repository`, which this branch treats as the
+> active repository abstraction (`rockets-core` re-exports them so features
+> import from core). No decorator-to-core migration is pending. The dynamic
+> token contract above is unchanged: registration and injection both resolve the
+> same entity key and token string.
 
 ---
 
@@ -407,12 +407,20 @@ export const githubFeature = defineModuleResource({
 
 Because core is `global: true` and re-exports every module slice, **everything
 in `exports[]` is injectable app-wide** — including the `inject:[...]` of an
-outer `forRootAsync` factory. Two bundles exporting the same class name collide
-silently (last one wins). Rule:
+outer `forRootAsync` factory. The collision risk is by **injection token**: two
+bundles exporting the **same token** (the same class reference, or the same
+string/symbol token) shadow each other (last one wins). Rule:
 
 - crosses a feature boundary → `providers` **and** `exports`
 - internal only → `providers` only
-- collision risk → prefix (`BillingPriceFormatter`) or use an injection token
+- collision risk → prefix the class (`BillingPriceFormatter`) or use an explicit
+  injection token/symbol for shared cross-feature providers
+
+> Note: `CLAUDE.md` rule 14 phrases this as "same class **name**". Nest keys
+> providers by token (class reference), so two *distinct* classes that merely
+> share a name are *different* tokens and don't actually collide — but they're a
+> readability/foot-gun hazard. Reconcile the rule-14 wording with whoever owns
+> `CLAUDE.md`.
 
 Canonical minimum-surface example: the sample auth wiring exports **only**
 `SampleAuthAdapter`; `AuthController` and `UserEntity` stay internal.
@@ -460,8 +468,10 @@ interface AuthAdapterInterface {
 }
 ```
 
-**Global guard opt-in:** `AuthServerGuard` is registered as `APP_GUARD` **unless
-`enableGlobalGuard === false`** (on by default / opt-out).
+**Global guard (default-on / opt-out):** `AuthServerGuard` is registered as
+`APP_GUARD` **unless `enableGlobalGuard === false`** — enabled by default; you
+opt **out**, never in. Routes are guarded unless explicitly made public
+(`@AuthPublic()`) or the global guard is disabled.
 
 ### 7a. External auth (`@bitwild/rockets`) — you own `authenticate()`
 
@@ -598,8 +608,13 @@ export function defineTypeOrmRepository(connection): RepositoryBootstrap {
 ```
 
 Swap to Firestore = pass a `defineFirestoreRepository(...)` instead — **no
-core/server change**. Per-table overrides go on `defineModuleResource` entity
-rows (`{ entity, repository }`) or `userMetadata.repository`.
+core/server change**. Per-entry repository overrides can be declared on any of:
+
+- `defineResource({ repository })` — override for that one CRUD resource's entity
+- `defineModuleResource({ entities: [{ entity, repository }] })` — per entity row
+- `userMetadata.repository` — override for the metadata table
+
+Each falls back to the root `repository` adapter when omitted.
 
 ---
 
@@ -674,6 +689,10 @@ flowchart TD
 
 ---
 
+> **Reading guide.** §1–§10 describe the **current shipped configuration
+> surface** (the contract). §12 is **design rationale + change-set / history**.
+> If the two ever conflict, the source code and §1–§10 are authoritative.
+
 ## 12. Signature v2 — design rationale & change-set (SHIPPED)
 
 > **Status: implemented.** The v2 DSL described in §1–§10 is live in
@@ -742,7 +761,9 @@ type OperationsConfig = {
   restore?: { returnRestored?: boolean; ... };
 };
 // `output` is always the single-item DTO; `paginated` is the list wrapper (auto-derived if omitted).
-// `handler` lives on the operation — there is no separate `handlers` block.
+// `operations.X.handler` is the preferred v2 location; the resource-level
+// `handlers` block is still supported and auto-registers unless
+// `autoRegisterHandlers: false`.
 
 // ── defineResource ──
 defineResource({ entity: PetEntity });                 // MIN — derives key/path/tags/ops/DTOs
@@ -774,8 +795,8 @@ petTags: defineSubResource({
   parentKey: 'petId',          // child FK → parent; only when it differs from <parent>+Id
   parentPk: 'id',              // parent PK column for the ownership guard (default 'id')
   segment: 'tags',             // URL segment; only when it differs from the map key
-  owner: 'userId',             // ownership guard — OPT-IN, separate from path-scope
-  scope: true,                 // path-scope FK filter — default on; false for a public parent
+  owner: 'userId',             // ownership column; default-on ('userId'). `owner: false` disables the guard.
+  scope: true,                 // path-scope FK filter — default on; `scope: false` disables FK scoping + guard
   reloadAfterCreate: true,
   relations: (rel) => [rel(() => PetEntity, 'pet'), rel(() => TagEntity, 'tag')],
   operations: {
@@ -810,9 +831,9 @@ relations: (rel) => [
 | `persistence.module` / `repository` (mixed) | `repository` everywhere | unify; → `RepositoryModuleInterface.forFeature` |
 | `operations.X.body` | `operations.X.input` | → `request.body` |
 | `operations.X.response` | `operations.X.output` | → `response.resource` |
-| `operations: [...]` string-array | object only (`{}` = default) | array dropped — dead-end for editing |
-| `handlers.X` block + `operations.X.handler` | `operations.X.handler` only | single location |
-| `parentParam` + `parentForeignKey` + `parentOwnerColumn` + (none) | `parentKey` + `owner` (opt-in) + `scope` + `parentPk` | owner decoupled from scope; parent PK now configurable |
+| `operations: [...]` string-array | keyed object (preferred) | **both still supported top-level**; keyed object preferred for customized ops; **sub-resources require the keyed object** (parent `@ApiParam` appended per op) |
+| `handlers.X` block / `operations.X.handler` | `operations.X.handler` (preferred) | **`handlers` block still supported** + auto-registered unless `autoRegisterHandlers: false` |
+| `parentParam` + `parentForeignKey` + `parentOwnerColumn` + (none) | `parentKey` + `owner` (default `'userId'`) + `scope` + `parentPk` | owner decoupled from scope; parent PK now configurable |
 | `relation(Source, Target, prop)` array | `rel(Target, prop)` bound | source implicit |
 | `urlSegment` | `segment` | — |
 
