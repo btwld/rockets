@@ -24,11 +24,11 @@ export const appointmentResource = defineResource({
   relations: (relation) => [relation(ReminderEntity, 'reminders')],
   hooks: [AppointmentOwnerScope],
   operations: {
-    list: { response: AppointmentResponseDto },
-    read: { response: AppointmentResponseDto },
+    list: { output: AppointmentResponseDto },
+    read: { output: AppointmentResponseDto },
     create: {
-      body: AppointmentCreateDto,
-      response: AppointmentResponseDto,
+      input: AppointmentCreateDto,
+      output: AppointmentResponseDto,
       handler: AppointmentCreateHandler,
     },
     delete: {},

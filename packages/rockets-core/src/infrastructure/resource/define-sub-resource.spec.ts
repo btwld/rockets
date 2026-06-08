@@ -65,8 +65,8 @@ describe('defineSubResource', () => {
         key: 'petTag',
         entity: PetTagEntity,
         operations: {
-          list: { response: PetTagDto },
-          create: { body: PetTagDto, response: PetTagDto },
+          list: { output: PetTagDto },
+          create: { input: PetTagDto, output: PetTagDto },
         },
       });
       expect(sub.definition.key).toBe('petTag');
@@ -75,49 +75,49 @@ describe('defineSubResource', () => {
       expect(sub.definition.operations).toBeDefined();
     });
 
-    it('forwards parentParam when provided', () => {
+    it('forwards parentKey when provided', () => {
       const sub = defineSubResource({
         key: 'petTag',
         entity: PetTagEntity,
-        parentParam: 'parentPetId',
+        parentKey: 'parentPetId',
       });
-      expect(sub.parentParam).toBe('parentPetId');
+      expect(sub.parentKey).toBe('parentPetId');
     });
 
-    it('forwards parentForeignKey when provided', () => {
+    it('forwards parentPk when provided', () => {
       const sub = defineSubResource({
         key: 'petTag',
         entity: PetTagEntity,
-        parentForeignKey: 'pet_id',
+        parentPk: 'companyId',
       });
-      expect(sub.parentForeignKey).toBe('pet_id');
+      expect(sub.parentPk).toBe('companyId');
     });
 
-    it('forwards urlSegment when provided', () => {
+    it('forwards segment when provided', () => {
       const sub = defineSubResource({
         key: 'petTag',
         entity: PetTagEntity,
-        urlSegment: 'tags',
+        segment: 'tags',
       });
-      expect(sub.urlSegment).toBe('tags');
+      expect(sub.segment).toBe('tags');
     });
 
-    it('forwards parentOwnerColumn when provided', () => {
+    it('forwards owner when provided', () => {
       const sub = defineSubResource({
         key: 'petTag',
         entity: PetTagEntity,
-        parentOwnerColumn: 'orgId',
+        owner: 'orgId',
       });
-      expect(sub.parentOwnerColumn).toBe('orgId');
+      expect(sub.owner).toBe('orgId');
     });
 
-    it('forwards disablePathScopeGuard when provided', () => {
+    it('forwards owner=false when provided', () => {
       const sub = defineSubResource({
         key: 'petTag',
         entity: PetTagEntity,
-        disablePathScopeGuard: true,
+        owner: false,
       });
-      expect(sub.disablePathScopeGuard).toBe(true);
+      expect(sub.owner).toBe(false);
     });
 
     it('forwards reloadAfterCreate when provided', () => {
@@ -134,11 +134,11 @@ describe('defineSubResource', () => {
         key: 'petTag',
         entity: PetTagEntity,
       });
-      expect('parentParam' in sub).toBe(false);
-      expect('parentForeignKey' in sub).toBe(false);
-      expect('urlSegment' in sub).toBe(false);
-      expect('parentOwnerColumn' in sub).toBe(false);
-      expect('disablePathScopeGuard' in sub).toBe(false);
+      expect('parentKey' in sub).toBe(false);
+      expect('parentPk' in sub).toBe(false);
+      expect('segment' in sub).toBe(false);
+      expect('owner' in sub).toBe(false);
+      expect('scope' in sub).toBe(false);
       expect('reloadAfterCreate' in sub).toBe(false);
     });
   });

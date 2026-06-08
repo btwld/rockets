@@ -1,10 +1,10 @@
 import { DynamicModule, Type } from '@nestjs/common';
-import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
 import type {
   AbstractUpsertUserMetadataHandler,
   AbstractGetUserMetadataHandler,
   AuthBootstrap,
   RepositoryBootstrap,
+  RepositoryModuleInterface,
   ResourceInput,
   RocketsUserMetadataConfig,
 } from '@bitwild/rockets-core';

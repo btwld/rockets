@@ -25,7 +25,7 @@ import {
 import {
   InjectDynamicRepository,
   type RepositoryInterface,
-} from '@bitwild/rockets-repository';
+} from '@bitwild/rockets-core';
 import request from 'supertest';
 import { RocketsModule } from '../rockets.module';
 import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';

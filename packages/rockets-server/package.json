@@ -71,8 +71,6 @@
   "dependencies": {
     "@bitwild/rockets-app": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
-    "@bitwild/rockets-crud": "workspace:^",
-    "@bitwild/rockets-repository": "workspace:^",
     "@nestjs/common": "^11.1.18",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.1.18",
@@ -80,8 +78,8 @@
     "@nestjs/swagger": "^11.0.0"
   },
   "devDependencies": {
+    "@bitwild/rockets-crud": "workspace:^",
     "@bitwild/rockets-repository-typeorm": "workspace:^",
-    "@concepta/nestjs-authentication": "8.0.0-alpha.5",
     "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.5",
     "@nestjs/platform-express": "^11.1.18",
     "@nestjs/testing": "^11.1.18",

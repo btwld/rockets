@@ -95,7 +95,6 @@ export type {
   RocketsResourceDefinition,
   ResourceDtoConfig,
   ResourceRelationEntry,
-  ResourcePersistenceConfigDefinition as ResourcePersistenceConfig,
   ResourceHandlerOverrides,
   ResourceOperationName,
   ResourceOperationConfig,

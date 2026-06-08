@@ -6,7 +6,13 @@ import type {
 } from '../../domain/interfaces/rockets-resource-definition.interface';
 
 /**
- * Type-safe relation declaration helper.
+ * Type-safe relation declaration helper (source-first primitive).
+ *
+ * **Canonical idiom: the bound callback form** —
+ * `relations: (rel) => [rel(TargetEntity, 'prop')]` — where `rel` is the
+ * source-bound builder (`source` is implicit). Use this standalone
+ * `relation(Source, Target, 'prop')` only when composing relation
+ * entries programmatically outside the callback.
  *
  * `relation()` returns the same shape as a `ResourceRelationEntry` but
  * the generics narrow `target` to the **target entity class** and

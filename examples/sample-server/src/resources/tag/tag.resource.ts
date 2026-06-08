@@ -13,9 +13,9 @@ export const tagResource = defineResource({
   // key / path / tags omitted — derived from `TagEntity` →
   // `'tag'` → `tags` / `['Tags']`.
   operations: {
-    list: { response: TagResponseDto },
-    read: { response: TagResponseDto },
-    create: { body: TagCreateDto, response: TagResponseDto },
-    update: { body: TagUpdateDto, response: TagResponseDto },
+    list: { output: TagResponseDto },
+    read: { output: TagResponseDto },
+    create: { input: TagCreateDto, output: TagResponseDto },
+    update: { input: TagUpdateDto, output: TagResponseDto },
   },
 });

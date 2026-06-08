@@ -212,9 +212,9 @@ const parentResource = defineResource<ParentEntity>({
   hooks: [ParentOwnerStamp, AfterCreateReloadHook.for(ParentEntity)],
   relations: (rel) => [rel(CategoryEntity, 'category')],
   operations: {
-    list: { response: ParentResponseDto },
-    read: { response: ParentResponseDto },
-    create: { body: ParentCreateDto, response: ParentResponseDto },
+    list: { output: ParentResponseDto },
+    read: { output: ParentResponseDto },
+    create: { input: ParentCreateDto, output: ParentResponseDto },
     delete: { soft: true, returnDeleted: true },
   },
   subResources: {
@@ -222,31 +222,31 @@ const parentResource = defineResource<ParentEntity>({
       key: 'child',
       entity: ChildEntity,
       tags: ['Children'],
-      // `parentOwnerColumn` is required (no default). PathScopeHook +
-      // PathScopeGuard are auto-injected. `reloadAfterCreate` opts the
-      // child into the eager-relation reload.
-      parentOwnerColumn: 'userId',
+      // `owner` defaults to 'userId' (declared here explicitly).
+      // PathScopeHook + PathScopeGuard are auto-injected.
+      // `reloadAfterCreate` opts the child into the eager-relation reload.
+      owner: 'userId',
       reloadAfterCreate: true,
       relations: (rel) => [rel(CategoryEntity, 'category')],
       operations: {
-        list: { response: ChildResponseDto },
-        read: { response: ChildResponseDto },
-        create: { body: ChildCreateDto, response: ChildResponseDto },
+        list: { output: ChildResponseDto },
+        read: { output: ChildResponseDto },
+        create: { input: ChildCreateDto, output: ChildResponseDto },
         delete: { soft: true, returnDeleted: true },
       },
     }),
     childrenNoReload: defineSubResource<ChildNoReloadEntity>({
       key: 'childNoReload',
       entity: ChildNoReloadEntity,
-      urlSegment: 'children-no-reload',
+      segment: 'children-no-reload',
       tags: ['Children (no reload)'],
       // Default behaviour: `reloadAfterCreate` is OFF, so the eager
       // relation should be absent on the create response.
-      parentOwnerColumn: 'userId',
+      owner: 'userId',
       relations: (rel) => [rel(CategoryEntity, 'category')],
       operations: {
-        list: { response: ChildResponseDto },
-        create: { body: ChildCreateDto, response: ChildResponseDto },
+        list: { output: ChildResponseDto },
+        create: { input: ChildCreateDto, output: ChildResponseDto },
       },
     }),
   },
@@ -261,9 +261,9 @@ const plainItemResource = defineResource<PlainItemEntity>({
   // No eager relation, no AfterCreateReloadHook — proves the path
   // works fine without it.
   operations: {
-    list: { response: PlainItemResponseDto },
-    read: { response: PlainItemResponseDto },
-    create: { body: PlainItemCreateDto, response: PlainItemResponseDto },
+    list: { output: PlainItemResponseDto },
+    read: { output: PlainItemResponseDto },
+    create: { input: PlainItemCreateDto, output: PlainItemResponseDto },
     delete: { soft: true, returnDeleted: true },
   },
 });
@@ -278,9 +278,9 @@ const categoryResource = defineResource<CategoryEntity>({
   tags: ['Categories'],
   public: true,
   operations: {
-    list: { response: CategoryResponseDto },
-    read: { response: CategoryResponseDto },
-    create: { body: CategoryCreateDto, response: CategoryResponseDto },
+    list: { output: CategoryResponseDto },
+    read: { output: CategoryResponseDto },
+    create: { input: CategoryCreateDto, output: CategoryResponseDto },
   },
 });
 

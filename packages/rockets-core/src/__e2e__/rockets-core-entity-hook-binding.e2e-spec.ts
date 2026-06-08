@@ -204,8 +204,8 @@ const widgetResource = defineResource<WidgetEntity>({
   tags: ['Widgets'],
   hooks: [WidgetLoggerHook],
   operations: {
-    create: { body: WidgetCreateDto, response: WidgetResponseDto },
-    list: { response: WidgetResponseDto },
+    create: { input: WidgetCreateDto, output: WidgetResponseDto },
+    list: { output: WidgetResponseDto },
   },
 });
 
@@ -216,8 +216,8 @@ const gadgetResource = defineResource<GadgetEntity>({
   tags: ['Gadgets'],
   hooks: [GadgetCounterHook],
   operations: {
-    create: { body: GadgetCreateDto, response: GadgetResponseDto },
-    list: { response: GadgetResponseDto },
+    create: { input: GadgetCreateDto, output: GadgetResponseDto },
+    list: { output: GadgetResponseDto },
   },
 });
 

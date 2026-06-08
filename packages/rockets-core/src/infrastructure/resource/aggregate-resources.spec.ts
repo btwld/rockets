@@ -485,7 +485,7 @@ describe('buildAppRegistrationPlan', () => {
         subResources: {
           vaccinations: defineSubResource({
             key: 'vaccination',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: VaccinationEntity,
           }),
         },
@@ -517,12 +517,12 @@ describe('buildAppRegistrationPlan', () => {
         subResources: {
           tags: defineSubResource({
             key: 'tag',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: TagEntity,
             subResources: {
               comments: defineSubResource({
                 key: 'comment',
-                disablePathScopeGuard: true,
+                owner: false,
                 entity: CommentEntity,
               }),
             },
@@ -548,7 +548,7 @@ describe('buildAppRegistrationPlan', () => {
         subResources: {
           vaccinations: defineSubResource({
             key: 'vaccination',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: VaccinationEntity,
           }),
         },
@@ -588,7 +588,7 @@ describe('buildAppRegistrationPlan', () => {
         subResources: {
           subs: defineSubResource({
             key: 'sub',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: NeighbouringSub,
             relations: [
               relation(NeighbouringSub, UnregisteredEntity, 'unrelated'),
@@ -619,7 +619,7 @@ describe('buildAppRegistrationPlan', () => {
           tags: defineSubResource({
             key: 'tag',
             entity: TagEntity,
-            disablePathScopeGuard: true,
+            owner: false,
           }),
         },
       });
@@ -656,7 +656,7 @@ describe('buildAppRegistrationPlan', () => {
           a: defineSubResource({
             key: 'shared',
             entity: VaccinationEntity,
-            disablePathScopeGuard: true,
+            owner: false,
           }),
         },
       });
@@ -669,7 +669,7 @@ describe('buildAppRegistrationPlan', () => {
           b: defineSubResource({
             key: 'shared',
             entity: CollidingEntity,
-            disablePathScopeGuard: true,
+            owner: false,
           }),
         },
       });
@@ -826,13 +826,13 @@ describe('buildAppRegistrationPlan', () => {
       ]);
     });
 
-    it('honours an explicit `persistence.module` override on a CRUD bundle (root NOT used for that row)', () => {
+    it('honours an explicit `repository` override on a CRUD bundle (root NOT used for that row)', () => {
       const pet = defineResource({
         key: 'pet',
         entity: PetEntity,
         path: 'pet',
         tags: ['pet'],
-        persistence: { module: altAdapter },
+        repository: altAdapter,
       });
       const vac = defineResource({
         key: 'vaccination',

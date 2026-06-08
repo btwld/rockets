@@ -25,11 +25,11 @@ export const petVaccinationResource = defineResource({
   // `['Pet Vaccinations']` (kebab-case + pluralize).
   relations: (relation) => [relation(() => PetEntity, 'pet')],
   operations: {
-    list: { response: PetVaccinationResponseDto },
-    read: { response: PetVaccinationResponseDto },
+    list: { output: PetVaccinationResponseDto },
+    read: { output: PetVaccinationResponseDto },
     create: {
-      body: PetVaccinationCreateDto,
-      response: PetVaccinationResponseDto,
+      input: PetVaccinationCreateDto,
+      output: PetVaccinationResponseDto,
     },
     delete: {},
   },

@@ -209,13 +209,13 @@ describe('defineResource', () => {
       expect(bundle.persistence.module).toBeUndefined();
     });
 
-    it('preserves persistence.module when the definition declares one', () => {
+    it('preserves the repository adapter when the definition declares one', () => {
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        persistence: { module: TypeOrmRepositoryModule },
+        repository: TypeOrmRepositoryModule,
       });
       expect(bundle.persistence.module).toBe(TypeOrmRepositoryModule);
     });
@@ -727,8 +727,8 @@ describe('defineResource', () => {
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          list: { response: WidgetResponseDto },
-          read: { response: WidgetResponseDto },
+          list: { output: WidgetResponseDto },
+          read: { output: WidgetResponseDto },
         },
       });
       const ops = narrow(bundle).operations.map((o) => o.operation);
@@ -742,8 +742,8 @@ describe('defineResource', () => {
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          list: { response: WidgetResponseDto },
-          read: { response: WidgetResponseDto },
+          list: { output: WidgetResponseDto },
+          read: { output: WidgetResponseDto },
         },
       });
       // The promoted dto.response drives the controller-level response wiring.
@@ -754,7 +754,7 @@ describe('defineResource', () => {
       expect(list?.response?.resource).toBe(WidgetResponseDto);
     });
 
-    it('throws when read.response and list.response differ', () => {
+    it('throws when read.output and list.output differ', () => {
       class ReadShape {
         id!: string;
       }
@@ -769,11 +769,11 @@ describe('defineResource', () => {
           path: 'widgets',
           tags: ['Widgets'],
           operations: {
-            list: { response: ListShape },
-            read: { response: ReadShape },
+            list: { output: ListShape },
+            read: { output: ReadShape },
           },
         }),
-      ).toThrow(/operations\.read\.response.*list\.response.*differ/);
+      ).toThrow(/operations\.read\.output.*list\.output.*differ/);
     });
 
     it('does NOT promote when consumer declares dto.response explicitly', () => {
@@ -794,8 +794,8 @@ describe('defineResource', () => {
         tags: ['Widgets'],
         dto: { response: ExplicitShape },
         operations: {
-          list: { response: ListShape },
-          read: { response: ReadShape },
+          list: { output: ListShape },
+          read: { output: ReadShape },
         },
       });
       // Per-op responses still flow to their own operation overrides.
@@ -816,7 +816,7 @@ describe('defineResource', () => {
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          create: { body: WidgetCreateDto, handler: FakeCreateHandler },
+          create: { input: WidgetCreateDto, handler: FakeCreateHandler },
         },
       });
       const create = narrow(bundle).operations.find(
@@ -886,7 +886,7 @@ describe('defineResource', () => {
       expect(ops).toContain(Operation.Restore);
     });
 
-    it('throws when an op declares both body and requestOverride.body', () => {
+    it('throws when an op declares both input and requestOverride.body', () => {
       expect(() =>
         defineResource({
           key: 'widget',
@@ -895,15 +895,15 @@ describe('defineResource', () => {
           tags: ['Widgets'],
           operations: {
             create: {
-              body: WidgetCreateDto,
+              input: WidgetCreateDto,
               requestOverride: { body: WidgetCreateDto },
             },
           },
         }),
-      ).toThrow(/declares both `body` and `requestOverride\.body`/);
+      ).toThrow(/declares both `input` and `requestOverride\.body`/);
     });
 
-    it('throws when an op declares both response and responseOverride.resource', () => {
+    it('throws when an op declares both output and responseOverride.resource', () => {
       expect(() =>
         defineResource({
           key: 'widget',
@@ -912,12 +912,12 @@ describe('defineResource', () => {
           tags: ['Widgets'],
           operations: {
             list: {
-              response: WidgetResponseDto,
+              output: WidgetResponseDto,
               responseOverride: { resource: WidgetResponseDto },
             },
           },
         }),
-      ).toThrow(/declares both `response` and `responseOverride/);
+      ).toThrow(/declares both `output` and `responseOverride/);
     });
 
     it('throws when an empty operations object is supplied', () => {
@@ -943,7 +943,7 @@ describe('defineResource', () => {
         tags: ['Widgets'],
         operations: {
           list: {
-            response: WidgetResponseDto,
+            output: WidgetResponseDto,
             decorators: [fakeMethodDecorator()],
             hooks: [MinimalPlainHook],
           },
@@ -1034,9 +1034,9 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1045,7 +1045,7 @@ describe('defineResource', () => {
       expect(sub.meta.key).toBe('widgetPart');
     });
 
-    it('composes the path as <parent.path>/:<parentParam>/<segment>', async () => {
+    it('composes the path as <parent.path>/:<parentKey>/<segment>', async () => {
       const { defineSubResource } = await import('./define-sub-resource');
       const bundle = defineResource({
         key: 'widget',
@@ -1055,9 +1055,9 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1065,7 +1065,7 @@ describe('defineResource', () => {
       expect(sub.controller.path).toBe('widgets/:widgetId/parts');
     });
 
-    it('honors explicit parentParam override', async () => {
+    it('honors explicit parentKey override', async () => {
       const { defineSubResource } = await import('./define-sub-resource');
       const bundle = defineResource({
         key: 'widget',
@@ -1075,10 +1075,10 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
-            parentParam: 'wid',
-            operations: { list: { response: WidgetResponseDto } },
+            parentKey: 'wid',
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1096,9 +1096,9 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1119,10 +1119,10 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
             tags: ['Parts'],
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1130,26 +1130,7 @@ describe('defineResource', () => {
       expect(bundle.subResources![0].meta.key).toBe('widgetPart');
     });
 
-    it('throws when neither parentOwnerColumn nor disablePathScopeGuard is declared', async () => {
-      const { defineSubResource } = await import('./define-sub-resource');
-      expect(() =>
-        defineResource({
-          key: 'widget',
-          entity: WidgetEntity,
-          path: 'widgets',
-          tags: ['Widgets'],
-          subResources: {
-            parts: defineSubResource({
-              key: 'widgetPart',
-              entity: PartEntity,
-              operations: { list: { response: WidgetResponseDto } },
-            }),
-          },
-        }),
-      ).toThrow(/must declare `parentOwnerColumn`/);
-    });
-
-    it('auto-injects PathScopeGuard into sub providers when parentOwnerColumn is declared', async () => {
+    it('defaults owner to userId (guard injected) when owner is omitted', async () => {
       const { defineSubResource } = await import('./define-sub-resource');
       const { PathScopeGuard } = await import('../guards/path-scope.guard');
       const bundle = defineResource({
@@ -1161,8 +1142,7 @@ describe('defineResource', () => {
           parts: defineSubResource({
             key: 'widgetPart',
             entity: PartEntity,
-            parentOwnerColumn: 'userId',
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1171,7 +1151,7 @@ describe('defineResource', () => {
       expect(sub.core.providers).toContain(Expected);
     });
 
-    it('honors parentOwnerColumn override when auto-binding the guard', async () => {
+    it('auto-injects PathScopeGuard into sub providers when owner is declared', async () => {
       const { defineSubResource } = await import('./define-sub-resource');
       const { PathScopeGuard } = await import('../guards/path-scope.guard');
       const bundle = defineResource({
@@ -1183,8 +1163,30 @@ describe('defineResource', () => {
           parts: defineSubResource({
             key: 'widgetPart',
             entity: PartEntity,
-            parentOwnerColumn: 'orgId',
-            operations: { list: { response: WidgetResponseDto } },
+            owner: 'userId',
+            operations: { list: { output: WidgetResponseDto } },
+          }),
+        },
+      });
+      const sub = bundle.subResources![0];
+      const Expected = PathScopeGuard.for('widgetId', 'widget', 'userId');
+      expect(sub.core.providers).toContain(Expected);
+    });
+
+    it('honors owner override when auto-binding the guard', async () => {
+      const { defineSubResource } = await import('./define-sub-resource');
+      const { PathScopeGuard } = await import('../guards/path-scope.guard');
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widgets',
+        tags: ['Widgets'],
+        subResources: {
+          parts: defineSubResource({
+            key: 'widgetPart',
+            entity: PartEntity,
+            owner: 'orgId',
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1207,8 +1209,8 @@ describe('defineResource', () => {
           parts: defineSubResource({
             key: 'widgetPart',
             entity: PartEntity,
-            parentOwnerColumn: 'userId',
-            operations: { list: { response: WidgetResponseDto } },
+            owner: 'userId',
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1231,9 +1233,9 @@ describe('defineResource', () => {
           parts: defineSubResource({
             key: 'widgetPart',
             entity: PartEntity,
-            parentOwnerColumn: 'userId',
+            owner: 'userId',
             reloadAfterCreate: true,
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1242,7 +1244,7 @@ describe('defineResource', () => {
       expect(sub.core.providers).toContain(Reload);
     });
 
-    it('skips the auto guard when disablePathScopeGuard is true', async () => {
+    it('skips the auto guard when owner is false', async () => {
       const { defineSubResource } = await import('./define-sub-resource');
       const { PathScopeGuard } = await import('../guards/path-scope.guard');
       const bundle = defineResource({
@@ -1254,8 +1256,8 @@ describe('defineResource', () => {
           parts: defineSubResource({
             key: 'widgetPart',
             entity: PartEntity,
-            disablePathScopeGuard: true,
-            operations: { list: { response: WidgetResponseDto } },
+            owner: false,
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1281,9 +1283,9 @@ describe('defineResource', () => {
             // @ts-expect-error — empty-string is not a key of WidgetEntity.
             '': defineSubResource({
               key: 'widgetPart',
-              disablePathScopeGuard: true,
+              owner: false,
               entity: PartEntity,
-              operations: { list: { response: WidgetResponseDto } },
+              operations: { list: { output: WidgetResponseDto } },
             }),
           },
         }),
@@ -1300,9 +1302,9 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1321,9 +1323,9 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
           }),
         },
       });
@@ -1350,15 +1352,15 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: LocalPartEntity,
-            operations: { list: { response: WidgetResponseDto } },
+            operations: { list: { output: WidgetResponseDto } },
             subResources: {
               labels: defineSubResource({
                 key: 'partLabel',
-                disablePathScopeGuard: true,
+                owner: false,
                 entity: GrandPartEntity,
-                operations: { list: { response: WidgetResponseDto } },
+                operations: { list: { output: WidgetResponseDto } },
               }),
             },
           }),
@@ -1393,18 +1395,18 @@ describe('defineResource', () => {
         subResources: {
           a: defineSubResource({
             key: 'level1',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: L1,
             subResources: {
               b: defineSubResource({
                 key: 'level2',
-                disablePathScopeGuard: true,
+                owner: false,
                 entity: L2,
                 subResources: {
                   c: defineSubResource({
                     key: 'level3',
                     entity: L3,
-                    disablePathScopeGuard: true,
+                    owner: false,
                   }),
                 },
               }),
@@ -1430,7 +1432,7 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
           }),
         },
@@ -1452,7 +1454,7 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
           }),
         },
@@ -1480,7 +1482,7 @@ describe('defineResource', () => {
           myItems: defineSubResource({
             key: 'myItem',
             entity: PartEntity,
-            disablePathScopeGuard: true,
+            owner: false,
           }),
         },
       });
@@ -1514,7 +1516,7 @@ describe('defineResource', () => {
           // @ts-expect-error — entity mismatch: parts requires PartEntity, not CompletelyUnrelated.
           parts: defineSubResource({
             key: 'mismatch',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: CompletelyUnrelated,
           }),
         },
@@ -1531,7 +1533,7 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: () => PartEntity,
           }),
         },
@@ -1544,7 +1546,7 @@ describe('defineResource', () => {
       );
     });
 
-    it('honors urlSegment override (decouples URL from entity property)', async () => {
+    it('honors segment override (decouples URL from entity property)', async () => {
       const { defineSubResource } = await import('./define-sub-resource');
       const bundle = defineResource({
         key: 'widget',
@@ -1554,37 +1556,14 @@ describe('defineResource', () => {
         subResources: {
           parts: defineSubResource({
             key: 'widgetPart',
-            disablePathScopeGuard: true,
+            owner: false,
             entity: PartEntity,
-            urlSegment: 'pieces', // URL says `pieces`, entity prop says `parts`
+            segment: 'pieces', // URL says `pieces`, entity prop says `parts`
           }),
         },
       });
       expect(narrow(bundle.subResources![0]).controller.path).toBe(
         'widgets/:widgetId/pieces',
-      );
-    });
-
-    it('honors parentForeignKey when it differs from parentParam (FK on persistence side)', async () => {
-      const { defineSubResource } = await import('./define-sub-resource');
-      const bundle = defineResource({
-        key: 'widget',
-        entity: WidgetEntity,
-        path: 'widgets',
-        tags: ['Widgets'],
-        subResources: {
-          parts: defineSubResource({
-            key: 'widgetPart',
-            disablePathScopeGuard: true,
-            entity: PartEntity,
-            parentParam: 'wid',
-            parentForeignKey: 'widget_pk',
-          }),
-        },
-      });
-      // Path uses parentParam; the URL is /widgets/:wid/parts.
-      expect(narrow(bundle.subResources![0]).controller.path).toBe(
-        'widgets/:wid/parts',
       );
     });
   });
@@ -1603,7 +1582,7 @@ describe('defineResource', () => {
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          replace: { body: WidgetReplaceDto, response: WidgetResponseDto },
+          replace: { input: WidgetReplaceDto, output: WidgetResponseDto },
         },
       });
       const ops = narrow(bundle).operations.map((o) => o.operation);
@@ -1626,8 +1605,8 @@ describe('defineResource', () => {
         tags: ['Widgets'],
         operations: {
           replace: {
-            body: WidgetReplaceDto,
-            response: WidgetResponseDto,
+            input: WidgetReplaceDto,
+            output: WidgetResponseDto,
             handler: FakeReplaceHandler,
           },
         },
@@ -1759,7 +1738,7 @@ describe('defineResource', () => {
         tags: ['Widgets'],
         dto: { create: WidgetCreateDto, response: WidgetResponseDto },
         operations: {
-          create: { body: CustomCreateDto },
+          create: { input: CustomCreateDto },
         },
       });
       const op = narrow(bundle).operations.find(
@@ -1787,7 +1766,7 @@ describe('defineResource', () => {
           tags: ['Widgets'],
           operations: {
             create: {
-              body: CustomBody,
+              input: CustomBody,
               requestOverride: {
                 params: {
                   id: { field: 'id', type: 'uuid', primary: true },

@@ -1,6 +1,6 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import { getDynamicRepositoryToken } from '@bitwild/rockets-core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { UserModule } from './user.module';
 import { MeController } from './gateways/http/me.controller';
@@ -15,7 +15,7 @@ import {
 } from './rockets.tokens';
 import type { RocketsOptions } from './rockets.module-definition';
 import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
-import type { RepositoryInterface } from '@bitwild/rockets-repository';
+import type { RepositoryInterface } from '@bitwild/rockets-core';
 import type { UserMetadataEntityInterface } from '@bitwild/rockets-core';
 
 class MetadataCreateDto {

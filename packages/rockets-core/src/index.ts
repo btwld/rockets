@@ -22,6 +22,16 @@ export { PathScopeGuard } from './infrastructure/guards/path-scope.guard';
 
 // Decorators
 export { AuthPublic } from './decorators/auth-public.decorator';
+// Canonical authenticated-user param decorator (reads `request.user`).
+export { AuthUser } from '@bitwild/rockets-app';
+
+// Auth user-context overlay — re-exported so downstream layers consume it
+// through core instead of depending on `@concepta/nestjs-authentication`.
+// Core registers `AuthUserContextOverlay` as a global APP_INTERCEPTOR.
+export {
+  AuthUserContextOverlay,
+  AuthUserCtx,
+} from '@concepta/nestjs-authentication';
 
 // Actor overlay (transport-agnostic identity of "who" performed the op)
 export type {
@@ -69,6 +79,20 @@ export { SafeCrudContextInterceptor } from './infrastructure/interceptors/safe-c
 export type { RepositoryPersistenceConfig } from './domain/interfaces/repository-persistence.interface';
 export type { RepositoryBootstrap } from './domain/interfaces/repository-bootstrap.interface';
 export { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.interface';
+
+// Repository abstraction primitives — re-exported so downstream layers
+// (`rockets`, `rockets-server-auth`) consume the persistence contract through
+// core and never depend on `@bitwild/rockets-repository` directly.
+export type {
+  RepositoryModuleInterface,
+  RepositoryInterface,
+} from '@bitwild/rockets-repository';
+export {
+  RepositoryModule,
+  Where,
+  getDynamicRepositoryToken,
+  InjectDynamicRepository,
+} from '@bitwild/rockets-repository';
 
 // Module resource (non-CRUD persistence + Nest module slice)
 export type {
@@ -119,7 +143,6 @@ export type {
   RocketsResourceDefinition,
   ResourceDtoConfig,
   ResourceRelationEntry,
-  ResourcePersistenceConfig as ResourcePersistenceConfigDefinition,
   ResourceHandlerOverrides,
   ResourceOperationName,
   ResourceOperationConfig,

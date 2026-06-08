@@ -53,13 +53,13 @@ export const petResource = defineResource({
     PetCreatedEventHook,
   ],
   operations: {
-    list: { response: PetResponseDto },
-    read: { response: PetResponseDto },
+    list: { output: PetResponseDto },
+    read: { output: PetResponseDto },
     create: {
-      body: PetCreateDto,
-      response: PetResponseDto,
+      input: PetCreateDto,
+      output: PetResponseDto,
     },
-    update: { body: PetUpdateDto, response: PetResponseDto },
+    update: { input: PetUpdateDto, output: PetResponseDto },
     delete: { soft: true, returnDeleted: true },
     restore: { returnRestored: true },
   },
@@ -73,11 +73,11 @@ export const petResource = defineResource({
       entity: PetTagEntity,
       hooks: [PetTagTagIdExistsHook],
       tags: ['Pet Tags'],
-      urlSegment: 'tags',
-      // `parentOwnerColumn` is required: the auto guard checks that
-      // the actor owns the parent pet. `userId` matches PetEntity's
-      // ownership column.
-      parentOwnerColumn: 'userId',
+      segment: 'tags',
+      // `owner` defaults to 'userId'; declared here for clarity. The auto
+      // guard checks the actor owns the parent pet via this column. Set
+      // `owner: false` for a public parent.
+      owner: 'userId',
       // Eager `tag` relation needs reloading because TypeORM `save()`
       // omits eager loads. Opt-in to keep the cost explicit.
       reloadAfterCreate: true,
@@ -89,11 +89,11 @@ export const petResource = defineResource({
       // PathScopeGuard (authenticated actor + parent owner check) are
       // auto-injected by defineSubResource.
       operations: {
-        list: { response: PetTagResponseDto },
-        read: { response: PetTagResponseDto },
+        list: { output: PetTagResponseDto },
+        read: { output: PetTagResponseDto },
         create: {
-          body: PetTagCreateDto,
-          response: PetTagResponseDto,
+          input: PetTagCreateDto,
+          output: PetTagResponseDto,
         },
         delete: {},
       },

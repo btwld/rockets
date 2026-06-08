@@ -9,7 +9,7 @@ import {
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { AuthPublic, AuthUser } from '@concepta/nestjs-authentication';
+import { AuthPublic, AuthUser } from '@bitwild/rockets-core';
 import { AuthorizedUser } from './domain/interfaces/auth-user.interface';
 import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import {

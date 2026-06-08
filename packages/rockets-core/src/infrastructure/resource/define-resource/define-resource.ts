@@ -44,6 +44,14 @@ type CrudDecorator = ReturnType<typeof applyDecorators>;
  *   (`buildAppRegistrationPlan`)
  *
  * @example
+ * Minimal — only `entity` is required:
+ *
+ * ```ts
+ * const petResource = defineResource({ entity: PetEntity });
+ * // key 'pet', path 'pets', tags ['Pets'], default CRUD ops, DTO = entity shape
+ * ```
+ *
+ * @example
  * Input → output:
  *
  * ```ts
@@ -53,8 +61,8 @@ type CrudDecorator = ReturnType<typeof applyDecorators>;
  *   entity: PetEntity,
  *   // path / tags omitted — derived as 'pets' / ['Pets']
  *   operations: {
- *     list:   { response: PetDto },
- *     create: { body: PetCreateDto, response: PetDto },
+ *     list:   { output: PetDto },
+ *     create: { input: PetCreateDto, output: PetDto },
  *   },
  * });
  *
@@ -105,7 +113,7 @@ export function defineResource<E extends PlainLiteralObject>(
     dto: dtoInput = {},
     operations: operationsInput = DEFAULT_OPERATIONS,
     relations: relationsInput,
-    persistence,
+    repository,
     hooks: hooksInput,
     handlers: handlersInput = {},
     providers = [],
@@ -198,7 +206,7 @@ export function defineResource<E extends PlainLiteralObject>(
         parentKey: key,
         parentPath: path,
         parentTags: tags,
-        parentPersistenceModule: persistence?.module,
+        parentPersistenceModule: repository,
         segment,
         sub,
       });
@@ -210,7 +218,7 @@ export function defineResource<E extends PlainLiteralObject>(
     kind: ResourceKind.Crud,
     core,
     persistence: {
-      ...(persistence?.module ? { module: persistence.module } : {}),
+      ...(repository ? { module: repository } : {}),
       entity: entityOptions,
     },
     meta: {

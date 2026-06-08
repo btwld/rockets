@@ -8,7 +8,7 @@ import {
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AuthUser } from '@concepta/nestjs-authentication';
+import { AuthUser } from '@bitwild/rockets-core';
 import { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
 import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
 

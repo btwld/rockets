@@ -3,7 +3,7 @@ import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { AuthUser } from '@concepta/nestjs-authentication';
+import { AuthUser } from '@bitwild/rockets-core';
 import {
   AuthorizedUser,
   UpsertUserMetadataCommand,

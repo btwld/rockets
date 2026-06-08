@@ -71,21 +71,21 @@ export function normalizeOperationsInput(
   };
 
   if (!dto.response) {
-    const declared = [obj.read?.response, obj.list?.response].filter(
+    const declared = [obj.read?.output, obj.list?.output].filter(
       (r): r is Type => r !== undefined,
     );
     const allSame = declared.every((r) => r === declared[0]);
     if (declared.length > 0 && !allSame) {
       throw new Error(
-        `defineResource(${resourceKey}): \`operations.read.response\` and \`operations.list.response\` differ. ` +
-          `Declare \`dto.response\` explicitly at the resource level so the auto-paginated DTO and any op without its own response use the right shape.`,
+        `defineResource(${resourceKey}): \`operations.read.output\` and \`operations.list.output\` differ. ` +
+          `Declare \`dto.response\` explicitly at the resource level so the auto-paginated DTO and any op without its own output use the right shape.`,
       );
     }
     if (declared.length > 0) dto.response = declared[0];
   }
-  if (!dto.create && obj.create?.body) dto.create = obj.create.body;
-  if (!dto.update && obj.update?.body) dto.update = obj.update.body;
-  if (!dto.replace && obj.replace?.body) dto.replace = obj.replace.body;
+  if (!dto.create && obj.create?.input) dto.create = obj.create.input;
+  if (!dto.update && obj.update?.input) dto.update = obj.update.input;
+  if (!dto.replace && obj.replace?.input) dto.replace = obj.replace.input;
 
   const consumeCommon = (
     op: ResourceOperationName,
@@ -98,21 +98,21 @@ export function normalizeOperationsInput(
 
     if (cfg.handler) handlers[handlerSlot] = cfg.handler;
 
-    if (cfg.body !== undefined && cfg.requestOverride?.body !== undefined) {
+    if (cfg.input !== undefined && cfg.requestOverride?.body !== undefined) {
       throw new Error(
-        `defineResource(${resourceKey}): \`operations.${label}\` declares both \`body\` and \`requestOverride.body\`. ` +
-          `Use one — \`body\` for the high-level shorthand or \`requestOverride.body\` when you also need \`requestOverride.params\`/\`requestOverride.query\` overrides.`,
+        `defineResource(${resourceKey}): \`operations.${label}\` declares both \`input\` and \`requestOverride.body\`. ` +
+          `Use one — \`input\` for the high-level shorthand or \`requestOverride.body\` when you also need \`requestOverride.params\`/\`requestOverride.query\` overrides.`,
       );
     }
     if (
-      cfg.response !== undefined &&
+      cfg.output !== undefined &&
       cfg.responseOverride !== undefined &&
       (cfg.responseOverride.resource !== undefined ||
         cfg.responseOverride.paginated !== undefined)
     ) {
       throw new Error(
-        `defineResource(${resourceKey}): \`operations.${label}\` declares both \`response\` and \`responseOverride.resource/paginated\`. ` +
-          `Use \`response\` for the simple case or \`responseOverride\` for the full upstream config — not both.`,
+        `defineResource(${resourceKey}): \`operations.${label}\` declares both \`output\` and \`responseOverride.resource/paginated\`. ` +
+          `Use \`output\` for the simple case or \`responseOverride\` for the full upstream config — not both.`,
       );
     }
 
@@ -127,13 +127,13 @@ export function normalizeOperationsInput(
     if (cfg.requestOverride !== undefined) next.request = cfg.requestOverride;
     if (cfg.responseOverride !== undefined)
       next.response = cfg.responseOverride;
-    if (cfg.body !== undefined) {
-      next.request = { ...(next.request ?? {}), body: cfg.body };
+    if (cfg.input !== undefined) {
+      next.request = { ...(next.request ?? {}), body: cfg.input };
     }
-    if (cfg.response !== undefined) {
+    if (cfg.output !== undefined) {
       next.response = {
         ...(next.response ?? {}),
-        resource: cfg.response,
+        resource: cfg.output,
         ...(cfg.paginated !== undefined ? { paginated: cfg.paginated } : {}),
       };
     }

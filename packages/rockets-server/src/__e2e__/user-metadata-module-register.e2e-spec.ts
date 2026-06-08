@@ -15,11 +15,11 @@ import {
   HttpAdapterHost,
   Reflector,
 } from '@nestjs/core';
-import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
+import { AuthUserContextOverlay } from '@bitwild/rockets-core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import { getDynamicRepositoryToken } from '@bitwild/rockets-core';
 import { IsOptional, IsString } from 'class-validator';
 
 import {

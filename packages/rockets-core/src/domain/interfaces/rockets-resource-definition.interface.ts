@@ -171,23 +171,6 @@ export type BoundRelation<S extends object> = <
 ) => ResourceRelationEntry<S, T, K>;
 
 /**
- * Persistence layer configuration for this resource.
- *
- * Only carries the repository module selector. Relation-level persistence
- * flags (federation, distinct filter) live on the top-level `relations`
- * array and are merged into the `RepositoryProviderOptions.relations` map
- * keyed by `propertyName` during resource building.
- */
-export interface ResourcePersistenceConfig {
-  /**
-   * Repository module implementation (e.g. `TypeOrmRepositoryModule`).
-   * Defaults to the resource builder's default adapter (today: TypeORM) unless
-   * overridden. Provide explicitly for multi-adapter apps.
-   */
-  readonly module?: RepositoryModuleInterface;
-}
-
-/**
  * Handler override map keyed by operation name.
  * Each value is the command/query handler class for that operation.
  */
@@ -206,21 +189,21 @@ export interface ResourceHandlerOverrides {
  * Per-operation configuration for the keyed `operations` form.
  *
  * Co-locates everything the consumer can override for a single operation:
- * request body DTO, response DTO, custom command/query handler, op-specific
+ * request input DTO, output DTO, custom command/query handler, op-specific
  * hooks, route path/method-name, transactional behavior, and any extra
  * decorators. Keeping it in one block per operation is the AI-friendly,
  * grep-friendly shape — no need to cross-reference `dto`, `handlers`, and
  * `overrides.operations` to understand "what does POST do".
  *
  * Every field is optional. Missing values fall back to the resource-level
- * `dto` (for `body` / `response` / `paginated`) and to the framework's
+ * `dto` (for `input` / `output` / `paginated`) and to the framework's
  * default command/query class.
  */
 export interface ResourceOperationConfig {
-  /** Request body DTO. Falls back to `definition.dto.{create,update,replace}`. */
-  readonly body?: Type;
-  /** Single-item response DTO. Falls back to `definition.dto.response`. */
-  readonly response?: Type;
+  /** Request input (body) DTO. Maps to `request.body`. Falls back to `definition.dto.{create,update,replace}`. */
+  readonly input?: Type;
+  /** Single-item output (response) DTO. Maps to `response.resource`. Falls back to `definition.dto.response`. */
+  readonly output?: Type;
   /** Paginated response DTO (auto-generated if omitted when needed). */
   readonly paginated?: Type;
   /** Custom command/query handler class. */
@@ -237,13 +220,13 @@ export interface ResourceOperationConfig {
   readonly transactional?: boolean;
   /**
    * Low-level request override. Use when the auto-derived request shape
-   * (body from `body`, params from URL) doesn't fit and you need full
+   * (body from `input`, params from URL) doesn't fit and you need full
    * control over `params` / `query` shapes.
    */
   readonly requestOverride?: CrudRequestConfig<PlainLiteralObject>;
   /**
    * Low-level response override. Use only when something other than
-   * `response` / `paginated` needs to change (e.g. `serialization`,
+   * `output` / `paginated` needs to change (e.g. `serialization`,
    * `collection`).
    */
   readonly responseOverride?: CrudResponseConfig;
@@ -312,10 +295,10 @@ export interface ResourceRestoreOperationConfig
  * defineResource<PetEntity>({
  *   // ...
  *   operations: {
- *     list:   { response: PetDto },
- *     read:   { response: PetDto },
- *     create: { body: PetCreateDto, response: PetDto, handler: PetCreateHandler },
- *     update: { body: PetUpdateDto, response: PetDto },
+ *     list:   { output: PetDto },
+ *     read:   { output: PetDto },
+ *     create: { input: PetCreateDto, output: PetDto, handler: PetCreateHandler },
+ *     update: { input: PetUpdateDto, output: PetDto },
  *     delete: { soft: true, returnDeleted: true },
  *     restore: { returnRestored: true },
  *   },
@@ -355,9 +338,9 @@ export interface ResourceOperationsObject {
  * Declarative resource definition. Pass this to `defineResource()` to
  * receive a ready-to-consume `CrudResource`.
  *
- * Required fields: `key`, `entity`, `path`, `tags`. Everything else is
- * either derived from supplied DTOs (request/response shapes) or
- * configured via `overrides`.
+ * Required field: `entity`. `key` / `path` / `tags` are derived from it
+ * when omitted; everything else is derived from supplied DTOs
+ * (input/output shapes) or configured per operation.
  */
 export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
   /**
@@ -407,10 +390,10 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
    *
    * ```ts
    * operations: {
-   *   list: { response: PetDto },
+   *   list: { output: PetDto },
    *   create: {
-   *     body: PetCreateDto,
-   *     response: PetDto,
+   *     input: PetCreateDto,
+   *     output: PetDto,
    *     handler: PetCreateHandler,
    *   },
    *   delete: { soft: true, returnDeleted: true },
@@ -460,10 +443,11 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
     | ReadonlyArray<ResourceRelationEntry<E>>
     | ((relation: BoundRelation<E>) => ReadonlyArray<ResourceRelationEntry<E>>);
   /**
-   * Persistence-layer truths about the entity. Currently just the
-   * repository module selector; relation-level flags live on `relations`.
+   * Repository adapter for this resource's entity (e.g. `TypeOrmRepositoryModule`).
+   * Overrides the root `repository` adapter for this one table — provide for
+   * multi-adapter apps. Relation-level flags live on `relations`.
    */
-  readonly persistence?: ResourcePersistenceConfig;
+  readonly repository?: RepositoryModuleInterface;
   /** Repository hook classes applied via `@UseHooks` at the controller level. */
   readonly hooks?: readonly RocketsEntityHookForResource<E>[];
   /** Custom handler class per operation (overrides the defaults). */
@@ -606,16 +590,15 @@ export interface RocketsSubResourceDefinition<
     readonly out: () => Sub;
   };
   /**
-   * Override the parent-param name appended to the URL. Defaults to
-   * `${parent.key}Id` (e.g. parent key `pet` → `:petId`).
+   * Parent reference: URL path param AND foreign-key column on the
+   * sub-entity. Default: `${parentEntityKey}Id` (e.g. `pet` → `petId`).
    */
-  readonly parentParam?: string;
+  readonly parentKey?: string;
   /**
-   * Foreign-key column on the sub-entity that joins back to the parent.
-   * Defaults to the same name as `parentParam` (most junction/child
-   * tables follow `<parent>Id` for both URL param and FK column).
+   * Primary-key column on the parent entity, used by the ownership
+   * guard. Default: `'id'`.
    */
-  readonly parentForeignKey?: string;
+  readonly parentPk?: string;
   /**
    * URL segment override. The `subResources` object key (constrained to
    * `keyof Parent`) drives type-safety; this field decouples the URL
@@ -625,16 +608,17 @@ export interface RocketsSubResourceDefinition<
    * → URL segment `pet-tags`. Override when the URL should be
    * different (e.g. `tags` while the entity property is `petTags`).
    */
-  readonly urlSegment?: string;
+  readonly segment?: string;
   /**
-   * Parent owner column for the auto-injected `PathScopeGuard`.
-   * Default: `userId`.
+   * Ownership column for the auto-injected `PathScopeGuard`. Default:
+   * `'userId'`. Set `false` to drop the ownership guard (public parent).
    */
-  readonly parentOwnerColumn?: string;
+  readonly owner?: string | false;
   /**
-   * Disable the auto-injected `PathScopeGuard`.
+   * Path-scoping master switch (FK filter + stamp, and the ownership
+   * guard). Default: `true`. `false` = unscoped nested route.
    */
-  readonly disablePathScopeGuard?: boolean;
+  readonly scope?: boolean;
   /**
    * Enable the auto-injected `AfterCreateReloadHook` (off by default).
    */

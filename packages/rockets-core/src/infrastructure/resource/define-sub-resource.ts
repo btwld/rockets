@@ -20,48 +20,46 @@ export interface RocketsSubResourceInput<E extends PlainLiteralObject>
   readonly entity: Type<E> | (() => Type<E>);
   readonly tags?: readonly string[];
   /**
-   * Override the parent-param name appended to the URL. Defaults to
-   * `${parent.key}Id` (camelCase parent entity key + "Id").
+   * The parent reference: both the URL path param and the foreign-key
+   * column on the sub-entity that joins back to the parent. Drives
+   * `/parent/:<parentKey>/segment`, `WHERE <parentKey> = :<parentKey>`,
+   * and the FK stamped on create.
    *
-   * Use when the parent key is multi-word and the conventional
-   * `${key}Id` is awkward (e.g. parent key `categoryAddress` → default
-   * `categoryAddressId`; override to something shorter).
+   * Default: `${parentEntityKey}Id` (e.g. parent key `pet` → `petId`).
+   * Override for legacy schemas (e.g. `animalId`).
    */
-  readonly parentParam?: string;
+  readonly parentKey?: string;
   /**
-   * Foreign-key column on the sub-entity that joins back to the parent.
-   * Defaults to `parentParam` (most child tables follow `<parent>Id` for
-   * both URL param and FK column).
-   *
-   * Set this when the FK column has a different name from the URL param
-   * (legacy schemas, junction tables with composite keys, etc.).
+   * Primary-key column on the **parent** entity, used by the ownership
+   * guard to look the parent up. Default: `'id'`. Override when the
+   * parent's PK column is not `id`.
    */
-  readonly parentForeignKey?: string;
+  readonly parentPk?: string;
   /**
    * URL segment override.
    *
    * Default: `kebab-case(subResourcesKey)` — e.g. the parent declared
    * `subResources: { petTags: defineSubResource(...) }` ⇒ URL segment
-   * `pet-tags`. Set this field to decouple the URL shape from the
-   * relation-property name.
+   * `pet-tags`. Set to decouple the URL from the relation-property name
+   * (e.g. property `petTags` but route segment `tags`).
+   */
+  readonly segment?: string;
+  /**
+   * Ownership column the auto-injected `PathScopeGuard` checks on the
+   * parent (the parent row must have `<owner> === actor.id`).
    *
-   * Useful when the entity property is `petTags` (forced by type-safety)
-   * but the URL segment must remain `tags` for a friendlier route.
+   * Default: `'userId'` — secure by default. Set `owner: false` to drop
+   * the ownership guard entirely (public parent); the path-scope FK
+   * filter still applies unless `scope: false`.
    */
-  readonly urlSegment?: string;
+  readonly owner?: string | false;
   /**
-   * Parent owner column name used by the auto-injected `PathScopeGuard`.
-   * **Required** unless `disablePathScopeGuard: true`. There is no
-   * default — wrong column = silent 404 for legitimate users, so the
-   * core forces an explicit declaration.
+   * Path-scoping master switch: the FK filter (reads scoped to the
+   * parent) + FK stamp (on create). Default: `true`. Set `false` for an
+   * unscoped nested route — disables both the FK hook and the ownership
+   * guard.
    */
-  readonly parentOwnerColumn?: string;
-  /**
-   * Disable the auto-injected `PathScopeGuard`. Use only when the parent
-   * is public (no ownership check) or you supply your own guard via
-   * `decorators: [UseGuards(MyGuard)]`.
-   */
-  readonly disablePathScopeGuard?: boolean;
+  readonly scope?: boolean;
   /**
    * Enable the auto-injected `AfterCreateReloadHook` so eager relations
    * declared on the sub-entity land on the create response. Off by
@@ -89,24 +87,22 @@ export interface RocketsSubResourceInput<E extends PlainLiteralObject>
  * Input → output:
  *
  * ```ts
- * // Input
+ * // Input — secure by default: owner defaults to 'userId', scope on.
  * const sub = defineSubResource({
  *   key: 'petTag',
  *   entity: PetTagEntity,
- *   urlSegment: 'tags',                  // /pets/:petId/tags
- *   parentOwnerColumn: 'userId',         // required (no default)
+ *   segment: 'tags',                     // /pets/:petId/tags
  *   reloadAfterCreate: true,             // opt-in eager reload
  *   operations: {
- *     list:   { response: PetTagDto },
- *     create: { body: PetTagCreateDto, response: PetTagDto },
+ *     list:   { output: PetTagDto },
+ *     create: { input: PetTagCreateDto, output: PetTagDto },
  *   },
  * });
  *
  * // Output (opaque value carrying parent-binding metadata)
  * {
  *   kind: ResourceKind.Sub,
- *   urlSegment: 'tags',
- *   parentOwnerColumn: 'userId',
+ *   segment: 'tags',
  *   reloadAfterCreate: true,
  *   definition: {
  *     key: 'petTag',
@@ -152,11 +148,11 @@ export function defineSubResource<E extends PlainLiteralObject>(
   const resolvedEntity = isThunk(input.entity) ? input.entity() : input.entity;
 
   const {
-    parentParam,
-    parentForeignKey,
-    urlSegment,
-    parentOwnerColumn,
-    disablePathScopeGuard,
+    parentKey,
+    parentPk,
+    segment,
+    owner,
+    scope,
     reloadAfterCreate,
     ...definitionRest
   } = input;
@@ -176,11 +172,11 @@ export function defineSubResource<E extends PlainLiteralObject>(
   // while the runtime payload stays minimal.
   const bundle = {
     kind: ResourceKind.Sub,
-    ...(parentParam !== undefined ? { parentParam } : {}),
-    ...(parentForeignKey !== undefined ? { parentForeignKey } : {}),
-    ...(urlSegment !== undefined ? { urlSegment } : {}),
-    ...(parentOwnerColumn !== undefined ? { parentOwnerColumn } : {}),
-    ...(disablePathScopeGuard !== undefined ? { disablePathScopeGuard } : {}),
+    ...(parentKey !== undefined ? { parentKey } : {}),
+    ...(parentPk !== undefined ? { parentPk } : {}),
+    ...(segment !== undefined ? { segment } : {}),
+    ...(owner !== undefined ? { owner } : {}),
+    ...(scope !== undefined ? { scope } : {}),
     ...(reloadAfterCreate !== undefined ? { reloadAfterCreate } : {}),
     definition,
   } as unknown as RocketsSubResourceDefinition<E>;

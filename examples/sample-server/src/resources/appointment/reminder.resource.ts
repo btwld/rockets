@@ -20,7 +20,7 @@ export const reminderResource = defineResource({
   relations: (relation) => [relation(() => AppointmentEntity, 'appointment')],
   hooks: [ReminderOwnerScopeHook],
   operations: {
-    list: { response: ReminderResponseDto },
-    read: { response: ReminderResponseDto },
+    list: { output: ReminderResponseDto },
+    read: { output: ReminderResponseDto },
   },
 });

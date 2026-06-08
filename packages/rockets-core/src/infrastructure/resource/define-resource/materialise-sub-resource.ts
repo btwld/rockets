@@ -1,7 +1,6 @@
 import type { PlainLiteralObject, Provider } from '@nestjs/common';
 import { UseGuards } from '@nestjs/common';
 import { ApiParam } from '@nestjs/swagger';
-import { deriveEntityKey } from '@bitwild/rockets-app';
 import type { CrudParamOptionInterface } from '@bitwild/rockets-crud';
 import type { CrudRequestConfig } from '@bitwild/rockets-crud';
 import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
@@ -42,11 +41,14 @@ export function materialiseSubResource(args: {
     );
   }
 
-  const parentParam = sub.parentParam ?? defaultParentParam(parentKey);
-  const parentForeignKey = sub.parentForeignKey ?? parentParam;
+  // `parentKey` (arg) is the parent entity's own key; `sub.parentKey`
+  // (DSL field) is the parent reference — URL param AND FK column,
+  // collapsed into one. Default `${parentEntityKey}Id`.
+  const parentParam = sub.parentKey ?? defaultParentParam(parentKey);
+  const parentForeignKey = parentParam;
 
   const urlSegment =
-    sub.urlSegment ??
+    sub.segment ??
     segment
       .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
       .replace(/[_\s]+/g, '-')
@@ -59,7 +61,6 @@ export function materialiseSubResource(args: {
     : composePath(parentPath as string);
 
   const def = sub.definition;
-  const subKey = def.key ?? deriveEntityKey(def.entity);
   const tags = def.tags ?? parentTags;
 
   const parentApiParam = ApiParam({
@@ -89,36 +90,38 @@ export function materialiseSubResource(args: {
     parentKey,
   );
 
-  const ScopeHook = PathScopeHook.for(
-    def.entity,
-    parentParam,
-    parentForeignKey,
-  );
+  // Path-scoping master switch. `scope: false` → no FK filter/stamp hook
+  // and no ownership guard (fully unscoped nested route).
+  const applyScope = sub.scope !== false;
+
+  // Ownership guard column. Defaults to `'userId'` (secure by default).
+  // `owner: false` drops the guard while keeping the FK hook. `scope:
+  // false` drops both.
+  const ownerColumn =
+    !applyScope || sub.owner === false ? undefined : sub.owner ?? 'userId';
+
+  const ScopeHook = applyScope
+    ? PathScopeHook.for(def.entity, parentParam, parentForeignKey)
+    : undefined;
 
   const ReloadHook = sub.reloadAfterCreate
     ? AfterCreateReloadHook.for(def.entity)
     : undefined;
 
   const composedHooks = [
-    ScopeHook,
+    ...(ScopeHook ? [ScopeHook] : []),
     ...(ReloadHook ? [ReloadHook] : []),
     ...(def.hooks ?? []),
   ];
 
-  if (!sub.disablePathScopeGuard && !sub.parentOwnerColumn) {
-    throw new Error(
-      `defineSubResource(${subKey}): must declare \`parentOwnerColumn\` ` +
-        `(e.g. 'userId', 'orgId') or opt out with \`disablePathScopeGuard: true\`. ` +
-        `The auto guard cannot pick a default safely — wrong column = silent 404 for everyone.`,
-    );
-  }
-  const ScopeGuard = sub.disablePathScopeGuard
-    ? undefined
-    : PathScopeGuard.for(
+  const ScopeGuard = ownerColumn
+    ? PathScopeGuard.for(
         parentParam,
         parentKey,
-        sub.parentOwnerColumn as string,
-      );
+        ownerColumn,
+        sub.parentPk ?? 'id',
+      )
+    : undefined;
 
   const composedDecorators: readonly ClassDecorator[] = [
     ...(def.decorators ?? []),
@@ -130,7 +133,7 @@ export function materialiseSubResource(args: {
     ? [...(def.providers ?? []), ScopeGuard]
     : def.providers ?? [];
 
-  const persistenceModule = def.persistence?.module ?? parentPersistenceModule;
+  const persistenceModule = def.repository ?? parentPersistenceModule;
 
   const materialised: RocketsResourceDefinition<PlainLiteralObject> = {
     ...def,
@@ -138,7 +141,7 @@ export function materialiseSubResource(args: {
     tags,
     hooks: composedHooks,
     providers: composedProviders,
-    persistence: persistenceModule ? { module: persistenceModule } : {},
+    ...(persistenceModule ? { repository: persistenceModule } : {}),
     operations: composedOperations,
     decorators: composedDecorators,
     request: composedRequest,

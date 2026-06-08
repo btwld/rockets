@@ -24,7 +24,7 @@ import { IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import request from 'supertest';
-import { RepositoryModule } from '@bitwild/rockets-repository';
+import { RepositoryModule } from '@bitwild/rockets-core';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,

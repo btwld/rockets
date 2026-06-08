@@ -44,6 +44,8 @@ export abstract class PathScopeGuard implements CanActivate {
   protected parentParam = '';
   protected parentEntityKey = '';
   protected ownerColumn = '';
+  /** Primary-key column on the parent entity. Defaults to `'id'`. */
+  protected parentPk = 'id';
   protected parentRepo!: RepositoryInterface<Record<string, unknown>>;
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -69,10 +71,10 @@ export abstract class PathScopeGuard implements CanActivate {
     // would be wasteful. `select` narrows the read to the primary key.
     const parent = await this.parentRepo.findOne({
       where: Where.and(
-        Where.eq<Record<string, unknown>>('id', parentId),
+        Where.eq<Record<string, unknown>>(this.parentPk, parentId),
         Where.eq<Record<string, unknown>>(this.ownerColumn, actorId),
       ),
-      select: ['id'],
+      select: [this.parentPk],
     });
     if (!parent) {
       throw new NotFoundException(
@@ -84,17 +86,24 @@ export abstract class PathScopeGuard implements CanActivate {
   }
 
   /**
-   * Static factory binding the parent param name, parent entity key, and
-   * the parent's owner column on a cached named subclass. Subclass cache
-   * keyed by `(parentParam, parentEntityKey, ownerColumn)` so distinct
-   * triples receive distinct provider tokens.
+   * Static factory binding the parent param name, parent entity key, the
+   * parent's owner column, and the parent's primary-key column on a cached
+   * named subclass. Subclass cache keyed by
+   * `(parentParam, parentEntityKey, ownerColumn, parentPk)` so distinct
+   * tuples receive distinct provider tokens.
    */
   static for(
     parentParam: string,
     parentEntityKey: string,
     ownerColumn: string,
+    parentPk: string = 'id',
   ): Type<PathScopeGuard> {
-    return getPathScopeGuardSubclass(parentParam, parentEntityKey, ownerColumn);
+    return getPathScopeGuardSubclass(
+      parentParam,
+      parentEntityKey,
+      ownerColumn,
+      parentPk,
+    );
   }
 }
 
@@ -104,8 +113,9 @@ function getPathScopeGuardSubclass(
   parentParam: string,
   parentEntityKey: string,
   ownerColumn: string,
+  parentPk: string,
 ): Type<PathScopeGuard> {
-  const cacheKey = `${parentParam}::${parentEntityKey}::${ownerColumn}`;
+  const cacheKey = `${parentParam}::${parentEntityKey}::${ownerColumn}::${parentPk}`;
   const existing = pathScopeGuardCache.get(cacheKey);
   if (existing) return existing;
 
@@ -116,6 +126,7 @@ function getPathScopeGuardSubclass(
       this.parentParam = parentParam;
       this.parentEntityKey = parentEntityKey;
       this.ownerColumn = ownerColumn;
+      this.parentPk = parentPk;
       this.parentRepo = parentRepo;
     }
   };
