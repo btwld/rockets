@@ -3,6 +3,7 @@ import type { AuthenticationUserResult } from '@concepta/nestjs-authentication';
 import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
 import { GetUserByUsernameQuery, UserInterface } from '@concepta/nestjs-user';
 
+import { resolveBitwildAppContext } from '../../../../../shared/compatibility/resolve-bitwild-app-context';
 import { RocketsAuthUserPortGetByUsernameQuery } from '../impl/rockets-auth-user-port-get-by-username.query';
 
 /**
@@ -27,7 +28,12 @@ export class RocketsAuthUserPortGetByUsernameHandler
     const aggregate = await this.queryBus.execute<
       GetUserByUsernameQuery,
       DomainAggregate<UserInterface> | null
-    >(new GetUserByUsernameQuery(query.ctx, query.username));
+    >(
+      new GetUserByUsernameQuery(
+        resolveBitwildAppContext(query.ctx),
+        query.username,
+      ),
+    );
 
     if (!aggregate) {
       return null;

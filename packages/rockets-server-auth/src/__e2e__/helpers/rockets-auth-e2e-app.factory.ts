@@ -1,6 +1,6 @@
 import './patch-crud-module-for-e2e.bootstrap';
 
-import { ExceptionsFilter } from '@bitwild/rockets-app';
+import { RocketsAuthExceptionsFilter } from '../../shared/compatibility/rockets-auth-exceptions.filter';
 import { EmailSendInterface } from '@concepta/nestjs-common';
 import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
@@ -265,7 +265,7 @@ export async function createRocketsAuthStandardE2eTestingModule(
 
 export function applyRocketsAuthE2eAppGlobals(app: INestApplication): void {
   const exceptionsFilter = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new ExceptionsFilter(exceptionsFilter));
+  app.useGlobalFilters(new RocketsAuthExceptionsFilter(exceptionsFilter));
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

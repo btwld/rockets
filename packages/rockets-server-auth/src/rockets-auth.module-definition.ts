@@ -99,6 +99,7 @@ import {
 } from './shared/authentication/rockets-auth-password-port.handlers';
 import { RocketsValidateCurrentPasswordOverrideModule } from './shared/authentication/rockets-validate-current-password-override.module';
 import { RocketsAuthCreateOtpPortHandler } from './shared/authentication/rockets-auth-create-otp-port.handler';
+import { ConceptaRepositoryCompatModule } from './shared/compatibility/concepta-repository-compat.module';
 
 export { RAW_OPTIONS_TOKEN } from './shared/constants/rockets-auth-raw-options.token';
 
@@ -328,6 +329,7 @@ export function createRocketsAuthImports(importOptions: {
 
     CqrsModule.forRoot(),
     RepositoryModule.forRoot({}),
+    ConceptaRepositoryCompatModule,
     RocketsAuthPortsModule.forRoot(importOptions.extras?.ports),
     ConfigModule.forFeature(rocketsAuthOptionsDefaultConfig),
     createSafeCrudRootModule(),

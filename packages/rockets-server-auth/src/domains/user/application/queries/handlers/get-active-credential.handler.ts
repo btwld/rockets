@@ -1,6 +1,5 @@
 import { Inject, Optional } from '@nestjs/common';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
-import { AppContextHost } from '@bitwild/rockets-app';
 import { UserCredentialEntityInterface } from '@concepta/nestjs-user';
 import {
   RepositoryInterface,
@@ -9,16 +8,8 @@ import {
 } from '@bitwild/rockets-repository';
 
 import { USER_CREDENTIALS_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
+import { resolveBitwildAppContext } from '../../../../../shared/compatibility/resolve-bitwild-app-context';
 import { GetActiveCredentialQuery } from '../impl/get-active-credential.query';
-
-function resolveCredentialLookupCtx(
-  explicit: GetActiveCredentialQuery['ctx'],
-): AppContextHost {
-  if (explicit !== undefined && explicit !== null) {
-    return AppContextHost.from(explicit as AppContextHost);
-  }
-  return new AppContextHost();
-}
 
 @QueryHandler(GetActiveCredentialQuery)
 export class GetActiveCredentialHandler
@@ -39,7 +30,7 @@ export class GetActiveCredentialHandler
   ): Promise<UserCredentialEntityInterface | null> {
     if (!this.credentialsRepo) return null;
 
-    const ctx = resolveCredentialLookupCtx(query.ctx);
+    const ctx = resolveBitwildAppContext(query.ctx);
 
     return await this.credentialsRepo.findOne({
       where: Where.and(

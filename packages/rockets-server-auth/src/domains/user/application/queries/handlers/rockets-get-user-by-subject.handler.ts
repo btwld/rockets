@@ -3,6 +3,7 @@ import type { AuthenticationUserResult } from '@concepta/nestjs-authentication';
 import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
 import { GetUserBySubjectQuery, UserInterface } from '@concepta/nestjs-user';
 
+import { resolveBitwildAppContext } from '../../../../../shared/compatibility/resolve-bitwild-app-context';
 import { RocketsGetUserBySubjectQuery } from '../impl/rockets-get-user-by-subject.query';
 import {
   resolveUserRoles,
@@ -41,7 +42,12 @@ export class RocketsGetUserBySubjectHandler
     const aggregate = await this.queryBus.execute<
       GetUserBySubjectQuery,
       DomainAggregate<UserInterface> | null
-    >(new GetUserBySubjectQuery(query.ctx, String(query.subject)));
+    >(
+      new GetUserBySubjectQuery(
+        resolveBitwildAppContext(query.ctx),
+        String(query.subject),
+      ),
+    );
 
     if (!aggregate) {
       return null;
