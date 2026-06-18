@@ -1,12 +1,39 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
   "testSequencer": "<rootDir>/scripts/jest-e2e-barrel-last-sequencer.cjs",
   "testEnvironment": "node",
   "testRegex": ".*\\.e2e-spec\\.ts$",
-  "testPathIgnorePatterns": ["/node_modules/", "/dist/", "/examples/"],
+  "testPathIgnorePatterns": [
+    "/node_modules/",
+    "/dist/",
+    "/examples/"
+  ],
   "transform": {
-    "^.+\\.ts$": ["ts-jest", { "tsconfig": "tsconfig.jest.json" }]
+    "^.+\\.ts$": [
+      "ts-jest",
+      {
+        "tsconfig": "tsconfig.jest.json"
+      }
+    ],
+    "^.+\\.js$": [
+      "babel-jest",
+      {
+        "configFile": false,
+        "plugins": [
+          "./scripts/babel-plugin-import-meta-url-filename.cjs",
+          "./scripts/babel-plugin-dynamic-import-to-require.cjs",
+          "@babel/plugin-transform-modules-commonjs"
+        ]
+      }
+    ]
   },
+  "transformIgnorePatterns": [
+    "/node_modules/(?!@nestjs/)"
+  ],
   "maxWorkers": 1,
   "forceExit": true,
   "moduleNameMapper": {
@@ -30,5 +57,10 @@
     "!**/dist/**"
   ],
   "coverageDirectory": "coverage-e2e",
-  "coverageReporters": ["text", "text-summary", "lcov", "html"]
+  "coverageReporters": [
+    "text",
+    "text-summary",
+    "lcov",
+    "html"
+  ]
 }

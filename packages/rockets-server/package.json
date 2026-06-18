@@ -71,15 +71,16 @@
   "dependencies": {
     "@bitwild/rockets-app": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
+    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@nestjs/common": "^11.1.18",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.1.18",
     "@nestjs/cqrs": "^11.0.0",
-    "@nestjs/swagger": "^11.0.0"
+    "@nestjs/swagger": "^11.0.0",
+    "@nestjs/typeorm": "^11.0.0"
   },
   "devDependencies": {
     "@bitwild/rockets-crud": "workspace:^",
-    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.5",
     "@nestjs/platform-express": "^11.1.18",
     "@nestjs/testing": "^11.1.18",
@@ -96,6 +97,7 @@
   "peerDependencies": {
     "class-transformer": "*",
     "class-validator": "*",
-    "rxjs": "^7.1.0"
+    "rxjs": "^7.1.0",
+    "typeorm": "^0.3.0"
   }
 }

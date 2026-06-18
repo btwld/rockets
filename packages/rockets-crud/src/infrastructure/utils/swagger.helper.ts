@@ -8,10 +8,15 @@ export const swagger = safeRequire('@nestjs/swagger', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@nestjs/swagger'),
 );
-export const swaggerConst = safeRequire('@nestjs/swagger/dist/constants', () =>
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('@nestjs/swagger/dist/constants'),
-);
+// v12 exports DECORATORS from the main entry; v11 only exposes it via
+// dist/constants, a path the v12 exports map no longer allows.
+export const swaggerConst =
+  swagger?.DECORATORS !== undefined
+    ? swagger
+    : safeRequire('@nestjs/swagger/dist/constants', () =>
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('@nestjs/swagger/dist/constants'),
+      );
 export const swaggerPkgJson = safeRequire('@nestjs/swagger/package.json', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@nestjs/swagger/package.json'),

@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, PlainLiteralObject } from '@nestjs/common';
 import { EntityHook, PassthroughEntityHookBase } from '@bitwild/rockets-core';
 import { EventBus } from '@nestjs/cqrs';
-import { PetEntity } from '../resources/pet/pet.entity';
+import { PetEntity } from '../resources/pet/pet.schema';
 import { PetCreatedEvent } from './pet-created.event';
 
 /**
@@ -14,12 +14,12 @@ import { PetCreatedEvent } from './pet-created.event';
  */
 @EntityHook({ entity: PetEntity })
 @Injectable()
-export class PetCreatedEventHook extends PassthroughEntityHookBase<PetEntity> {
+export class PetCreatedEventHook extends PassthroughEntityHookBase<PlainLiteralObject> {
   constructor(private readonly eventBus: EventBus) {
     super();
   }
 
-  override async afterCreate(result: PetEntity): Promise<PetEntity> {
+  override async afterCreate(result: PlainLiteralObject): Promise<PlainLiteralObject> {
     if (result?.id && result?.userId) {
       this.eventBus.publish(
         new PetCreatedEvent(result.id, result.userId, result.name ?? ''),

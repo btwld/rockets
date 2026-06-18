@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  PlainLiteralObject,
+} from '@nestjs/common';
 import {
   InjectDynamicRepository,
   type RepositoryInterface,
@@ -9,8 +13,9 @@ import {
   type EntityHookContext,
   PassthroughEntityHookBase,
 } from '@bitwild/rockets-core';
-import { PetTagEntity } from './pet-tag.entity';
-import { TagEntity } from '../tag/tag.entity';
+import { PetTagEntity } from './pet-tag.schema';
+import { TagEntity } from '../tag/tag.zod';
+import type { Tag } from '../tag/tag.schema';
 
 /**
  * Ensures `tagId` references an existing {@link TagEntity} row before the
@@ -19,25 +24,25 @@ import { TagEntity } from '../tag/tag.entity';
  */
 @EntityHook({ entity: PetTagEntity })
 @Injectable()
-export class PetTagTagIdExistsHook extends PassthroughEntityHookBase<PetTagEntity> {
+export class PetTagTagIdExistsHook extends PassthroughEntityHookBase<PlainLiteralObject> {
   constructor(
     @InjectDynamicRepository(TagEntity)
-    private readonly tagRepo: RepositoryInterface<TagEntity>,
+    private readonly tagRepo: RepositoryInterface<Tag>,
   ) {
     super();
   }
 
   override async beforeCreate(
-    payload: PetTagEntity,
+    payload: PlainLiteralObject,
     ctx?: EntityHookContext,
-  ): Promise<PetTagEntity> {
+  ): Promise<PlainLiteralObject> {
     const tagId = payload.tagId;
     if (typeof tagId !== 'string' || tagId.length === 0) {
       return payload;
     }
 
     const existing = await this.tagRepo.findOne({
-      where: Where.eq<TagEntity>('id', tagId),
+      where: Where.eq<Tag>('id', tagId),
     });
 
     if (!existing) {

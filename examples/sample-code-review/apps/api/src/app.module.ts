@@ -7,11 +7,11 @@ import { defineModuleResource } from '@bitwild/rockets-core';
 import { resolveFirebaseAuthModuleOptions } from './auth-firebase';
 import { UserEntity } from './auth/user.entity';
 import { defineApiKeyAuth, apiKeyAuthResource } from './auth-api-key';
-import { UserMetadataEntity } from './entities/user-metadata.entity';
 import {
+  UserMetadataEntity,
   UserMetadataCreateDto,
   UserMetadataUpdateDto,
-} from './dto/user-metadata.dto';
+} from './user-metadata.schema';
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 import { githubFeature } from './github';
 import { analysisFeature } from './analysis';

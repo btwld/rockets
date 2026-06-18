@@ -1,2 +1,5 @@
-export { petVaccinationResource } from './pet-vaccination.resource';
-export { PetVaccinationEntity } from './pet-vaccination.entity';
+export {
+  petVaccinationResource,
+  PetVaccinationEntity,
+  petVaccinationSchema,
+} from './pet-vaccination.schema';

@@ -1,25 +1,19 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { z } from 'zod';
+import { createdEntity, f } from '@bitwild/rockets-zod';
+import { zodEntityCompiler } from '../zod-bindings';
 
 /**
  * Local user row keyed by Firebase `uid` (see resolver / metadata `userId`).
- * No password flow — identity comes from Firebase tokens.
+ * No password flow — identity comes from Firebase tokens. Zod-sourced.
  */
-@Entity('users')
-export class UserEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export const userSchema = createdEntity({
+  email: f.string({ max: 255, unique: true, example: 'dev@example.com' }),
+  name: f.string({ max: 100 }).optional(),
+});
 
-  @Column({ type: 'varchar', length: 255, unique: true })
-  email!: string;
+export type User = z.infer<typeof userSchema>;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  name?: string;
-
-  @CreateDateColumn()
-  dateCreated!: Date;
-}
+export const UserEntity = zodEntityCompiler.compileEntity(userSchema, {
+  name: 'UserEntity',
+  table: 'users',
+});

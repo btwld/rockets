@@ -1,6 +1,7 @@
 import { DynamicModule, InjectionToken } from '@nestjs/common';
 
 import { RepositoryProviderOptions } from './repository-provider-options.interface';
+import { SchemaEntityCompiler } from './schema-entity-compiler.interface';
 import { TransactionFactoryInterface } from './transaction-factory.interface';
 
 /**
@@ -53,4 +54,14 @@ export interface RepositoryModuleInterface {
    * This is a static method on the module class.
    */
   forFeature(entities: RepositoryProviderOptions[]): DynamicRepositoryModule;
+
+  /**
+   * Optional capability: compile a declarative validation schema into
+   * this adapter's entity representation. Schema-first resource layers
+   * (e.g. the zod layer) resolve the compiler from the same
+   * `repository` option that selects the adapter, keeping entity
+   * generation adapter-owned — see {@link SchemaEntityCompiler} for the
+   * contract and implementation guide.
+   */
+  readonly entityCompiler?: SchemaEntityCompiler;
 }

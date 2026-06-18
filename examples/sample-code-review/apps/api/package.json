@@ -20,6 +20,8 @@
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",
     "@bitwild/rockets-repository-firestore": "workspace:^",
+    "@bitwild/rockets-zod": "workspace:^",
+    "@bitwild/rockets-zod-typeorm": "workspace:^",
     "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.5",
     "@nestjs/common": "11.1.18",
     "@nestjs/config": "4.0.0",
@@ -35,7 +37,8 @@
     "reflect-metadata": "^0.1.14",
     "rxjs": "^7.8.1",
     "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

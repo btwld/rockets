@@ -2,13 +2,12 @@ import { Injectable } from '@nestjs/common';
 import {
   CrudAdapter,
   CrudListQuery,
+  CrudQueryHandlerBase,
   CrudResponsePaginatedInterface,
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
+import type { CrudQueryInterface } from '@bitwild/rockets-crud';
 import { getActor } from '@bitwild/rockets-core';
-// TODO: deep imports — move to barrel when @bitwild/rockets-crud exports these
-import { CrudQueryHandler } from '@bitwild/rockets-crud/dist/application/queries/handlers/crud-query.handler';
-import type { CrudQueryInterface } from '@bitwild/rockets-crud/dist/application/queries/interfaces/crud-query.interface';
 import { WhereOperator, type EntityColumn } from '@bitwild/rockets-repository';
 import { PetEntity } from './pet.entity';
 
@@ -20,7 +19,7 @@ import { PetEntity } from './pet.entity';
  * route, so callers without the right grant never reach this handler.
  */
 @Injectable()
-export class PetListHandler extends CrudQueryHandler<PetEntity> {
+export class PetListHandler extends CrudQueryHandlerBase<PetEntity> {
   constructor(
     @InjectCrudAdapter(PetEntity)
     crudAdapter: CrudAdapter<PetEntity>,

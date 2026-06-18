@@ -17,7 +17,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Ctx, type AppContextInterface } from '@bitwild/rockets-app';
-import { PetEntity } from '../resources/pet/pet.entity';
+import { PetEntity } from '../resources/pet/pet.schema';
+import type { Pet } from '../resources/pet/pet.schema';
 import { AdminGuard } from './admin.guard';
 import { AdminPetService, ListResult } from './admin-pet.service';
 
@@ -57,7 +58,7 @@ export class AdminPetController {
     @Ctx() ctx: AppContextInterface,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Query('withDeleted') withDeleted?: string,
-  ): Promise<PetEntity> {
+  ): Promise<Pet> {
     return this.adminPetService.read(ctx, id, parseBool(withDeleted));
   }
 
@@ -68,7 +69,7 @@ export class AdminPetController {
   async forceRestore(
     @Ctx() ctx: AppContextInterface,
     @Param('id', new ParseUUIDPipe()) id: string,
-  ): Promise<PetEntity> {
+  ): Promise<Pet> {
     return this.adminPetService.forceRestore(ctx, id);
   }
 

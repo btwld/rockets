@@ -7,7 +7,7 @@ import { SwaggerUiService } from '@bitwild/rockets-app';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
-import { UserMetadataUpdateDto } from './dto/user-metadata.dto';
+import { UserMetadataUpdateDto } from './user-metadata.schema';
 import { patchMePatchOpenApi } from './swagger/patch-me-openapi';
 
 async function bootstrap() {

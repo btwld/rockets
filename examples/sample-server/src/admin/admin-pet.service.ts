@@ -6,7 +6,8 @@ import {
   TransactionScope,
   Where,
 } from '@bitwild/rockets-repository';
-import { PetEntity } from '../resources/pet/pet.entity';
+import { PetEntity } from '../resources/pet/pet.schema';
+import type { Pet } from '../resources/pet/pet.schema';
 
 export interface ListParams {
   readonly withDeleted: boolean;
@@ -15,7 +16,7 @@ export interface ListParams {
 }
 
 export interface ListResult {
-  readonly data: PetEntity[];
+  readonly data: Pet[];
   readonly total: number;
   readonly limit: number;
   readonly offset: number;
@@ -31,7 +32,7 @@ export interface ListResult {
 export class AdminPetService {
   constructor(
     @InjectDynamicRepository(PetEntity)
-    private readonly petRepo: RepositoryInterface<PetEntity>,
+    private readonly petRepo: RepositoryInterface<Pet>,
     private readonly txScope: TransactionScope,
   ) {}
 
@@ -52,9 +53,9 @@ export class AdminPetService {
     ctx: AppContextInterface,
     id: string,
     withDeleted: boolean,
-  ): Promise<PetEntity> {
+  ): Promise<Pet> {
     const pet = await this.petRepo.findOne({
-      where: Where.eq<PetEntity>('id', id),
+      where: Where.eq<Pet>('id', id),
       withDeleted,
       ctx,
     });
@@ -62,10 +63,10 @@ export class AdminPetService {
     return pet;
   }
 
-  async forceRestore(ctx: AppContextInterface, id: string): Promise<PetEntity> {
+  async forceRestore(ctx: AppContextInterface, id: string): Promise<Pet> {
     return this.txScope.run(ctx, async () => {
       const pet = await this.petRepo.findOne({
-        where: Where.eq<PetEntity>('id', id),
+        where: Where.eq<Pet>('id', id),
         withDeleted: true,
         ctx,
       });
@@ -77,7 +78,7 @@ export class AdminPetService {
   async hardDelete(ctx: AppContextInterface, id: string): Promise<void> {
     await this.txScope.run(ctx, async () => {
       const pet = await this.petRepo.findOne({
-        where: Where.eq<PetEntity>('id', id),
+        where: Where.eq<Pet>('id', id),
         withDeleted: true,
         ctx,
       });

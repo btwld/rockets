@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, PlainLiteralObject } from '@nestjs/common';
 import {
   InjectDynamicRepository,
   type RepositoryFindOneOptions,
@@ -15,7 +15,7 @@ import {
   getActor,
   getCrudContext,
 } from '@bitwild/rockets-core';
-import { PetEntity } from '../pet/pet.entity';
+import { PetEntity } from '../pet/pet.schema';
 import { PetShareEntity } from './pet-share.entity';
 
 /**
@@ -35,7 +35,7 @@ import { PetShareEntity } from './pet-share.entity';
  */
 @EntityHook({ entity: PetEntity })
 @Injectable()
-export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PetEntity> {
+export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PlainLiteralObject> {
   constructor(
     @InjectDynamicRepository(PetShareEntity)
     private readonly shareRepo: RepositoryInterface<PetShareEntity>,
@@ -44,16 +44,16 @@ export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PetEntity> {
   }
 
   override async beforeFindAndCount(
-    options: RepositoryFindOptions<PetEntity>,
+    options: RepositoryFindOptions<PlainLiteralObject>,
     ctx?: EntityHookContext,
-  ): Promise<RepositoryFindOptions<PetEntity>> {
+  ): Promise<RepositoryFindOptions<PlainLiteralObject>> {
     return this.applyScope(options, ctx, { writeOnly: false });
   }
 
   override async beforeFindOne(
-    options: RepositoryFindOneOptions<PetEntity>,
+    options: RepositoryFindOneOptions<PlainLiteralObject>,
     ctx?: EntityHookContext,
-  ): Promise<RepositoryFindOneOptions<PetEntity>> {
+  ): Promise<RepositoryFindOneOptions<PlainLiteralObject>> {
     const crudCtx = getCrudContext(ctx);
     const writeOps = new Set<string>([
       Operation.Update,
@@ -69,8 +69,8 @@ export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PetEntity> {
 
   private async applyScope<
     T extends
-      | RepositoryFindOptions<PetEntity>
-      | RepositoryFindOneOptions<PetEntity>,
+      | RepositoryFindOptions<PlainLiteralObject>
+      | RepositoryFindOneOptions<PlainLiteralObject>,
   >(
     options: T,
     ctx: EntityHookContext | undefined,
@@ -79,7 +79,7 @@ export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PetEntity> {
     const actor = getActor(ctx);
     if (!actor?.id) return options;
 
-    const ownerClause = Where.eq<PetEntity>('userId', actor.id);
+    const ownerClause = Where.eq<PlainLiteralObject>('userId', actor.id);
     let clause: WhereClause = ownerClause;
 
     if (!flags.writeOnly) {
@@ -88,7 +88,7 @@ export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PetEntity> {
       });
       const sharedPetIds = shares.map((s) => s.petId);
       if (sharedPetIds.length > 0) {
-        clause = Where.or(ownerClause, Where.in<PetEntity>('id', sharedPetIds));
+        clause = Where.or(ownerClause, Where.in<PlainLiteralObject>('id', sharedPetIds));
       }
     }
 

@@ -7,12 +7,24 @@ import { EntityColumn, SortOrder } from '../repository.types';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Sortable field. A root sort targets a column of `T` (autocompleted via
+ * {@link EntityColumn}); a relation sort (`relation` set) targets a column
+ * of the RELATED entity, which `T` cannot name — hence the `string`
+ * branch. Parsed sorts also originate from raw query strings, so the
+ * string branch matches runtime reality while preserving column
+ * suggestions for the common root-sort case.
+ */
+export type SortField<T extends PlainLiteralObject> =
+  | EntityColumn<T>
+  | (string & {});
+
+/**
  * A sort key with ascending order.
  */
 export interface OrderSortKeyAsc<
   T extends PlainLiteralObject = PlainLiteralObject,
 > {
-  field: EntityColumn<T>;
+  field: SortField<T>;
   order: typeof SortOrder.ASC;
   relation?: string;
 }
@@ -23,7 +35,7 @@ export interface OrderSortKeyAsc<
 export interface OrderSortKeyDesc<
   T extends PlainLiteralObject = PlainLiteralObject,
 > {
-  field: EntityColumn<T>;
+  field: SortField<T>;
   order: typeof SortOrder.DESC;
   relation?: string;
 }

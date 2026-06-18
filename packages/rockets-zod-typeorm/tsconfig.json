@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["**/*.spec.ts", "**/*.e2e-spec.ts"],
+  "references": [
+    { "path": "../rockets-app" },
+    { "path": "../rockets-repository" },
+    { "path": "../rockets-core" },
+    { "path": "../rockets-zod" }
+  ]
+}

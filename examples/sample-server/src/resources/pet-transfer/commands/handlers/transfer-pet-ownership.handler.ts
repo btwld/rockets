@@ -10,7 +10,8 @@ import {
   TransactionScope,
   Where,
 } from '@bitwild/rockets-repository';
-import { PetEntity } from '../../../pet/pet.entity';
+import { PetEntity } from '../../../pet/pet.schema';
+import type { Pet } from '../../../pet/pet.schema';
 import { PetShareEntity } from '../../../pet-share/pet-share.entity';
 import { UserEntity } from '../../../../auth/user.entity';
 import { TransferPetOwnershipCommand } from '../impl/transfer-pet-ownership.command';
@@ -40,11 +41,11 @@ import { PetTransferredEvent } from '../../events/pet-transferred.event';
 @Injectable()
 @CommandHandler(TransferPetOwnershipCommand)
 export class TransferPetOwnershipHandler
-  implements ICommandHandler<TransferPetOwnershipCommand, PetEntity>
+  implements ICommandHandler<TransferPetOwnershipCommand, Pet>
 {
   constructor(
     @InjectDynamicRepository(PetEntity)
-    private readonly petRepo: RepositoryInterface<PetEntity>,
+    private readonly petRepo: RepositoryInterface<Pet>,
     @InjectDynamicRepository(PetShareEntity)
     private readonly shareRepo: RepositoryInterface<PetShareEntity>,
     @InjectDynamicRepository(UserEntity)
@@ -53,7 +54,7 @@ export class TransferPetOwnershipHandler
     private readonly eventBus: EventBus,
   ) {}
 
-  async execute(command: TransferPetOwnershipCommand): Promise<PetEntity> {
+  async execute(command: TransferPetOwnershipCommand): Promise<Pet> {
     const { ctx, petId, currentOwnerId, newOwnerId } = command;
 
     if (currentOwnerId === newOwnerId) {
@@ -62,7 +63,7 @@ export class TransferPetOwnershipHandler
 
     const { result, revokedCount } = await this.txScope.run(ctx, async () => {
       const pet = await this.petRepo.findOne({
-        where: Where.eq<PetEntity>('id', petId),
+        where: Where.eq<Pet>('id', petId),
         ctx,
       });
       if (!pet) throw new NotFoundException(`Pet ${petId} not found`);

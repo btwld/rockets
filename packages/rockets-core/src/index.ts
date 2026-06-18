@@ -86,6 +86,8 @@ export { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.
 export type {
   RepositoryModuleInterface,
   RepositoryInterface,
+  SchemaEntityCompiler,
+  SchemaEntityCompilerOptions,
 } from '@bitwild/rockets-repository';
 export {
   RepositoryModule,

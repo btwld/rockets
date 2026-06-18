@@ -1,10 +1,6 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { z } from 'zod';
+import { f, rocketsFieldMeta } from '@bitwild/rockets-zod';
+import { zodEntityCompiler } from '../zod-bindings';
 
 export enum AuditAction {
   CREATE = 'create',
@@ -14,36 +10,31 @@ export enum AuditAction {
   RESTORE = 'restore',
 }
 
-@Entity('audit_logs')
-export class AuditLogEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
+/**
+ * Zod source of truth for the audit log (replaces the handwritten
+ * `@Entity`). The write-side `AuditLogHook` and read-side
+ * `AuditLogService` are unchanged — they inject `AuditLogEntity` (value)
+ * and type rows by `AuditLogEntity` (the same-named row type below).
+ */
+export const auditLogSchema = z.object({
+  id: f.pk(),
   /** Auth-user id that triggered the write. `null` for system / anonymous. */
-  @Index()
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  actorId!: string | null;
-
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  action!: AuditAction;
-
+  actorId: f.string({ max: 255, index: true }).nullable(),
+  action: f.enum(AuditAction, { length: 20 }),
   /** Resource key (e.g. 'pet'). */
-  @Index()
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  resource!: string;
-
-  @Index()
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  resourceId!: string | null;
-
+  resource: f.string({ max: 100, index: true }),
+  resourceId: f.string({ max: 255, index: true }).nullable(),
   /**
    * JSON-encoded snapshot of the post-write entity. Stored as text rather
-   * than `@Column({type:'json'})` so this works unchanged against SQLite
-   * (tests) and postgres/mysql.
+   * than a json column so it works unchanged against SQLite and pg/mysql.
    */
-  @Column({ type: 'text', nullable: true })
-  snapshot!: string | null;
+  snapshot: f.string({ text: true }).nullable(),
+  dateCreated: z.date().register(rocketsFieldMeta, { db: { createdAt: true } }),
+});
 
-  @CreateDateColumn()
-  dateCreated!: Date;
-}
+export const AuditLogEntity = zodEntityCompiler.compileEntity(auditLogSchema, {
+  name: 'AuditLogEntity',
+  table: 'audit_logs',
+});
+/** Persistence row type — shares the name with the entity class (value + type). */
+export type AuditLogEntity = z.infer<typeof auditLogSchema>;

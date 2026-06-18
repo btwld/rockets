@@ -1,10 +1,10 @@
 import { Injectable, type PlainLiteralObject } from '@nestjs/common';
 import {
   CrudAdapter,
-  CrudCommandHandler,
+  CrudCommandHandlerBase,
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
-import { PetEntity } from './pet.entity';
+import { PetEntity } from './pet.schema';
 
 /**
  * Optional custom create handler — the stock `CrudCommandHandler` path
@@ -14,7 +14,7 @@ import { PetEntity } from './pet.entity';
  * command-bus logic beyond repository hooks.
  */
 @Injectable()
-export class PetCreateHandler extends CrudCommandHandler<PlainLiteralObject> {
+export class PetCreateHandler extends CrudCommandHandlerBase<PlainLiteralObject> {
   constructor(
     @InjectCrudAdapter(PetEntity)
     readonly crudAdapter: CrudAdapter<PlainLiteralObject>,

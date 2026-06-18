@@ -10,7 +10,8 @@ import {
   TransactionScope,
   Where,
 } from '@bitwild/rockets-repository';
-import { PetEntity } from '../pet/pet.entity';
+import { PetEntity } from '../pet/pet.schema';
+import type { Pet } from '../pet/pet.schema';
 import { PetShareEntity, PetSharePermission } from './pet-share.entity';
 
 export interface ShareCreateInput {
@@ -38,7 +39,7 @@ export interface ShareCreateInput {
 export class PetShareService {
   constructor(
     @InjectDynamicRepository(PetEntity)
-    private readonly petRepo: RepositoryInterface<PetEntity>,
+    private readonly petRepo: RepositoryInterface<Pet>,
     @InjectDynamicRepository(PetShareEntity)
     private readonly shareRepo: RepositoryInterface<PetShareEntity>,
     private readonly txScope: TransactionScope,
@@ -110,11 +111,11 @@ export class PetShareService {
     ctx: AppContextInterface,
     petId: string,
     actorUserId: string,
-  ): Promise<PetEntity> {
+  ): Promise<Pet> {
     const pet = await this.petRepo.findOne({
       where: Where.and(
-        Where.eq<PetEntity>('id', petId),
-        Where.eq<PetEntity>('userId', actorUserId),
+        Where.eq<Pet>('id', petId),
+        Where.eq<Pet>('userId', actorUserId),
       ),
       ctx,
     });

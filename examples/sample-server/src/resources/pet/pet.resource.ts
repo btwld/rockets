@@ -1,25 +1,23 @@
-import { defineResource, defineSubResource } from '@bitwild/rockets';
-import { OwnerStampHook } from '@bitwild/rockets-core';
-import { PetEntity } from './pet.entity';
-import { PetCreateDto, PetUpdateDto, PetResponseDto } from './pet.dto';
+import { zodResource, zodSubResource } from '../../zod-bindings';
+import { PetEntity, petSchema } from './pet.schema';
 import { PetOwnerOrSharedHook } from '../pet-share/pet-owner-or-shared.hook';
 import { AuditLogHook } from '../../audit/audit-log.hook';
-import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
-import { PetTagEntity } from './pet-tag.entity';
-import { TagEntity } from '../tag/tag.entity';
-import { PetTagCreateDto, PetTagResponseDto } from './pet-tag.dto';
+import { petTagSchema } from './pet-tag.schema';
 import { PetCreatedEventHook } from '../../events/pet-created-event.hook';
 import { PetUniqueRefHook } from './pet-unique-ref.hook';
 import { PetTagTagIdExistsHook } from './pet-tag-tag-id-exists.hook';
 
-const PetOwnerStamp = OwnerStampHook.for(PetEntity);
 const PetAuditLogHook = AuditLogHook.for(PetEntity);
 
 /**
+ * Fully zod-driven: entity, DTO projections and relations all come from
+ * `petSchema` (pet.schema.ts) — see the mapping table there.
+ *
  * Hook stack and what each one owns:
  *
- * - {@link OwnerStampHook} — `beforeCreate`/`beforeUpdate` stamp `userId`
- *   from the actor and reject spoofing.
+ * - `OwnerStampHook` — auto-wired by the zod layer from `owner: 'userId'`
+ *   below; `beforeCreate`/`beforeUpdate` stamp `userId` from the actor and
+ *   reject spoofing. (Opt out with `ownerStamp: false`.)
  * - {@link PetOwnerOrSharedHook} — `beforeFindAndCount` / `beforeFindOne`
  *   broaden read scope to "owner OR shared user" while keeping writes
  *   strict-owner.
@@ -30,47 +28,40 @@ const PetAuditLogHook = AuditLogHook.for(PetEntity);
  * - {@link PetCreatedEventHook} — `afterCreate` publishes
  *   `PetCreatedEvent` for downstream listeners (welcome email).
  *
- * Pet ↔ Tag many-to-many is exposed as a nested sub-resource at
- * `/pets/:petId/tags`. `defineSubResource` composes the path, declares
- * `request.params: { id, petId }`, applies `@ApiParam(:petId)` on every
- * op, and auto-injects a `PathScopeHook` that filters reads by `petId`
- * and stamps the FK on creates — eliminating the per-junction
- * boilerplate that previously lived in a separate `pet-tag.resource.ts`.
- * {@link PetTagTagIdExistsHook} validates `tagId` on create (no custom handler).
+ * Pet ↔ Tag many-to-many stays exposed as the zod sub-resource at
+ * `/pets/:petId/tags`. The vaccination/junction relation entries come
+ * from the `relation` meta on the schema (`include: 'default'`).
  */
-export const petResource = defineResource({
-  entity: PetEntity,
-  // path / tags omitted — derived as `pets` / `['Pets']` from the key.
-  relations: (relation) => [
-    relation(PetVaccinationEntity, 'vaccinations'),
-    relation(PetTagEntity, 'petTags'),
-  ],
+export const petResource = zodResource({
+  name: 'Pet',
+  schema: petSchema,
+  // No `entity:` — `PetEntity` was compiled from this same schema in
+  // pet.schema.ts (eagerly, so hooks/relations can import it without a
+  // cycle); zodResource reuses that registered class.
+  // key / path / tags derived: `pet` → `pets` / `['Pets']`.
+  owner: 'userId', // stamps userId from the actor + excludes it from create/update
   hooks: [
-    PetOwnerStamp,
+    // OwnerStampHook for `userId` is auto-wired from `owner` (prepended
+    // ahead of these).
     PetOwnerOrSharedHook,
     PetUniqueRefHook,
     PetAuditLogHook,
     PetCreatedEventHook,
   ],
   operations: {
-    list: { output: PetResponseDto },
-    read: { output: PetResponseDto },
-    create: {
-      input: PetCreateDto,
-      output: PetResponseDto,
-    },
-    update: { input: PetUpdateDto, output: PetResponseDto },
+    list: true,
+    read: true,
+    create: true,
+    update: true,
     delete: { soft: true, returnDeleted: true },
     restore: { returnRestored: true },
   },
   subResources: {
-    // The key MUST be a property of `PetEntity` — `petTags` is the
-    // junction relation declared on the entity. The URL segment is
-    // overridden to `tags` for a friendlier route (default would be
-    // kebab-cased `pet-tags`). The sub's entity type is inferred from
-    // the `entity` field — no need to repeat it as a generic.
-    petTags: defineSubResource({
-      entity: PetTagEntity,
+    petTags: zodSubResource({
+      name: 'PetTag',
+      schema: petTagSchema,
+      // No `entity:` — `PetTagEntity` is the class compiled from this
+      // schema in pet-tag.schema.ts; zodSubResource reuses it.
       hooks: [PetTagTagIdExistsHook],
       tags: ['Pet Tags'],
       segment: 'tags',
@@ -81,22 +72,11 @@ export const petResource = defineResource({
       // Eager `tag` relation needs reloading because TypeORM `save()`
       // omits eager loads. Opt-in to keep the cost explicit.
       reloadAfterCreate: true,
-      relations: (relation) => [
-        relation(() => PetEntity, 'pet'),
-        relation(() => TagEntity, 'tag'),
-      ],
       // PathScopeHook (filter by :petId, stamp petId on create) and
       // PathScopeGuard (authenticated actor + parent owner check) are
-      // auto-injected by defineSubResource.
-      operations: {
-        list: { output: PetTagResponseDto },
-        read: { output: PetTagResponseDto },
-        create: {
-          input: PetTagCreateDto,
-          output: PetTagResponseDto,
-        },
-        delete: {},
-      },
+      // auto-injected by defineSubResource; the pet/tag relation entries
+      // come from the schema's FK relation meta (`include: 'default'`).
+      operations: { list: true, read: true, create: true, delete: true },
     }),
   },
 });

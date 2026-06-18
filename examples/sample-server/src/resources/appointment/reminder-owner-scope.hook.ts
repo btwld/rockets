@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, PlainLiteralObject } from '@nestjs/common';
 import {
   InjectDynamicRepository,
   type RepositoryFindOneOptions,
@@ -12,7 +12,7 @@ import {
   PassthroughEntityHookBase,
   getActor,
 } from '@bitwild/rockets-core';
-import { ReminderEntity } from './reminder.entity';
+import { ReminderEntity } from './reminder.schema';
 import { AppointmentEntity } from './appointment.entity';
 
 /**
@@ -28,10 +28,15 @@ import { AppointmentEntity } from './appointment.entity';
  * a sample and for apps where appointment cardinality per user stays
  * bounded. For very large users, denormalize `userId` onto the reminder
  * row and switch back to `OwnerScopeHook`.
+ *
+ * Typed `PlainLiteralObject`, not `Reminder`: zod resources are
+ * `CrudResource<PlainLiteralObject>` and `RocketsEntityHookForResource`
+ * is invariant in the row type — a `Reminder`-typed hook does not
+ * satisfy the resource's `hooks` field.
  */
 @EntityHook({ entity: ReminderEntity })
 @Injectable()
-export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<ReminderEntity> {
+export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<PlainLiteralObject> {
   constructor(
     @InjectDynamicRepository(AppointmentEntity)
     private readonly apptRepo: RepositoryInterface<AppointmentEntity>,
@@ -40,23 +45,23 @@ export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<ReminderEn
   }
 
   override async beforeFindAndCount(
-    options: RepositoryFindOptions<ReminderEntity>,
+    options: RepositoryFindOptions<PlainLiteralObject>,
     ctx?: EntityHookContext,
-  ): Promise<RepositoryFindOptions<ReminderEntity>> {
+  ): Promise<RepositoryFindOptions<PlainLiteralObject>> {
     return this.applyScope(options, ctx);
   }
 
   override async beforeFindOne(
-    options: RepositoryFindOneOptions<ReminderEntity>,
+    options: RepositoryFindOneOptions<PlainLiteralObject>,
     ctx?: EntityHookContext,
-  ): Promise<RepositoryFindOneOptions<ReminderEntity>> {
+  ): Promise<RepositoryFindOneOptions<PlainLiteralObject>> {
     return this.applyScope(options, ctx);
   }
 
   private async applyScope<
     T extends
-      | RepositoryFindOptions<ReminderEntity>
-      | RepositoryFindOneOptions<ReminderEntity>,
+      | RepositoryFindOptions<PlainLiteralObject>
+      | RepositoryFindOneOptions<PlainLiteralObject>,
   >(options: T, ctx?: EntityHookContext): Promise<T> {
     const actor = getActor(ctx);
     if (!actor?.id) return options;
@@ -69,7 +74,7 @@ export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<ReminderEn
     // No appointments → no reminders. `Where.in('id', [])` is treated as
     // a "match nothing" clause by the upstream repository, so the result
     // set is empty rather than unscoped.
-    const clause = Where.in<ReminderEntity>('appointmentId', appointmentIds);
+    const clause = Where.in<PlainLiteralObject>('appointmentId', appointmentIds);
 
     return {
       ...options,

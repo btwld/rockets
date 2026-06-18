@@ -7,7 +7,8 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "build": "tsc -p tsconfig.json",
-    "test:e2e": "jest --config jest-e2e.config.json"
+    "test:e2e": "node ../../scripts/run-isolated-e2e.cjs jest-e2e.config.json",
+    "test:e2e:shared": "jest --config jest-e2e.config.json"
   },
   "dependencies": {
     "@bitwild/rockets": "workspace:^",
@@ -17,6 +18,8 @@
     "@bitwild/rockets-crud": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",
     "@bitwild/rockets-repository-typeorm": "workspace:^",
+    "@bitwild/rockets-zod": "workspace:^",
+    "@bitwild/rockets-zod-typeorm": "workspace:^",
     "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.5",
     "@nestjs/common": "11.1.18",
     "@nestjs/core": "11.1.18",
@@ -28,10 +31,12 @@
     "class-validator": "^0.14.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "nestjs-zod": "^5.4.0",
     "reflect-metadata": "^0.1.14",
     "rxjs": "^7.8.1",
     "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

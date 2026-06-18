@@ -11,15 +11,10 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
 import { AppointmentStatus } from './appointment.entity';
-
-@Exclude()
-export class ReminderResponseDto {
-  @Expose() @ApiProperty({ format: 'uuid' }) id!: string;
-  @Expose() @ApiProperty({ format: 'uuid' }) appointmentId!: string;
-  @Expose() @ApiProperty({ type: String, format: 'date-time' }) sendAt!: Date;
-  @Expose() @ApiProperty({ description: 'Whether the reminder was dispatched' }) sent!: boolean;
-  @Expose() @ApiProperty({ type: String, format: 'date-time' }) dateCreated!: Date;
-}
+// Generated from `reminderSchema` — one class serves the `/reminders`
+// routes and this nested projection (it carries `@Expose` metadata, so
+// class-transformer serializes it like any handwritten DTO).
+import { ReminderResponseDto } from './reminder.zod';
 
 @Exclude()
 export class AppointmentDto {

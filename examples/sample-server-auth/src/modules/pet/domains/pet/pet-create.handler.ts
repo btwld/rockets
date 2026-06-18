@@ -5,14 +5,13 @@ import {
 } from '@nestjs/common';
 import {
   CrudAdapter,
+  CrudCommandHandlerBase,
   CrudCreateCommand,
   CrudQueryException,
   InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
+import type { CrudCommandInterface } from '@bitwild/rockets-crud';
 import { getActor } from '@bitwild/rockets-core';
-// TODO: deep imports — move to barrel when @bitwild/rockets-crud exports these
-import { CrudCommandHandler } from '@bitwild/rockets-crud/dist/application/commands/handlers/crud-command.handler';
-import type { CrudCommandInterface } from '@bitwild/rockets-crud/dist/application/commands/interfaces/crud-command.interface';
 import { PetEntity } from './pet.entity';
 import { PetCreatableInterface } from './pet.interface';
 
@@ -29,7 +28,7 @@ import { PetCreatableInterface } from './pet.interface';
  * the handler simply pins ownership to the caller.
  */
 @Injectable()
-export class PetCreateHandler extends CrudCommandHandler<PetEntity> {
+export class PetCreateHandler extends CrudCommandHandlerBase<PetEntity> {
   constructor(
     @InjectCrudAdapter(PetEntity)
     crudAdapter: CrudAdapter<PetEntity>,

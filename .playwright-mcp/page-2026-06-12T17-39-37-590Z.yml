@@ -1,0 +1,904 @@
+- generic [active] [ref=e1]:
+  - img
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - img [ref=e8]
+      - button [ref=e44] [cursor=pointer]:
+        - img [ref=e45]
+    - generic [ref=e47]:
+      - generic:
+        - img
+      - generic [ref=e48]:
+        - generic [ref=e52]:
+          - heading "API 0.0.0 OAS 3.0" [level=1] [ref=e54]:
+            - text: API
+            - generic [ref=e55]:
+              - generic [ref=e57]: 0.0.0
+              - generic [ref=e59]: OAS 3.0
+          - paragraph [ref=e62]: API Documentation
+        - button "Authorize" [ref=e66] [cursor=pointer]:
+          - generic [ref=e67]: Authorize
+          - img [ref=e68]
+        - generic [ref=e72]:
+          - generic [ref=e74]:
+            - heading "user Collapse operation" [level=3] [ref=e75] [cursor=pointer]:
+              - link "user" [ref=e76]:
+                - /url: "#/user"
+              - button "Collapse operation" [expanded] [ref=e77]:
+                - img [ref=e78]
+            - generic [ref=e81]:
+              - generic [ref=e84] [cursor=pointer]:
+                - button "GET /me Get current user information" [ref=e85]:
+                  - generic [ref=e86]: GET
+                  - generic [ref=e87]:
+                    - link "/me" [ref=e89]:
+                      - /url: "#/user/MeController_me"
+                    - generic [ref=e90]: Get current user information
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e93]:
+                  - img [ref=e94]
+                - button "get /me" [ref=e96]:
+                  - img [ref=e97]
+              - generic [ref=e101] [cursor=pointer]:
+                - button "PATCH /me Update user userMetadata data" [ref=e102]:
+                  - generic [ref=e103]: PATCH
+                  - generic [ref=e104]:
+                    - link "/me" [ref=e106]:
+                      - /url: "#/user/MeController_updateUser"
+                    - generic [ref=e107]: Update user userMetadata data
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e110]:
+                  - img [ref=e111]
+                - button "patch /me" [ref=e113]:
+                  - img [ref=e114]
+          - generic [ref=e117]:
+            - heading "Pet shares Collapse operation" [level=3] [ref=e118] [cursor=pointer]:
+              - link "Pet shares" [ref=e119]:
+                - /url: "#/Pet%20shares"
+              - button "Collapse operation" [expanded] [ref=e120]:
+                - img [ref=e121]
+            - generic [ref=e124]:
+              - generic [ref=e127] [cursor=pointer]:
+                - 'button "POST /pets/{petId}/share Share a pet with another user (owner only)" [ref=e128]':
+                  - generic [ref=e129]: POST
+                  - generic [ref=e130]:
+                    - 'link "/pets/{petId}/share" [ref=e132]':
+                      - /url: "#/Pet%20shares/PetShareController_share"
+                      - generic [ref=e133]:
+                        - text: /pets
+                        - text: "/{petId}"
+                        - text: /share
+                    - generic [ref=e134]: Share a pet with another user (owner only)
+                - generic "Copy to clipboard" [ref=e135]:
+                  - img [ref=e136]
+                - button "authorization button unlocked" [ref=e139]:
+                  - img [ref=e140]
+                - 'button "post /pets/{petId}/share" [ref=e142]':
+                  - img [ref=e143]
+              - generic [ref=e147] [cursor=pointer]:
+                - 'button "GET /pets/{petId}/share List shares for a pet (owner only)" [ref=e148]':
+                  - generic [ref=e149]: GET
+                  - generic [ref=e150]:
+                    - 'link "/pets/{petId}/share" [ref=e152]':
+                      - /url: "#/Pet%20shares/PetShareController_list"
+                      - generic [ref=e153]:
+                        - text: /pets
+                        - text: "/{petId}"
+                        - text: /share
+                    - generic [ref=e154]: List shares for a pet (owner only)
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e157]:
+                  - img [ref=e158]
+                - 'button "get /pets/{petId}/share" [ref=e160]':
+                  - img [ref=e161]
+              - generic [ref=e165] [cursor=pointer]:
+                - 'button "DELETE /pets/{petId}/share/{userId} Revoke a pet share (owner only)" [ref=e166]':
+                  - generic [ref=e167]: DELETE
+                  - generic [ref=e168]:
+                    - 'link "/pets/{petId}/share/{userId}" [ref=e170]':
+                      - /url: "#/Pet%20shares/PetShareController_revoke"
+                      - generic [ref=e171]:
+                        - text: /pets
+                        - text: "/{petId}"
+                        - text: /share
+                        - text: "/{userId}"
+                    - generic [ref=e172]: Revoke a pet share (owner only)
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e175]:
+                  - img [ref=e176]
+                - 'button "delete /pets/{petId}/share/{userId}" [ref=e178]':
+                  - img [ref=e179]
+          - generic [ref=e182]:
+            - heading "Pet transfer Collapse operation" [level=3] [ref=e183] [cursor=pointer]:
+              - link "Pet transfer" [ref=e184]:
+                - /url: "#/Pet%20transfer"
+              - button "Collapse operation" [expanded] [ref=e185]:
+                - img [ref=e186]
+            - generic [ref=e192] [cursor=pointer]:
+              - 'button "POST /pets/{petId}/transfer Transfer pet ownership to another user (owner only)" [ref=e193]':
+                - generic [ref=e194]: POST
+                - generic [ref=e195]:
+                  - 'link "/pets/{petId}/transfer" [ref=e197]':
+                    - /url: "#/Pet%20transfer/PetTransferController_transfer"
+                    - generic [ref=e198]:
+                      - text: /pets
+                      - text: "/{petId}"
+                      - text: /transfer
+                  - generic [ref=e199]: Transfer pet ownership to another user (owner only)
+              - generic "Copy to clipboard"
+              - button "authorization button unlocked" [ref=e202]:
+                - img [ref=e203]
+              - 'button "post /pets/{petId}/transfer" [ref=e205]':
+                - img [ref=e206]
+          - generic [ref=e209]:
+            - heading "Admin Pets Collapse operation" [level=3] [ref=e210] [cursor=pointer]:
+              - link "Admin Pets" [ref=e211]:
+                - /url: "#/Admin%20Pets"
+              - button "Collapse operation" [expanded] [ref=e212]:
+                - img [ref=e213]
+            - generic [ref=e216]:
+              - generic [ref=e219] [cursor=pointer]:
+                - button "GET /admin/pets List every pet in the system (admin only, owner scope bypassed)" [ref=e220]:
+                  - generic [ref=e221]: GET
+                  - generic [ref=e222]:
+                    - link "/admin/pets" [ref=e224]:
+                      - /url: "#/Admin%20Pets/AdminPetController_list"
+                      - generic [ref=e225]:
+                        - text: /admin
+                        - text: /pets
+                    - generic [ref=e226]: List every pet in the system (admin only, owner scope bypassed)
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e229]:
+                  - img [ref=e230]
+                - button "get /admin/pets" [ref=e232]:
+                  - img [ref=e233]
+              - generic [ref=e237] [cursor=pointer]:
+                - 'button "GET /admin/pets/{id} Read any pet by id (admin only)" [ref=e238]':
+                  - generic [ref=e239]: GET
+                  - generic [ref=e240]:
+                    - 'link "/admin/pets/{id}" [ref=e242]':
+                      - /url: "#/Admin%20Pets/AdminPetController_read"
+                      - generic [ref=e243]:
+                        - text: /admin
+                        - text: /pets
+                        - text: "/{id}"
+                    - generic [ref=e244]: Read any pet by id (admin only)
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e247]:
+                  - img [ref=e248]
+                - 'button "get /admin/pets/{id}" [ref=e250]':
+                  - img [ref=e251]
+              - generic [ref=e255] [cursor=pointer]:
+                - 'button "PATCH /admin/pets/{id}/force-restore Force-restore any pet regardless of owner (admin only)" [ref=e256]':
+                  - generic [ref=e257]: PATCH
+                  - generic [ref=e258]:
+                    - 'link "/admin/pets/{id}/force-restore" [ref=e260]':
+                      - /url: "#/Admin%20Pets/AdminPetController_forceRestore"
+                      - generic [ref=e261]:
+                        - text: /admin
+                        - text: /pets
+                        - text: "/{id}"
+                        - text: /force-restore
+                    - generic [ref=e262]: Force-restore any pet regardless of owner (admin only)
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e265]:
+                  - img [ref=e266]
+                - 'button "patch /admin/pets/{id}/force-restore" [ref=e268]':
+                  - img [ref=e269]
+              - generic [ref=e273] [cursor=pointer]:
+                - 'button "DELETE /admin/pets/{id}/hard Hard-delete any pet (admin only, bypasses soft-delete)" [ref=e274]':
+                  - generic [ref=e275]: DELETE
+                  - generic [ref=e276]:
+                    - 'link "/admin/pets/{id}/hard" [ref=e278]':
+                      - /url: "#/Admin%20Pets/AdminPetController_hardDelete"
+                      - generic [ref=e279]:
+                        - text: /admin
+                        - text: /pets
+                        - text: "/{id}"
+                        - text: /hard
+                    - generic [ref=e280]: Hard-delete any pet (admin only, bypasses soft-delete)
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e283]:
+                  - img [ref=e284]
+                - 'button "delete /admin/pets/{id}/hard" [ref=e286]':
+                  - img [ref=e287]
+          - generic [ref=e290]:
+            - heading "Audit Collapse operation" [level=3] [ref=e291] [cursor=pointer]:
+              - link "Audit" [ref=e292]:
+                - /url: "#/Audit"
+              - button "Collapse operation" [expanded] [ref=e293]:
+                - img [ref=e294]
+            - generic [ref=e300] [cursor=pointer]:
+              - button "GET /admin/audit-logs List audit rows (admin only)" [ref=e301]:
+                - generic [ref=e302]: GET
+                - generic [ref=e303]:
+                  - link "/admin/audit-logs" [ref=e305]:
+                    - /url: "#/Audit/AuditLogController_list"
+                    - generic [ref=e306]:
+                      - text: /admin
+                      - text: /audit-logs
+                  - generic [ref=e307]: List audit rows (admin only)
+              - generic "Copy to clipboard"
+              - button "authorization button unlocked" [ref=e310]:
+                - img [ref=e311]
+              - button "get /admin/audit-logs" [ref=e313]:
+                - img [ref=e314]
+          - generic [ref=e317]:
+            - heading "Pets Collapse operation" [level=3] [ref=e318] [cursor=pointer]:
+              - link "Pets" [ref=e319]:
+                - /url: "#/Pets"
+              - button "Collapse operation" [expanded] [ref=e320]:
+                - img [ref=e321]
+            - generic [ref=e324]:
+              - generic [ref=e327] [cursor=pointer]:
+                - button "GET /pets" [ref=e328]:
+                  - generic [ref=e329]: GET
+                  - link "/pets" [ref=e332]:
+                    - /url: "#/Pets/pet_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e335]:
+                  - img [ref=e336]
+                - button "get /pets" [ref=e338]:
+                  - img [ref=e339]
+              - generic [ref=e343] [cursor=pointer]:
+                - button "POST /pets" [ref=e344]:
+                  - generic [ref=e345]: POST
+                  - link "/pets" [ref=e348]:
+                    - /url: "#/Pets/pet_create"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e351]:
+                  - img [ref=e352]
+                - button "post /pets" [ref=e354]:
+                  - img [ref=e355]
+              - generic [ref=e359] [cursor=pointer]:
+                - 'button "GET /pets/{id}" [ref=e360]':
+                  - generic [ref=e361]: GET
+                  - 'link "/pets/{id}" [ref=e364]':
+                    - /url: "#/Pets/pet_read"
+                    - generic [ref=e365]:
+                      - text: /pets
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e368]:
+                  - img [ref=e369]
+                - 'button "get /pets/{id}" [ref=e371]':
+                  - img [ref=e372]
+              - generic [ref=e376] [cursor=pointer]:
+                - 'button "PATCH /pets/{id}" [ref=e377]':
+                  - generic [ref=e378]: PATCH
+                  - 'link "/pets/{id}" [ref=e381]':
+                    - /url: "#/Pets/pet_update"
+                    - generic [ref=e382]:
+                      - text: /pets
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e385]:
+                  - img [ref=e386]
+                - 'button "patch /pets/{id}" [ref=e388]':
+                  - img [ref=e389]
+              - generic [ref=e393] [cursor=pointer]:
+                - 'button "DELETE /pets/{id}" [ref=e394]':
+                  - generic [ref=e395]: DELETE
+                  - 'link "/pets/{id}" [ref=e398]':
+                    - /url: "#/Pets/pet_softDelete"
+                    - generic [ref=e399]:
+                      - text: /pets
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e402]:
+                  - img [ref=e403]
+                - 'button "delete /pets/{id}" [ref=e405]':
+                  - img [ref=e406]
+              - generic [ref=e410] [cursor=pointer]:
+                - 'button "PATCH /pets/restore/{id}" [ref=e411]':
+                  - generic [ref=e412]: PATCH
+                  - 'link "/pets/restore/{id}" [ref=e415]':
+                    - /url: "#/Pets/pet_restore"
+                    - generic [ref=e416]:
+                      - text: /pets
+                      - text: /restore
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e419]:
+                  - img [ref=e420]
+                - 'button "patch /pets/restore/{id}" [ref=e422]':
+                  - img [ref=e423]
+          - generic [ref=e426]:
+            - heading "Pet Tags Collapse operation" [level=3] [ref=e427] [cursor=pointer]:
+              - link "Pet Tags" [ref=e428]:
+                - /url: "#/Pet%20Tags"
+              - button "Collapse operation" [expanded] [ref=e429]:
+                - img [ref=e430]
+            - generic [ref=e433]:
+              - generic [ref=e436] [cursor=pointer]:
+                - 'button "GET /pets/{petId}/tags" [ref=e437]':
+                  - generic [ref=e438]: GET
+                  - 'link "/pets/{petId}/tags" [ref=e441]':
+                    - /url: "#/Pet%20Tags/petTag_list"
+                    - generic [ref=e442]:
+                      - text: /pets
+                      - text: "/{petId}"
+                      - text: /tags
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e445]:
+                  - img [ref=e446]
+                - 'button "get /pets/{petId}/tags" [ref=e448]':
+                  - img [ref=e449]
+              - generic [ref=e453] [cursor=pointer]:
+                - 'button "POST /pets/{petId}/tags" [ref=e454]':
+                  - generic [ref=e455]: POST
+                  - 'link "/pets/{petId}/tags" [ref=e458]':
+                    - /url: "#/Pet%20Tags/petTag_create"
+                    - generic [ref=e459]:
+                      - text: /pets
+                      - text: "/{petId}"
+                      - text: /tags
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e462]:
+                  - img [ref=e463]
+                - 'button "post /pets/{petId}/tags" [ref=e465]':
+                  - img [ref=e466]
+              - generic [ref=e470] [cursor=pointer]:
+                - 'button "GET /pets/{petId}/tags/{id}" [ref=e471]':
+                  - generic [ref=e472]: GET
+                  - 'link "/pets/{petId}/tags/{id}" [ref=e475]':
+                    - /url: "#/Pet%20Tags/petTag_read"
+                    - generic [ref=e476]:
+                      - text: /pets
+                      - text: "/{petId}"
+                      - text: /tags
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e479]:
+                  - img [ref=e480]
+                - 'button "get /pets/{petId}/tags/{id}" [ref=e482]':
+                  - img [ref=e483]
+              - generic [ref=e487] [cursor=pointer]:
+                - 'button "DELETE /pets/{petId}/tags/{id}" [ref=e488]':
+                  - generic [ref=e489]: DELETE
+                  - 'link "/pets/{petId}/tags/{id}" [ref=e492]':
+                    - /url: "#/Pet%20Tags/petTag_delete"
+                    - generic [ref=e493]:
+                      - text: /pets
+                      - text: "/{petId}"
+                      - text: /tags
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e496]:
+                  - img [ref=e497]
+                - 'button "delete /pets/{petId}/tags/{id}" [ref=e499]':
+                  - img [ref=e500]
+          - generic [ref=e503]:
+            - heading "Pet Vaccinations Collapse operation" [level=3] [ref=e504] [cursor=pointer]:
+              - link "Pet Vaccinations" [ref=e505]:
+                - /url: "#/Pet%20Vaccinations"
+              - button "Collapse operation" [expanded] [ref=e506]:
+                - img [ref=e507]
+            - generic [ref=e510]:
+              - generic [ref=e513] [cursor=pointer]:
+                - button "GET /pet-vaccinations" [ref=e514]:
+                  - generic [ref=e515]: GET
+                  - link "/pet-vaccinations" [ref=e518]:
+                    - /url: "#/Pet%20Vaccinations/petVaccination_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e521]:
+                  - img [ref=e522]
+                - button "get /pet-vaccinations" [ref=e524]:
+                  - img [ref=e525]
+              - generic [ref=e529] [cursor=pointer]:
+                - button "POST /pet-vaccinations" [ref=e530]:
+                  - generic [ref=e531]: POST
+                  - link "/pet-vaccinations" [ref=e534]:
+                    - /url: "#/Pet%20Vaccinations/petVaccination_create"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e537]:
+                  - img [ref=e538]
+                - button "post /pet-vaccinations" [ref=e540]:
+                  - img [ref=e541]
+              - generic [ref=e545] [cursor=pointer]:
+                - 'button "GET /pet-vaccinations/{id}" [ref=e546]':
+                  - generic [ref=e547]: GET
+                  - 'link "/pet-vaccinations/{id}" [ref=e550]':
+                    - /url: "#/Pet%20Vaccinations/petVaccination_read"
+                    - generic [ref=e551]:
+                      - text: /pet-vaccinations
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e554]:
+                  - img [ref=e555]
+                - 'button "get /pet-vaccinations/{id}" [ref=e557]':
+                  - img [ref=e558]
+              - generic [ref=e562] [cursor=pointer]:
+                - 'button "DELETE /pet-vaccinations/{id}" [ref=e563]':
+                  - generic [ref=e564]: DELETE
+                  - 'link "/pet-vaccinations/{id}" [ref=e567]':
+                    - /url: "#/Pet%20Vaccinations/petVaccination_delete"
+                    - generic [ref=e568]:
+                      - text: /pet-vaccinations
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e571]:
+                  - img [ref=e572]
+                - 'button "delete /pet-vaccinations/{id}" [ref=e574]':
+                  - img [ref=e575]
+          - generic [ref=e578]:
+            - heading "Tags Collapse operation" [level=3] [ref=e579] [cursor=pointer]:
+              - link "Tags" [ref=e580]:
+                - /url: "#/Tags"
+              - button "Collapse operation" [expanded] [ref=e581]:
+                - img [ref=e582]
+            - generic [ref=e585]:
+              - generic [ref=e588] [cursor=pointer]:
+                - button "GET /tags" [ref=e589]:
+                  - generic [ref=e590]: GET
+                  - link "/tags" [ref=e593]:
+                    - /url: "#/Tags/tag_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e596]:
+                  - img [ref=e597]
+                - button "get /tags" [ref=e599]:
+                  - img [ref=e600]
+              - generic [ref=e604] [cursor=pointer]:
+                - button "POST /tags" [ref=e605]:
+                  - generic [ref=e606]: POST
+                  - link "/tags" [ref=e609]:
+                    - /url: "#/Tags/tag_create"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e612]:
+                  - img [ref=e613]
+                - button "post /tags" [ref=e615]:
+                  - img [ref=e616]
+              - generic [ref=e620] [cursor=pointer]:
+                - 'button "GET /tags/{id}" [ref=e621]':
+                  - generic [ref=e622]: GET
+                  - 'link "/tags/{id}" [ref=e625]':
+                    - /url: "#/Tags/tag_read"
+                    - generic [ref=e626]:
+                      - text: /tags
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e629]:
+                  - img [ref=e630]
+                - 'button "get /tags/{id}" [ref=e632]':
+                  - img [ref=e633]
+              - generic [ref=e637] [cursor=pointer]:
+                - 'button "PATCH /tags/{id}" [ref=e638]':
+                  - generic [ref=e639]: PATCH
+                  - 'link "/tags/{id}" [ref=e642]':
+                    - /url: "#/Tags/tag_update"
+                    - generic [ref=e643]:
+                      - text: /tags
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e646]:
+                  - img [ref=e647]
+                - 'button "patch /tags/{id}" [ref=e649]':
+                  - img [ref=e650]
+          - generic [ref=e653]:
+            - heading "TagsClassic Collapse operation" [level=3] [ref=e654] [cursor=pointer]:
+              - link "TagsClassic" [ref=e655]:
+                - /url: "#/TagsClassic"
+              - button "Collapse operation" [expanded] [ref=e656]:
+                - img [ref=e657]
+            - generic [ref=e660]:
+              - generic [ref=e663] [cursor=pointer]:
+                - button "GET /tags-classic" [ref=e664]:
+                  - generic [ref=e665]: GET
+                  - link "/tags-classic" [ref=e668]:
+                    - /url: "#/TagsClassic/tagClassic_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e671]:
+                  - img [ref=e672]
+                - button "get /tags-classic" [ref=e674]:
+                  - img [ref=e675]
+              - generic [ref=e679] [cursor=pointer]:
+                - button "POST /tags-classic" [ref=e680]:
+                  - generic [ref=e681]: POST
+                  - link "/tags-classic" [ref=e684]:
+                    - /url: "#/TagsClassic/tagClassic_create"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e687]:
+                  - img [ref=e688]
+                - button "post /tags-classic" [ref=e690]:
+                  - img [ref=e691]
+              - generic [ref=e695] [cursor=pointer]:
+                - 'button "GET /tags-classic/{id}" [ref=e696]':
+                  - generic [ref=e697]: GET
+                  - 'link "/tags-classic/{id}" [ref=e700]':
+                    - /url: "#/TagsClassic/tagClassic_read"
+                    - generic [ref=e701]:
+                      - text: /tags-classic
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e704]:
+                  - img [ref=e705]
+                - 'button "get /tags-classic/{id}" [ref=e707]':
+                  - img [ref=e708]
+              - generic [ref=e712] [cursor=pointer]:
+                - 'button "PATCH /tags-classic/{id}" [ref=e713]':
+                  - generic [ref=e714]: PATCH
+                  - 'link "/tags-classic/{id}" [ref=e717]':
+                    - /url: "#/TagsClassic/tagClassic_update"
+                    - generic [ref=e718]:
+                      - text: /tags-classic
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e721]:
+                  - img [ref=e722]
+                - 'button "patch /tags-classic/{id}" [ref=e724]':
+                  - img [ref=e725]
+          - generic [ref=e728]:
+            - heading "Authors Collapse operation" [level=3] [ref=e729] [cursor=pointer]:
+              - link "Authors" [ref=e730]:
+                - /url: "#/Authors"
+              - button "Collapse operation" [expanded] [ref=e731]:
+                - img [ref=e732]
+            - generic [ref=e735]:
+              - generic [ref=e738] [cursor=pointer]:
+                - button "GET /authors" [ref=e739]:
+                  - generic [ref=e740]: GET
+                  - link "/authors" [ref=e743]:
+                    - /url: "#/Authors/author_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e746]:
+                  - img [ref=e747]
+                - button "get /authors" [ref=e749]:
+                  - img [ref=e750]
+              - generic [ref=e754] [cursor=pointer]:
+                - button "POST /authors" [ref=e755]:
+                  - generic [ref=e756]: POST
+                  - link "/authors" [ref=e759]:
+                    - /url: "#/Authors/author_create"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e762]:
+                  - img [ref=e763]
+                - button "post /authors" [ref=e765]:
+                  - img [ref=e766]
+              - generic [ref=e770] [cursor=pointer]:
+                - 'button "GET /authors/{id}" [ref=e771]':
+                  - generic [ref=e772]: GET
+                  - 'link "/authors/{id}" [ref=e775]':
+                    - /url: "#/Authors/author_read"
+                    - generic [ref=e776]:
+                      - text: /authors
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e779]:
+                  - img [ref=e780]
+                - 'button "get /authors/{id}" [ref=e782]':
+                  - img [ref=e783]
+              - generic [ref=e787] [cursor=pointer]:
+                - 'button "PATCH /authors/{id}" [ref=e788]':
+                  - generic [ref=e789]: PATCH
+                  - 'link "/authors/{id}" [ref=e792]':
+                    - /url: "#/Authors/author_update"
+                    - generic [ref=e793]:
+                      - text: /authors
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e796]:
+                  - img [ref=e797]
+                - 'button "patch /authors/{id}" [ref=e799]':
+                  - img [ref=e800]
+              - generic [ref=e804] [cursor=pointer]:
+                - 'button "DELETE /authors/{id}" [ref=e805]':
+                  - generic [ref=e806]: DELETE
+                  - 'link "/authors/{id}" [ref=e809]':
+                    - /url: "#/Authors/author_delete"
+                    - generic [ref=e810]:
+                      - text: /authors
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e813]:
+                  - img [ref=e814]
+                - 'button "delete /authors/{id}" [ref=e816]':
+                  - img [ref=e817]
+          - generic [ref=e820]:
+            - heading "Books Collapse operation" [level=3] [ref=e821] [cursor=pointer]:
+              - link "Books" [ref=e822]:
+                - /url: "#/Books"
+              - button "Collapse operation" [expanded] [ref=e823]:
+                - img [ref=e824]
+            - generic [ref=e827]:
+              - generic [ref=e830] [cursor=pointer]:
+                - button "GET /books" [ref=e831]:
+                  - generic [ref=e832]: GET
+                  - link "/books" [ref=e835]:
+                    - /url: "#/Books/book_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e838]:
+                  - img [ref=e839]
+                - button "get /books" [ref=e841]:
+                  - img [ref=e842]
+              - generic [ref=e846] [cursor=pointer]:
+                - button "POST /books" [ref=e847]:
+                  - generic [ref=e848]: POST
+                  - link "/books" [ref=e851]:
+                    - /url: "#/Books/book_create"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e854]:
+                  - img [ref=e855]
+                - button "post /books" [ref=e857]:
+                  - img [ref=e858]
+              - generic [ref=e862] [cursor=pointer]:
+                - 'button "GET /books/{id}" [ref=e863]':
+                  - generic [ref=e864]: GET
+                  - 'link "/books/{id}" [ref=e867]':
+                    - /url: "#/Books/book_read"
+                    - generic [ref=e868]:
+                      - text: /books
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e871]:
+                  - img [ref=e872]
+                - 'button "get /books/{id}" [ref=e874]':
+                  - img [ref=e875]
+              - generic [ref=e879] [cursor=pointer]:
+                - 'button "PATCH /books/{id}" [ref=e880]':
+                  - generic [ref=e881]: PATCH
+                  - 'link "/books/{id}" [ref=e884]':
+                    - /url: "#/Books/book_update"
+                    - generic [ref=e885]:
+                      - text: /books
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e888]:
+                  - img [ref=e889]
+                - 'button "patch /books/{id}" [ref=e891]':
+                  - img [ref=e892]
+              - generic [ref=e896] [cursor=pointer]:
+                - 'button "PUT /books/{id}" [ref=e897]':
+                  - generic [ref=e898]: PUT
+                  - 'link "/books/{id}" [ref=e901]':
+                    - /url: "#/Books/book_replace"
+                    - generic [ref=e902]:
+                      - text: /books
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e905]:
+                  - img [ref=e906]
+                - 'button "put /books/{id}" [ref=e908]':
+                  - img [ref=e909]
+              - generic [ref=e913] [cursor=pointer]:
+                - 'button "DELETE /books/{id}" [ref=e914]':
+                  - generic [ref=e915]: DELETE
+                  - 'link "/books/{id}" [ref=e918]':
+                    - /url: "#/Books/book_softDelete"
+                    - generic [ref=e919]:
+                      - text: /books
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e922]:
+                  - img [ref=e923]
+                - 'button "delete /books/{id}" [ref=e925]':
+                  - img [ref=e926]
+              - generic [ref=e930] [cursor=pointer]:
+                - 'button "PATCH /books/restore/{id}" [ref=e931]':
+                  - generic [ref=e932]: PATCH
+                  - 'link "/books/restore/{id}" [ref=e935]':
+                    - /url: "#/Books/book_restore"
+                    - generic [ref=e936]:
+                      - text: /books
+                      - text: /restore
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e939]:
+                  - img [ref=e940]
+                - 'button "patch /books/restore/{id}" [ref=e942]':
+                  - img [ref=e943]
+          - generic [ref=e946]:
+            - heading "Appointments Collapse operation" [level=3] [ref=e947] [cursor=pointer]:
+              - link "Appointments" [ref=e948]:
+                - /url: "#/Appointments"
+              - button "Collapse operation" [expanded] [ref=e949]:
+                - img [ref=e950]
+            - generic [ref=e953]:
+              - generic [ref=e956] [cursor=pointer]:
+                - button "GET /appointments" [ref=e957]:
+                  - generic [ref=e958]: GET
+                  - link "/appointments" [ref=e961]:
+                    - /url: "#/Appointments/appointment_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e964]:
+                  - img [ref=e965]
+                - button "get /appointments" [ref=e967]:
+                  - img [ref=e968]
+              - generic [ref=e972] [cursor=pointer]:
+                - button "POST /appointments" [ref=e973]:
+                  - generic [ref=e974]: POST
+                  - link "/appointments" [ref=e977]:
+                    - /url: "#/Appointments/appointment_create"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e980]:
+                  - img [ref=e981]
+                - button "post /appointments" [ref=e983]:
+                  - img [ref=e984]
+              - generic [ref=e988] [cursor=pointer]:
+                - 'button "GET /appointments/{id}" [ref=e989]':
+                  - generic [ref=e990]: GET
+                  - 'link "/appointments/{id}" [ref=e993]':
+                    - /url: "#/Appointments/appointment_read"
+                    - generic [ref=e994]:
+                      - text: /appointments
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e997]:
+                  - img [ref=e998]
+                - 'button "get /appointments/{id}" [ref=e1000]':
+                  - img [ref=e1001]
+              - generic [ref=e1005] [cursor=pointer]:
+                - 'button "DELETE /appointments/{id}" [ref=e1006]':
+                  - generic [ref=e1007]: DELETE
+                  - 'link "/appointments/{id}" [ref=e1010]':
+                    - /url: "#/Appointments/appointment_delete"
+                    - generic [ref=e1011]:
+                      - text: /appointments
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e1014]:
+                  - img [ref=e1015]
+                - 'button "delete /appointments/{id}" [ref=e1017]':
+                  - img [ref=e1018]
+          - generic [ref=e1021]:
+            - heading "Reminders Collapse operation" [level=3] [ref=e1022] [cursor=pointer]:
+              - link "Reminders" [ref=e1023]:
+                - /url: "#/Reminders"
+              - button "Collapse operation" [expanded] [ref=e1024]:
+                - img [ref=e1025]
+            - generic [ref=e1028]:
+              - generic [ref=e1031] [cursor=pointer]:
+                - button "GET /reminders" [ref=e1032]:
+                  - generic [ref=e1033]: GET
+                  - link "/reminders" [ref=e1036]:
+                    - /url: "#/Reminders/reminder_list"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e1039]:
+                  - img [ref=e1040]
+                - button "get /reminders" [ref=e1042]:
+                  - img [ref=e1043]
+              - generic [ref=e1047] [cursor=pointer]:
+                - 'button "GET /reminders/{id}" [ref=e1048]':
+                  - generic [ref=e1049]: GET
+                  - 'link "/reminders/{id}" [ref=e1052]':
+                    - /url: "#/Reminders/reminder_read"
+                    - generic [ref=e1053]:
+                      - text: /reminders
+                      - text: "/{id}"
+                - generic "Copy to clipboard"
+                - button "authorization button unlocked" [ref=e1056]:
+                  - img [ref=e1057]
+                - 'button "get /reminders/{id}" [ref=e1059]':
+                  - img [ref=e1060]
+          - generic [ref=e1063]:
+            - heading "Auth Collapse operation" [level=3] [ref=e1064] [cursor=pointer]:
+              - link "Auth" [ref=e1065]:
+                - /url: "#/Auth"
+              - button "Collapse operation" [expanded] [ref=e1066]:
+                - img [ref=e1067]
+            - generic [ref=e1070]:
+              - generic [ref=e1073] [cursor=pointer]:
+                - button "POST /auth/signup Create a new account" [ref=e1074]:
+                  - generic [ref=e1075]: POST
+                  - generic [ref=e1076]:
+                    - link "/auth/signup" [ref=e1078]:
+                      - /url: "#/Auth/AuthController_signup"
+                      - generic [ref=e1079]:
+                        - text: /auth
+                        - text: /signup
+                    - generic [ref=e1080]: Create a new account
+                - generic "Copy to clipboard"
+                - button "post /auth/signup" [ref=e1083]:
+                  - img [ref=e1084]
+              - generic [ref=e1088] [cursor=pointer]:
+                - button "POST /auth/login Login with email and password" [ref=e1089]:
+                  - generic [ref=e1090]: POST
+                  - generic [ref=e1091]:
+                    - link "/auth/login" [ref=e1093]:
+                      - /url: "#/Auth/AuthController_login"
+                      - generic [ref=e1094]:
+                        - text: /auth
+                        - text: /login
+                    - generic [ref=e1095]: Login with email and password
+                - generic "Copy to clipboard"
+                - button "post /auth/login" [ref=e1098]:
+                  - img [ref=e1099]
+        - generic [ref=e1103]:
+          - heading "Schemas" [level=4] [ref=e1104] [cursor=pointer]:
+            - button "Schemas" [expanded] [ref=e1105]:
+              - generic [ref=e1106]: Schemas
+              - img [ref=e1107]
+          - generic [ref=e1109]:
+            - button "RoleNameDto" [ref=e1112] [cursor=pointer]:
+              - generic [ref=e1114]: RoleNameDto
+            - button "UserRoleItemDto" [ref=e1118] [cursor=pointer]:
+              - generic [ref=e1120]: UserRoleItemDto
+            - button "UserResponseDto" [ref=e1124] [cursor=pointer]:
+              - generic [ref=e1126]: UserResponseDto
+            - button "UserUpdateDto" [ref=e1130] [cursor=pointer]:
+              - generic [ref=e1132]: UserUpdateDto
+            - button "PetShareCreateDto" [ref=e1136] [cursor=pointer]:
+              - generic [ref=e1138]: PetShareCreateDto
+            - button "PetShareResponseDto" [ref=e1142] [cursor=pointer]:
+              - generic [ref=e1144]: PetShareResponseDto
+            - button "TransferPetOwnershipDto" [ref=e1148] [cursor=pointer]:
+              - generic [ref=e1150]: TransferPetOwnershipDto
+            - button "PetTagEntity" [ref=e1154] [cursor=pointer]:
+              - generic [ref=e1156]: PetTagEntity
+            - button "PetEntity" [ref=e1160] [cursor=pointer]:
+              - generic [ref=e1162]: PetEntity
+            - button "PetVaccinationEntity" [ref=e1166] [cursor=pointer]:
+              - generic [ref=e1168]: PetVaccinationEntity
+            - button "PetVaccinationResponseDto" [ref=e1172] [cursor=pointer]:
+              - generic [ref=e1174]: PetVaccinationResponseDto
+            - button "TagResponseDto" [ref=e1178] [cursor=pointer]:
+              - generic [ref=e1180]: TagResponseDto
+            - button "PetResponseDto" [ref=e1184] [cursor=pointer]:
+              - generic [ref=e1186]: PetResponseDto
+            - button "PetResponseDtoPaginatedDto" [ref=e1190] [cursor=pointer]:
+              - generic [ref=e1192]: PetResponseDtoPaginatedDto
+            - button "PetCreateDto" [ref=e1196] [cursor=pointer]:
+              - generic [ref=e1198]: PetCreateDto
+            - button "PetUpdateDto" [ref=e1202] [cursor=pointer]:
+              - generic [ref=e1204]: PetUpdateDto
+            - button "PetTagResponseDto" [ref=e1208] [cursor=pointer]:
+              - generic [ref=e1210]: PetTagResponseDto
+            - button "PetTagResponseDtoPaginatedDto" [ref=e1214] [cursor=pointer]:
+              - generic [ref=e1216]: PetTagResponseDtoPaginatedDto
+            - button "PetTagCreateDto" [ref=e1220] [cursor=pointer]:
+              - generic [ref=e1222]: PetTagCreateDto
+            - button "PetVaccinationResponseDtoPaginatedDto" [ref=e1226] [cursor=pointer]:
+              - generic [ref=e1228]: PetVaccinationResponseDtoPaginatedDto
+            - button "PetVaccinationCreateDto" [ref=e1232] [cursor=pointer]:
+              - generic [ref=e1234]: PetVaccinationCreateDto
+            - button "TagResponseDtoPaginatedDto" [ref=e1238] [cursor=pointer]:
+              - generic [ref=e1240]: TagResponseDtoPaginatedDto
+            - button "TagCreateDto" [ref=e1244] [cursor=pointer]:
+              - generic [ref=e1246]: TagCreateDto
+            - button "TagUpdateDto" [ref=e1250] [cursor=pointer]:
+              - generic [ref=e1252]: TagUpdateDto
+            - button "TagClassicResponseDto" [ref=e1256] [cursor=pointer]:
+              - generic [ref=e1258]: TagClassicResponseDto
+            - button "TagClassicResponseDtoPaginatedDto" [ref=e1262] [cursor=pointer]:
+              - generic [ref=e1264]: TagClassicResponseDtoPaginatedDto
+            - button "TagClassicCreateDto" [ref=e1268] [cursor=pointer]:
+              - generic [ref=e1270]: TagClassicCreateDto
+            - button "TagClassicUpdateDto" [ref=e1274] [cursor=pointer]:
+              - generic [ref=e1276]: TagClassicUpdateDto
+            - button "AuthorResponseDto" [ref=e1280] [cursor=pointer]:
+              - generic [ref=e1282]: AuthorResponseDto
+            - button "AuthorResponseDtoPaginatedDto" [ref=e1286] [cursor=pointer]:
+              - generic [ref=e1288]: AuthorResponseDtoPaginatedDto
+            - button "AuthorCreateDto" [ref=e1292] [cursor=pointer]:
+              - generic [ref=e1294]: AuthorCreateDto
+            - button "AuthorUpdateDto" [ref=e1298] [cursor=pointer]:
+              - generic [ref=e1300]: AuthorUpdateDto
+            - button "BookResponseDto" [ref=e1304] [cursor=pointer]:
+              - generic [ref=e1306]: BookResponseDto
+            - button "BookResponseDtoPaginatedDto" [ref=e1310] [cursor=pointer]:
+              - generic [ref=e1312]: BookResponseDtoPaginatedDto
+            - button "BookCreateDto" [ref=e1316] [cursor=pointer]:
+              - generic [ref=e1318]: BookCreateDto
+            - button "BookUpdateDto" [ref=e1322] [cursor=pointer]:
+              - generic [ref=e1324]: BookUpdateDto
+            - button "BookReplaceDto" [ref=e1328] [cursor=pointer]:
+              - generic [ref=e1330]: BookReplaceDto
+            - button "ReminderResponseDto" [ref=e1334] [cursor=pointer]:
+              - generic [ref=e1336]: ReminderResponseDto
+            - button "AppointmentResponseDto" [ref=e1340] [cursor=pointer]:
+              - generic [ref=e1342]: AppointmentResponseDto
+            - button "AppointmentResponseDtoPaginatedDto" [ref=e1346] [cursor=pointer]:
+              - generic [ref=e1348]: AppointmentResponseDtoPaginatedDto
+            - button "AppointmentCreateDto" [ref=e1352] [cursor=pointer]:
+              - generic [ref=e1354]: AppointmentCreateDto
+            - button "ReminderResponseDtoPaginatedDto" [ref=e1358] [cursor=pointer]:
+              - generic [ref=e1360]: ReminderResponseDtoPaginatedDto
+            - button "SignupDto" [ref=e1364] [cursor=pointer]:
+              - generic [ref=e1366]: SignupDto
+            - button "SignupResponseDto" [ref=e1370] [cursor=pointer]:
+              - generic [ref=e1372]: SignupResponseDto
+            - button "LoginDto" [ref=e1376] [cursor=pointer]:
+              - generic [ref=e1378]: LoginDto
+            - button "LoginResponseDto" [ref=e1382] [cursor=pointer]:
+              - generic [ref=e1384]: LoginResponseDto
+            - button "UserMetadataUpdateDto" [ref=e1388] [cursor=pointer]:
+              - generic [ref=e1390]: UserMetadataUpdateDto

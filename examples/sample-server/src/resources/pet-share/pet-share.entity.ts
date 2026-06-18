@@ -1,11 +1,6 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  Unique,
-} from 'typeorm';
+import { z } from 'zod';
+import { f, rocketsEntityMeta, rocketsFieldMeta } from '@bitwild/rockets-zod';
+import { zodEntityCompiler } from '../../zod-bindings';
 
 export enum PetSharePermission {
   READ = 'read',
@@ -15,33 +10,29 @@ export enum PetSharePermission {
 
 /**
  * Join row recording "user X has been granted access to pet Y by pet's
- * owner". Unlike `pet_tag` (an implicit TypeORM @JoinTable junction), this
- * is an explicit entity with its own id, created-at, and permission level —
- * it's queried directly by `PetOwnerOrSharedHook` to broaden read/list
- * scoping, and managed via the dedicated `PetShareController` endpoints.
+ * owner". Explicit entity (own id, created-at, permission) queried directly
+ * by `PetOwnerOrSharedHook` and managed via `PetShareController`. Zod-sourced
+ * — the controller/service/hook keep their own DTOs and inject
+ * `PetShareEntity` (value) typed by the same-named row type below.
  */
-@Entity('pet_share')
-@Unique(['petId', 'userId'])
-export class PetShareEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
-  @Index()
-  @Column({ type: 'varchar', length: 255, nullable: false })
-  petId!: string;
-
-  @Index()
-  @Column({ type: 'varchar', length: 255, nullable: false })
-  userId!: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    nullable: false,
-    default: PetSharePermission.READ,
+export const petShareSchema = z
+  .object({
+    id: f.pk(),
+    petId: f.string({ max: 255, index: true }),
+    userId: f.string({ max: 255, index: true }),
+    permission: f.enum(PetSharePermission, {
+      default: PetSharePermission.READ,
+      length: 20,
+    }),
+    dateCreated: z
+      .date()
+      .register(rocketsFieldMeta, { db: { createdAt: true } }),
   })
-  permission!: PetSharePermission;
+  .register(rocketsEntityMeta, { unique: [['petId', 'userId']] });
 
-  @CreateDateColumn()
-  dateCreated!: Date;
-}
+export const PetShareEntity = zodEntityCompiler.compileEntity(petShareSchema, {
+  name: 'PetShareEntity',
+  table: 'pet_share',
+});
+/** Persistence row type — shares the name with the entity class (value + type). */
+export type PetShareEntity = z.infer<typeof petShareSchema>;

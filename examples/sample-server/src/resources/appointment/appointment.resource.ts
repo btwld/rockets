@@ -3,7 +3,7 @@ import { OwnerScopeHook } from '@bitwild/rockets-core';
 import { AppointmentEntity } from './appointment.entity';
 
 const AppointmentOwnerScope = OwnerScopeHook.for(AppointmentEntity);
-import { ReminderEntity } from './reminder.entity';
+import { ReminderEntity } from './reminder.schema';
 import {
   AppointmentCreateDto,
   AppointmentResponseDto,
@@ -21,7 +21,10 @@ export const appointmentResource = defineResource({
   entity: AppointmentEntity,
   // key / path / tags omitted — derived from `AppointmentEntity` →
   // `'appointment'` → `appointments` / `['Appointments']`.
-  relations: (relation) => [relation(ReminderEntity, 'reminders')],
+  // Thunk form: `ReminderEntity` is generated in reminder.schema.ts,
+  // which imports appointment.entity — the lazy reference sidesteps the
+  // module cycle (same reason the old entity pair used lazy thunks).
+  relations: (relation) => [relation(() => ReminderEntity, 'reminders')],
   hooks: [AppointmentOwnerScope],
   operations: {
     list: { output: AppointmentResponseDto },

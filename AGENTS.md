@@ -165,7 +165,9 @@ When replying to the project owner or maintainer:
 - `packages/rockets-server` (`@bitwild/rockets`): external-auth integration layer. `MeController` + global guard opt-in. Use when users live in Firebase / Auth0 / another system.
 - `packages/rockets-server-auth`: complete built-in auth system (JWT, signup, login, recovery, otp, oauth, admin).
 - `packages/rockets-adapter-firebase`: Firebase auth adapter implementing `AuthAdapterInterface`.
-- `examples/sample-server`: canonical reference app using `rockets-server` with an external auth adapter.
+- `packages/rockets-zod` (`@bitwild/rockets-zod`): zod-first resource layer — one zod schema compiles to nestjs-zod DTOs + a `defineResource()` call (`zodResource`/`zodSubResource`/`bindZodResources`, the `rocketsFieldMeta`/`rocketsEntityMeta` registries, the schema→entity registry). Also `defineZodUserMetadata` — the `userMetadata` config counterpart (schema → `{ entity, createDto, updateDto, responseDto }`). A schema whose entity is compiled eagerly (to break a module cycle) is auto-reused by `zodResource` via the registry, so resources omit the redundant `entity:` override. **DB-agnostic and ORM-free**: entity generation is delegated to a `SchemaEntityCompiler` adapter. Depends on `rockets-core` + `zod` + `nestjs-zod`. Do NOT put this in core — core stays validation-library-neutral.
+- `packages/rockets-zod-typeorm` (`@bitwild/rockets-zod-typeorm`): TypeORM implementation of the zod layer's `SchemaEntityCompiler` (`typeOrmZodEntityCompiler`) — the bridge that keeps `rockets-zod` ORM-free and `rockets-repository-typeorm` zod-free. Mirror it (`rockets-zod-firestore`, …) for other stores.
+- `examples/sample-server`: canonical reference app using `rockets-server` with an external auth adapter. Wires the zod layer in one line (`src/zod-bindings.ts`: `bindZodResources(typeOrmZodEntityCompiler)`).
 - `examples/sample-server-auth`: reference app using `rockets-server-auth` (built-in auth).
 - `examples/sample-code-review`: full-stack reference (api + web) used for code review walkthroughs.
 - `.context/`: shared scratchpad for multi-agent collaboration (gitignored).

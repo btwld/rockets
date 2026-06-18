@@ -7,8 +7,20 @@
   "testTimeout": 30000,
   "maxWorkers": 1,
   "transform": {
-    "^.+\\.ts$": ["ts-jest", { "tsconfig": "<rootDir>/tsconfig.json" }]
+    "^.+\\.ts$": ["ts-jest", { "tsconfig": "<rootDir>/tsconfig.json" }],
+    "^.+\\.js$": [
+      "babel-jest",
+      {
+        "configFile": false,
+        "plugins": [
+          "../../../../scripts/babel-plugin-import-meta-url-filename.cjs",
+          "../../../../scripts/babel-plugin-dynamic-import-to-require.cjs",
+          "@babel/plugin-transform-modules-commonjs"
+        ]
+      }
+    ]
   },
+  "transformIgnorePatterns": ["/node_modules/(?!@nestjs/)"],
   "moduleNameMapper": {
     "^../repository/code-review-reports\\.persistence$": "<rootDir>/test/stubs/code-review-reports.persistence.stub.ts"
   }

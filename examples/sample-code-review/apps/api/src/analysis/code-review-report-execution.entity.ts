@@ -1,55 +1,33 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
-import type { CodeReviewEngine } from './code-review-report.types';
+import { z } from 'zod';
+import { f, rocketsFieldMeta } from '@bitwild/rockets-zod';
+import { zodEntityCompiler } from '../zod-bindings';
+import { CodeReviewEngine } from './code-review-report.types';
 
-@Entity('code_review_report_executions')
-export class CodeReviewReportExecutionEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+export const codeReviewReportExecutionSchema = z.object({
+  id: f.pk(),
+  reportId: f.string({ max: 128, unique: true }),
+  userId: f.string({ max: 128, index: true }),
+  githubLogin: f.string({ max: 128 }),
+  reviewEngine: f.enum(CodeReviewEngine, { length: 64 }).nullable(),
+  reviewModel: f.string({ max: 128 }).nullable(),
+  defaultBranch: f.string({ max: 255 }),
+  repositoryLanguage: f.string({ max: 120 }).nullable(),
+  sourceFilesCount: f.int({ default: 0 }),
+  sourceFilesTruncated: f.bool({ default: false }),
+  durationMs: f.int().nullable(),
+  dateCompleted: z.date().nullable(),
+  dateCreated: z.date().register(rocketsFieldMeta, { db: { createdAt: true } }),
+  dateUpdated: z.date().register(rocketsFieldMeta, { db: { updatedAt: true } }),
+});
 
-  @Column({ type: 'varchar', length: 128, unique: true })
-  reportId!: string;
-
-  @Index('code_review_report_executions_user_id_idx')
-  @Column({ type: 'varchar', length: 128 })
-  userId!: string;
-
-  @Column({ type: 'varchar', length: 128 })
-  githubLogin!: string;
-
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  reviewEngine!: CodeReviewEngine | null;
-
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  reviewModel!: string | null;
-
-  @Column({ type: 'varchar', length: 255 })
-  defaultBranch!: string;
-
-  @Column({ type: 'varchar', length: 120, nullable: true })
-  repositoryLanguage!: string | null;
-
-  @Column({ type: 'int', default: 0 })
-  sourceFilesCount!: number;
-
-  @Column({ type: 'boolean', default: false })
-  sourceFilesTruncated!: boolean;
-
-  @Column({ type: 'int', nullable: true })
-  durationMs!: number | null;
-
-  @Column({ type: 'datetime', nullable: true })
-  dateCompleted!: Date | null;
-
-  @CreateDateColumn()
-  dateCreated!: Date;
-
-  @UpdateDateColumn()
-  dateUpdated!: Date;
-}
+export const CodeReviewReportExecutionEntity = zodEntityCompiler.compileEntity(
+  codeReviewReportExecutionSchema,
+  {
+    name: 'CodeReviewReportExecutionEntity',
+    table: 'code_review_report_executions',
+  },
+);
+/** Persistence row type — shares the name with the entity class (value + type). */
+export type CodeReviewReportExecutionEntity = z.infer<
+  typeof codeReviewReportExecutionSchema
+>;

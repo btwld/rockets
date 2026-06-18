@@ -1,37 +1,28 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { z } from 'zod';
+import { createdEntity, f } from '@bitwild/rockets-zod';
+import { compileZodEntity } from '../zod-bindings';
 
 export enum UserRole {
   USER = 'user',
   ADMIN = 'admin',
 }
 
-@Entity('users')
-export class UserEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+/**
+ * Local user row for the sample auth adapter. Zod-sourced — the adapter
+ * (`auth.adapter.ts`) and the pet-transfer / events handlers inject
+ * `UserEntity` (value) and type rows by `UserEntity` (the same-named row
+ * type below).
+ */
+export const userSchema = createdEntity({
+  email: f.string({ max: 255, unique: true, example: 'dev@example.com' }),
+  password: f.string({ max: 255 }),
+  name: f.string({ max: 100 }).optional(),
+  role: f.enum(UserRole, { default: UserRole.USER, length: 20 }),
+});
 
-  @Column({ type: 'varchar', length: 255, unique: true })
-  email!: string;
-
-  @Column({ type: 'varchar', length: 255 })
-  password!: string;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  name?: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    nullable: false,
-    default: UserRole.USER,
-  })
-  role!: UserRole;
-
-  @CreateDateColumn()
-  dateCreated!: Date;
-}
+export const UserEntity = compileZodEntity(userSchema, {
+  name: 'UserEntity',
+  table: 'users',
+});
+/** Row type — shares the name with the entity value for type-position uses. */
+export type UserEntity = z.output<typeof userSchema>;

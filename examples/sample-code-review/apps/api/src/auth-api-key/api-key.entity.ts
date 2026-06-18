@@ -1,37 +1,30 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { z } from 'zod';
+import { f, rocketsFieldMeta } from '@bitwild/rockets-zod';
+import { zodEntityCompiler } from '../zod-bindings';
 
 /**
- * Stores API keys for programmatic access (e.g., CI/CD pipelines).
+ * API keys for programmatic access (e.g., CI/CD pipelines). Zod-sourced —
+ * the schema is the single source for the entity columns and the row type.
  *
  * ⚠️ SAMPLE CODE — in production, store a bcrypt/argon2 hash of the
  * key rather than plaintext, and compare with the library's verify
  * function (constant-time). Only reveal the raw key once, at creation.
  */
-@Entity('api_keys')
-export class ApiKeyEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
+export const apiKeySchema = z.object({
+  id: f.pk(),
   /** Raw key value — shown once at creation, then only the prefix is exposed. */
-  @Column({ type: 'varchar', length: 64, unique: true })
-  key!: string;
-
+  key: f.string({ max: 64, unique: true }),
   /** ID of the owning user (maps to the Firebase uid via UserEntity). */
-  @Column({ type: 'varchar', length: 255 })
-  userId!: string;
-
+  userId: f.string({ max: 255 }),
   /** Human-readable label so users can identify which key is which. */
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  name?: string;
+  name: f.string({ max: 100 }).optional(),
+  lastUsedAt: z.date().optional(),
+  dateCreated: z.date().register(rocketsFieldMeta, { db: { createdAt: true } }),
+});
 
-  @Column({ type: 'datetime', nullable: true })
-  lastUsedAt?: Date;
-
-  @CreateDateColumn()
-  dateCreated!: Date;
-}
+export const ApiKeyEntity = zodEntityCompiler.compileEntity(apiKeySchema, {
+  name: 'ApiKeyEntity',
+  table: 'api_keys',
+});
+/** Persistence row type — shares the name with the entity class (value + type). */
+export type ApiKeyEntity = z.infer<typeof apiKeySchema>;

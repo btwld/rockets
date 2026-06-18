@@ -60,6 +60,18 @@ export { CrudReturnRestored } from './infrastructure/decorators/routes/crud-retu
 export { CrudSerialize } from './infrastructure/decorators/routes/crud-serialize.decorator';
 export { CrudSort } from './infrastructure/decorators/routes/crud-sort.decorator';
 export { CrudValidate } from './infrastructure/decorators/routes/crud-validate.decorator';
+// pipes
+export {
+  CrudStandardSchemaValidationPipe,
+  getStandardSchema,
+} from './infrastructure/pipes/crud-standard-schema-validation.pipe';
+export type {
+  StandardSchemaV1,
+  StandardSchemaV1Props,
+  StandardSchemaV1Result,
+  StandardSchemaV1Issue,
+} from './infrastructure/pipes/crud-standard-schema-validation.pipe';
+
 // interceptors
 export {
   CrudContextOverlay,
@@ -130,6 +142,14 @@ export { CrudRestoreCommand } from './application/commands/impl/crud-restore.com
 export { CrudWithBodyCommand } from './application/commands/impl/crud-with-body.command';
 
 // operations (handlers)
+// Base classes for custom handlers. Aliased with the `Base` suffix because
+// the plain names are taken by the route decorators above — extending the
+// decorator by mistake is a TS2507 foot-gun (and forced deep `dist/` imports
+// in examples before these aliases existed).
+export { CrudCommandHandler as CrudCommandHandlerBase } from './application/commands/handlers/crud-command.handler';
+export { CrudQueryHandler as CrudQueryHandlerBase } from './application/queries/handlers/crud-query.handler';
+export type { CrudCommandInterface } from './application/commands/interfaces/crud-command.interface';
+export type { CrudQueryInterface } from './application/queries/interfaces/crud-query.interface';
 export { CrudListHandler } from './application/queries/handlers/crud-list.handler';
 export { CrudReadHandler } from './application/queries/handlers/crud-read.handler';
 export { CrudCreateHandler } from './application/commands/handlers/crud-create.handler';

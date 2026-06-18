@@ -2,11 +2,12 @@ import 'reflect-metadata';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { AppModule } from './app.module';
 import { ExceptionsFilter } from '@bitwild/rockets';
 import { SwaggerUiService } from '@bitwild/rockets-app';
 import helmet from 'helmet';
-import { UserMetadataUpdateDto } from './dto/user-metadata.dto';
+import { UserMetadataUpdateDto } from './user-metadata.schema';
 import { patchMePatchOpenApi } from './swagger/patch-me-openapi';
 
 async function bootstrap() {
@@ -31,7 +32,9 @@ async function bootstrap() {
     },
   );
   patchMePatchOpenApi(document, UserMetadataUpdateDto);
-  SwaggerModule.setup(swaggerPath, app, document);
+  // nestjs-zod DTOs leave internal markers in the raw document; cleanup
+  // only rewrites schemas generated from zod DTOs.
+  SwaggerModule.setup(swaggerPath, app, cleanupOpenApiDoc(document));
 
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));

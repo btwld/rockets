@@ -20,7 +20,7 @@ import {
   type AppContextInterface,
 } from '@bitwild/rockets-app';
 import type { AuthorizedUser } from '@bitwild/rockets';
-import { PetEntity } from '../pet/pet.entity';
+import type { Pet } from '../pet/pet.schema';
 import { TransferPetOwnershipDto } from './dto/transfer-pet-ownership.dto';
 import { TransferPetOwnershipCommand } from './commands/impl/transfer-pet-ownership.command';
 
@@ -56,7 +56,7 @@ export class PetTransferController {
     @Param('petId', new ParseUUIDPipe()) petId: string,
     @AuthUser() authUser: AuthorizedUser,
     @Body() dto: TransferPetOwnershipDto,
-  ): Promise<PetEntity> {
+  ): Promise<Pet> {
     return this.commandBus.execute(
       new TransferPetOwnershipCommand(ctx, petId, authUser.id, dto.newOwnerId),
     );

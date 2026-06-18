@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import {
   CrudAdapter,
-  CrudCommandHandler,
+  CrudCommandHandlerBase,
   CrudCreateCommand,
   CrudQueryException,
   InjectCrudAdapter,
@@ -20,9 +20,11 @@ import {
   Where,
 } from '@bitwild/rockets-repository';
 import { getActor } from '@bitwild/rockets-core';
-import { PetEntity } from '../pet/pet.entity';
+import { PetEntity } from '../pet/pet.schema';
+import type { Pet } from '../pet/pet.schema';
 import { AppointmentEntity } from './appointment.entity';
-import { ReminderEntity } from './reminder.entity';
+import { ReminderEntity } from './reminder.schema';
+import type { Reminder } from './reminder.schema';
 
 type AppointmentCreatePayload = PlainLiteralObject & {
   petId: string;
@@ -39,16 +41,16 @@ type AppointmentCreatePayload = PlainLiteralObject & {
  * ownership could change between a pre-check and the inserts.
  */
 @Injectable()
-export class AppointmentCreateHandler extends CrudCommandHandler<PlainLiteralObject> {
+export class AppointmentCreateHandler extends CrudCommandHandlerBase<PlainLiteralObject> {
   constructor(
     @InjectCrudAdapter(AppointmentEntity)
     readonly crudAdapter: CrudAdapter<PlainLiteralObject>,
     @InjectDynamicRepository(AppointmentEntity)
     private readonly apptRepo: RepositoryInterface<AppointmentEntity>,
     @InjectDynamicRepository(ReminderEntity)
-    private readonly reminderRepo: RepositoryInterface<ReminderEntity>,
+    private readonly reminderRepo: RepositoryInterface<Reminder>,
     @InjectDynamicRepository(PetEntity)
-    private readonly petRepo: RepositoryInterface<PetEntity>,
+    private readonly petRepo: RepositoryInterface<Pet>,
     private readonly txScope: TransactionScope,
   ) {
     super(crudAdapter);
@@ -73,8 +75,8 @@ export class AppointmentCreateHandler extends CrudCommandHandler<PlainLiteralObj
       return await this.txScope.run(context, async () => {
         const pet = await this.petRepo.findOne({
           where: Where.and(
-            Where.eq<PetEntity>('id', dto.petId),
-            Where.eq<PetEntity>('userId', actor.id),
+            Where.eq<Pet>('id', dto.petId),
+            Where.eq<Pet>('userId', actor.id),
           ),
           ctx: context,
         });
@@ -103,7 +105,9 @@ export class AppointmentCreateHandler extends CrudCommandHandler<PlainLiteralObj
         const reminder = await this.reminderRepo.create(
           {
             appointmentId: appointment.id,
-            sendAt: reminderDate,
+            // `Reminder` is the wire type — ISO string. The datetime
+            // column stores it as a real date either way.
+            sendAt: reminderDate.toISOString(),
           },
           { ctx: context },
         );

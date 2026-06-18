@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  PlainLiteralObject,
+} from '@nestjs/common';
 import {
   InjectDynamicRepository,
   type RepositoryInterface,
@@ -9,7 +13,7 @@ import {
   type EntityHookContext,
   PassthroughEntityHookBase,
 } from '@bitwild/rockets-core';
-import { PetEntity } from './pet.entity';
+import { PetEntity } from './pet.schema';
 
 /**
  * Ensures `uniqueRef` is not already taken before insert.
@@ -24,18 +28,18 @@ import { PetEntity } from './pet.entity';
  */
 @EntityHook({ entity: PetEntity })
 @Injectable()
-export class PetUniqueRefHook extends PassthroughEntityHookBase<PetEntity> {
+export class PetUniqueRefHook extends PassthroughEntityHookBase<PlainLiteralObject> {
   constructor(
     @InjectDynamicRepository(PetEntity)
-    private readonly petRepo: RepositoryInterface<PetEntity>,
+    private readonly petRepo: RepositoryInterface<PlainLiteralObject>,
   ) {
     super();
   }
 
   override async beforeCreate(
-    payload: PetEntity,
+    payload: PlainLiteralObject,
     ctx?: EntityHookContext,
-  ): Promise<PetEntity> {
+  ): Promise<PlainLiteralObject> {
     const raw = payload.uniqueRef;
     const uniqueRef = typeof raw === 'string' ? raw.trim() : undefined;
 
@@ -44,7 +48,7 @@ export class PetUniqueRefHook extends PassthroughEntityHookBase<PetEntity> {
     }
 
     const existing = await this.petRepo.findOne({
-      where: Where.eq<PetEntity>('uniqueRef', uniqueRef),
+      where: Where.eq<PlainLiteralObject>('uniqueRef', uniqueRef),
       ctx,
     });
 

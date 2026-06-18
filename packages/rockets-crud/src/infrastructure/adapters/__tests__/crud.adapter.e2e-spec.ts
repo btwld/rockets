@@ -8,7 +8,12 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { ActionEnum, AppContextHost, Operation } from '@bitwild/rockets-app';
+import {
+  ActionEnum,
+  AppContextHost,
+  Operation,
+  OverlayRef,
+} from '@bitwild/rockets-app';
 import {
   getDynamicRepositoryToken,
   RepoCtx,
@@ -27,7 +32,6 @@ import { mockCrudParsedQuery } from '../../../__fixtures__/crud/mocks/crud-parse
 import { CompanyEntity } from '../../../__fixtures__/typeorm/company/company.entity';
 import { ProjectEntity } from '../../../__fixtures__/typeorm/project/project.entity';
 import { UserEntity } from '../../../__fixtures__/typeorm/users/user.entity';
-import { CrudCtx } from '../../interceptors/crud-context.overlay';
 import { CrudContextInterface } from '../../interceptors/interfaces/crud-context.interface';
 import { CrudAdapter } from '../crud.adapter';
 
@@ -46,6 +50,15 @@ class TestEntityFixture extends CommonSqliteEntity {
 
 const ENTITY_TOKEN = 'test-adapter-entity';
 
+// Entity-typed view of the shared `withCrud` overlay. Overlays are keyed
+// by name string, so this is runtime-identical to the production `CrudCtx`
+// ref — it only carries `TestEntityFixture` so `host.with(...)` returns a
+// `CrudContextInterface<TestEntityFixture>` the typed adapter accepts.
+const CrudCtxTyped = new OverlayRef<
+  'withCrud',
+  CrudContextInterface<TestEntityFixture>
+>('withCrud');
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function ctx(overrides?: Partial<CrudContextInterface<TestEntityFixture>>) {
@@ -54,7 +67,7 @@ function ctx(overrides?: Partial<CrudContextInterface<TestEntityFixture>>) {
   host.defineOverlay(TrxCtx, {
     trx: { onCommit() {}, onRollback() {} },
   } as unknown as TransactionContextInterface);
-  host.defineOverlay(CrudCtx, {
+  host.defineOverlay(CrudCtxTyped, {
     entity: 'TestEntityFixture',
     params: {},
     query: mockCrudParsedQuery<TestEntityFixture>(),
@@ -63,7 +76,7 @@ function ctx(overrides?: Partial<CrudContextInterface<TestEntityFixture>>) {
     action: ActionEnum.READ,
     ...overrides,
   });
-  return host.with(CrudCtx);
+  return host.with(CrudCtxTyped);
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -1083,9 +1096,14 @@ describe('CrudAdapter relations (e2e)', () => {
   let projectRepo: TypeOrmRepository<ProjectEntity>;
   let adapter: CrudAdapter<CompanyEntity>;
 
+  const CrudCtxCompany = new OverlayRef<
+    'withCrud',
+    CrudContextInterface<CompanyEntity>
+  >('withCrud');
+
   function relCtx(overrides?: Partial<CrudContextInterface<CompanyEntity>>) {
     const host = new AppContextHost();
-    host.defineOverlay(CrudCtx, {
+    host.defineOverlay(CrudCtxCompany, {
       entity: 'CompanyEntity',
       params: {},
       query: mockCrudParsedQuery<CompanyEntity>(),
@@ -1094,7 +1112,7 @@ describe('CrudAdapter relations (e2e)', () => {
       action: ActionEnum.READ,
       ...overrides,
     });
-    return host.with(CrudCtx);
+    return host.with(CrudCtxCompany);
   }
 
   beforeEach(async () => {
@@ -1287,7 +1305,7 @@ describe('CrudAdapter relations (e2e)', () => {
       const result = await adapter.list(
         relCtx({
           ...usersRelationCtx(),
-          query: mockCrudParsedQuery<PlainLiteralObject>({
+          query: mockCrudParsedQuery<CompanyEntity>({
             sort: [{ field: 'email', order: 'ASC', relation: 'users' }],
           }),
         }),
@@ -1307,7 +1325,7 @@ describe('CrudAdapter relations (e2e)', () => {
       const result = await adapter.list(
         relCtx({
           ...usersRelationCtx(),
-          query: mockCrudParsedQuery<PlainLiteralObject>({
+          query: mockCrudParsedQuery<CompanyEntity>({
             sort: [{ field: 'email', order: 'DESC', relation: 'users' }],
           }),
         }),
@@ -1327,7 +1345,7 @@ describe('CrudAdapter relations (e2e)', () => {
       const result = await adapter.list(
         relCtx({
           ...usersRelationCtx(),
-          query: mockCrudParsedQuery<PlainLiteralObject>({
+          query: mockCrudParsedQuery<CompanyEntity>({
             sort: [
               { field: 'name', order: 'ASC' },
               { field: 'email', order: 'DESC', relation: 'users' },

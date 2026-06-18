@@ -18,6 +18,7 @@ control, and a two-level repository hook system.
 - [Module Registration](#module-registration)
 - [Architecture Overview](#architecture-overview)
 - [Repository Adapter](#repository-adapter)
+- [Schema Entity Compilers](#schema-entity-compilers)
 - [Relations and Joins](#relations-and-joins)
 - [Where Clause Builder](#where-clause-builder)
 - [Order Clause Builder](#order-clause-builder)
@@ -211,6 +212,71 @@ class TypeOrmRepository<Entity> extends RepositoryAdapter<Entity> {
   // ... implement remaining abstract methods
 }
 ```
+
+## Schema Entity Compilers
+
+Schema-first resource layers (e.g. a zod layer) describe a resource once —
+fields, constraints, relations — and derive DTOs, validation and OpenAPI
+from it. What a *persisted entity* looks like, however, is an **adapter
+concern**: TypeORM needs a decorated class with column metadata, Firestore
+needs little more than a named class token plus a collection name, and a
+filesystem/JSON store can use the schema itself as the storage format.
+
+The `SchemaEntityCompiler` contract keeps that boundary clean. This package
+defines the contract only — it has **no dependency on any validation
+library** — and each adapter ships (or will ship) its own implementation:
+
+```ts
+export interface SchemaEntityCompilerOptions {
+  /** Entity class name (drives dynamic-repository key derivation). */
+  readonly name: string;
+  /** Physical storage name — SQL table, collection, file name. */
+  readonly table: string;
+}
+
+export interface SchemaEntityCompiler {
+  compileEntity(
+    schema: unknown,
+    options: SchemaEntityCompilerOptions,
+  ): Type<PlainLiteralObject>;
+}
+```
+
+Adapters expose their compiler through the optional
+`RepositoryModuleInterface.entityCompiler` field, so schema layers resolve
+it from the same `repository` option that selects the adapter:
+
+```ts
+zodResource({
+  name: 'Invoice',
+  schema: invoiceSchema,
+  // Per-resource adapter override — its compiler generates the entity.
+  repository: firestoreAdapter, // adapter carries `entityCompiler`
+});
+```
+
+### Implementing a compiler
+
+1. **Narrow the schema.** `schema` is `unknown` by design. Check for the
+   schema type you support (e.g. `schema instanceof z.ZodObject`) and throw
+   a descriptive error naming the entity otherwise — a wrong schema type is
+   a boot-time configuration bug, never a silent fallback.
+2. **Name the class.** Produce a class whose `name` is `options.name`
+   (`Object.defineProperty(cls, 'name', { value: options.name })`) so
+   dynamic-repository key derivation and error messages match handwritten
+   entities.
+3. **Apply storage metadata.** For decorator-based ORMs apply the real
+   decorators programmatically — `Column({ ... })(cls.prototype, key)` is
+   identical to the `@Column` syntax at runtime. For document stores a bare
+   named class is usually enough.
+4. **Honor the persistence semantics your store understands** (primary
+   key, generated values, uniqueness, indexes, relations) and ignore the
+   rest explicitly — never half-apply a constraint.
+
+The TypeORM reference implementation lives in the sample-server zod layer
+(`examples/sample-server/src/zod/compile-entity.ts`, exported as
+`typeOrmZodEntityCompiler`) pending promotion to an adapter companion
+package.
 
 ## Relations and Joins
 

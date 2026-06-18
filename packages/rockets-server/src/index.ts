@@ -26,6 +26,20 @@ export {
   UserResponseDto,
   RoleNameDto,
   UserRoleItemDto,
+  OwnerStampHook,
+  OwnerScopeHook,
+  InjectDynamicRepository,
+  Where,
+  getDynamicRepositoryToken,
+  RepositoryModule,
+  createStubAuthBootstrap,
+  AuthUser,
+  ActorCtx,
+  getActor,
+  getCrudContext,
+  EntityHook,
+  EntityHookBase,
+  PassthroughEntityHookBase,
 } from '@bitwild/rockets-core';
 
 export type {
@@ -48,11 +62,30 @@ export type {
   UserMetadataCreatableInterface,
   UserMetadataUpdatableInterface,
   UserMetadataModelUpdatableInterface,
+  AuthBootstrap,
+  RepositoryBootstrap,
+  RepositoryInterface,
+  RepositoryModuleInterface,
+  SchemaEntityCompiler,
+  SchemaEntityCompilerOptions,
+  Actor,
+  ActorType,
+  ActorContext,
+  WithActor,
+  EntityHookContext,
+  RocketsCrudContext,
 } from '@bitwild/rockets-core';
 
+export { isRepositoryBootstrap } from '@bitwild/rockets-core';
+
 // ── Re-export common utilities ──
-export { logAndGetErrorDetails, getErrorDetails } from '@bitwild/rockets-app';
-export type { ErrorDetails } from '@bitwild/rockets-app';
+export {
+  logAndGetErrorDetails,
+  getErrorDetails,
+  SwaggerUiService,
+  Ctx,
+} from '@bitwild/rockets-app';
+export type { ErrorDetails, AppContextInterface } from '@bitwild/rockets-app';
 
 // ── Backward compatibility re-exports ──
 export { ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from './rockets.constants';
@@ -72,6 +105,7 @@ export type {
 } from './infrastructure/config/interfaces/rockets-options-extras.interface';
 export { UserModule } from './user.module';
 export { MeController } from './gateways/http/me.controller';
+export { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 
 // ── Declarative resource definition (re-exported from core) ──
 export {
