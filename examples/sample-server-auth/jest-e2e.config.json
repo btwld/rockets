@@ -18,7 +18,7 @@
     "^@nestjs/testing$": "<rootDir>/../../node_modules/@nestjs/testing",
     "^@nestjs/typeorm$": "<rootDir>/../../node_modules/@nestjs/typeorm",
     "^typeorm$": "<rootDir>/../../node_modules/typeorm",
-    "^@concepta/nestjs-common/aggregate$": "<rootDir>/../../node_modules/@concepta/nestjs-common/dist/index-aggregate",
+    "^@concepta/nestjs-core/aggregate$": "<rootDir>/../../node_modules/@concepta/nestjs-core/dist/index-aggregate",
     "^@concepta/(.*)$": "<rootDir>/../../node_modules/@concepta/$1",
     "^class-transformer$": "<rootDir>/../../node_modules/class-transformer",
     "^class-validator$": "<rootDir>/../../node_modules/class-validator"

@@ -4,6 +4,9 @@
     "json",
     "ts"
   ],
+  "setupFilesAfterEnv": [
+    "jest-extended/all"
+  ],
   "roots": [
     "<rootDir>/packages"
   ],
@@ -68,7 +71,7 @@
   ],
   "testEnvironment": "node",
   "moduleNameMapper": {
-    "^@concepta/nestjs-common/aggregate$": "<rootDir>/node_modules/@concepta/nestjs-common/dist/index-aggregate",
+    "^@concepta/nestjs-core/aggregate$": "<rootDir>/node_modules/@concepta/nestjs-core/dist/index-aggregate",
     "^@concepta/nestjs-invitation/dist/(.*)$": "<rootDir>/node_modules/@concepta/nestjs-invitation/dist/$1"
   }
 }

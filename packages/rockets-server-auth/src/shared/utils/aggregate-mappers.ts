@@ -1,4 +1,4 @@
-import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
+import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { UserEntityInterface, UserInterface } from '@concepta/nestjs-user';
 
 /**

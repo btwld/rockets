@@ -57,6 +57,14 @@ export {
 } from './infrastructure/hooks/entity-hook';
 export type { RocketsCrudContext } from './domain/interfaces/rockets-crud-context.interface';
 
+// Functional hook authoring — turns lifecycle functions into an
+// `@EntityHook`-decorated, DI-ready class (sugar over PassthroughEntityHookBase).
+export {
+  defineHook,
+  type EntityHookFns,
+  type EntityHookTools,
+} from './infrastructure/hooks/define-hook';
+
 // Reusable repository hooks
 export {
   OwnerScopeHook,

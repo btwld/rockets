@@ -40,7 +40,7 @@
     "@bitwild/rockets-app": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",
-    "@concepta/nestjs-repository": "8.0.0-alpha.5"
+    "@concepta/nestjs-repository": "8.0.0-alpha.7"
   },
   "devDependencies": {
     "@nestjs/common": "11.1.18",

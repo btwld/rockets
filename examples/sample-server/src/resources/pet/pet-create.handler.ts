@@ -1,21 +1,37 @@
-import { Injectable, type PlainLiteralObject } from '@nestjs/common';
-import { CrudAdapter, CrudCommandHandlerBase } from '@bitwild/rockets-crud';
+import { Injectable, Logger, type PlainLiteralObject } from '@nestjs/common';
+import {
+  CrudAdapter,
+  CrudCreateCommand,
+  CrudCreateHandler,
+} from '@bitwild/rockets-crud';
 import { PetEntity } from './pet.schema';
 import { InjectCrudAdapter } from '@bitwild/rockets-common';
 
 /**
- * Optional custom create handler — the stock `CrudCommandHandler` path
- * is enough when {@link PetUniqueRefHook} owns pre-insert validation.
+ * Reference: a custom create command handler on a **zod** resource
+ * (wired via `operations.create.handler` in pet.resource.ts).
  *
- * Wire `handler: PetCreateHandler` on `create` only when you need extra
- * command-bus logic beyond repository hooks.
+ * It extends the stock {@link CrudCreateHandler} and delegates with
+ * `super.execute(command)` — the `execute` override is the seam where you'd
+ * add command-bus logic that doesn't fit a repository hook. Pre-insert
+ * validation still lives in {@link PetUniqueRefHook} and post-write effects
+ * in {@link PetCreatedEventHook}; this handler just proves the seam runs.
  */
 @Injectable()
-export class PetCreateHandler extends CrudCommandHandlerBase<PlainLiteralObject> {
+export class PetCreateHandler extends CrudCreateHandler<PlainLiteralObject> {
+  private readonly logger = new Logger(PetCreateHandler.name);
+
   constructor(
     @InjectCrudAdapter(PetEntity)
     readonly crudAdapter: CrudAdapter<PlainLiteralObject>,
   ) {
     super(crudAdapter);
+  }
+
+  async execute(
+    command: CrudCreateCommand<PlainLiteralObject>,
+  ): Promise<PlainLiteralObject> {
+    this.logger.debug('Custom PetCreateHandler create seam');
+    return super.execute(command);
   }
 }

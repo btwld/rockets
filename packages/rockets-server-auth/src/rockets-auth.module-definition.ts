@@ -465,8 +465,10 @@ export function createRocketsAuthImports(importOptions: {
         settings: {
           ...rocketsServerAuthOptions.role?.settings,
           assignments: {
-            user: { entityKey: USER_ROLE_ENTITY_KEY },
             ...rocketsServerAuthOptions.role?.settings?.assignments,
+            entityKey:
+              rocketsServerAuthOptions.role?.settings?.assignments?.entityKey ??
+              USER_ROLE_ENTITY_KEY,
           },
         },
       }),

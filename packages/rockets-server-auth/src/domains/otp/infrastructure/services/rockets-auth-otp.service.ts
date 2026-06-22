@@ -1,4 +1,5 @@
 import { ReferenceIdInterface, RuntimeException } from '@bitwild/rockets-app';
+import { RuntimeException as ConceptaRuntimeException } from '@concepta/nestjs-core';
 import {
   RocketsAuthOtpPortService,
   ROCKETS_AUTH_OTP_PORT_TOKEN,
@@ -76,7 +77,10 @@ export class RocketsAuthOtpService implements RocketsAuthOtpServiceInterface {
         'OTP send failed',
         { errorId: 'OTP_SEND_FAILED' },
       );
-      if (error instanceof RuntimeException) {
+      if (
+        error instanceof RuntimeException ||
+        error instanceof ConceptaRuntimeException
+      ) {
         throw error;
       }
       throw new RocketsAuthException(errorMessage);

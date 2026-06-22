@@ -82,7 +82,7 @@
   },
   "devDependencies": {
     "@bitwild/rockets-crud": "workspace:^",
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.5",
+    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.7",
     "@nestjs/platform-express": "^11.1.18",
     "@nestjs/testing": "^11.1.18",
     "@nestjs/typeorm": "^11.0.0",

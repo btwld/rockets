@@ -1,6 +1,6 @@
 import { QueryBus, QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import type { AuthenticationUserResult } from '@concepta/nestjs-authentication';
-import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
+import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { GetUserByUsernameQuery, UserInterface } from '@concepta/nestjs-user';
 
 import { resolveBitwildAppContext } from '../../../../../shared/compatibility/resolve-bitwild-app-context';

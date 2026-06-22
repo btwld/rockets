@@ -41,10 +41,9 @@ export {
   AccessControlRecoverOne,
   AccessControlReplaceOne,
   AccessControlUpdateOne,
-  ActionEnum,
   PossessionEnum,
-  AccessControlAction,
 } from '@concepta/nestjs-access-control';
+export { ActionEnum } from '@concepta/nestjs-core';
 export type {
   AccessControlOptionsInterface,
   AccessControlContextInterface,

@@ -6,7 +6,7 @@ import {
   UserEntityInterface,
   UserCredentialEntityInterface,
 } from '@concepta/nestjs-user';
-import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
+import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { userAggregateToEntity } from '../utils/aggregate-mappers';
 import { RocketsGetUserByEmailQuery } from '../../domains/user/application/queries/impl/rockets-get-user-by-email.query';
 import { RocketsGetUserByUsernameQuery } from '../../domains/user/application/queries/impl/rockets-get-user-by-username.query';

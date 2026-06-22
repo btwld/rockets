@@ -1,54 +1,29 @@
-import {
-  ConflictException,
-  Injectable,
-  PlainLiteralObject,
-} from '@nestjs/common';
-import { type RepositoryInterface, Where } from '@bitwild/rockets-repository';
-import {
-  EntityHook,
-  type EntityHookContext,
-  PassthroughEntityHookBase,
-} from '@bitwild/rockets-core';
+import { ConflictException, PlainLiteralObject } from '@nestjs/common';
+import { Where } from '@bitwild/rockets-repository';
+import { defineHook } from '@bitwild/rockets-core';
 import { PetEntity } from './pet.schema';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
- * Ensures `uniqueRef` is not already taken before insert.
+ * Functional hook (via {@link defineHook}) — the same `beforeCreate`
+ * uniqueness check that used to be a hand-written `PassthroughEntityHookBase`
+ * subclass. `tools.repo` is the pet repository, injected by the generator;
+ * no `@EntityHook` / `@Injectable` / `@InjectDynamicRepository` boilerplate.
  *
- * Runs in `beforeCreate` on the repository path so the default
- * `CrudCommandHandler` create flow stays unchanged — no custom
- * `handler:` override is required for this check.
- *
- * Thrown {@link ConflictException} is unwrapped by
- * `RocketsCoreExceptionsFilter` when nested under adapter exceptions,
- * surfacing `409` and the message to API clients.
+ * Thrown {@link ConflictException} is unwrapped by `RocketsCoreExceptionsFilter`,
+ * surfacing `409` to API clients.
  */
-@EntityHook({ entity: PetEntity })
-@Injectable()
-export class PetUniqueRefHook extends PassthroughEntityHookBase<PlainLiteralObject> {
-  constructor(
-    @InjectDynamicRepository(PetEntity)
-    private readonly petRepo: RepositoryInterface<PlainLiteralObject>,
-  ) {
-    super();
-  }
-
-  override async beforeCreate(
-    payload: PlainLiteralObject,
-    ctx?: EntityHookContext,
-  ): Promise<PlainLiteralObject> {
+export const PetUniqueRefHook = defineHook<PlainLiteralObject>(PetEntity, {
+  async beforeCreate(payload, ctx, { repo }) {
     const raw = payload.uniqueRef;
     const uniqueRef = typeof raw === 'string' ? raw.trim() : undefined;
-
     if (!uniqueRef) {
       return payload;
     }
 
-    const existing = await this.petRepo.findOne({
+    const existing = await repo.findOne({
       where: Where.eq<PlainLiteralObject>('uniqueRef', uniqueRef),
       ctx,
     });
-
     if (existing) {
       throw new ConflictException(
         `Pet uniqueRef "${uniqueRef}" is already in use`,
@@ -56,5 +31,5 @@ export class PetUniqueRefHook extends PassthroughEntityHookBase<PlainLiteralObje
     }
 
     return payload;
-  }
-}
+  },
+});

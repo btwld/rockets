@@ -6,7 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { RuntimeException as ConceptaRuntimeException } from '@concepta/nestjs-common';
+import { RuntimeException as ConceptaRuntimeException } from '@concepta/nestjs-core';
 import {
   ExceptionInterface,
   ExceptionsFilter,

@@ -5,7 +5,9 @@ import { AuditLogHook } from '../../audit/audit-log.hook';
 import { petTagSchema } from './pet-tag.schema';
 import { PetCreatedEventHook } from '../../events/pet-created-event.hook';
 import { PetUniqueRefHook } from './pet-unique-ref.hook';
+import { PetNameNormalizeHook } from './pet-name-normalize.hook';
 import { PetTagTagIdExistsHook } from './pet-tag-tag-id-exists.hook';
+import { PetCreateHandler } from './pet-create.handler';
 
 const PetAuditLogHook = AuditLogHook.for(PetEntity);
 
@@ -44,6 +46,7 @@ export const petResource = zodResource({
     // OwnerStampHook for `userId` is auto-wired from `owner` (prepended
     // ahead of these).
     PetOwnerOrSharedHook,
+    PetNameNormalizeHook,
     PetUniqueRefHook,
     PetAuditLogHook,
     PetCreatedEventHook,
@@ -51,7 +54,11 @@ export const petResource = zodResource({
   operations: {
     list: true,
     read: true,
-    create: true,
+    // Reference: a zod resource with a custom command handler. `input`/
+    // `output` DTOs still come from the schema; only the create command
+    // path is overridden. The handler delegates to the stock CRUD write
+    // (see PetCreateHandler) — the seam is what's being demonstrated.
+    create: { handler: PetCreateHandler },
     update: true,
     delete: { soft: true, returnDeleted: true },
     restore: { returnRestored: true },

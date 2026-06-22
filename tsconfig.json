@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "strict": true,
-    "module": "commonjs",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "target": "es2017",
     "sourceMap": true,
     "incremental": true,

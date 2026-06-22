@@ -1,6 +1,6 @@
 import { CommandHandler, ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { UserInterface } from '@concepta/nestjs-user';
-import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
+import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { UpdateUserCommand } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
 

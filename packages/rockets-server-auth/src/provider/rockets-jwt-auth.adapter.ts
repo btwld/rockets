@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { ValidateAndVerifyAccessTokenQuery } from '@concepta/nestjs-authentication';
 import { UserInterface } from '@concepta/nestjs-user';
-import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
+import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { GetUserBySubjectQuery } from '@concepta/nestjs-user';
 import type {
   AuthAdapterInterface,

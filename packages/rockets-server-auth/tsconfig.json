@@ -10,8 +10,8 @@
       "../../node_modules/@types"
     ],
     "paths": {
-      "@concepta/nestjs-common/aggregate": [
-        "../../node_modules/@concepta/nestjs-common/dist/index-aggregate"
+      "@concepta/nestjs-core/aggregate": [
+        "../../node_modules/@concepta/nestjs-core/dist/index-aggregate"
       ]
     }
   },
