@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { whitelistedFromDto } from '@bitwild/rockets-app';
+
 import { PasswordCreationService } from '@concepta/nestjs-password';
 import { TransactionScope } from '@bitwild/rockets-repository';
 import { AssignRoleCommand } from '@concepta/nestjs-role';
@@ -23,6 +23,7 @@ import {
   InvitationAcceptanceConfig,
   INVITATION_ACCEPTANCE_CONFIG_TOKEN,
 } from '../../infrastructure/config/invitation-acceptance.config';
+import { whitelistedFromDto } from '@bitwild/rockets-common';
 
 /**
  * Invitation User Acceptance Listener

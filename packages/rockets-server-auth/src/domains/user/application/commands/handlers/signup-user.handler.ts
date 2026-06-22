@@ -1,7 +1,7 @@
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Injectable } from '@nestjs/common';
 import { TransactionScope } from '@bitwild/rockets-repository';
-import { RepositoryContextInterface } from '@bitwild/rockets-app';
+
 import {
   CreateUserCommand,
   GetUserByEmailQuery,
@@ -15,6 +15,7 @@ import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth
 import { AbstractSignupUserHandler } from './abstract-signup-user.handler';
 import { SignupUserCommand } from '../impl/signup-user.command';
 import { userAggregateToEntity } from '../../../../../shared/utils/aggregate-mappers';
+import { RepositoryContextInterface } from '@bitwild/rockets-common';
 
 /**
  * Drop server-controlled identity fields from a user-supplied metadata

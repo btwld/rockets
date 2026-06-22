@@ -1,4 +1,4 @@
-import { ReferenceIdInterface } from '../../reference/interfaces/reference-id.interface';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 
 export interface UpdateOneInterface<
   T extends ReferenceIdInterface,

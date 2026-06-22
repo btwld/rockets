@@ -4,18 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  TransactionScope,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, TransactionScope, Where } from '@bitwild/rockets-repository';
 import { PetEntity } from '../../../pet/pet.schema';
 import type { Pet } from '../../../pet/pet.schema';
 import { PetShareEntity } from '../../../pet-share/pet-share.entity';
 import { UserEntity } from '../../../../auth/user.entity';
 import { TransferPetOwnershipCommand } from '../impl/transfer-pet-ownership.command';
 import { PetTransferredEvent } from '../../events/pet-transferred.event';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * CQRS handler for pet ownership transfer.

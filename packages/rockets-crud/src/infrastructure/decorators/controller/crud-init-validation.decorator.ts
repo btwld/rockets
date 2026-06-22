@@ -13,12 +13,15 @@ import { CrudMetaview } from '../../services/crud-metaview.service';
  *
  * Add a ValidationPipe to every parameter called with the `CrudBody` decorator.
  *
- * When the route's `expectedType` DTO carries a Standard Schema (static
- * `schema` property — e.g. `nestjs-zod` DTOs), the schema owns the body
- * contract: a `CrudStandardSchemaValidationPipe` validates, strips and
- * coerces with full fidelity and the class-validator pipe is NOT
- * installed — such DTO classes carry no class-validator/transformer
- * metadata, so the default `excludeAll` transform would empty the body.
+ * ROCKETS-DIVERGENCE: Standard Schema support (see UPSTREAM-DIVERGENCE.md).
+ * Standard Schema (https://standardschema.dev) is the vendor-neutral validation
+ * contract adopted natively by NestJS v12 route decorators — NOT a zod
+ * dependency (crud imports no validation library). When the route's
+ * `expectedType` DTO carries a static `schema` (e.g. `nestjs-zod` DTOs), the
+ * schema owns the body contract: a `CrudStandardSchemaValidationPipe` validates,
+ * strips and coerces with full fidelity and the class-validator pipe is NOT
+ * installed — such DTO classes carry no class-validator/transformer metadata, so
+ * the default `excludeAll` transform would empty the body.
  */
 export const CrudInitValidation = (): ClassDecorator => (classTarget) => {
   const reflectionService = new CrudMetaview();

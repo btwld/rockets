@@ -21,10 +21,7 @@ import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { APP_GUARD } from '@nestjs/core';
 import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
-import {
-  getDynamicRepositoryToken,
-  InjectDynamicRepository,
-} from '@bitwild/rockets-repository';
+import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
 import request from 'supertest';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
@@ -36,6 +33,7 @@ import type {
 } from '../domain/interfaces/auth-adapter.interface';
 import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,

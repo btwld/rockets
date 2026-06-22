@@ -16,6 +16,7 @@
     "@bitwild/rockets-access-control": "workspace:^",
     "@bitwild/rockets-app": "workspace:^",
     "@bitwild/rockets-auth": "workspace:^",
+    "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-crud": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",

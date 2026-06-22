@@ -71,14 +71,10 @@ export abstract class AbstractChangeMyPasswordHandler
     payload: ChangeMyPasswordPayload,
   ): Promise<void> {
     await this.commandBus.execute(
-      new UpdateUserPasswordCommand(
-        resolveBitwildAppContext(ctx),
-        userId,
-        {
-          password: payload.next,
-          passwordCurrent: payload.current,
-        },
-      ),
+      new UpdateUserPasswordCommand(resolveBitwildAppContext(ctx), userId, {
+        password: payload.next,
+        passwordCurrent: payload.current,
+      }),
     );
   }
 

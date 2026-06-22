@@ -1,10 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { stripUndefined } from '@bitwild/rockets-app';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import { AbstractUpsertUserMetadataHandler } from './abstract-upsert-user-metadata.handler';
 import { UpsertUserMetadataCommand } from '../impl/upsert-user-metadata.command';
 import {
@@ -12,6 +8,8 @@ import {
   UserMetadataUpdatableInterface,
 } from '../../../domain/interfaces/user-metadata.interface';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../rockets-core.constants';
+import { stripUndefined } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 @Injectable()
 export class UpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandler {

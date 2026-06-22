@@ -23,7 +23,6 @@ export { PathScopeGuard } from './infrastructure/guards/path-scope.guard';
 // Decorators
 export { AuthPublic } from './decorators/auth-public.decorator';
 // Canonical authenticated-user param decorator (reads `request.user`).
-export { AuthUser } from '@bitwild/rockets-app';
 
 // Auth user-context overlay — re-exported so downstream layers consume it
 // through core instead of depending on `@concepta/nestjs-authentication`.
@@ -86,14 +85,11 @@ export { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.
 export type {
   RepositoryModuleInterface,
   RepositoryInterface,
-  SchemaEntityCompiler,
-  SchemaEntityCompilerOptions,
 } from '@bitwild/rockets-repository';
 export {
   RepositoryModule,
   Where,
   getDynamicRepositoryToken,
-  InjectDynamicRepository,
 } from '@bitwild/rockets-repository';
 
 // Module resource (non-CRUD persistence + Nest module slice)
@@ -157,7 +153,6 @@ export type {
 export type { CrudResource } from './domain/interfaces/rockets-resource-bundle.interface';
 
 // Swagger (re-exported so consumers don't need @bitwild/rockets-app directly)
-export type { SwaggerUiOptionsInterface } from '@bitwild/rockets-app';
 
 // Options interfaces
 export type { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';
@@ -209,6 +204,13 @@ export { UpsertUserMetadataHandler } from './application/commands/handlers/upser
 export { GetUserMetadataQuery } from './application/queries/impl/get-user-metadata.query';
 export { AbstractGetUserMetadataHandler } from './application/queries/handlers/abstract-get-user-metadata.handler';
 export { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
+export {
+  AuthUser,
+  type SchemaEntityCompiler,
+  type SchemaEntityCompilerOptions,
+  InjectDynamicRepository,
+  type SwaggerUiOptionsInterface,
+} from '@bitwild/rockets-common';
 
 // Constants
 export {

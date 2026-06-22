@@ -1,8 +1,4 @@
-import {
-  createSettingsProvider,
-  RocketsAppModule,
-  SwaggerUiModule,
-} from '@bitwild/rockets-app';
+import { createSettingsProvider, RocketsAppModule } from '@bitwild/rockets-app';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,
@@ -37,6 +33,7 @@ import { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
 import { ActorOverlay } from './infrastructure/interceptors/actor.overlay';
 import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
 import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
+import { SwaggerUiModule } from '@bitwild/rockets-common';
 
 export const {
   ConfigurableModuleClass: RocketsCoreModuleClass,

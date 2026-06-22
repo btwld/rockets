@@ -1,13 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AppContextInterface } from '@bitwild/rockets-app';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  TransactionScope,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, TransactionScope, Where } from '@bitwild/rockets-repository';
 import { PetEntity } from '../resources/pet/pet.schema';
 import type { Pet } from '../resources/pet/pet.schema';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 export interface ListParams {
   readonly withDeleted: boolean;

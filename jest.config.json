@@ -4,6 +4,9 @@
     "json",
     "ts"
   ],
+  "roots": [
+    "<rootDir>/packages"
+  ],
   "coverageProvider": "v8",
   "coverageThreshold": {
     "global": {

@@ -1,5 +1,5 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
+import type { RocketsRepositoryModuleInterface } from '@bitwild/rockets-common';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
@@ -23,5 +23,5 @@ export interface RocketsUserMetadataConfig<
    * Useful when user-metadata lives in a different store than the rest of
    * the app (e.g. Firestore for metadata, TypeORM for everything else).
    */
-  readonly repository?: RepositoryModuleInterface;
+  readonly repository?: RocketsRepositoryModuleInterface;
 }

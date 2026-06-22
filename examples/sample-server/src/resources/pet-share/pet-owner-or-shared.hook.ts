@@ -1,12 +1,5 @@
 import { Injectable, PlainLiteralObject } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  type RepositoryFindOneOptions,
-  type RepositoryFindOptions,
-  type RepositoryInterface,
-  Where,
-  type WhereClause,
-} from '@bitwild/rockets-repository';
+import { type RepositoryFindOneOptions, type RepositoryFindOptions, type RepositoryInterface, Where, type WhereClause } from '@bitwild/rockets-repository';
 import { Operation } from '@bitwild/rockets-app';
 import {
   EntityHook,
@@ -17,6 +10,7 @@ import {
 } from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.schema';
 import { PetShareEntity } from './pet-share.entity';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Broadens pet visibility from strict "owner-only" to "owner OR shared

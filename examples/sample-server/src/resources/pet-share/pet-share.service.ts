@@ -4,15 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { AppContextInterface } from '@bitwild/rockets-app';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  TransactionScope,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, TransactionScope, Where } from '@bitwild/rockets-repository';
 import { PetEntity } from '../pet/pet.schema';
 import type { Pet } from '../pet/pet.schema';
 import { PetShareEntity, PetSharePermission } from './pet-share.entity';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 export interface ShareCreateInput {
   readonly petId: string;

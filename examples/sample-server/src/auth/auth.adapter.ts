@@ -22,11 +22,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import { sign, verify } from 'jsonwebtoken';
 import type {
   AuthAdapterInterface,
@@ -36,6 +32,7 @@ import type {
 } from '@bitwild/rockets';
 import { extractBearerToken } from '@bitwild/rockets';
 import { UserEntity, UserRole } from './user.entity';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 // Hardcoded for demo only — see file header.
 const JWT_SECRET = 'sample-server-secret-do-not-use-in-production';

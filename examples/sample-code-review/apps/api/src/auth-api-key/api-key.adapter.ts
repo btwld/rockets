@@ -1,16 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { UnauthorizedException } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
   AuthRequest,
 } from '@bitwild/rockets-core';
 import { ApiKeyEntity } from './api-key.entity';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Authenticates requests via an `X-API-Key` header.

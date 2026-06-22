@@ -3,12 +3,13 @@ import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import { ExceptionsFilter } from '@bitwild/rockets';
-import { SwaggerUiService } from '@bitwild/rockets-app';
+
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 import { UserMetadataUpdateDto } from './user-metadata.schema';
 import { patchMePatchOpenApi } from './swagger/patch-me-openapi';
+import { SwaggerUiService } from '@bitwild/rockets-common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

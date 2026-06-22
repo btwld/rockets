@@ -1,6 +1,7 @@
-import { ByIdInterface, ReferenceIdInterface } from '@bitwild/rockets-app';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 import { PetVaccinationEntityInterface } from '../pet-vaccination/pet-vaccination.interface';
 import { PetAppointmentEntityInterface } from '../pet-appointment/pet-appointment.interface';
+import { ByIdInterface } from '@bitwild/rockets-common';
 
 // Audit field type aliases for consistency
 export type AuditDateCreated = Date;

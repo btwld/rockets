@@ -16,12 +16,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { randomBytes } from 'crypto';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
-import { AuthUser } from '@bitwild/rockets-app';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+
 import type { AuthorizedUser } from '@bitwild/rockets-core';
 import { ApiKeyEntity } from './api-key.entity';
 import {
@@ -29,6 +25,7 @@ import {
   CreateApiKeyDto,
   CreateApiKeyResponseDto,
 } from './api-key.dto';
+import { AuthUser, InjectDynamicRepository } from '@bitwild/rockets-common';
 
 @ApiTags('API Keys')
 @ApiBearerAuth()

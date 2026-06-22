@@ -1,5 +1,5 @@
 import { applyDecorators, type PlainLiteralObject } from '@nestjs/common';
-import { deriveEntityKey } from '@bitwild/rockets-app';
+
 import {
   CrudOperationResolver,
   type ConfigurableCrudGeneratedOptions,
@@ -28,6 +28,7 @@ import {
 import { buildPersistenceRelations } from './build-persistence-relations';
 import { buildOperation, mergeProviders } from './build-operation';
 import { materialiseSubResource } from './materialise-sub-resource';
+import { deriveEntityKey } from '@bitwild/rockets-common';
 
 type CrudDecorator = ReturnType<typeof applyDecorators>;
 

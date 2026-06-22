@@ -1,13 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import { UserEntity } from '../auth/user.entity';
 import { FakeEmailGateway } from './email.gateway';
 import { PetCreatedEvent } from './pet-created.event';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Sends a "welcome" email to the pet's owner when a new pet is created.

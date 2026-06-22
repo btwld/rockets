@@ -1,11 +1,9 @@
 import { Injectable, type PlainLiteralObject, type Type } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  type RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
-import { deriveEntityKey } from '@bitwild/rockets-app';
+import { type RepositoryInterface, Where } from '@bitwild/rockets-repository';
+
 import { EntityHook, PassthroughEntityHookBase } from './entity-hook';
+import { deriveEntityKey } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Re-fetches the persisted row by primary key after an entity is created

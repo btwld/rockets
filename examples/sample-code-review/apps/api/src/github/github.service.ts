@@ -4,15 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import type { AppContextInterface } from '@bitwild/rockets-app';
 import { GithubConfig } from '../config/github.config';
 import { GithubConnectionEntity } from './github-connection.entity';
 import { GithubOAuthStateService } from './github-oauth-state.service';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 import {
   GITHUB_API_CLIENT,
   type GithubApiClientInterface,

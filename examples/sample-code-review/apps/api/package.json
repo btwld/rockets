@@ -17,6 +17,7 @@
     "@bitwild/rockets": "workspace:^",
     "@bitwild/rockets-adapter-firebase": "workspace:^",
     "@bitwild/rockets-app": "workspace:^",
+    "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",
     "@bitwild/rockets-repository-firestore": "workspace:^",

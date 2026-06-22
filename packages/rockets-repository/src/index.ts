@@ -19,10 +19,6 @@ export {
   RepositoryModuleInterface,
   DynamicRepositoryModule,
 } from './interfaces/repository-module.interface';
-export type {
-  SchemaEntityCompiler,
-  SchemaEntityCompilerOptions,
-} from './interfaces/schema-entity-compiler.interface';
 
 // ═══════════════════════════════════════════════════════════════════
 // Exceptions

@@ -1,10 +1,7 @@
 import { Injectable, type PlainLiteralObject } from '@nestjs/common';
-import {
-  CrudAdapter,
-  CrudCommandHandlerBase,
-  InjectCrudAdapter,
-} from '@bitwild/rockets-crud';
+import { CrudAdapter, CrudCommandHandlerBase } from '@bitwild/rockets-crud';
 import { PetEntity } from './pet.schema';
+import { InjectCrudAdapter } from '@bitwild/rockets-common';
 
 /**
  * Optional custom create handler — the stock `CrudCommandHandler` path

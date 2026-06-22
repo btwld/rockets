@@ -8,12 +8,12 @@ import {
   CrudCommandHandlerBase,
   CrudCreateCommand,
   CrudQueryException,
-  InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
 import type { CrudCommandInterface } from '@bitwild/rockets-crud';
 import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from './pet.entity';
 import { PetCreatableInterface } from './pet.interface';
+import { InjectCrudAdapter } from '@bitwild/rockets-common';
 
 /**
  * Stamps `userId` from the authenticated actor that `ActorOverlay`

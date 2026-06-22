@@ -15,15 +15,12 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import {
-  AuthUser,
-  Ctx,
-  type AppContextInterface,
-} from '@bitwild/rockets-app';
+import { Ctx, type AppContextInterface } from '@bitwild/rockets-app';
 import type { AuthorizedUser } from '@bitwild/rockets';
 import { PetShareEntity } from './pet-share.entity';
 import { PetShareCreateDto, PetShareResponseDto } from './pet-share.dto';
 import { PetShareService } from './pet-share.service';
+import { AuthUser } from '@bitwild/rockets-common';
 
 /**
  * Thin HTTP gateway. `@Ctx()` resolves the per-request `AppContextHost`

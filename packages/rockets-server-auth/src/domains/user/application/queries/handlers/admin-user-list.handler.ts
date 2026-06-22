@@ -3,11 +3,11 @@ import {
   CrudAdapter,
   CrudListQuery,
   CrudResponsePaginatedInterface,
-  InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
 import { USER_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 import { AbstractAdminUserListHandler } from '../../commands/handlers/abstract-admin-user-list.handler';
+import { InjectCrudAdapter } from '@bitwild/rockets-common';
 
 @Injectable()
 export class AdminUserListHandler extends AbstractAdminUserListHandler {

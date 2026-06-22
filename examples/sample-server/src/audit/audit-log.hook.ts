@@ -1,8 +1,5 @@
 import { Injectable, type PlainLiteralObject, type Type } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  type RepositoryInterface,
-} from '@bitwild/rockets-repository';
+import { type RepositoryInterface } from '@bitwild/rockets-repository';
 import {
   EntityHook,
   type EntityHookContext,
@@ -11,6 +8,7 @@ import {
   getCrudContext,
 } from '@bitwild/rockets-core';
 import { AuditAction, AuditLogEntity } from './audit-log.entity';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Repo hook that writes an `audit_logs` row after every mutating

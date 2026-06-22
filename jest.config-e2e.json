@@ -5,6 +5,9 @@
     "ts"
   ],
   "testEnvironment": "node",
+  "roots": [
+    "<rootDir>/packages"
+  ],
   "testRegex": ".*\\.e2e-spec\\.ts$",
   "testPathIgnorePatterns": [
     "/node_modules/",

@@ -4,12 +4,12 @@ import {
   CrudListQuery,
   CrudQueryHandlerBase,
   CrudResponsePaginatedInterface,
-  InjectCrudAdapter,
 } from '@bitwild/rockets-crud';
 import type { CrudQueryInterface } from '@bitwild/rockets-crud';
 import { getActor } from '@bitwild/rockets-core';
 import { WhereOperator, type EntityColumn } from '@bitwild/rockets-repository';
 import { PetEntity } from './pet.entity';
+import { InjectCrudAdapter } from '@bitwild/rockets-common';
 
 /**
  * List handler: filters pets by the authenticated actor's id so users only

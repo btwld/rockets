@@ -1,11 +1,5 @@
 import { Injectable, PlainLiteralObject } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  type RepositoryFindOneOptions,
-  type RepositoryFindOptions,
-  type RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { type RepositoryFindOneOptions, type RepositoryFindOptions, type RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import {
   EntityHook,
   type EntityHookContext,
@@ -14,6 +8,7 @@ import {
 } from '@bitwild/rockets-core';
 import { ReminderEntity } from './reminder.schema';
 import { AppointmentEntity } from './appointment.entity';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Scopes reminders to the authenticated user's own appointments.

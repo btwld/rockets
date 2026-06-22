@@ -7,6 +7,9 @@ import { EntityColumn, SortOrder } from '../repository.types';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * ROCKETS-DIVERGENCE: type widening on a canonical interface (see
+ * UPSTREAM-DIVERGENCE.md). Upstream types `field` as `EntityColumn<T>`.
+ *
  * Sortable field. A root sort targets a column of `T` (autocompleted via
  * {@link EntityColumn}); a relation sort (`relation` set) targets a column
  * of the RELATED entity, which `T` cannot name — hence the `string`

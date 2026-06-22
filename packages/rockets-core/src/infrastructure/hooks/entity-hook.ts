@@ -19,8 +19,9 @@ import {
   type RepositoryFindOneOptions,
   type RepositoryFindOptions,
 } from '@bitwild/rockets-repository';
-import { Specification, deriveEntityKey } from '@bitwild/rockets-app';
+import { Specification } from '@bitwild/rockets-app';
 import type { RocketsCrudContext } from '../../domain/interfaces/rockets-crud-context.interface';
+import { deriveEntityKey } from '@bitwild/rockets-common';
 
 /**
  * # When to reach for `EntityHook` vs Guard / Interceptor / Subscriber

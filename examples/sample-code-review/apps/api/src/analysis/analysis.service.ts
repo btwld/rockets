@@ -5,12 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  SortOrder,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, SortOrder, Where } from '@bitwild/rockets-repository';
 import type { AppContextInterface } from '@bitwild/rockets-app';
 
 import {
@@ -34,6 +29,7 @@ import {
   type ListCodeReviewReportsFilter,
 } from './code-review-report.types';
 import type { CodeReviewReportView } from './code-review-report.view';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 @Injectable()
 export class AnalysisService {

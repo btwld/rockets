@@ -3,8 +3,9 @@ import { UserInterface } from '@concepta/nestjs-user';
 import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
 import { GetUserQuery } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
-import { createRepositoryContext } from '@bitwild/rockets-app';
+
 import { RocketsGetUserByIdQuery } from '../impl/rockets-get-user-by-id.query';
+import { createRepositoryContext } from '@bitwild/rockets-common';
 
 @QueryHandler(RocketsGetUserByIdQuery)
 export class RocketsGetUserByIdHandler

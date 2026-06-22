@@ -1,15 +1,13 @@
 import type { PlainLiteralObject, Provider, Type } from '@nestjs/common';
 import type { RocketsEntityHookForResource } from '../../infrastructure/hooks/entity-hook';
 import type { Operation } from '@bitwild/rockets-app';
+import type { RocketsRepositoryModuleInterface } from '@bitwild/rockets-common';
 import type { ResourceKind } from './resource-kind.enum';
 import type {
   CrudRequestConfig,
   CrudResponseConfig,
 } from '@bitwild/rockets-crud';
-import type {
-  RepositoryModuleInterface,
-  WhereCondition,
-} from '@bitwild/rockets-repository';
+import type { WhereCondition } from '@bitwild/rockets-repository';
 
 /**
  * Names of CRUD operations supported by the declarative resource definition.
@@ -447,7 +445,7 @@ export interface RocketsResourceDefinition<E extends PlainLiteralObject> {
    * Overrides the root `repository` adapter for this one table — provide for
    * multi-adapter apps. Relation-level flags live on `relations`.
    */
-  readonly repository?: RepositoryModuleInterface;
+  readonly repository?: RocketsRepositoryModuleInterface;
   /** Repository hook classes applied via `@UseHooks` at the controller level. */
   readonly hooks?: readonly RocketsEntityHookForResource<E>[];
   /** Custom handler class per operation (overrides the defaults). */

@@ -60,7 +60,8 @@ export { CrudReturnRestored } from './infrastructure/decorators/routes/crud-retu
 export { CrudSerialize } from './infrastructure/decorators/routes/crud-serialize.decorator';
 export { CrudSort } from './infrastructure/decorators/routes/crud-sort.decorator';
 export { CrudValidate } from './infrastructure/decorators/routes/crud-validate.decorator';
-// pipes
+// ROCKETS-DIVERGENCE: Standard Schema validation pipe (vendor-neutral, v12
+// native). See UPSTREAM-DIVERGENCE.md.
 export {
   CrudStandardSchemaValidationPipe,
   getStandardSchema,
@@ -142,7 +143,9 @@ export { CrudRestoreCommand } from './application/commands/impl/crud-restore.com
 export { CrudWithBodyCommand } from './application/commands/impl/crud-with-body.command';
 
 // operations (handlers)
-// Base classes for custom handlers. Aliased with the `Base` suffix because
+// ROCKETS-DIVERGENCE: additive re-exports of upstream-internal symbols (the
+// underlying files are byte-identical to upstream; only the index re-export
+// differs). See UPSTREAM-DIVERGENCE.md. Aliased with the `Base` suffix because
 // the plain names are taken by the route decorators above — extending the
 // decorator by mistake is a TS2507 foot-gun (and forced deep `dist/` imports
 // in examples before these aliases existed).
@@ -161,6 +164,8 @@ export { CrudSoftDeleteHandler } from './application/commands/handlers/crud-soft
 export { CrudRestoreHandler } from './application/commands/handlers/crud-restore.handler';
 
 // request/response config + metaview (consumed by rockets-core resource builder)
+// ROCKETS-DIVERGENCE: additive re-exports of upstream-internal symbols
+// (underlying files byte-identical to upstream). See UPSTREAM-DIVERGENCE.md.
 export { CrudRequestConfig } from './infrastructure/request/interfaces/crud-request-config.interface';
 export { CrudResponseConfig } from './infrastructure/request/interfaces/crud-response-config.interface';
 export { CrudParamOptionInterface } from './infrastructure/interfaces/crud-param-option.interface';

@@ -70,6 +70,7 @@
   },
   "dependencies": {
     "@bitwild/rockets-app": "workspace:^",
+    "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@nestjs/common": "^11.1.18",

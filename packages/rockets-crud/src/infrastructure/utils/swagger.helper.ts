@@ -8,8 +8,10 @@ export const swagger = safeRequire('@nestjs/swagger', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@nestjs/swagger'),
 );
+// ROCKETS-DIVERGENCE: nestjs-swagger v12 compat (see UPSTREAM-DIVERGENCE.md).
 // v12 exports DECORATORS from the main entry; v11 only exposes it via
-// dist/constants, a path the v12 exports map no longer allows.
+// dist/constants, a path the v12 exports map no longer allows. Cannot be
+// wrapped from rockets-common (internal const); to be contributed upstream.
 export const swaggerConst =
   swagger?.DECORATORS !== undefined
     ? swagger

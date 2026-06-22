@@ -43,6 +43,7 @@
   "dependencies": {
     "@bitwild/rockets-access-control": "workspace:^",
     "@bitwild/rockets-app": "workspace:^",
+    "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-crud": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",
     "@concepta/nestjs-authentication": "8.0.0-alpha.5",

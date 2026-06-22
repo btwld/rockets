@@ -21,6 +21,9 @@
       "path": "packages/rockets-app"
     },
     {
+      "path": "packages/rockets-common"
+    },
+    {
       "path": "packages/rockets-repository"
     },
     {

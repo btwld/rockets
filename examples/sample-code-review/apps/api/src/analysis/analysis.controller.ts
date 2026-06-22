@@ -14,7 +14,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthUser, Ctx, type AppContextInterface } from '@bitwild/rockets-app';
+import { Ctx, type AppContextInterface } from '@bitwild/rockets-app';
 import type { AuthorizedUser } from '@bitwild/rockets';
 
 import {
@@ -30,6 +30,7 @@ import { CodeReviewReportEntity } from './code-review-report.entity';
 import { CodeReviewReportExecutionEntity } from './code-review-report-execution.entity';
 import type { CodeReviewReportView } from './code-review-report.view';
 import { CODE_REVIEW_REPORT_COLLECTION } from '../repository/code-review-reports.persistence';
+import { AuthUser } from '@bitwild/rockets-common';
 
 @ApiTags('Code review')
 @ApiBearerAuth()

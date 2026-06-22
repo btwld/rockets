@@ -5,7 +5,7 @@ import {
   User,
 } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
-import { createRepositoryContext } from '@bitwild/rockets-app';
+
 import { userAggregateToEntity } from '../../../../../shared/utils/aggregate-mappers';
 
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
@@ -13,6 +13,7 @@ import { RocketsAuthUserMetadataEntityInterface } from '../../../interfaces/rock
 import { UserException } from '../../../domain/exceptions/user.exception';
 import { GetUserQuery } from '../impl/get-user.query';
 import { GetUserMetadataQuery } from '../impl/get-user-metadata.query';
+import { createRepositoryContext } from '@bitwild/rockets-common';
 
 @QueryHandler(GetUserQuery)
 export class GetUserHandler implements IQueryHandler<GetUserQuery> {

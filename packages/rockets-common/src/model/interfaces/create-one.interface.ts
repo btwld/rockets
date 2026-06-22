@@ -1,6 +1,6 @@
 import { PlainLiteralObject } from '@nestjs/common';
 
-import { ReferenceIdInterface } from '../../reference/interfaces/reference-id.interface';
+import { ReferenceIdInterface } from '@bitwild/rockets-app';
 
 export interface CreateOneInterface<
   T extends PlainLiteralObject,

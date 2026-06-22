@@ -79,13 +79,8 @@ export type {
 export { isRepositoryBootstrap } from '@bitwild/rockets-core';
 
 // ── Re-export common utilities ──
-export {
-  logAndGetErrorDetails,
-  getErrorDetails,
-  SwaggerUiService,
-  Ctx,
-} from '@bitwild/rockets-app';
-export type { ErrorDetails, AppContextInterface } from '@bitwild/rockets-app';
+export { Ctx } from '@bitwild/rockets-app';
+export type { AppContextInterface } from '@bitwild/rockets-app';
 
 // ── Backward compatibility re-exports ──
 export { ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from './rockets.constants';
@@ -106,6 +101,12 @@ export type {
 export { UserModule } from './user.module';
 export { MeController } from './gateways/http/me.controller';
 export { defineTypeOrmRepository } from './repository/define-typeorm-repository';
+export {
+  logAndGetErrorDetails,
+  getErrorDetails,
+  SwaggerUiService,
+  type ErrorDetails,
+} from '@bitwild/rockets-common';
 
 // ── Declarative resource definition (re-exported from core) ──
 export {

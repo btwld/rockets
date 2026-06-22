@@ -1,15 +1,13 @@
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
-import { RepositoryContextInterface } from '@bitwild/rockets-app';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+
 import { Injectable } from '@nestjs/common';
 import { DeepPartial } from '@bitwild/rockets-app';
 import { UserMetadataRepositoryInterface } from '../../domain/repositories/user-metadata-repository.interface';
 import { RocketsAuthUserMetadataEntityInterface } from '../../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../interfaces/rockets-auth-user-metadata-updatable.interface';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../../shared/constants/repository-entity-keys.constants';
+import { RepositoryContextInterface } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 @Injectable()
 export class UserMetadataRepository implements UserMetadataRepositoryInterface {

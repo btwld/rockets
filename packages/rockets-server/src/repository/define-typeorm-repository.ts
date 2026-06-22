@@ -7,9 +7,9 @@ import type {
   RepositoryProviderOptions,
 } from '@bitwild/rockets-repository';
 
-export function defineTypeOrmRepository<Connection extends TypeOrmModuleOptions>(
-  connection: Connection,
-): RepositoryBootstrap {
+export function defineTypeOrmRepository<
+  Connection extends TypeOrmModuleOptions,
+>(connection: Connection): RepositoryBootstrap {
   return {
     name: 'typeorm-bootstrap',
 
@@ -17,9 +17,7 @@ export function defineTypeOrmRepository<Connection extends TypeOrmModuleOptions>
       return TypeOrmRepositoryModule.forFeature(entities);
     },
 
-    forRoot(
-      entities: ReadonlyArray<Type<PlainLiteralObject>>,
-    ): DynamicModule {
+    forRoot(entities: ReadonlyArray<Type<PlainLiteralObject>>): DynamicModule {
       return TypeOrmModule.forRoot({
         ...connection,
         entities: [...entities],

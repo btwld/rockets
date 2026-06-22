@@ -1,11 +1,10 @@
+import { AuditInterface, ReferenceIdInterface } from '@bitwild/rockets-app';
 import {
-  AuditInterface,
   ByIdInterface,
   CreateOneInterface,
-  ReferenceIdInterface,
   RemoveOneInterface,
   UpdateOneInterface,
-} from '@bitwild/rockets-app';
+} from '@bitwild/rockets-common';
 
 /**
  * Pet Vaccination Interface

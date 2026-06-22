@@ -6,6 +6,9 @@
   ],
   "testSequencer": "<rootDir>/scripts/jest-e2e-barrel-last-sequencer.cjs",
   "testEnvironment": "node",
+  "roots": [
+    "<rootDir>/packages"
+  ],
   "testRegex": ".*\\.e2e-spec\\.ts$",
   "testPathIgnorePatterns": [
     "/node_modules/",

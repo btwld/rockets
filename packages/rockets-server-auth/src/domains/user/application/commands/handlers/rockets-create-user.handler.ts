@@ -2,9 +2,10 @@ import { CommandHandler, ICommandHandler, CommandBus } from '@nestjs/cqrs';
 import { UserInterface } from '@concepta/nestjs-user';
 import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
 import { CreateUserCommand } from '@concepta/nestjs-user';
-import { createRepositoryContext } from '@bitwild/rockets-app';
+
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsCreateUserCommand } from '../impl/rockets-create-user.command';
+import { createRepositoryContext } from '@bitwild/rockets-common';
 
 @CommandHandler(RocketsCreateUserCommand)
 export class RocketsCreateUserHandler

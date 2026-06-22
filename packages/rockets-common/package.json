@@ -1,0 +1,36 @@
+{
+  "name": "@bitwild/rockets-common",
+  "version": "0.0.1-alpha.0",
+  "description": "Rockets Common - local extensions layered on the upstream-parity rockets-app/repository/crud packages",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "license": "BSD-3-Clause",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/**/!(*.spec|*.e2e-spec|*.fixture|*.mock).{js,d.ts}",
+    "!dist/**/__tests__/**",
+    "!dist/**/__fixtures__/**"
+  ],
+  "dependencies": {
+    "@bitwild/rockets-app": "workspace:^",
+    "@bitwild/rockets-crud": "workspace:^",
+    "@bitwild/rockets-repository": "workspace:^",
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/swagger": "^11.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "peerDependencies": {
+    "class-transformer": "*",
+    "class-validator": "*"
+  }
+}

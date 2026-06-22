@@ -3,8 +3,9 @@ import { UserInterface } from '@concepta/nestjs-user';
 import { DomainAggregate } from '@concepta/nestjs-common/aggregate';
 import { UpdateUserCommand } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
-import { createRepositoryContext } from '@bitwild/rockets-app';
+
 import { RocketsUpdateUserCommand } from '../impl/rockets-update-user.command';
+import { createRepositoryContext } from '@bitwild/rockets-common';
 
 @CommandHandler(RocketsUpdateUserCommand)
 export class RocketsUpdateUserHandler

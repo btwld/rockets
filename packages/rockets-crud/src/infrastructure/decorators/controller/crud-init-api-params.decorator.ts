@@ -5,12 +5,15 @@ import { ApiParam, ApiParamOptions } from '@nestjs/swagger';
 import { CrudMetaview } from '../../services/crud-metaview.service';
 
 /**
+ * ROCKETS-DIVERGENCE: required for `@nestjs/swagger` v12 (see
+ * UPSTREAM-DIVERGENCE.md). Upstream reads `options.schema?.type` directly,
+ * which v12's stricter `ApiParamOptions` union (`ApiParamSchemaHost` has no
+ * top-level `type`/`enum`) rejects under our type-checker.
+ *
  * `ApiParamOptions` is `ApiParamMetadata | ApiParamSchemaHost`. Only the
  * inline metadata variant carries top-level `type`/`enum`; the schema-host
  * variant nests them under `schema`. This distributive conditional isolates
- * the inline variant so a structural view can read both shapes uniformly
- * under `strict` and non-`strict` type-checking (union narrowing on `in`
- * is unreliable once `strictNullChecks` is off).
+ * the inline variant so a structural view can read both shapes uniformly.
  */
 type ApiParamInline = ApiParamOptions extends infer T
   ? T extends { schema: object }

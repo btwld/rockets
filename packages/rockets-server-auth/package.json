@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@bitwild/rockets-app": "workspace:^",
+    "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-crud": "workspace:^",
     "@bitwild/rockets-repository": "workspace:^",

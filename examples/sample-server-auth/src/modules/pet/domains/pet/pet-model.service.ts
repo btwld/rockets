@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  type RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { type RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import {
   PetEntityInterface,
   PetCreatableInterface,
@@ -15,6 +11,7 @@ import {
 import { PetEntity } from './pet.entity';
 import { PetCreateDto, PetUpdateDto } from './pet.dto';
 import { PetNotFoundException } from './pet.exception';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Pet domain service backed by the dynamic repository registered for the

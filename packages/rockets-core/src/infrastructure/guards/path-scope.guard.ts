@@ -6,12 +6,9 @@ import {
   Type,
   UnauthorizedException,
 } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import type { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 interface RequestWithUserAndParams {
   user?: AuthorizedUser;

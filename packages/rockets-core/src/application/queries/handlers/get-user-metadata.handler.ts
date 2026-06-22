@@ -1,13 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import { AbstractGetUserMetadataHandler } from './abstract-get-user-metadata.handler';
 import { GetUserMetadataQuery } from '../impl/get-user-metadata.query';
 import { UserMetadataEntityInterface } from '../../../domain/interfaces/user-metadata.interface';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../rockets-core.constants';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 @Injectable()
 export class GetUserMetadataHandler extends AbstractGetUserMetadataHandler {

@@ -1,12 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { AppContextInterface } from '@bitwild/rockets-app';
-import {
-  InjectDynamicRepository,
-  RepositoryInterface,
-  Where,
-  type WhereClause,
-} from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where, type WhereClause } from '@bitwild/rockets-repository';
 import { AuditAction, AuditLogEntity } from './audit-log.entity';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 export interface AuditQueryFilter {
   readonly resource?: string;

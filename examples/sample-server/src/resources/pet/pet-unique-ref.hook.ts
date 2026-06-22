@@ -3,17 +3,14 @@ import {
   Injectable,
   PlainLiteralObject,
 } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  type RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { type RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import {
   EntityHook,
   type EntityHookContext,
   PassthroughEntityHookBase,
 } from '@bitwild/rockets-core';
 import { PetEntity } from './pet.schema';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Ensures `uniqueRef` is not already taken before insert.

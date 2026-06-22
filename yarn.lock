@@ -736,6 +736,7 @@ __metadata:
   dependencies:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-app": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-crud": "workspace:^"
     "@bitwild/rockets-repository": "workspace:^"
@@ -794,12 +795,31 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@bitwild/rockets-common@workspace:^, @bitwild/rockets-common@workspace:packages/rockets-common":
+  version: 0.0.0-use.local
+  resolution: "@bitwild/rockets-common@workspace:packages/rockets-common"
+  dependencies:
+    "@bitwild/rockets-app": "workspace:^"
+    "@bitwild/rockets-crud": "workspace:^"
+    "@bitwild/rockets-repository": "workspace:^"
+    "@nestjs/common": "npm:^11.1.9"
+    "@nestjs/config": "npm:^4.0.2"
+    "@nestjs/core": "npm:^11.1.9"
+    "@nestjs/swagger": "npm:^11.2.2"
+    rxjs: "npm:^7.8.1"
+  peerDependencies:
+    class-transformer: "*"
+    class-validator: "*"
+  languageName: unknown
+  linkType: soft
+
 "@bitwild/rockets-core@workspace:^, @bitwild/rockets-core@workspace:packages/rockets-core":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-core@workspace:packages/rockets-core"
   dependencies:
     "@bitwild/rockets-access-control": "workspace:^"
     "@bitwild/rockets-app": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-crud": "workspace:^"
     "@bitwild/rockets-repository": "workspace:^"
     "@bitwild/rockets-repository-typeorm": "workspace:^"
@@ -972,6 +992,7 @@ __metadata:
   resolution: "@bitwild/rockets@workspace:packages/rockets-server"
   dependencies:
     "@bitwild/rockets-app": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-crud": "workspace:^"
     "@bitwild/rockets-repository-typeorm": "workspace:^"
@@ -6892,6 +6913,7 @@ __metadata:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-adapter-firebase": "workspace:^"
     "@bitwild/rockets-app": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-repository": "workspace:^"
     "@bitwild/rockets-repository-firestore": "workspace:^"
@@ -17766,6 +17788,7 @@ __metadata:
     "@bitwild/rockets-access-control": "workspace:^"
     "@bitwild/rockets-app": "workspace:^"
     "@bitwild/rockets-auth": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-crud": "workspace:^"
     "@bitwild/rockets-repository": "workspace:^"
@@ -17819,6 +17842,7 @@ __metadata:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-access-control": "workspace:^"
     "@bitwild/rockets-app": "workspace:^"
+    "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-crud": "workspace:^"
     "@bitwild/rockets-repository": "workspace:^"

@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Body, Inject } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { AuthUser, whitelistedFromDto } from '@bitwild/rockets-app';
+
 import {
   ApiTags,
   ApiOperation,
@@ -20,6 +20,7 @@ import type {
 } from '@bitwild/rockets-core';
 import type { RocketsUserMetadataDtoConfig } from '../../rockets.tokens';
 import { ROCKETS_USER_METADATA_DTO_TOKEN } from '../../rockets.tokens';
+import { AuthUser, whitelistedFromDto } from '@bitwild/rockets-common';
 
 @ApiTags('user')
 @ApiBearerAuth()

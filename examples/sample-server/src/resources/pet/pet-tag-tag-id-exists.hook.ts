@@ -3,11 +3,7 @@ import {
   Injectable,
   PlainLiteralObject,
 } from '@nestjs/common';
-import {
-  InjectDynamicRepository,
-  type RepositoryInterface,
-  Where,
-} from '@bitwild/rockets-repository';
+import { type RepositoryInterface, Where } from '@bitwild/rockets-repository';
 import {
   EntityHook,
   type EntityHookContext,
@@ -16,6 +12,7 @@ import {
 import { PetTagEntity } from './pet-tag.schema';
 import { TagEntity } from '../tag/tag.zod';
 import type { Tag } from '../tag/tag.schema';
+import { InjectDynamicRepository } from '@bitwild/rockets-common';
 
 /**
  * Ensures `tagId` references an existing {@link TagEntity} row before the
