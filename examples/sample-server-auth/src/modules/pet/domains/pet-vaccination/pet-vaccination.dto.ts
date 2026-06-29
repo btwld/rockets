@@ -7,7 +7,7 @@ import {
   IsNotEmpty,
   MaxLength,
 } from 'class-validator';
-import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
+import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
 
 /**
  * Pet Vaccination DTO

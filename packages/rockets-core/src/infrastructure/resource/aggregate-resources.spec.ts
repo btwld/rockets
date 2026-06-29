@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
-import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
+import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import type { RepositoryPersistenceConfig } from '../../domain/interfaces/repository-persistence.interface';
 import type {
   UserMetadataCreatableInterface,

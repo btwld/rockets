@@ -1,4 +1,4 @@
-import { RepositoryModuleInterface } from '@bitwild/rockets-repository';
+import { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 
 import { SchemaEntityCompiler } from './schema-entity-compiler.interface';
 

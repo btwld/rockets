@@ -1,5 +1,5 @@
 import { Injectable, PlainLiteralObject } from '@nestjs/common';
-import { type RepositoryFindOneOptions, type RepositoryFindOptions, type RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { type RepositoryFindOneOptions, type RepositoryFindOptions, type RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import {
   EntityHook,
   type EntityHookContext,

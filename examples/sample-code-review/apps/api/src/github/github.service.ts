@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
-import type { AppContextInterface } from '@bitwild/rockets-app';
+import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
+import type { AppContextInterface } from '@concepta/nestjs-core';
 import { GithubConfig } from '../config/github.config';
 import { GithubConnectionEntity } from './github-connection.entity';
 import { GithubOAuthStateService } from './github-oauth-state.service';

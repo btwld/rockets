@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { RuntimeException } from '@bitwild/rockets-app';
+import { RuntimeException } from '@concepta/nestjs-core';
 import { EmailSendInterface } from '@concepta/nestjs-common';
 import { EmailService } from '@concepta/nestjs-email';
 import { RocketsAuthSettingsInterface } from '../../../../shared/interfaces/rockets-auth-settings.interface';

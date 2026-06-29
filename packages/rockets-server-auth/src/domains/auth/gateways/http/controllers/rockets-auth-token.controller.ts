@@ -8,7 +8,7 @@ import {
   RefreshDto,
   RefreshGuard,
 } from '@concepta/nestjs-authentication';
-import { ReferenceIdInterface } from '@bitwild/rockets-app';
+import { ReferenceIdInterface } from '@concepta/nestjs-core';
 import {
   Body,
   Controller,

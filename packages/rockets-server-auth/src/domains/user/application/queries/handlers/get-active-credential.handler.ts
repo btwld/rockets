@@ -5,7 +5,7 @@ import {
   RepositoryInterface,
   getDynamicRepositoryToken,
   Where,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 
 import { USER_CREDENTIALS_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { resolveBitwildAppContext } from '../../../../../shared/compatibility/resolve-bitwild-app-context';

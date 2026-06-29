@@ -3,8 +3,8 @@ import {
   SortOrder,
   Where,
   getDynamicRepositoryToken,
-} from '@bitwild/rockets-repository';
-import type { RepositoryInterface } from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
+import type { RepositoryInterface } from '@concepta/nestjs-repository';
 
 import { InMemoryFirestoreBackend } from '../backends/in-memory-firestore.backend';
 import { FirestoreRepositoryModule } from '../firestore-repository.module';

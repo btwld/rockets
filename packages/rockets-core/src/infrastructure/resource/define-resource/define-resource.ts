@@ -5,8 +5,8 @@ import {
   type ConfigurableCrudGeneratedOptions,
   type CrudControllerOptionsInterface,
   type CrudOperationOptions,
-} from '@bitwild/rockets-crud';
-import type { RepositoryProviderOptions } from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-crud';
+import type { RepositoryProviderOptions } from '@concepta/nestjs-repository';
 import type { RocketsResourceConfig } from '../../../domain/interfaces/rockets-resource.interface';
 import type { RocketsResourceDefinition } from '../../../domain/interfaces/rockets-resource-definition.interface';
 import type { CrudResource } from '../../../domain/interfaces/rockets-resource-bundle.interface';

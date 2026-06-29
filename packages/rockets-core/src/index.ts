@@ -93,12 +93,12 @@ export { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.
 export type {
   RepositoryModuleInterface,
   RepositoryInterface,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 export {
   RepositoryModule,
   Where,
   getDynamicRepositoryToken,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 
 // Module resource (non-CRUD persistence + Nest module slice)
 export type {

@@ -1,5 +1,5 @@
 import { DynamicModule, Module, Provider } from '@nestjs/common';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { PlainLiteralObject } from '@nestjs/common';
 import { SqliteRepositoryAdapter } from './sqlite-repository.adapter';
 

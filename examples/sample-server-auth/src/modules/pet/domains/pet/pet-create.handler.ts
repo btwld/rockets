@@ -5,11 +5,11 @@ import {
 } from '@nestjs/common';
 import {
   CrudAdapter,
-  CrudCommandHandlerBase,
   CrudCreateCommand,
   CrudQueryException,
-} from '@bitwild/rockets-crud';
-import type { CrudCommandInterface } from '@bitwild/rockets-crud';
+} from '@concepta/nestjs-crud';
+import { CrudCommandHandlerBase } from '@bitwild/rockets-common';
+import type { CrudCommandInterface } from '@bitwild/rockets-common';
 import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from './pet.entity';
 import { PetCreatableInterface } from './pet.interface';

@@ -1,9 +1,11 @@
 import type { PlainLiteralObject, Provider } from '@nestjs/common';
 import { UseGuards } from '@nestjs/common';
 import { ApiParam } from '@nestjs/swagger';
-import type { CrudParamOptionInterface } from '@bitwild/rockets-crud';
-import type { CrudRequestConfig } from '@bitwild/rockets-crud';
-import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
+import type {
+  CrudParamOptionInterface,
+  CrudRequestConfig,
+} from '../../crud-compat';
+import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import type {
   RocketsResourceDefinition,
   RocketsSubResourceDefinition,

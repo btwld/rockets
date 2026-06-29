@@ -1,12 +1,12 @@
 import { Injectable, type PlainLiteralObject } from '@nestjs/common';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { Operation } from '@bitwild/rockets-app';
-import { Where } from '@bitwild/rockets-repository';
-import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
+import { Operation } from '@concepta/nestjs-core';
+import { Where } from '@concepta/nestjs-repository';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   CrudOperationResolver,
   type ConfigurableCrudGeneratedOptions,
-} from '@bitwild/rockets-crud';
+} from '@concepta/nestjs-crud';
 import { defineResource } from './define-resource';
 import { relation } from './relation';
 import { EntityHook, PassthroughEntityHookBase } from '../hooks/entity-hook';

@@ -11,7 +11,7 @@ import {
   ExceptionInterface,
   ExceptionsFilter,
   RuntimeException as BitwildRuntimeException,
-} from '@bitwild/rockets-app';
+} from '@concepta/nestjs-core';
 
 const ERROR_CODE_UNKNOWN = 'UNKNOWN';
 const ERROR_MESSAGE_FALLBACK = 'Internal Server Error';

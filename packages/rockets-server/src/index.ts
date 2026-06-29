@@ -79,8 +79,8 @@ export type {
 export { isRepositoryBootstrap } from '@bitwild/rockets-core';
 
 // ── Re-export common utilities ──
-export { Ctx } from '@bitwild/rockets-app';
-export type { AppContextInterface } from '@bitwild/rockets-app';
+export { Ctx } from '@concepta/nestjs-core';
+export type { AppContextInterface } from '@concepta/nestjs-core';
 
 // ── Backward compatibility re-exports ──
 export { ROCKETS_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN } from './rockets.constants';
@@ -106,6 +106,7 @@ export {
   getErrorDetails,
   SwaggerUiService,
   type ErrorDetails,
+  type RocketsRepositoryModuleInterface,
 } from '@bitwild/rockets-common';
 
 // ── Declarative resource definition (re-exported from core) ──

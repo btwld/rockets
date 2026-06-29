@@ -1,4 +1,4 @@
-import { ReferenceIdInterface, RuntimeException } from '@bitwild/rockets-app';
+import { ReferenceIdInterface, RuntimeException } from '@concepta/nestjs-core';
 import { RuntimeException as ConceptaRuntimeException } from '@concepta/nestjs-core';
 import {
   RocketsAuthOtpPortService,

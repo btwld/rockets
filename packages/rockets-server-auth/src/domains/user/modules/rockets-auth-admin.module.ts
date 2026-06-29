@@ -1,5 +1,5 @@
 import { DynamicModule, Module, UseGuards } from '@nestjs/common';
-import { Operation } from '@bitwild/rockets-app';
+import { Operation } from '@concepta/nestjs-core';
 import { CqrsModule } from '@nestjs/cqrs';
 import {
   CrudModule,
@@ -9,8 +9,8 @@ import {
   CrudReadQuery,
   CrudUpdateCommand,
   CrudDeleteCommand,
-} from '@bitwild/rockets-crud';
-import { CrudJoin } from '@bitwild/rockets-crud';
+} from '@concepta/nestjs-crud';
+import { CrudJoin } from '@concepta/nestjs-crud';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Exclude, Expose, Type as TransformType } from 'class-transformer';
 

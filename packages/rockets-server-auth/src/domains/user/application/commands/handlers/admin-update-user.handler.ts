@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { CrudUpdateCommand } from '@bitwild/rockets-crud';
+import { CrudUpdateCommand } from '@concepta/nestjs-crud';
 
 import { UpdateUserCommand } from '../impl/update-user.command';
 import { AbstractAdminUserUpdateHandler } from './abstract-admin-user-update.handler';

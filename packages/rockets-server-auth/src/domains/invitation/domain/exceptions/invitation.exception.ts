@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { RuntimeExceptionOptions } from '@bitwild/rockets-app';
+import { RuntimeExceptionOptions } from '@concepta/nestjs-core';
 import { RocketsAuthException } from '../../../../shared/exceptions/rockets-auth.exception';
 
 export class RocketsAuthInvitationException extends RocketsAuthException {

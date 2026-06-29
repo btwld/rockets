@@ -5,7 +5,7 @@ import {
   getDynamicRepositoryToken,
   RepositoryInterface,
   Where,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 
 import { ROLE_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsGetRoleByNameQuery } from '../impl/rockets-get-role-by-name.query';

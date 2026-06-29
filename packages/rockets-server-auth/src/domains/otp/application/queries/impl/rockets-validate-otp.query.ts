@@ -1,4 +1,4 @@
-import { ReferenceAssignment } from '@bitwild/rockets-app';
+import { ReferenceAssignment } from '@concepta/nestjs-core';
 import { OtpInterface } from '@concepta/nestjs-otp';
 
 export class RocketsValidateOtpQuery {

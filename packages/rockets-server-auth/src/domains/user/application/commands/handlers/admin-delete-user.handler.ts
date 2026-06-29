@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { CrudDeleteCommand } from '@bitwild/rockets-crud';
+import { CrudDeleteCommand } from '@concepta/nestjs-crud';
 import { RemoveUserCommand as UpstreamRemoveUserCommand } from '@concepta/nestjs-user';
 
 import { AbstractAdminDeleteUserHandler } from './abstract-admin-delete-user.handler';

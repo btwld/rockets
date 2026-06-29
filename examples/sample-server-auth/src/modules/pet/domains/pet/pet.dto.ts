@@ -11,7 +11,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
+import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
 import {
   PetInterface,
   PetCreatableInterface,

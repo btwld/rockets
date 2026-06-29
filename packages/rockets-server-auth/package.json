@@ -75,15 +75,12 @@
     "generate-swagger": "ts-node src/generate-swagger.ts"
   },
   "dependencies": {
-    "@bitwild/rockets-app": "workspace:^",
     "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
-    "@bitwild/rockets-crud": "workspace:^",
-    "@bitwild/rockets-repository": "workspace:^",
-    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@concepta/nestjs-access-control": "8.0.0-alpha.7",
     "@concepta/nestjs-authentication": "8.0.0-alpha.7",
     "@concepta/nestjs-common": "8.0.0-alpha.5",
+    "@concepta/nestjs-core": "8.0.0-alpha.7",
     "@concepta/nestjs-crud": "8.0.0-alpha.7",
     "@concepta/nestjs-email": "7.0.0-alpha.10",
     "@concepta/nestjs-event": "7.0.0-alpha.10",

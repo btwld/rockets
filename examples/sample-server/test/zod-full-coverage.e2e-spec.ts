@@ -20,20 +20,16 @@ import {
   defineTypeOrmRepository,
 } from '@bitwild/rockets';
 import type {
-  RepositoryModuleInterface,
+  RocketsRepositoryModuleInterface,
   SchemaEntityCompiler,
   SchemaEntityCompilerOptions,
 } from '@bitwild/rockets';
-import {
-  CrudAdapter,
-  CrudCommandHandlerBase,
-  CrudCreateCommand,
-  InjectCrudAdapter,
-} from '@bitwild/rockets-crud';
+import { CrudAdapter, CrudCreateCommand } from '@concepta/nestjs-crud';
+import { CrudCommandHandlerBase, InjectCrudAdapter } from '@bitwild/rockets-common';
 import {
   InjectDynamicRepository,
   RepositoryInterface,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 import {
   UserMetadataCreateDto,
   UserMetadataEntity,
@@ -318,7 +314,7 @@ describe('zod full defineResource coverage (e2e)', () => {
           return typeOrmZodEntityCompiler.compileEntity(schema, options);
         },
       };
-      const probeAdapter: RepositoryModuleInterface = {
+      const probeAdapter: RocketsRepositoryModuleInterface = {
         name: 'ProbeAdapter',
         forFeature: () => ({ module: class ProbeModule {} }),
         entityCompiler: customCompiler,

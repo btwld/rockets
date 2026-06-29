@@ -1,7 +1,7 @@
 import type {
   RepositoryInterface,
   Where as WhereType,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 import type { RoleEntityInterface } from '@concepta/nestjs-role';
 
 import { RocketsGetRoleByNameHandler } from './rockets-get-role-by-name.handler';

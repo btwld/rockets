@@ -3,7 +3,7 @@ import type { RepositoryBootstrap } from '@bitwild/rockets-core';
 import type {
   DynamicRepositoryModule,
   RepositoryProviderOptions,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 
 import { FirestoreRepositoryModule } from '../firestore-repository.module';
 import type { DefineFirestoreRepositoryOptions } from './define-firestore-repository.config';

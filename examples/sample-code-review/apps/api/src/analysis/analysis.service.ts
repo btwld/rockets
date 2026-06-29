@@ -5,8 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { RepositoryInterface, SortOrder, Where } from '@bitwild/rockets-repository';
-import type { AppContextInterface } from '@bitwild/rockets-app';
+import { RepositoryInterface, SortOrder, Where } from '@concepta/nestjs-repository';
+import type { AppContextInterface } from '@concepta/nestjs-core';
 
 import {
   GITHUB_API_CLIENT,

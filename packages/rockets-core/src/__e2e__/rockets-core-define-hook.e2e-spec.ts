@@ -26,12 +26,12 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   getDynamicRepositoryToken,
   type RepositoryInterface,
   Where,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 import { Expose } from 'class-transformer';
 import { IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -125,7 +125,8 @@ const ThingHook = defineHook<ThingEntity>(ThingEntity, {
     // merge-back must make these stick despite the preserve-merge membrane.
     return {
       ...payload,
-      name: typeof payload.name === 'string' ? payload.name.trim() : payload.name,
+      name:
+        typeof payload.name === 'string' ? payload.name.trim() : payload.name,
       ref,
       ownerId: actor?.id ?? null,
     };

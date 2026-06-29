@@ -1,6 +1,6 @@
 import * as sqlite3 from 'sqlite3';
 import { PlainLiteralObject } from '@nestjs/common';
-import { DeepPartial } from '@bitwild/rockets-app';
+import { DeepPartial } from '@concepta/nestjs-core';
 import { ModelQueryException } from '@concepta/nestjs-common';
 
 /**

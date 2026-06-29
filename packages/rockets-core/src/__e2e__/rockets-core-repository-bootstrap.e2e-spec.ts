@@ -11,8 +11,8 @@ import { Test } from '@nestjs/testing';
 import type {
   DynamicRepositoryModule,
   RepositoryProviderOptions,
-} from '@bitwild/rockets-repository';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import type {

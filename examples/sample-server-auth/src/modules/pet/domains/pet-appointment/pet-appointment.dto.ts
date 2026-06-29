@@ -8,7 +8,7 @@ import {
   MaxLength,
   IsEnum,
 } from 'class-validator';
-import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
+import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
 import { PetAppointmentStatus } from './pet-appointment.interface';
 
 /**

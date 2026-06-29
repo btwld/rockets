@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { DeepPartial } from '@bitwild/rockets-app';
+import type { DeepPartial } from '@concepta/nestjs-core';
 import {
   isWhereCondition,
   RepositoryAdapter,
@@ -13,7 +13,7 @@ import {
   type RepositoryUpdateOptions,
   type RepositoryUpsertOptions,
   type WhereClause,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 import type { PlainLiteralObject } from '@nestjs/common';
 
 import {

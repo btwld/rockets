@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { ReferenceIdInterface, ReferenceSubject } from '@bitwild/rockets-app';
+import { ReferenceIdInterface, ReferenceSubject } from '@concepta/nestjs-core';
 import {
   UserInterface,
   UserEntityInterface,

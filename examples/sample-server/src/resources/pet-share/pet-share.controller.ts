@@ -15,7 +15,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { Ctx, type AppContextInterface } from '@bitwild/rockets-app';
+import { Ctx, type AppContextInterface } from '@concepta/nestjs-core';
 import type { AuthorizedUser } from '@bitwild/rockets';
 import { PetShareEntity } from './pet-share.entity';
 import { PetShareCreateDto, PetShareResponseDto } from './pet-share.dto';

@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import {
   CrudAdapter,
   CrudListQuery,
-  CrudQueryHandlerBase,
   CrudResponsePaginatedInterface,
-} from '@bitwild/rockets-crud';
-import type { CrudQueryInterface } from '@bitwild/rockets-crud';
+} from '@concepta/nestjs-crud';
+import {
+  CrudQueryHandlerBase,
+  type CrudQueryInterface,
+} from '@bitwild/rockets-common';
 import { getActor } from '@bitwild/rockets-core';
-import { WhereOperator, type EntityColumn } from '@bitwild/rockets-repository';
+import { WhereOperator, type EntityColumn } from '@concepta/nestjs-repository';
 import { PetEntity } from './pet.entity';
 import { InjectCrudAdapter } from '@bitwild/rockets-common';
 

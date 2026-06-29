@@ -5,7 +5,8 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { CrudContextOverlay, CrudMetaview } from '@bitwild/rockets-crud';
+import { CrudContextOverlay } from '@concepta/nestjs-crud';
+import { CrudMetaview } from '../crud-compat';
 
 /**
  * Guarded replacement for the upstream `CrudContextOverlay` interceptor.

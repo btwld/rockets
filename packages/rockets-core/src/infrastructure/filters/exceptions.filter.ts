@@ -2,7 +2,7 @@ import {
   ExceptionInterface,
   mapHttpStatus,
   RuntimeException,
-} from '@bitwild/rockets-app';
+} from '@concepta/nestjs-core';
 import {
   Catch,
   ArgumentsHost,
@@ -37,7 +37,9 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
     // pre-handler validation that must surface as 4xx, prefer a NestJS
     // Guard or Pipe over a `Before*` repo hook so the `HttpException`
     // never enters the wrapping pipeline in the first place.
-    const unwrapped = this.unwrapToHttpException(rawException);
+    const unwrapped =
+      this.unwrapToHttpException(rawException) ??
+      this.unwrapToClientRuntimeException(rawException);
     const exception: ExceptionInterface | HttpException =
       unwrapped ?? rawException;
 
@@ -111,6 +113,16 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
    * and return the first `HttpException` encountered. Returns `undefined`
    * if the chain contains no `HttpException` (the original exception
    * already represents the right shape).
+   *
+   * NOTE: upstream `RepositoryQueryException` loses `context.originalError`
+   * due to a constructor pattern bug (`Object.assign({}, super.context, …)`
+   * where `super.context` evaluates to undefined for instance properties).
+   * This is compensated by `defineHook` which pre-wraps `HttpException`s as
+   * `RepositoryQueryException` and grafts `originalError` onto context
+   * AFTER construction. Class-based hooks that cannot do this should throw
+   * a `RepositoryQueryException` directly with the appropriate `httpStatus`
+   * rather than throwing `HttpException` — those surface via
+   * `unwrapToRuntimeException` below.
    */
   private unwrapToHttpException(exception: unknown): HttpException | undefined {
     let current: unknown = exception;
@@ -126,5 +138,36 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
       current = next;
     }
     return undefined;
+  }
+
+  /**
+   * Walk the exception chain to find the innermost `RuntimeException` with
+   * a 4xx `httpStatus`. This surfaces domain exceptions thrown from
+   * repository hooks that cannot propagate `HttpException` through the
+   * membrane (upstream wrapping loses `originalError` — see above).
+   * Returns `undefined` if no 4xx `RuntimeException` is found.
+   */
+  private unwrapToClientRuntimeException(
+    exception: unknown,
+  ): RuntimeException | undefined {
+    let current: unknown = exception;
+    let candidate: RuntimeException | undefined;
+    const seen = new Set<unknown>();
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      if (
+        current instanceof RuntimeException &&
+        current.httpStatus !== undefined &&
+        current.httpStatus < 500 &&
+        current !== exception
+      ) {
+        candidate = current;
+      }
+      const next = (current as { context?: { originalError?: unknown } })
+        ?.context?.originalError;
+      if (!next || next === current) break;
+      current = next;
+    }
+    return candidate;
   }
 }

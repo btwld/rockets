@@ -1,11 +1,11 @@
 import type { DynamicModule, PlainLiteralObject, Type } from '@nestjs/common';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import type { RepositoryBootstrap } from '@bitwild/rockets-core';
 import type {
   DynamicRepositoryModule,
   RepositoryProviderOptions,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 
 /**
  * Returns a `RepositoryBootstrap` that:
@@ -26,9 +26,6 @@ import type {
  * Identical to the helper in `examples/sample-server` — duplicated here so
  * each sample app boots without depending on the other's source tree.
  *
- * @typeParam Connection - the concrete `TypeOrmModuleOptions` member
- *   (e.g. `SqliteConnectionOptions`) chosen at the callsite; preserved
- *   through the spread so driver-specific options stay type-checked.
  */
 export function defineTypeOrmRepository<
   Connection extends TypeOrmModuleOptions,

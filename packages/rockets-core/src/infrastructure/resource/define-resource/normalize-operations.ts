@@ -1,5 +1,5 @@
 import type { Type } from '@nestjs/common';
-import { Operation } from '@bitwild/rockets-app';
+import { Operation } from '@concepta/nestjs-core';
 import type {
   ResourceDtoConfig,
   ResourceHandlerOverrides,

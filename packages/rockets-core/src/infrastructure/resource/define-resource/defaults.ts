@@ -1,5 +1,5 @@
 import pluralize from 'pluralize';
-import { Operation } from '@bitwild/rockets-app';
+import { Operation } from '@concepta/nestjs-core';
 import type { ResourceOperationName } from '../../../domain/interfaces/rockets-resource-definition.interface';
 
 export const DEFAULT_OPERATIONS: readonly ResourceOperationName[] = [

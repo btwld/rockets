@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import { RepositoryInterface, TransactionScope, Where } from '@bitwild/rockets-repository';
+import { RepositoryInterface, TransactionScope, Where } from '@concepta/nestjs-repository';
 import { PetEntity } from '../../../pet/pet.schema';
 import type { Pet } from '../../../pet/pet.schema';
 import { PetShareEntity } from '../../../pet-share/pet-share.entity';

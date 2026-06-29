@@ -1,4 +1,4 @@
-import { AuditInterface, ReferenceIdInterface } from '@bitwild/rockets-app';
+import { AuditInterface, ReferenceIdInterface } from '@concepta/nestjs-core';
 import {
   ByIdInterface,
   CreateOneInterface,

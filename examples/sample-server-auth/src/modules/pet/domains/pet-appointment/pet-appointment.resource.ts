@@ -1,5 +1,5 @@
 import { defineResource } from '@bitwild/rockets';
-import { Operation } from '@bitwild/rockets-app';
+import { Operation } from '@concepta/nestjs-core';
 import { PetAppointmentEntity } from './pet-appointment.entity';
 import { PetEntity } from '../pet/pet.entity';
 import {

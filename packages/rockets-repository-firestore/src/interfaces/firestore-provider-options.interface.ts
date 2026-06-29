@@ -1,4 +1,4 @@
-import type { RepositoryProviderOptions } from '@bitwild/rockets-repository';
+import type { RepositoryProviderOptions } from '@concepta/nestjs-repository';
 import type { PlainLiteralObject } from '@nestjs/common';
 
 export interface FirestoreProviderOptions<

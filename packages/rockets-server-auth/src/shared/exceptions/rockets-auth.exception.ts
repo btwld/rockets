@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import {
   RuntimeException,
   RuntimeExceptionOptions,
-} from '@bitwild/rockets-app';
+} from '@concepta/nestjs-core';
 
 export class RocketsAuthException extends RuntimeException {
   constructor(message: string, options?: RuntimeExceptionOptions) {

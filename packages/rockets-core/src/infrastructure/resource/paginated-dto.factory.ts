@@ -1,7 +1,7 @@
 import { Type } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type as TypeTransform } from 'class-transformer';
-import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
+import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
 
 /**
  * Per-resource cache so repeated calls with the same resource DTO return

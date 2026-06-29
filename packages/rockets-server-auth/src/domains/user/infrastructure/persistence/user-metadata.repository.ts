@@ -1,7 +1,7 @@
-import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 
 import { Injectable } from '@nestjs/common';
-import { DeepPartial } from '@bitwild/rockets-app';
+import { DeepPartial } from '@concepta/nestjs-core';
 import { UserMetadataRepositoryInterface } from '../../domain/repositories/user-metadata-repository.interface';
 import { RocketsAuthUserMetadataEntityInterface } from '../../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../interfaces/rockets-auth-user-metadata-updatable.interface';

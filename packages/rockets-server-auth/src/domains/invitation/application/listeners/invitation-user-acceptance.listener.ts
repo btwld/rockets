@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
 
 import { PasswordCreationService } from '@concepta/nestjs-password';
-import { TransactionScope } from '@bitwild/rockets-repository';
+import { TransactionScope } from '@concepta/nestjs-repository';
 import { AssignRoleCommand } from '@concepta/nestjs-role';
 import { InvitationAcceptedEvent } from '@concepta/nestjs-invitation';
 

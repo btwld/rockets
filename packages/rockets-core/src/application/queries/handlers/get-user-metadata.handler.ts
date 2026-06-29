@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import { AbstractGetUserMetadataHandler } from './abstract-get-user-metadata.handler';
 import { GetUserMetadataQuery } from '../impl/get-user-metadata.query';
 import { UserMetadataEntityInterface } from '../../../domain/interfaces/user-metadata.interface';

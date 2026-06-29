@@ -1,6 +1,6 @@
 import { Column, Entity } from 'typeorm';
 import { UserPasswordHistorySqliteEntity } from '@concepta/nestjs-typeorm-ext';
-import { ReferenceActive } from '@bitwild/rockets-app';
+import { ReferenceActive } from '@concepta/nestjs-core';
 
 @Entity()
 export class UserCredentialEntityFixture extends UserPasswordHistorySqliteEntity {

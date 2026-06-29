@@ -20,8 +20,8 @@ import {
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { APP_GUARD } from '@nestjs/core';
-import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import request from 'supertest';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';

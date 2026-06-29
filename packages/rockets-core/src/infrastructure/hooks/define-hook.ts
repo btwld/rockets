@@ -1,10 +1,16 @@
-import { Injectable, type PlainLiteralObject, type Type } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  type PlainLiteralObject,
+  type Type,
+} from '@nestjs/common';
 import {
   InjectDynamicRepository,
+  RepositoryQueryException,
   type RepositoryInterface,
   type RepositoryFindOneOptions,
   type RepositoryFindOptions,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 
 import { deriveEntityKey } from '@bitwild/rockets-common';
 
@@ -57,9 +63,17 @@ export interface EntityHookFns<E extends PlainLiteralObject> {
     ctx: Ctx,
     tools: EntityHookTools<E>,
   ): { data: E[]; total: number } | Promise<{ data: E[]; total: number }>;
-  beforeCreate?(payload: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
+  beforeCreate?(
+    payload: E,
+    ctx: Ctx,
+    tools: EntityHookTools<E>,
+  ): E | Promise<E>;
   afterCreate?(entity: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
-  beforeUpdate?(payload: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
+  beforeUpdate?(
+    payload: E,
+    ctx: Ctx,
+    tools: EntityHookTools<E>,
+  ): E | Promise<E>;
   afterUpdate?(entity: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
   beforeDelete?(entity: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
   afterDelete?(entity: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
@@ -73,7 +87,11 @@ export interface EntityHookFns<E extends PlainLiteralObject> {
     ctx: Ctx,
     tools: EntityHookTools<E>,
   ): E | Promise<E>;
-  beforeRestore?(entity: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
+  beforeRestore?(
+    entity: E,
+    ctx: Ctx,
+    tools: EntityHookTools<E>,
+  ): E | Promise<E>;
   afterRestore?(entity: E, ctx: Ctx, tools: EntityHookTools<E>): E | Promise<E>;
 }
 
@@ -144,7 +162,26 @@ export function defineHook<E extends PlainLiteralObject>(
           repo: this.repo,
           actor: ctx === undefined ? undefined : getActor(ctx),
         };
-        const result = await fn(arg0, ctx, tools);
+        let result: unknown;
+        try {
+          result = await fn(arg0, ctx, tools);
+        } catch (e) {
+          if (e instanceof HttpException) {
+            // The repository membrane's onError wraps every thrown error in
+            // RepositoryQueryException, losing the original HttpException in
+            // the process (upstream bug: the subclass constructor overwrites
+            // this.context with Object.assign({}, super.context, …) where
+            // super.context evaluates to undefined for instance properties).
+            // Pre-wrap here as RepositoryQueryException so the membrane
+            // passes it through unchanged, then manually graft the original
+            // HttpException onto context.originalError so the filter's
+            // unwrapToHttpException chain can surface the right status code.
+            const wrapped = new RepositoryQueryException(entity.name, {});
+            wrapped.context.originalError = e;
+            throw wrapped;
+          }
+          throw e;
+        }
 
         if (MERGE_BACK_KEYS.has(key)) {
           if (

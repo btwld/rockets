@@ -1,4 +1,4 @@
-import { ReferenceAssignment } from '@bitwild/rockets-app';
+import { ReferenceAssignment } from '@concepta/nestjs-core';
 import { OtpCreatableInterface } from '@concepta/nestjs-otp';
 
 /**

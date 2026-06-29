@@ -14,7 +14,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CommandBus } from '@nestjs/cqrs';
-import { Ctx, type AppContextInterface } from '@bitwild/rockets-app';
+import { Ctx, type AppContextInterface } from '@concepta/nestjs-core';
 import type { AuthorizedUser } from '@bitwild/rockets';
 import type { Pet } from '../pet/pet.schema';
 import { TransferPetOwnershipDto } from './dto/transfer-pet-ownership.dto';

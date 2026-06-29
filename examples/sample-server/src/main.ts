@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
-import { cleanupOpenApiDoc } from 'nestjs-zod';
+import { cleanupOpenApiDoc, ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module';
 import { ExceptionsFilter } from '@bitwild/rockets';
 
@@ -19,7 +19,12 @@ async function bootstrap() {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
     credentials: true,
   });
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  // ZodValidationPipe must run before ValidationPipe so zod DTOs get their
+  // required-field and constraint checks before class-validator whitelist runs.
+  app.useGlobalPipes(
+    new ZodValidationPipe(),
+    new ValidationPipe({ transform: true, whitelist: true }),
+  );
 
   const swaggerUiService = app.get(SwaggerUiService);
   swaggerUiService.builder().addBearerAuth();

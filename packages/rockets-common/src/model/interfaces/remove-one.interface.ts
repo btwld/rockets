@@ -1,4 +1,4 @@
-import { ReferenceIdInterface } from '@bitwild/rockets-app';
+import { ReferenceIdInterface } from '@concepta/nestjs-core';
 
 export interface RemoveOneInterface<
   T extends ReferenceIdInterface,

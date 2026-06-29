@@ -1,4 +1,4 @@
-import { CrudResponsePaginatedDto, CrudModule } from '@bitwild/rockets-crud';
+import { CrudResponsePaginatedDto, CrudModule } from '@concepta/nestjs-crud';
 import {
   applyDecorators,
   DynamicModule,
@@ -6,7 +6,7 @@ import {
   Type,
   UseGuards,
 } from '@nestjs/common';
-import { Operation } from '@bitwild/rockets-app';
+import { Operation } from '@concepta/nestjs-core';
 import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Exclude, Expose, Type as TransformType } from 'class-transformer';
 

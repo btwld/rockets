@@ -2,7 +2,7 @@ import type { PlainLiteralObject } from '@nestjs/common';
 import type {
   RepositoryModuleInterface,
   RepositoryProviderOptions,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 import type { RocketsResourceConfig } from './rockets-resource.interface';
 import type { ResourceRelationEntry } from './rockets-resource-definition.interface';
 import type { ResourceKind } from './resource-kind.enum';

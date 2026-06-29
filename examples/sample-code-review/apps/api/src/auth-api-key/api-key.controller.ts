@@ -16,7 +16,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { randomBytes } from 'crypto';
-import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 
 import type { AuthorizedUser } from '@bitwild/rockets-core';
 import { ApiKeyEntity } from './api-key.entity';

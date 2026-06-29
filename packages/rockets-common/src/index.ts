@@ -36,3 +36,9 @@ export { InjectDynamicRepository } from './repository/inject-dynamic-repository.
 
 // Crud extensions (entity-class adapter wrapper)
 export { InjectCrudAdapter } from './crud/inject-crud-adapter.decorator';
+
+// Crud base classes not yet exported from @concepta/nestjs-crud index
+export { CrudCommandHandler as CrudCommandHandlerBase } from '@concepta/nestjs-crud/dist/application/commands/handlers/crud-command.handler';
+export type { CrudCommandInterface } from '@concepta/nestjs-crud/dist/application/commands/interfaces/crud-command.interface';
+export { CrudQueryHandler as CrudQueryHandlerBase } from '@concepta/nestjs-crud/dist/application/queries/handlers/crud-query.handler';
+export type { CrudQueryInterface } from '@concepta/nestjs-crud/dist/application/queries/interfaces/crud-query.interface';

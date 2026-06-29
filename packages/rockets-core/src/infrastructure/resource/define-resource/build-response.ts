@@ -1,4 +1,4 @@
-import type { CrudResponseConfig } from '@bitwild/rockets-crud';
+import type { CrudResponseConfig } from '../../crud-compat';
 import type { ResourceDtoConfig } from '../../../domain/interfaces/rockets-resource-definition.interface';
 import { createPaginatedDto } from '../paginated-dto.factory';
 

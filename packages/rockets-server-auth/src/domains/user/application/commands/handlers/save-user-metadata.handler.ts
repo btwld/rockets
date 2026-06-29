@@ -1,6 +1,6 @@
 import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { TransactionScope } from '@bitwild/rockets-repository';
+import { TransactionScope } from '@concepta/nestjs-repository';
 
 import { SaveUserMetadataCommand } from '../impl/save-user-metadata.command';
 import { UserMetadataRepositoryInterface } from '../../../domain/repositories/user-metadata-repository.interface';

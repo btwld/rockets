@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { createSettingsProvider } from '@bitwild/rockets-app';
+import { createSettingsProvider } from '@concepta/nestjs-core';
 
 import { swaggerUiDefaultConfig } from './config/swagger-ui-default.config';
 import { SwaggerUiOptionsExtrasInterface } from './interfaces/swagger-ui-options-extras.interface';

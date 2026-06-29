@@ -1,6 +1,6 @@
 import type { PlainLiteralObject } from '@nestjs/common';
-import type { CrudContextInterface } from '@bitwild/rockets-crud';
-import type { AppContextInterface } from '@bitwild/rockets-app';
+import type { CrudContextInterface } from '@concepta/nestjs-crud';
+import type { AppContextInterface } from '@concepta/nestjs-core';
 
 /**
  * Concrete context shape passed to {@link EntityHookBase} lifecycle methods

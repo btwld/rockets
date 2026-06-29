@@ -8,7 +8,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   CrudOperationResolver,
   CrudListQuery,
@@ -18,7 +18,7 @@ import {
   CrudDeleteCommand,
   CrudResponsePaginatedDto,
   Operation,
-} from '@bitwild/rockets-crud';
+} from '@concepta/nestjs-crud';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';

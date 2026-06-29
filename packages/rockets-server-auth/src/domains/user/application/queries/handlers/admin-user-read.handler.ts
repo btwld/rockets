@@ -3,7 +3,7 @@ import {
   CrudAdapter,
   CrudReadQuery,
   CrudResponsePaginatedInterface,
-} from '@bitwild/rockets-crud';
+} from '@concepta/nestjs-crud';
 import { USER_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 import { AbstractAdminUserReadHandler } from '../../commands/handlers/abstract-admin-user-read.handler';

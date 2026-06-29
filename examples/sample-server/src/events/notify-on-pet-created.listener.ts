@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
-import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import { UserEntity } from '../auth/user.entity';
 import { FakeEmailGateway } from './email.gateway';
 import { PetCreatedEvent } from './pet-created.event';

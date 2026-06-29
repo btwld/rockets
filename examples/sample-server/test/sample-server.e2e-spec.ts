@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ExceptionsFilter } from '@bitwild/rockets';
+import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { FakeEmailGateway } from '../src/events';
@@ -14,6 +15,7 @@ describe('Sample Server (e2e)', () => {
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: ['error'] });
     app.useGlobalPipes(
+      new ZodValidationPipe(),
       new ValidationPipe({ transform: true, whitelist: true }),
     );
     const httpAdapterHost = app.get(HttpAdapterHost);

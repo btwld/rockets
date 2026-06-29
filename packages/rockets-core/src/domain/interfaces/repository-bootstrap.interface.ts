@@ -1,5 +1,5 @@
 import type { DynamicModule, PlainLiteralObject, Type } from '@nestjs/common';
-import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
+import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 
 /**
  * Adapter that, in addition to `forFeature`, knows how to create the

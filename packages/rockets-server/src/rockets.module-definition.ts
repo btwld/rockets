@@ -1,4 +1,4 @@
-import { createSettingsProvider } from '@bitwild/rockets-app';
+import { createSettingsProvider } from '@concepta/nestjs-core';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,

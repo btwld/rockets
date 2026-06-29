@@ -3,7 +3,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { Test } from '@nestjs/testing';
 import { PathScopeGuard } from './path-scope.guard';
 

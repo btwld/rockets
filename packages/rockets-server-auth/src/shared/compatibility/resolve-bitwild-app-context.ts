@@ -1,5 +1,5 @@
 import { PlainLiteralObject } from '@nestjs/common';
-import { AppContextHost } from '@bitwild/rockets-app';
+import { AppContextHost } from '@concepta/nestjs-core';
 
 /**
  * Upstream `@concepta/nestjs-common` `getAppContext()` stores a different

@@ -10,7 +10,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { IsString } from 'class-validator';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import {
   AUTH_ADAPTERS_TOKEN,
   defineModuleResource,

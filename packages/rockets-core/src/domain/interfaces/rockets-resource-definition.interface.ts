@@ -1,13 +1,13 @@
 import type { PlainLiteralObject, Provider, Type } from '@nestjs/common';
 import type { RocketsEntityHookForResource } from '../../infrastructure/hooks/entity-hook';
-import type { Operation } from '@bitwild/rockets-app';
+import type { Operation } from '@concepta/nestjs-core';
 import type { RocketsRepositoryModuleInterface } from '@bitwild/rockets-common';
 import type { ResourceKind } from './resource-kind.enum';
 import type {
   CrudRequestConfig,
   CrudResponseConfig,
-} from '@bitwild/rockets-crud';
-import type { WhereCondition } from '@bitwild/rockets-repository';
+} from '../../infrastructure/crud-compat';
+import type { WhereCondition } from '@concepta/nestjs-repository';
 
 /**
  * Names of CRUD operations supported by the declarative resource definition.

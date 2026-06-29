@@ -21,7 +21,7 @@ import type {
   InvitationUserPortSettings,
 } from '@concepta/nestjs-invitation';
 
-import { CrudModule } from '@bitwild/rockets-crud';
+import { CrudModule } from '@concepta/nestjs-crud';
 import { RoleOptionsInterface } from '@concepta/nestjs-role';
 import type {
   UserOptionsInterface,

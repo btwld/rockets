@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { type RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import {
   PetEntityInterface,
   PetCreatableInterface,

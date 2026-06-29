@@ -6,8 +6,9 @@ import {
   NotFoundException,
   PlainLiteralObject,
 } from '@nestjs/common';
-import { CrudAdapter, CrudCommandHandlerBase, CrudCreateCommand, CrudQueryException } from '@bitwild/rockets-crud';
-import { RepositoryInterface, TransactionScope, Where } from '@bitwild/rockets-repository';
+import { CrudAdapter, CrudCreateCommand, CrudQueryException } from '@concepta/nestjs-crud';
+import { CrudCommandHandlerBase } from '@bitwild/rockets-common';
+import { RepositoryInterface, TransactionScope, Where } from '@concepta/nestjs-repository';
 import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.schema';
 import type { Pet } from '../pet/pet.schema';

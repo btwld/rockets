@@ -1,5 +1,5 @@
 import { DependenciesScanner } from '@nestjs/core/scanner';
-import { CrudModule } from '@bitwild/rockets-crud';
+import { CrudModule } from '@concepta/nestjs-crud';
 
 /**
  * E2e-only fixes for Nest module scanning:

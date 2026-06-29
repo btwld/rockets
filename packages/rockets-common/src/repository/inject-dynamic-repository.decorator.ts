@@ -1,5 +1,5 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import { InjectDynamicRepository as InjectDynamicRepositoryByKey } from '@bitwild/rockets-repository';
+import { InjectDynamicRepository as InjectDynamicRepositoryByKey } from '@concepta/nestjs-repository';
 
 import { resolveEntityKey } from '../utils/resolve-entity-key.util';
 

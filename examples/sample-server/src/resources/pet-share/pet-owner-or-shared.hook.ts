@@ -1,6 +1,6 @@
 import { Injectable, PlainLiteralObject } from '@nestjs/common';
-import { type RepositoryFindOneOptions, type RepositoryFindOptions, type RepositoryInterface, Where, type WhereClause } from '@bitwild/rockets-repository';
-import { Operation } from '@bitwild/rockets-app';
+import { type RepositoryFindOneOptions, type RepositoryFindOptions, type RepositoryInterface, Where, type WhereClause } from '@concepta/nestjs-repository';
+import { Operation } from '@concepta/nestjs-core';
 import {
   EntityHook,
   type EntityHookContext,

@@ -3,7 +3,7 @@ import {
   ContextOverlayInterceptor,
   getAppContext,
   OverlayRef,
-} from '@bitwild/rockets-app';
+} from '@concepta/nestjs-core';
 import type { Actor } from '../../domain/interfaces/actor.interface';
 import type { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
 

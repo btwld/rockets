@@ -1,4 +1,4 @@
-import { createSettingsProvider, RocketsAppModule } from '@bitwild/rockets-app';
+import { CoreModule, createSettingsProvider } from '@concepta/nestjs-core';
 import {
   ConfigurableModuleBuilder,
   DynamicModule,
@@ -8,8 +8,8 @@ import {
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@nestjs/config';
-import { RepositoryModule } from '@bitwild/rockets-repository';
-import { CrudModule, CrudContextOverlay } from '@bitwild/rockets-crud';
+import { RepositoryModule } from '@concepta/nestjs-repository';
+import { CrudModule, CrudContextOverlay } from '@concepta/nestjs-crud';
 import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
 import type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';
 import { collectBootstrapForRootImports } from './infrastructure/repository/collect-bootstrap-for-root-imports';
@@ -31,6 +31,7 @@ import { RocketsCoreSettingsInterface } from './infrastructure/config/interfaces
 import { rocketsCoreDefaultConfig } from './infrastructure/config/rockets-core-options-default.config';
 import { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
 import { ActorOverlay } from './infrastructure/interceptors/actor.overlay';
+import { ZodBodyValidationInterceptor } from './infrastructure/interceptors/zod-body-validation.interceptor';
 import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
 import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
 import { SwaggerUiModule } from '@bitwild/rockets-common';
@@ -111,7 +112,7 @@ function createCoreImports(
     // Register hooks *before* repositories, otherwise repository-level hooks
     // won’t be wired and will quietly do nothing. RocketsAppModule provides
     // the hook feature (HookResolverService) globally.
-    RocketsAppModule.forRoot(),
+    CoreModule.forRoot(),
     RepositoryModule.forRoot({}),
   ];
 
@@ -201,6 +202,10 @@ function createCoreProviders(options: {
     { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay },
     // Adds a simple “who did this?” id for repository hooks/audit (not the full user profile).
     { provide: APP_INTERCEPTOR, useClass: ActorOverlay },
+    // Validates request bodies against the zod schema when the CRUD route's DTO
+    // is a nestjs-zod DTO. NestJS ValidationPipe uses class-validator and misses
+    // zod constraints — this interceptor fills the gap without importing nestjs-zod.
+    { provide: APP_INTERCEPTOR, useClass: ZodBodyValidationInterceptor },
     // Built-in user-metadata CQRS (override in `extras.handlers` if you need to customize storage)
     options.extras?.handlers?.upsertUserMetadata ?? UpsertUserMetadataHandler,
     options.extras?.handlers?.getUserMetadata ?? GetUserMetadataHandler,

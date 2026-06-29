@@ -9,7 +9,7 @@ import {
   type WhereClause,
   type WhereCondition,
   type WhereConditionScalar,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 
 import type {
   FirestoreFilterOp,

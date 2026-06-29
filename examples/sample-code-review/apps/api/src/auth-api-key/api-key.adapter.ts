@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UnauthorizedException } from '@nestjs/common';
-import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,

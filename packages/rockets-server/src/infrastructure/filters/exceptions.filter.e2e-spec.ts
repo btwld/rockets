@@ -2,7 +2,7 @@ import { Controller, Get, INestApplication } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
-import { RuntimeException } from '@bitwild/rockets-app';
+import { RuntimeException } from '@concepta/nestjs-core';
 import request from 'supertest';
 import { ExceptionsFilter, ERROR_MESSAGE_FALLBACK } from './exceptions.filter';
 

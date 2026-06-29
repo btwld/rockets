@@ -1,5 +1,5 @@
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
-import type { RepositoryModuleInterface } from '@bitwild/rockets-repository';
+import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import type { ResourceInput } from '../../resource/aggregate-resources';
 import type { AuthBootstrap } from '../../../domain/interfaces/auth-bootstrap.interface';
 import type { RepositoryBootstrap } from '../../../domain/interfaces/repository-bootstrap.interface';

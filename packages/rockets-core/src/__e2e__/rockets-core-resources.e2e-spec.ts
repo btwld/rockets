@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { CrudResponsePaginatedDto } from '@bitwild/rockets-crud';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { Expose, Type } from 'class-transformer';
 import { IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';

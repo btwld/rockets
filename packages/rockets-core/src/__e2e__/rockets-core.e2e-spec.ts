@@ -11,7 +11,7 @@ import { Test } from '@nestjs/testing';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import request from 'supertest';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,

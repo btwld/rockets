@@ -1,9 +1,9 @@
+import { HttpStatus, Injectable, PlainLiteralObject } from '@nestjs/common';
 import {
-  BadRequestException,
-  Injectable,
-  PlainLiteralObject,
-} from '@nestjs/common';
-import { type RepositoryInterface, Where } from '@bitwild/rockets-repository';
+  RepositoryQueryException,
+  type RepositoryInterface,
+  Where,
+} from '@concepta/nestjs-repository';
 import {
   EntityHook,
   type EntityHookContext,
@@ -43,7 +43,14 @@ export class PetTagTagIdExistsHook extends PassthroughEntityHookBase<PlainLitera
     });
 
     if (!existing) {
-      throw new BadRequestException(`Unknown tag id: ${tagId}`);
+      // Throw RepositoryQueryException directly (bypasses membrane wrapping)
+      // with httpStatus 400 so RocketsCoreExceptionsFilter surfaces it correctly.
+      // HttpException thrown from a hook gets lost in the upstream membrane's
+      // onError wrapper — use this pattern instead.
+      throw new RepositoryQueryException(PetTagEntity.name, {
+        message: `Unknown tag id: ${tagId}`,
+        httpStatus: HttpStatus.BAD_REQUEST,
+      });
     }
 
     return payload;

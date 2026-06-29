@@ -1,4 +1,4 @@
-import { Where } from '@bitwild/rockets-repository';
+import { Where } from '@concepta/nestjs-repository';
 import {
   createBoundRelation,
   relation,

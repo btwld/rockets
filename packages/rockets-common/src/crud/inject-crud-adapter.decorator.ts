@@ -1,5 +1,5 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import { InjectCrudAdapter as InjectCrudAdapterByKey } from '@bitwild/rockets-crud';
+import { InjectCrudAdapter as InjectCrudAdapterByKey } from '@concepta/nestjs-crud';
 
 import { resolveEntityKey } from '../utils/resolve-entity-key.util';
 

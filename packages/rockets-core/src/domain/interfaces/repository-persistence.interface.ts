@@ -1,4 +1,4 @@
-import { RepositoryModule } from '@bitwild/rockets-repository';
+import { RepositoryModule } from '@concepta/nestjs-repository';
 
 /**
  * Type alias for the options accepted by RepositoryModule.forFeature().

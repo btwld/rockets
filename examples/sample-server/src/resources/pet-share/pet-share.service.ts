@@ -3,8 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { AppContextInterface } from '@bitwild/rockets-app';
-import { RepositoryInterface, TransactionScope, Where } from '@bitwild/rockets-repository';
+import type { AppContextInterface } from '@concepta/nestjs-core';
+import { RepositoryInterface, TransactionScope, Where } from '@concepta/nestjs-repository';
 import { PetEntity } from '../pet/pet.schema';
 import type { Pet } from '../pet/pet.schema';
 import { PetShareEntity, PetSharePermission } from './pet-share.entity';

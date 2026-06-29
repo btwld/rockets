@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { getDynamicRepositoryToken } from '@bitwild/rockets-repository';
+import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import { AfterCreateReloadHook } from './after-create-reload.hook';
 
 interface FakeWidget {

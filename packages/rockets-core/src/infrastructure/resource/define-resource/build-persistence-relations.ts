@@ -1,4 +1,4 @@
-import type { RelationActionConfig } from '@bitwild/rockets-repository';
+import type { RelationActionConfig } from '@concepta/nestjs-repository';
 import type { ResourceRelationEntry } from '../../../domain/interfaces/rockets-resource-definition.interface';
 
 export function buildPersistenceRelations(

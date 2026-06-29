@@ -3,7 +3,7 @@ import {
   type RepositoryFindOneOptions,
   type RepositoryFindOptions,
   Where,
-} from '@bitwild/rockets-repository';
+} from '@concepta/nestjs-repository';
 import { getCrudContext } from '../../utils/get-actor.helper';
 import {
   EntityHook,

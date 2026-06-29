@@ -16,9 +16,9 @@ import { SignupUserCommand } from '../application/commands/impl/signup-user.comm
 import {
   CrudAdapter,
   CrudResponsePaginatedInterface,
-} from '@bitwild/rockets-crud';
-import type { CrudQueryInterface } from '@bitwild/rockets-crud/dist/application/queries/interfaces/crud-query.interface';
-import type { CrudCommandInterface } from '@bitwild/rockets-crud/dist/application/commands/interfaces/crud-command.interface';
+} from '@concepta/nestjs-crud';
+import type { CrudQueryInterface } from '@concepta/nestjs-crud/dist/application/queries/interfaces/crud-query.interface';
+import type { CrudCommandInterface } from '@concepta/nestjs-crud/dist/application/commands/interfaces/crud-command.interface';
 import { RocketsAuthUserEntityInterface } from '../interfaces/rockets-auth-user-entity.interface';
 
 /**

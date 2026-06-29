@@ -1,8 +1,5 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import type {
-  CrudRequestConfig,
-  CrudResponseConfig,
-} from '@bitwild/rockets-crud';
+import type { CrudRequestConfig, CrudResponseConfig } from '../../crud-compat';
 
 export interface InternalOperationOverride {
   query?: Type;

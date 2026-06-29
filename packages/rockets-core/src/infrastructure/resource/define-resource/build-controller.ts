@@ -1,8 +1,8 @@
 import type { PlainLiteralObject } from '@nestjs/common';
 import { applyDecorators } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { UseHooks } from '@bitwild/rockets-app';
-import type { JoinClause } from '@bitwild/rockets-repository';
+import { UseHooks } from '@concepta/nestjs-core';
+import type { JoinClause } from '@concepta/nestjs-repository';
 import type { ResourceRelationEntry } from '../../../domain/interfaces/rockets-resource-definition.interface';
 import type { RocketsEntityHookForResource } from '../../hooks/entity-hook';
 

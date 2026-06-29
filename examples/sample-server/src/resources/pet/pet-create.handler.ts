@@ -3,7 +3,7 @@ import {
   CrudAdapter,
   CrudCreateCommand,
   CrudCreateHandler,
-} from '@bitwild/rockets-crud';
+} from '@concepta/nestjs-crud';
 import { PetEntity } from './pet.schema';
 import { InjectCrudAdapter } from '@bitwild/rockets-common';
 

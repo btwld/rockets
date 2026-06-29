@@ -1,5 +1,5 @@
 import type { Provider } from '@nestjs/common';
-import type { CrudModuleForFeatureOptionsInterface } from '@bitwild/rockets-crud';
+import type { CrudModuleForFeatureOptionsInterface } from '@concepta/nestjs-crud';
 
 /**
  * Declarative resource configuration.

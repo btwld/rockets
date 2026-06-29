@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { RepositoryInterface, Where } from '@bitwild/rockets-repository';
+import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import { AbstractUpsertUserMetadataHandler } from './abstract-upsert-user-metadata.handler';
 import { UpsertUserMetadataCommand } from '../impl/upsert-user-metadata.command';
 import {
