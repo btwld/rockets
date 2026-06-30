@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-common",
-  "version": "0.0.1-alpha.0",
+  "version": "1.0.0-alpha.9",
   "description": "Rockets Common - local extensions layered on the upstream-parity rockets-app/repository/crud packages",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

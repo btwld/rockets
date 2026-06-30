@@ -1,10 +1,9 @@
 {
   "name": "@bitwild/rockets-auth",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.9",
   "description": "Rockets Auth - Complete authentication and authorization solution for NestJS with JWT, OAuth, OTP, role-based access control, and more",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
-  "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

@@ -1,6 +1,6 @@
 {
   "name": "root",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.9",
   "license": "BSD-3-Clause",
   "private": true,
   "workspaces": {
@@ -147,6 +147,7 @@
     "samples:test:e2e": "yarn sample:test:e2e && yarn sample-auth:test:e2e",
     "pack:bitwild:rockets": "yarn workspace @bitwild/rockets pack",
     "pack:bitwild:rockets-auth": "yarn workspace @bitwild/rockets-auth pack",
+    "publish:bitwild": "yarn build && yarn workspaces foreach -A --include '@bitwild/*' --topological --no-private npm publish --access public --tag alpha",
     "codacy:analyze": ".codacy/cli.sh analyze",
     "codacy:analyze:fix": ".codacy/cli.sh analyze --fix",
     "codacy:analyze:file": ".codacy/cli.sh analyze",

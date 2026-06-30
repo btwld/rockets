@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-access-control",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.9",
   "description": "Rockets Access Control - ACL/RBAC abstraction",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",

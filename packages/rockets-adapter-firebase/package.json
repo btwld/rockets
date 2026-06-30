@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-adapter-firebase",
-  "version": "1.0.0-alpha.0",
+  "version": "1.0.0-alpha.9",
   "description": "Firebase Authentication adapter for Rockets — implements AuthAdapterInterface from @bitwild/rockets-core, validates Firebase ID tokens, maps to AuthorizedUser",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",

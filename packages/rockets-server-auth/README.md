@@ -5,7 +5,7 @@
 
 > Complete built-in auth system for Rockets: signup, login, password recovery, OTP, invitations, roles, admin user CRUD — wired as a single `defineRocketsAuth()` integration.
 
-**Status:** alpha (`1.0.0-alpha.7`, currently `private` in `package.json` — flipped to public on the first 1.0-track release). API on the `defineRocketsAuth()` surface is stable; the OAuth submodule is parked pending upstream v8 ports (see [Known limitations](#known-limitations)).
+**Status:** alpha (`1.0.0-alpha.8`, published on npm as `@bitwild/rockets-auth@alpha`). API on the `defineRocketsAuth()` surface is stable; the OAuth submodule is parked pending upstream v8 ports (see [Known limitations](#known-limitations)).
 
 ---
 

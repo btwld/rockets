@@ -10,7 +10,7 @@
 
 > Configuration-driven NestJS stack. One options object becomes a working API — auth, dynamic repositories, generated CRUD controllers, hooks, swagger.
 
-**Status:** pre-1.0 (`1.0.0-alpha.7`). The public surface (`AuthAdapterInterface`, `defineResource`, `defineModuleResource`, `RepositoryInterface`, the `RocketsModule.forRoot` options shape) is stable; field renames are still possible before 1.0. Pin exact versions in production.
+**Status:** pre-1.0 (`1.0.0-alpha.8`, on npm under `@bitwild/*` with dist-tag `alpha`). The public surface (`AuthAdapterInterface`, `defineResource`, `defineModuleResource`, `RepositoryInterface`, the `RocketsModule.forRoot` options shape) is stable; field renames are still possible before 1.0. Pin exact versions in production.
 
 ## Table of contents
 
@@ -807,7 +807,7 @@ If you maintain `@concepta/nestjs-*` modules, Rockets is a **consumer and config
 | `packages/rockets-access-control` | `@bitwild/rockets-access-control` | RBAC: `AccessControlModule`, `AccessControlGuard`, operation decorators, `CanAccess` query checks. | [README](packages/rockets-access-control/README.md) | stable (upstream still on v7) |
 | `packages/rockets-core` | `@bitwild/rockets-core` | Composition planner (not the data/CRUD motor). Auth chain, `buildAppRegistrationPlan`, `defineResource` / `defineModuleResource` / `defineSubResource`, owner / audit / path-scope hooks, swagger registration. | [README](packages/rockets-core/README.md) | stable |
 | `packages/rockets-server` | `@bitwild/rockets` | External-auth presentation layer. `MeController`, `APP_GUARD` opt-in, `auth` chain. | [README](packages/rockets-server/README.md) | stable |
-| `packages/rockets-server-auth` | `@bitwild/rockets-auth` | Built-in auth: signup, login, OTP, recovery, invitations, roles, admin user CRUD. `defineRocketsAuth()`. | [README](packages/rockets-server-auth/README.md) | alpha (private package today; first 1.0-track release flips it public) |
+| `packages/rockets-server-auth` | `@bitwild/rockets-auth` | Built-in auth: signup, login, OTP, recovery, invitations, roles, admin user CRUD. `defineRocketsAuth()`. | [README](packages/rockets-server-auth/README.md) | alpha |
 | `packages/rockets-adapter-firebase` | `@bitwild/rockets-adapter-firebase` | Firebase Auth adapter implementing `AuthAdapterInterface`. | [README](packages/rockets-adapter-firebase/README.md) | preview |
 
 ### Repository layout
@@ -831,7 +831,7 @@ rockets/
 
 ### Versions
 
-- **Rockets packages**: `1.0.0-alpha.7` (except `rockets-repository-firestore` and `rockets-adapter-firebase` at `1.0.0-alpha.0`).
+- **Rockets packages**: `1.0.0-alpha.8` on npm (`yarn add @bitwild/rockets@alpha`, or pin `1.0.0-alpha.8`). Monorepo packages keep `workspace:^` for local development.
 - **Upstream Concepta packages**: v8 line at `8.0.0-alpha.5`. Three packages still on v7 (`@concepta/nestjs-access-control`, `@concepta/nestjs-email`, `@concepta/nestjs-event`) pending the v8 port — version-mismatched intentionally and tested in CI.
 - **NestJS**: `^11.0.0`, pinned to `11.1.18` via root `resolutions`.
 - **Node**: `>=18.0.0`.

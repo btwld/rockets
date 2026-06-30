@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-zod-typeorm",
-  "version": "1.0.0-alpha.0",
+  "version": "1.0.0-alpha.9",
   "description": "TypeORM SchemaEntityCompiler for @bitwild/rockets-zod — compiles a zod schema into a decorated TypeORM entity class.",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",

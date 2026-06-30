@@ -50,19 +50,21 @@ export {
   EntityHook,
   EntityHookBase,
   PassthroughEntityHookBase,
-  type EntityHookContext,
-  type EntityHookLifecycleKey,
-  type OwnedEntity,
-  type RocketsEntityHookForResource,
+} from './infrastructure/hooks/entity-hook';
+export type {
+  EntityHookContext,
+  EntityHookLifecycleKey,
+  OwnedEntity,
+  RocketsEntityHookForResource,
 } from './infrastructure/hooks/entity-hook';
 export type { RocketsCrudContext } from './domain/interfaces/rockets-crud-context.interface';
 
 // Functional hook authoring — turns lifecycle functions into an
 // `@EntityHook`-decorated, DI-ready class (sugar over PassthroughEntityHookBase).
-export {
-  defineHook,
-  type EntityHookFns,
-  type EntityHookTools,
+export { defineHook } from './infrastructure/hooks/define-hook';
+export type {
+  EntityHookFns,
+  EntityHookTools,
 } from './infrastructure/hooks/define-hook';
 
 // Reusable repository hooks
@@ -123,8 +125,8 @@ export {
   defineSubResource,
   isSubResourceDefinition,
   defaultParentParam,
-  type RocketsSubResourceInput,
 } from './infrastructure/resource/define-sub-resource';
+export type { RocketsSubResourceInput } from './infrastructure/resource/define-sub-resource';
 export { PathScopeHook } from './infrastructure/hooks/path-scope.hook';
 export type { RocketsUserMetadataConfig } from './domain/interfaces/rockets-user-metadata-config.interface';
 export { createPaginatedDto } from './infrastructure/resource/paginated-dto.factory';
@@ -212,12 +214,11 @@ export { UpsertUserMetadataHandler } from './application/commands/handlers/upser
 export { GetUserMetadataQuery } from './application/queries/impl/get-user-metadata.query';
 export { AbstractGetUserMetadataHandler } from './application/queries/handlers/abstract-get-user-metadata.handler';
 export { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
-export {
-  AuthUser,
-  type SchemaEntityCompiler,
-  type SchemaEntityCompilerOptions,
-  InjectDynamicRepository,
-  type SwaggerUiOptionsInterface,
+export { AuthUser, InjectDynamicRepository } from '@bitwild/rockets-common';
+export type {
+  SchemaEntityCompiler,
+  SchemaEntityCompilerOptions,
+  SwaggerUiOptionsInterface,
 } from '@bitwild/rockets-common';
 
 // Constants
