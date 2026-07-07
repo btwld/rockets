@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createdEntity, f } from '@bitwild/rockets-zod';
+import { createdEntity, f } from '@bitwild/rockets-core/zod';
 import { compileZodEntity } from '../zod-bindings';
 
 export enum UserRole {

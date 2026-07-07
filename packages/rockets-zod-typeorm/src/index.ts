@@ -2,7 +2,7 @@
 // contract. Bridges @bitwild/rockets-zod (DB-agnostic schema → DTO /
 // resource translation) to TypeORM entity classes. Apps wire it once:
 //
-//   import { bindZodResources } from '@bitwild/rockets-zod';
+//   import { bindZodResources } from '@bitwild/rockets-core/zod';
 //   import { typeOrmZodEntityCompiler } from '@bitwild/rockets-zod-typeorm';
 //   export const { zodResource, zodSubResource } =
 //     bindZodResources(typeOrmZodEntityCompiler);

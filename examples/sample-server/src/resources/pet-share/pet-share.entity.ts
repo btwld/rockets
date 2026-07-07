@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { f, rocketsEntityMeta, rocketsFieldMeta } from '@bitwild/rockets-zod';
+import { f, rocketsEntityMeta, rocketsFieldMeta } from '@bitwild/rockets-core/zod';
 import { zodEntityCompiler } from '../../zod-bindings';
 
 export enum PetSharePermission {

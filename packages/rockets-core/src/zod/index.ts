@@ -1,7 +1,7 @@
 // Zod-first resource layer for Rockets. Database-agnostic: it produces
 // what core already accepts (nestjs-zod DTO classes + defineResource()),
 // and delegates entity generation to a SchemaEntityCompiler adapter
-// (e.g. @bitwild/rockets-zod-typeorm). Nothing here imports an ORM.
+// (e.g. @bitwild/rockets-repository-typeorm). Nothing here imports an ORM.
 export {
   getRegisteredEntity,
   registerSchemaEntity,

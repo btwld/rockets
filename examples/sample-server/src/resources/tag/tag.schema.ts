@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { baseEntity, f } from '@bitwild/rockets-zod';
+import { baseEntity, f } from '@bitwild/rockets-core/zod';
 
 /**
  * Source of truth for the tag resource surface. Near-pure module:

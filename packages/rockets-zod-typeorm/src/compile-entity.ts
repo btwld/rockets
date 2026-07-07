@@ -10,7 +10,7 @@ import {
   resolveRelationTarget,
   unwrapField,
   RocketsRelationFieldMeta,
-} from '@bitwild/rockets-zod';
+} from '@bitwild/rockets-core/zod';
 import {
   Column,
   CreateDateColumn,

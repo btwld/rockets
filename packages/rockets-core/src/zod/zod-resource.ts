@@ -8,11 +8,7 @@ import {
 import type { ClassTransformOptions } from 'class-transformer';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import {
-  defineResource,
-  defineSubResource,
-  OwnerStampHook,
-} from '@bitwild/rockets-core';
+import { defineResource, defineSubResource, OwnerStampHook } from '../index';
 import type {
   CrudResource,
   ResourceDeleteOperationConfig,
@@ -27,7 +23,7 @@ import type {
   SchemaEntityCompiler,
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,
-} from '@bitwild/rockets-core';
+} from '../index';
 import {
   getRegisteredEntity,
   registerSchemaEntity,
@@ -871,8 +867,8 @@ export function zodSubResource(
  * apps), so `bound.zodResource` is a default, not a lock-in.
  *
  * ```ts
- * import { bindZodResources } from '@bitwild/rockets-zod';
- * import { typeOrmZodEntityCompiler } from '@bitwild/rockets-zod-typeorm';
+ * import { bindZodResources } from '@bitwild/rockets-core/zod';
+ * import { typeOrmZodEntityCompiler } from '@bitwild/rockets-repository-typeorm';
  *
  * export const zodEntityCompiler = typeOrmZodEntityCompiler;
  * export const { zodResource, zodSubResource } =

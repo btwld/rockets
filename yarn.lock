@@ -775,14 +775,23 @@ __metadata:
     "@nestjs/typeorm": "npm:11.0.0"
     "@types/pluralize": "npm:^0.0.33"
     jest: "npm:^29.7.0"
+    nestjs-zod: "npm:^5.4.0"
     pluralize: "npm:^8.0.0"
     supertest: "npm:^6.3.4"
     ts-jest: "npm:^29.2.0"
     typeorm: "npm:^0.3.20"
+    zod: "npm:^4.1.0"
   peerDependencies:
     class-transformer: "*"
     class-validator: "*"
+    nestjs-zod: ^5.0.0
     rxjs: ^7.1.0
+    zod: ^4.0.0
+  peerDependenciesMeta:
+    nestjs-zod:
+      optional: true
+    zod:
+      optional: true
   languageName: unknown
   linkType: soft
 
@@ -814,7 +823,6 @@ __metadata:
   resolution: "@bitwild/rockets-zod-typeorm@workspace:packages/rockets-zod-typeorm"
   dependencies:
     "@bitwild/rockets-core": "workspace:^"
-    "@bitwild/rockets-zod": "workspace:^"
     "@nestjs/common": "npm:11.1.18"
     "@nestjs/testing": "npm:11.1.18"
     jest: "npm:^29.7.0"
@@ -826,28 +834,6 @@ __metadata:
     "@nestjs/common": ^11.0.0
     reflect-metadata: ^0.1.13 || ^0.2.0
     typeorm: ^0.3.0
-    zod: ^4.0.0
-  languageName: unknown
-  linkType: soft
-
-"@bitwild/rockets-zod@workspace:^, @bitwild/rockets-zod@workspace:packages/rockets-zod":
-  version: 0.0.0-use.local
-  resolution: "@bitwild/rockets-zod@workspace:packages/rockets-zod"
-  dependencies:
-    "@bitwild/rockets-core": "workspace:^"
-    "@nestjs/common": "npm:11.1.18"
-    "@nestjs/testing": "npm:11.1.18"
-    class-transformer: "npm:^0.5.1"
-    jest: "npm:^29.7.0"
-    nestjs-zod: "npm:^5.4.0"
-    ts-jest: "npm:^29.2.0"
-    typescript: "npm:^5.4.0"
-    zod: "npm:^4.1.0"
-  peerDependencies:
-    "@nestjs/common": ^11.0.0
-    class-transformer: ^0.5.1
-    nestjs-zod: ^5.0.0
-    reflect-metadata: ^0.1.13 || ^0.2.0
     zod: ^4.0.0
   languageName: unknown
   linkType: soft
@@ -6746,7 +6732,6 @@ __metadata:
     "@bitwild/rockets-adapter-firebase": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-repository-firestore": "workspace:^"
-    "@bitwild/rockets-zod": "workspace:^"
     "@bitwild/rockets-zod-typeorm": "workspace:^"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.7"
@@ -17656,7 +17641,6 @@ __metadata:
   dependencies:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
-    "@bitwild/rockets-zod": "workspace:^"
     "@bitwild/rockets-zod-typeorm": "workspace:^"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.7"

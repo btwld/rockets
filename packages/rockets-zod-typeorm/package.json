@@ -37,8 +37,7 @@
     "test": "cd ../.. && jest --testPathPattern=rockets-zod-typeorm"
   },
   "dependencies": {
-    "@bitwild/rockets-core": "workspace:^",
-    "@bitwild/rockets-zod": "workspace:^"
+    "@bitwild/rockets-core": "workspace:^"
   },
   "devDependencies": {
     "@nestjs/common": "11.1.18",

@@ -1,4 +1,4 @@
-import { bindZodResources } from '@bitwild/rockets-zod';
+import { bindZodResources } from '@bitwild/rockets-core/zod';
 import {
   typeOrmZodEntityCompiler,
   compileEntity,

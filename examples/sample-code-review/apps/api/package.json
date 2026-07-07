@@ -18,7 +18,6 @@
     "@bitwild/rockets-adapter-firebase": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-repository-firestore": "workspace:^",
-    "@bitwild/rockets-zod": "workspace:^",
     "@bitwild/rockets-zod-typeorm": "workspace:^",
     "@concepta/nestjs-core": "8.0.0-alpha.7",
     "@concepta/nestjs-repository": "8.0.0-alpha.7",

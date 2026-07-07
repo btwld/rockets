@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { auditableEntity, f, rocketsFieldMeta } from '@bitwild/rockets-zod';
+import { auditableEntity, f, rocketsFieldMeta } from '@bitwild/rockets-core/zod';
 import { zodEntityCompiler } from '../../zod-bindings';
 import { tagSchema } from '../tag/tag.schema';
 import { PetTagEntity } from './pet-tag.schema';

@@ -36,7 +36,7 @@ import {
   UserMetadataUpdateDto,
 } from '../src/user-metadata.schema';
 import { defineSampleAuth, sampleAuthUserResource } from '../src/auth';
-import { rocketsEntityMeta, rocketsFieldMeta } from '@bitwild/rockets-zod';
+import { rocketsEntityMeta, rocketsFieldMeta } from '@bitwild/rockets-core/zod';
 import { typeOrmZodEntityCompiler } from '@bitwild/rockets-zod-typeorm';
 import { zodResource } from '../src/zod-bindings';
 

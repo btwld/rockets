@@ -10,7 +10,6 @@
   "include": ["src/**/*.ts"],
   "exclude": ["**/*.spec.ts", "**/*.e2e-spec.ts"],
   "references": [
-    { "path": "../rockets-core" },
-    { "path": "../rockets-zod" }
+    { "path": "../rockets-core" }
   ]
 }
