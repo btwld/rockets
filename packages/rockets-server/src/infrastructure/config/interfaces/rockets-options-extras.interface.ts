@@ -6,6 +6,7 @@ import type {
   RepositoryBootstrap,
   RepositoryModuleInterface,
   ResourceInput,
+  RocketsAccessControlConfig,
   RocketsUserMetadataConfig,
 } from '@bitwild/rockets-core';
 
@@ -67,4 +68,11 @@ export interface RocketsOptionsExtrasInterface
    * persistence / Nest wiring), and hand-built `RocketsResourceConfig`.
    */
   resources?: ReadonlyArray<ResourceInput>;
+
+  /**
+   * Opt-in access control, forwarded to `RocketsCoreModule`. When set,
+   * core registers the upstream `AccessControlModule` (rules/settings,
+   * service, guard, query services); when omitted, no ACL wiring exists.
+   */
+  accessControl?: RocketsAccessControlConfig;
 }

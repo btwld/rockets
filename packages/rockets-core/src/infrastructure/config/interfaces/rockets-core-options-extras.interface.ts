@@ -1,4 +1,8 @@
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
+import type {
+  AccessControlOptionsInterface,
+  CanAccess,
+} from '@concepta/nestjs-access-control';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import type { ResourceInput } from '../../resource/aggregate-resources';
 import type { AuthBootstrap } from '../../../domain/interfaces/auth-bootstrap.interface';
@@ -6,6 +10,19 @@ import type { RepositoryBootstrap } from '../../../domain/interfaces/repository-
 import type { RocketsUserMetadataConfig } from '../../../domain/interfaces/rockets-user-metadata-config.interface';
 import type { AbstractUpsertUserMetadataHandler } from '../../../application/commands/handlers/abstract-upsert-user-metadata.handler';
 import type { AbstractGetUserMetadataHandler } from '../../../application/queries/handlers/abstract-get-user-metadata.handler';
+
+/**
+ * Opt-in access control configuration.
+ *
+ * Extends the upstream `AccessControlOptionsInterface` (settings/rules,
+ * service, appGuard, appFilter) with `imports` / `queryServices`, which are
+ * forwarded to `AccessControlModule.forRoot` so route guards can resolve
+ * domain `CanAccess` query services.
+ */
+export type RocketsAccessControlConfig = AccessControlOptionsInterface & {
+  readonly imports?: DynamicModule['imports'];
+  readonly queryServices?: Provider<CanAccess>[];
+};
 
 export interface RocketsCoreOptionsExtrasInterface
   extends Pick<DynamicModule, 'global'> {
@@ -60,4 +77,11 @@ export interface RocketsCoreOptionsExtrasInterface
     readonly upsertUserMetadata?: Type<AbstractUpsertUserMetadataHandler>;
     readonly getUserMetadata?: Type<AbstractGetUserMetadataHandler>;
   };
+
+  /**
+   * Opt-in access control. When set, core registers the upstream
+   * `AccessControlModule` with these options; when omitted, no ACL
+   * module, guard, or provider is registered at all.
+   */
+  readonly accessControl?: RocketsAccessControlConfig;
 }

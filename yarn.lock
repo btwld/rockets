@@ -762,6 +762,7 @@ __metadata:
   resolution: "@bitwild/rockets-core@workspace:packages/rockets-core"
   dependencies:
     "@bitwild/rockets-repository-typeorm": "workspace:^"
+    "@concepta/nestjs-access-control": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-authentication": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.7"
@@ -774,6 +775,7 @@ __metadata:
     "@nestjs/testing": "npm:11.1.18"
     "@nestjs/typeorm": "npm:11.0.0"
     "@types/pluralize": "npm:^0.0.33"
+    accesscontrol: "npm:^2.2.1"
     jest: "npm:^29.7.0"
     nestjs-zod: "npm:^5.4.0"
     pluralize: "npm:^8.0.0"

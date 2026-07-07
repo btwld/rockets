@@ -166,7 +166,10 @@ export type { CrudResource } from './domain/interfaces/rockets-resource-bundle.i
 
 // Options interfaces
 export type { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';
-export type { RocketsCoreOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-core-options-extras.interface';
+export type {
+  RocketsCoreOptionsExtrasInterface,
+  RocketsAccessControlConfig,
+} from './infrastructure/config/interfaces/rockets-core-options-extras.interface';
 export type { RocketsCoreSettingsInterface } from './infrastructure/config/interfaces/rockets-core-settings.interface';
 
 // User entity contracts

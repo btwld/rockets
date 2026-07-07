@@ -104,6 +104,7 @@ export function createRocketsImports(options: {
       repository: options.extras?.repository,
       resources: options.extras?.resources ?? [],
       handlers: options.extras?.handlers,
+      accessControl: options.extras?.accessControl,
       global: true,
     }),
   ];
