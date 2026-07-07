@@ -39,7 +39,6 @@
     "@concepta/nestjs-otp": "8.0.0-alpha.7",
     "@concepta/nestjs-password": "8.0.0-alpha.7",
     "@concepta/nestjs-repository": "8.0.0-alpha.7",
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.7",
     "@concepta/nestjs-role": "8.0.0-alpha.7",
     "@concepta/nestjs-swagger-ui": "7.0.0-alpha.10",
     "@concepta/nestjs-user": "8.0.0-alpha.7",

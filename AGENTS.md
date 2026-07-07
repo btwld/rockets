@@ -25,6 +25,9 @@ the user has already had to fix more than once.
    *"Would `rockets-server-auth` also need this?"* Yes → core. No → server.
    **Controllers belong in server or auth, never in core. Swagger IS in
    core** (both server and auth need API docs from a single registration).
+   Access control is core too: the opt-in `accessControl` option on
+   `RocketsCoreModule` / `RocketsModule` registers upstream
+   `@concepta/nestjs-access-control`; when omitted, no ACL wiring exists.
 
 2. **Dynamic repository, not `@InjectRepository`.** In new code, use
    `@InjectDynamicRepository(KEY)` + `RepositoryInterface<Entity>`. **Features
@@ -32,8 +35,8 @@ the user has already had to fix more than once.
    re-exports the repository abstraction — `InjectDynamicRepository`,
    `RepositoryInterface`, `RepositoryModuleInterface`, `Where`,
    `getDynamicRepositoryToken` — so feature/server code never depends on
-   `@bitwild/rockets-repository` directly). The symbols originate in
-   `@bitwild/rockets-repository`; only core and lower-level packages import them
+   the upstream repository package directly). The symbols originate in
+   `@concepta/nestjs-repository`; only core and adapter packages import them
    from there. Register entities through bundles inside
    `resources[]` (`defineResource()` auto-contributes its entity row;
    `defineModuleResource({ entities: [...] })` contributes additional
@@ -99,11 +102,13 @@ the user has already had to fix more than once.
     code, THEN modify. Do not edit blindly based on a diff alone.
 
 13. **Persistence is database-agnostic by default.** The supported contract is
-    `RepositoryInterface` and dynamic repository keys in `@bitwild/rockets-repository`.
-    Concrete backends (TypeORM, Firestore, other adapters) are **selected in module
-    options** and must remain **swappable**. `rockets-core` public design, types, and
-    docs must not hard-require a specific ORM. Example configs may use TypeORM as
-    a common case; that does not make TypeORM the definition of Rockets storage.
+    `RepositoryInterface` and dynamic repository keys in `@concepta/nestjs-repository`
+    (re-exported by `@bitwild/rockets-core`). Concrete backends (TypeORM, Firestore,
+    other adapters) are **selected in module options** and must remain **swappable**.
+    `rockets-core` public design, types, and docs must not hard-require a specific
+    ORM — the zod layer stays ORM-free by delegating entity generation to a
+    `SchemaEntityCompiler` adapter. Example configs may use TypeORM as a common
+    case; that does not make TypeORM the definition of Rockets storage.
 
 14. **Module resource exports are a public surface — export the minimum.**
     `defineModuleResource({ module: { providers, exports } })` materialises
@@ -155,18 +160,17 @@ When replying to the project owner or maintainer:
 
 ## Repository Map
 
-- `packages/rockets-app` (`@bitwild/rockets-app`): **foundation / domain kernel** — context overlay (`AppContextHost`, `getAppContext`, `OverlayRef`, `Ctx`, `ContextOverlayInterceptor`), exceptions (`RuntimeException`), hooks (`HookResolverService`, `Spec`, specifications), references, audit, `DomainAggregate`, `AuthUser`, Swagger UI module, and shared utils (`deriveEntityKey`/`resolveEntityKey`, `createRepositoryContext`, `whitelistedFromDto`, `stripUndefined`). Self-contained: depends only on `@nestjs/*` + `class-transformer`/`class-validator`/`rxjs` — **no `@concepta/nestjs-*`**. Replaced the former `rockets-common` (deleted; merged here). It is the lowest layer — `repository`/`crud` depend on it for shared `AppContextHost`/`RuntimeException` identity.
-- `packages/rockets-repository` (`@bitwild/rockets-repository`): self-contained dynamic repository implementation (module, adapter, transactions, federation, hooks, query helpers). DB-agnostic — no TypeORM/Firestore. Depends on `rockets-app`. `@InjectDynamicRepository(string | Type)`. (Was a thin wrapper over upstream `@concepta/nestjs-repository`; now owns the code.)
-- `packages/rockets-repository-typeorm` (`@bitwild/rockets-repository-typeorm`): TypeORM implementation of the dynamic repository contract.
+The engine is the upstream `@concepta/nestjs-*` stack consumed from npm
+(`nestjs-core`, `nestjs-repository`, `nestjs-crud`, `nestjs-authentication`,
+`nestjs-access-control`, plus the identity modules used by server-auth).
+The `@bitwild/*` packages are composition + curated re-exports on top of it.
+
+- `packages/rockets-core` (`@bitwild/rockets-core`): **shared server infrastructure** — auth abstraction (`AuthAdapterInterface`, `AuthServerGuard`), CQRS handlers, declarative resources (`defineResource`, `defineModuleResource`, `buildAppRegistrationPlan`), root `repository` adapter + `userMetadata` config, Swagger registration (`SwaggerUiModule`), opt-in `accessControl` (registers `@concepta/nestjs-access-control` when configured, nothing otherwise), and the shared decorators/utils formerly in `@bitwild/rockets-common` (`AuthUser`, `InjectDynamicRepository`, `InjectCrudAdapter`, model interfaces, `SchemaEntityCompiler` contract, error-logging/entity-key utils — now `src/common/`). Also owns the **zod-first resource layer** at the `@bitwild/rockets-core/zod` subpath (`zodResource`/`zodSubResource`/`bindZodResources`, `f.*` field helpers, `rocketsFieldMeta`/`rocketsEntityMeta` registries, `defineZodUserMetadata`). Zod is the first-class schema layer of Rockets; `zod` + `nestjs-zod` are **optional peers** and the main entry stays zod-free, so non-zod consumers pay nothing. The zod layer is still ORM-free: entity generation is delegated to a `SchemaEntityCompiler` adapter. Imported by both server and auth.
+- `packages/rockets-repository-typeorm` (`@bitwild/rockets-repository-typeorm`): TypeORM implementation of the dynamic repository contract — a **thin wrapper** whose main entry re-exports upstream `@concepta/nestjs-repository-typeorm` verbatim, so consumers depend on a single `@bitwild/*` package. The only code it owns is the zod layer's TypeORM `SchemaEntityCompiler` at the `@bitwild/rockets-repository-typeorm/zod` subpath (`typeOrmZodEntityCompiler`). Mirror the `/zod` compiler for other stores (`rockets-repository-firestore`, …).
 - `packages/rockets-repository-firestore`: Firestore implementation of the dynamic repository contract.
-- `packages/rockets-crud` (`@bitwild/rockets-crud`): self-contained generic CRUD module + configurable builder + CQRS handlers + interceptors. Depends on `rockets-repository` + `rockets-app`. `@InjectCrudAdapter(string | Type)`. (Was a wrapper over upstream `@concepta/nestjs-crud`; now owns the code.)
-- `packages/rockets-access-control`: ACL/RBAC primitives.
-- `packages/rockets-core`: **shared server infrastructure** — auth abstraction (`AuthAdapterInterface`, `AuthServerGuard`), CQRS handlers, declarative resources (`defineResource`, `defineModuleResource`, `buildAppRegistrationPlan`), root `repository` adapter + `userMetadata` config, Swagger registration. Imported by both server and auth.
 - `packages/rockets-server` (`@bitwild/rockets`): external-auth integration layer. `MeController` + global guard opt-in. Use when users live in Firebase / Auth0 / another system.
-- `packages/rockets-server-auth`: complete built-in auth system (JWT, signup, login, recovery, otp, oauth, admin).
+- `packages/rockets-server-auth` (`@bitwild/rockets-auth`): complete built-in auth system (JWT, signup, login, recovery, otp, oauth, admin).
 - `packages/rockets-adapter-firebase`: Firebase auth adapter implementing `AuthAdapterInterface`.
-- `packages/rockets-zod` (`@bitwild/rockets-zod`): zod-first resource layer — one zod schema compiles to nestjs-zod DTOs + a `defineResource()` call (`zodResource`/`zodSubResource`/`bindZodResources`, the `rocketsFieldMeta`/`rocketsEntityMeta` registries, the schema→entity registry). Also `defineZodUserMetadata` — the `userMetadata` config counterpart (schema → `{ entity, createDto, updateDto, responseDto }`). A schema whose entity is compiled eagerly (to break a module cycle) is auto-reused by `zodResource` via the registry, so resources omit the redundant `entity:` override. **DB-agnostic and ORM-free**: entity generation is delegated to a `SchemaEntityCompiler` adapter. Depends on `rockets-core` + `zod` + `nestjs-zod`. Do NOT put this in core — core stays validation-library-neutral.
-- `packages/rockets-zod-typeorm` (`@bitwild/rockets-zod-typeorm`): TypeORM implementation of the zod layer's `SchemaEntityCompiler` (`typeOrmZodEntityCompiler`) — the bridge that keeps `rockets-zod` ORM-free and `rockets-repository-typeorm` zod-free. Mirror it (`rockets-zod-firestore`, …) for other stores.
 - `examples/sample-server`: canonical reference app using `rockets-server` with an external auth adapter. Wires the zod layer in one line (`src/zod-bindings.ts`: `bindZodResources(typeOrmZodEntityCompiler)`).
 - `examples/sample-server-auth`: reference app using `rockets-server-auth` (built-in auth).
 - `examples/sample-code-review`: full-stack reference (api + web) used for code review walkthroughs.

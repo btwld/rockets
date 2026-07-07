@@ -17,7 +17,10 @@
 repository/CRUD/hook motor. It solves: _“I already use Concepta motors, but I
 still hand-wire Nest modules, entity lists, and auth guards on every new
 service.”_ The motor is `@concepta/nestjs-repository`, `@concepta/nestjs-crud`,
-and `@concepta/nestjs-hook` (imported via `@bitwild/rockets-common`). Core owns:
+and `@concepta/nestjs-core` (hook resolution) — core depends on them directly
+and re-exports the symbols apps need (`InjectDynamicRepository`,
+`RepositoryInterface`, `AuthUser`, `SwaggerUiModule`, …; the former
+`@bitwild/rockets-common` package was merged into core). Core owns:
 
 - An auth contract (`AuthAdapterInterface`) and a global guard that runs
   adapters in a chain.
@@ -135,9 +138,10 @@ export class AppModule {}
   with validation and Swagger schema. No controller was written.
 
 `defineTypeOrmRepository` is a small app-local `RepositoryBootstrap` wrapper
-(TypeORM connection options + planner-derived entity list). Keep it in the
-sample app (or copy into yours) — do not pull TypeORM into
-`@bitwild/rockets-core` or sibling packages.
+(TypeORM connection options + planner-derived entity list) around
+`TypeOrmRepositoryModule` from `@bitwild/rockets-repository-typeorm`. Keep the
+helper in the sample app (or copy into yours) — do not pull TypeORM into
+`@bitwild/rockets-core` itself.
 
 ---
 
@@ -293,18 +297,70 @@ export class HealthController {
 }
 ```
 
+### Zod-first resources (`@bitwild/rockets-core/zod`)
+
+The zod-first resource layer ships as the subpath export
+`@bitwild/rockets-core/zod` (`zodResource`, `zodSubResource`,
+`bindZodResources`, the `f.*` field helpers, `defineZodUserMetadata`,
+`rocketsFieldMeta`, `rocketsEntityMeta`). `zod` and `nestjs-zod` are
+**optional peerDependencies** of core — the main `@bitwild/rockets-core`
+entry stays zod-free, so apps that skip the subpath never install them.
+
+Entity generation is delegated to a `SchemaEntityCompiler`. The TypeORM
+implementation lives at `@bitwild/rockets-repository-typeorm/zod`; bind it
+once at startup:
+
+```typescript
+import { bindZodResources } from '@bitwild/rockets-core/zod';
+import { typeOrmZodEntityCompiler } from '@bitwild/rockets-repository-typeorm/zod';
+
+bindZodResources(typeOrmZodEntityCompiler);
+```
+
+See `examples/sample-server/src/zod-bindings.ts` for the canonical wiring.
+
+### Add role-based access control (opt-in `accessControl`)
+
+ACL is opt-in. Pass the `accessControl` option (type
+`RocketsAccessControlConfig`, exported from `@bitwild/rockets-core`) and core
+registers the upstream `AccessControlModule` from
+`@concepta/nestjs-access-control` — including the guard and any `CanAccess`
+query services. When the option is omitted, no ACL module, guard, or provider
+is registered at all. Route decorators and interfaces are imported directly
+from `@concepta/nestjs-access-control`:
+
+```typescript
+import { AccessControlReadOne } from '@concepta/nestjs-access-control';
+
+RocketsCoreModule.forRoot({
+  // ...auth, repository, resources
+  accessControl: {
+    service: new AcService(), // AccessControlServiceInterface
+    settings: { rules: acRules },
+    // optional: appGuard, appFilter, imports, queryServices (CanAccess)
+  },
+});
+
+@Controller('pets')
+class PetController {
+  @Get(':id') @AccessControlReadOne('pet') read() {
+    /* ... */
+  }
+}
+```
+
 ---
 
 ## 4. Reference
 
 ### Upstream engine
 
-| Motor (`@concepta/nestjs-*`)                     | Import path                       | What core does with it                                                                            |
-| ------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `repository`                                     | `@bitwild/rockets-common`         | `buildAppRegistrationPlan` calls `repository.forRoot(entities)` and `forFeature` per resource row |
-| `crud`                                           | `@bitwild/rockets-common`         | Each `defineResource` becomes a `CrudModule.forFeature` import                                    |
-| `hook`, `common`, `authentication`, `swagger-ui` | `@bitwild/rockets-common`         | `HookModule.forRoot` in `createCoreImports`; swagger from options                                 |
-| `access-control`                                 | `@bitwild/rockets-access-control` | Optional; apps register `AccessControlModule` when they need RBAC                                 |
+| Motor (`@concepta/nestjs-*`)                     | Import path                                    | What core does with it                                                                            |
+| ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `repository`                                     | `@bitwild/rockets-core` (re-export)            | `buildAppRegistrationPlan` calls `repository.forRoot(entities)` and `forFeature` per resource row |
+| `crud`                                           | `@bitwild/rockets-core` (re-export)            | Each `defineResource` becomes a `CrudModule.forFeature` import                                    |
+| `core`, `authentication`                         | `@bitwild/rockets-core` (re-export)            | `CoreModule.forRoot` (hook resolution) in `createCoreImports`; swagger UI is core's own module    |
+| `access-control`                                 | `@concepta/nestjs-access-control` (direct)     | Opt-in: the `accessControl` option registers `AccessControlModule`; omitted → no ACL wiring       |
 
 Core **does not** fork upstream behaviour — it only expands `resources[]`,
 `userMetadata`, and `auth` integrations into the module graph those packages
@@ -319,6 +375,7 @@ expect.
 | `userMetadata` | `RocketsUserMetadataConfig`                          | optional  | Entity + DTOs for the metadata table joined to external users.                                                                                                                                                                       |
 | `resources`    | `ReadonlyArray<ResourceInput>`                       | optional  | Mix of `defineResource`, `defineModuleResource`, and manual `RocketsResourceConfig`.                                                                                                                                                 |
 | `handlers`     | `{ upsertUserMetadata?, getUserMetadata? }`          | optional  | Override default metadata CQRS handlers.                                                                                                                                                                                             |
+| `accessControl` | `RocketsAccessControlConfig`                        | optional  | Opt-in ACL: `{ service, settings: { rules }, appGuard?, appFilter?, imports?, queryServices? }` forwarded to upstream `AccessControlModule.forRoot`. Omitted → no ACL wiring.                                                        |
 | `providers`    | `Provider[]`                                         | optional  | Extra providers registered on the module.                                                                                                                                                                                            |
 | `global`       | `boolean` (default `true`)                           | optional  | Module is global — exports visible app-wide.                                                                                                                                                                                         |
 
