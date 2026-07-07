@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   AccessControlContextInterface,
   CanAccess,
-} from '@bitwild/rockets-access-control';
+} from '@concepta/nestjs-access-control';
 import { PetModelService } from './pet-model.service';
 
 @Injectable()

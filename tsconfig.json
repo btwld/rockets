@@ -22,9 +22,6 @@
       "path": "packages/rockets-common"
     },
     {
-      "path": "packages/rockets-access-control"
-    },
-    {
       "path": "packages/rockets-core"
     },
     {

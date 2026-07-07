@@ -101,8 +101,15 @@ export type {
 export { UserModule } from './user.module';
 export { MeController } from './gateways/http/me.controller';
 export { defineTypeOrmRepository } from './repository/define-typeorm-repository';
-export { logAndGetErrorDetails, getErrorDetails, SwaggerUiService } from '@bitwild/rockets-common';
-export type { ErrorDetails, RocketsRepositoryModuleInterface } from '@bitwild/rockets-common';
+export {
+  logAndGetErrorDetails,
+  getErrorDetails,
+  SwaggerUiService,
+} from '@bitwild/rockets-common';
+export type {
+  ErrorDetails,
+  RocketsRepositoryModuleInterface,
+} from '@bitwild/rockets-common';
 
 // ── Declarative resource definition (re-exported from core) ──
 export {

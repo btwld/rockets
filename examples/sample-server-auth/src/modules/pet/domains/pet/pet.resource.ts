@@ -8,7 +8,7 @@ import {
   AccessControlCreateOne,
   AccessControlUpdateOne,
   AccessControlDeleteOne,
-} from '@bitwild/rockets-access-control';
+} from '@concepta/nestjs-access-control';
 
 import { PetEntity } from './pet.entity';
 import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';

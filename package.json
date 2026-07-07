@@ -6,7 +6,6 @@
   "workspaces": {
     "packages": [
       "packages/*",
-      "!packages/nestjs-access-control",
       "examples/*",
       "examples/sample-code-review",
       "examples/sample-code-review/apps/*",

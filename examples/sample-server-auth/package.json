@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@bitwild/rockets": "workspace:^",
-    "@bitwild/rockets-access-control": "workspace:^",
     "@bitwild/rockets-auth": "workspace:^",
     "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",

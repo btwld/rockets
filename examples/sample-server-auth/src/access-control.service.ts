@@ -1,4 +1,4 @@
-import { AccessControlServiceInterface } from '@bitwild/rockets-access-control';
+import { AccessControlServiceInterface } from '@concepta/nestjs-access-control';
 import {
   ExecutionContext,
   Injectable,

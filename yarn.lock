@@ -677,15 +677,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@bitwild/rockets-access-control@workspace:^, @bitwild/rockets-access-control@workspace:packages/rockets-access-control":
-  version: 0.0.0-use.local
-  resolution: "@bitwild/rockets-access-control@workspace:packages/rockets-access-control"
-  dependencies:
-    "@concepta/nestjs-access-control": "npm:8.0.0-alpha.7"
-    "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
-  languageName: unknown
-  linkType: soft
-
 "@bitwild/rockets-adapter-firebase@workspace:^, @bitwild/rockets-adapter-firebase@workspace:packages/rockets-adapter-firebase":
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-adapter-firebase@workspace:packages/rockets-adapter-firebase"
@@ -790,7 +781,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-core@workspace:packages/rockets-core"
   dependencies:
-    "@bitwild/rockets-access-control": "workspace:^"
     "@bitwild/rockets-common": "workspace:^"
     "@concepta/nestjs-authentication": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
@@ -17638,7 +17628,6 @@ __metadata:
   resolution: "sample-server-auth@workspace:examples/sample-server-auth"
   dependencies:
     "@bitwild/rockets": "workspace:^"
-    "@bitwild/rockets-access-control": "workspace:^"
     "@bitwild/rockets-auth": "workspace:^"
     "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
@@ -17690,7 +17679,6 @@ __metadata:
   resolution: "sample-server@workspace:examples/sample-server"
   dependencies:
     "@bitwild/rockets": "workspace:^"
-    "@bitwild/rockets-access-control": "workspace:^"
     "@bitwild/rockets-common": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-zod": "workspace:^"
