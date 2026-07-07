@@ -31,13 +31,13 @@ import { generateSwaggerJson } from '@concepta/rockets-server-auth';
 // Generate the Swagger documentation
 generateSwaggerJson()
   .then(() => console.log('Swagger generation complete'))
-  .catch(err => console.error('Error generating Swagger:', err));
+  .catch((err) => console.error('Error generating Swagger:', err));
 ```
 
 ## Output
 
-The generator will create a `swagger.json` file in the `swagger` directory.
-This file can be used with Swagger UI or other OpenAPI tools to visualize and
+The generator will create a `swagger.json` file in the `swagger` directory. This
+file can be used with Swagger UI or other OpenAPI tools to visualize and
 interact with your API documentation.
 
 ## Customization
@@ -67,12 +67,7 @@ document your API:
 
 ```typescript
 import { Controller, Post, Body } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('users')
 @Controller('users')

@@ -3,10 +3,9 @@
 [![NPM](https://img.shields.io/npm/v/@bitwild/rockets-zod-typeorm)](https://www.npmjs.com/package/@bitwild/rockets-zod-typeorm)
 
 TypeORM implementation of the `SchemaEntityCompiler` contract used by
-[`@bitwild/rockets-zod`](../rockets-zod). It compiles a zod object schema
-into a decorated TypeORM entity class at module-load time — to TypeORM
-and the dynamic repository layer the result is indistinguishable from a
-handwritten entity.
+[`@bitwild/rockets-zod`](../rockets-zod). It compiles a zod object schema into a
+decorated TypeORM entity class at module-load time — to TypeORM and the dynamic
+repository layer the result is indistinguishable from a handwritten entity.
 
 **Status:** stable (`1.0.0-alpha.9` on npm, dist-tag `alpha`).
 
@@ -21,8 +20,8 @@ yarn add @bitwild/rockets-zod-typeorm@alpha @bitwild/rockets-zod@alpha
 The compiler is both zod-specific and TypeORM-specific. Keeping it out of
 `@bitwild/rockets-zod` keeps that layer ORM-free; keeping it out of
 `@bitwild/rockets-repository-typeorm` keeps the generic TypeORM adapter
-zod-free. Non-zod TypeORM apps don't pull zod; Firestore zod apps don't
-pull TypeORM. Mirror this package for any other store.
+zod-free. Non-zod TypeORM apps don't pull zod; Firestore zod apps don't pull
+TypeORM. Mirror this package for any other store.
 
 ## Usage
 
@@ -37,17 +36,16 @@ export const { zodResource, zodSubResource } =
 
 ## Column mapping
 
-| `db` meta              | TypeORM decorator                         |
-| ---------------------- | ----------------------------------------- |
-| `pk: true`             | `@PrimaryGeneratedColumn('uuid')`         |
-| `createdAt: true`      | `@CreateDateColumn()`                     |
-| `updatedAt: true`      | `@UpdateDateColumn()`                     |
-| `deletedAt: true`      | `@DeleteDateColumn()` (soft delete)       |
-| `unique: true`         | `@Column({ unique: true })`               |
-| `index: true`          | `@Index()`                                |
-| `column: { ... }`      | raw `ColumnOptions`, merged last          |
-| `relation: { ... }`    | FK column + `@ManyToOne`/`@OneToOne`/`@OneToMany` + `@JoinColumn` |
+| `db` meta           | TypeORM decorator                                                 |
+| ------------------- | ----------------------------------------------------------------- |
+| `pk: true`          | `@PrimaryGeneratedColumn('uuid')`                                 |
+| `createdAt: true`   | `@CreateDateColumn()`                                             |
+| `updatedAt: true`   | `@UpdateDateColumn()`                                             |
+| `deletedAt: true`   | `@DeleteDateColumn()` (soft delete)                               |
+| `unique: true`      | `@Column({ unique: true })`                                       |
+| `index: true`       | `@Index()`                                                        |
+| `column: { ... }`   | raw `ColumnOptions`, merged last                                  |
+| `relation: { ... }` | FK column + `@ManyToOne`/`@OneToOne`/`@OneToMany` + `@JoinColumn` |
 
-Everything else derives from the zod type (string `max` → `varchar`
-length, `.optional()`/`.nullable()` → nullable, `.default()` → column
-default).
+Everything else derives from the zod type (string `max` → `varchar` length,
+`.optional()`/`.nullable()` → nullable, `.default()` → column default).

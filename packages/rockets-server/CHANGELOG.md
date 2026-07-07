@@ -1,7 +1,7 @@
 # Changelog
 
-All notable changes to the `@bitwild/rockets` package will be documented
-in this file.
+All notable changes to the `@bitwild/rockets` package will be documented in this
+file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
@@ -12,14 +12,13 @@ and this project adheres to
 ### Added
 
 - **`RocketsAuthIntegration`** (`ROCKETS_AUTH_INTEGRATION_KIND`,
-  `isRocketsAuthIntegration`) in `@bitwild/rockets-core` for bundles
-  returned by `@bitwild/rockets-auth` **`defineRocketsAuth()`**.
+  `isRocketsAuthIntegration`) in `@bitwild/rockets-core` for bundles returned by
+  `@bitwild/rockets-auth` **`defineRocketsAuth()`**.
 
 - **Auth adapter chain** — `auth` in `RocketsModule.forRoot` / `forRootAsync`
-  now accepts an array: `auth: [AdapterA, AdapterB]`. The
-  `AuthServerGuard` iterates the chain and stops on the first conclusive
-  result. Single `Type` inputs continue to work (normalised to a
-  one-element chain).
+  now accepts an array: `auth: [AdapterA, AdapterB]`. The `AuthServerGuard`
+  iterates the chain and stops on the first conclusive result. Single `Type`
+  inputs continue to work (normalised to a one-element chain).
 
 - **`extractBearerToken(request: AuthRequest): string | null`** exported from
   `@bitwild/rockets-core` (and re-exported from `@bitwild/rockets`). Replaces
@@ -33,8 +32,8 @@ and this project adheres to
 
 ### Changed
 
-- **`RocketsModule`**: when `extras.auth` is a `RocketsAuthIntegration`,
-  merges `resources` and appends `nestImports` **after**
+- **`RocketsModule`**: when `extras.auth` is a `RocketsAuthIntegration`, merges
+  `resources` and appends `nestImports` **after**
   `RocketsCoreModule.forRootAsync` so repository rows exist before
   `RocketsAuthModule` boots. Merges `userMetadata` /
   `rocketsDefaults.enableGlobalGuard` from the integration when not set on
@@ -45,26 +44,26 @@ and this project adheres to
   `AuthAttemptResult` is a discriminated union; see below.
 
 - **`AuthAttemptResult.error`** is now `HttpException` instead of
-  `UnauthorizedException`, allowing adapters to return 403 and other
-  status codes.
+  `UnauthorizedException`, allowing adapters to return 403 and other status
+  codes.
 
 - **`AuthServerGuard`** now logs every adapter decision at `debug` level and
-  wraps unexpected thrown errors in a generic `401` (details are only
-  emitted to the server-side `Logger`).
+  wraps unexpected thrown errors in a generic `401` (details are only emitted to
+  the server-side `Logger`).
 
-- **`authExternallyProvided`** is no longer a user-facing config field.
-  The flag is inferred internally by `resolveAuthChain` based on entry
-  type (`RocketsAuthIntegration` → externally provided; bare `Type` /
+- **`authExternallyProvided`** is no longer a user-facing config field. The flag
+  is inferred internally by `resolveAuthChain` based on entry type
+  (`RocketsAuthIntegration` → externally provided; bare `Type` /
   `AuthFeatureBundle` → auto-registered).
 
 ### Removed
 
-- **`BearerTokenAuthAdapter`** abstract class — use `extractBearerToken`
-  and implement `AuthAdapterInterface` directly.
+- **`BearerTokenAuthAdapter`** abstract class — use `extractBearerToken` and
+  implement `AuthAdapterInterface` directly.
 
-- **`AUTH_ADAPTER_TOKEN`** (singular) — replaced by `AUTH_ADAPTERS_TOKEN`
-  (the full chain). `RocketsAuthProvider` alias on `@bitwild/rockets` is
-  also removed.
+- **`AUTH_ADAPTER_TOKEN`** (singular) — replaced by `AUTH_ADAPTERS_TOKEN` (the
+  full chain). `RocketsAuthProvider` alias on `@bitwild/rockets` is also
+  removed.
 
 - **`AuthorizeUserInterface`** and **`ValidateTokenInterface`** — removed.
 
@@ -73,17 +72,25 @@ and this project adheres to
 #### Implement `authenticate` instead of `validateToken`
 
 **Before:**
+
 ```typescript
 @Injectable()
 export class MyAdapter extends BearerTokenAuthAdapter {
   async validateToken(token: string): Promise<AuthorizedUser> {
     const decoded = await verify(token);
-    return { id: decoded.sub, sub: decoded.sub, email: decoded.email, userRoles: [], claims: {} };
+    return {
+      id: decoded.sub,
+      sub: decoded.sub,
+      email: decoded.email,
+      userRoles: [],
+      claims: {},
+    };
   }
 }
 ```
 
 **After:**
+
 ```typescript
 import { extractBearerToken } from '@bitwild/rockets-core';
 
@@ -95,9 +102,21 @@ export class MyAdapter implements AuthAdapterInterface {
 
     try {
       const decoded = await verify(token);
-      return { matched: true, user: { id: decoded.sub, sub: decoded.sub, email: decoded.email, userRoles: [], claims: {} } };
+      return {
+        matched: true,
+        user: {
+          id: decoded.sub,
+          sub: decoded.sub,
+          email: decoded.email,
+          userRoles: [],
+          claims: {},
+        },
+      };
     } catch {
-      return { matched: true, error: new UnauthorizedException('Authentication failed') };
+      return {
+        matched: true,
+        error: new UnauthorizedException('Authentication failed'),
+      };
     }
   }
 }
@@ -106,11 +125,13 @@ export class MyAdapter implements AuthAdapterInterface {
 #### Replace `AUTH_ADAPTER_TOKEN` with `AUTH_ADAPTERS_TOKEN`
 
 **Before:**
+
 ```typescript
-providers: [{ provide: AUTH_ADAPTER_TOKEN, useClass: MyAdapter }]
+providers: [{ provide: AUTH_ADAPTER_TOKEN, useClass: MyAdapter }];
 ```
 
 **After:**
+
 ```typescript
 // Remove the manual provider — Rockets registers adapters automatically via
 // the `auth` option. Inject AUTH_ADAPTERS_TOKEN to read the chain.
@@ -121,104 +142,90 @@ const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
 
 ### Changed
 
-- **NestJS 11 upgrade**: Bumped all `@nestjs/*` dependencies
-  to v11 (`@nestjs/common`, `@nestjs/core`, `@nestjs/swagger`,
-  `@nestjs/config`, `@nestjs/testing`, `@nestjs/typeorm`,
-  `@nestjs/platform-express`) and updated `@concepta/*`
-  packages from `7.0.0-alpha.8` to `7.0.0-alpha.10`.
-- **User metadata model service**: `getUserMetadataByUserId`
-  now returns `null` instead of throwing `NotFoundException`
-  when no metadata exists, simplifying consumer code.
-- **Me controller**: Removed redundant try/catch and error
-  logging; relies on the model service for error handling.
-- **User DTOs**: Added `additionalProperties: true` to
-  Swagger `userMetadata` schemas for flexible metadata
-  payloads.
-- **Module definition**: `createRocketsControllers` now
-  respects `extras.controllers` for custom controller
-  overrides.
-- **Options extras interface**: Trimmed verbose JSDoc to
-  concise descriptions.
-- **Error handling**: Exception catch blocks now rethrow
-  `HttpException` subclasses alongside `RuntimeException`.
+- **NestJS 11 upgrade**: Bumped all `@nestjs/*` dependencies to v11
+  (`@nestjs/common`, `@nestjs/core`, `@nestjs/swagger`, `@nestjs/config`,
+  `@nestjs/testing`, `@nestjs/typeorm`, `@nestjs/platform-express`) and updated
+  `@concepta/*` packages from `7.0.0-alpha.8` to `7.0.0-alpha.10`.
+- **User metadata model service**: `getUserMetadataByUserId` now returns `null`
+  instead of throwing `NotFoundException` when no metadata exists, simplifying
+  consumer code.
+- **Me controller**: Removed redundant try/catch and error logging; relies on
+  the model service for error handling.
+- **User DTOs**: Added `additionalProperties: true` to Swagger `userMetadata`
+  schemas for flexible metadata payloads.
+- **Module definition**: `createRocketsControllers` now respects
+  `extras.controllers` for custom controller overrides.
+- **Options extras interface**: Trimmed verbose JSDoc to concise descriptions.
+- **Error handling**: Exception catch blocks now rethrow `HttpException`
+  subclasses alongside `RuntimeException`.
 
 ### Added
 
-- **User metadata model service unit tests**: Comprehensive
-  spec covering exception mapping, CRUD operations,
-  `createOrUpdate`, and `hasUserMetadata`.
+- **User metadata model service unit tests**: Comprehensive spec covering
+  exception mapping, CRUD operations, `createOrUpdate`, and `hasUserMetadata`.
 
 ### Fixed
 
-- **TypeScript strict mode**: Added definite assignment
-  assertions (`!`) to DTO properties in e2e specs and
-  `UserResponseDto`.
+- **TypeScript strict mode**: Added definite assignment assertions (`!`) to DTO
+  properties in e2e specs and `UserResponseDto`.
 
 ## [1.0.0-alpha.5] - 2026-02-03
 
 ### Added
 
-- **User metadata model service interface**:
-  `UserMetadataModelServiceInterface` and
-  `UserMetadataModelUpdatableInterface` for consistent
-  model-layer contracts and SDK patterns.
-- **Me controller**: `/me` endpoint now returns
-  authenticated user data with user metadata via
-  injectable `UserMetadataModelService`.
+- **User metadata model service interface**: `UserMetadataModelServiceInterface`
+  and `UserMetadataModelUpdatableInterface` for consistent model-layer contracts
+  and SDK patterns.
+- **Me controller**: `/me` endpoint now returns authenticated user data with
+  user metadata via injectable `UserMetadataModelService`.
 
 ### Changed
 
-- **User metadata module**: User metadata model service
-  is now injectable and follows the shared
-  `UserMetadataModelServiceInterface` for custom
+- **User metadata module**: User metadata model service is now injectable and
+  follows the shared `UserMetadataModelServiceInterface` for custom
   implementations.
-- **User DTOs**: `UserUpdateDto` and `UserResponseDto`
-  aligned with user metadata integration for the me
-  controller.
-- **Rockets options**: Extras interface and module
-  definition updates for extensibility.
+- **User DTOs**: `UserUpdateDto` and `UserResponseDto` aligned with user
+  metadata integration for the me controller.
+- **Rockets options**: Extras interface and module definition updates for
+  extensibility.
 
 ## [1.0.0-alpha.4] - 2026-01-23
 
 ### Changed
 
-- **User response DTO**: Updated user response DTO for
-  consistency with user metadata and API responses.
+- **User response DTO**: Updated user response DTO for consistency with user
+  metadata and API responses.
 
 ## [1.0.0-alpha.3] - 2026-01-22
 
 ### Changed
 
-- Type and array handling improvements for DTOs and
-  interfaces.
+- Type and array handling improvements for DTOs and interfaces.
 
 ## [1.0.0-alpha.2] - 2025-12-03
 
 ### Changed
 
-- Package and configuration updates; alignment with
-  rockets-server-auth changes.
+- Package and configuration updates; alignment with rockets-server-auth changes.
 
 ## [1.0.0-alpha.1] - 2025-10-28
 
 ### Changed
 
-- **NPM package metadata**: Improved package metadata and
-  configuration for publishing.
+- **NPM package metadata**: Improved package metadata and configuration for
+  publishing.
 - **Config**: Package and build configuration updates.
 
 ## [1.0.0-alpha.0] - 2025-10-28
 
 ### Added
 
-- Initial alpha release of Rockets core server
-  functionality
+- Initial alpha release of Rockets core server functionality
 - Core NestJS module for rapid API development
 - Built-in authentication infrastructure
 - User management foundation
 - User metadata system
-- Swagger documentation generator CLI tool
-  (`rockets-swagger`)
+- Swagger documentation generator CLI tool (`rockets-swagger`)
 - Exception filtering system
 - Authentication guards
 - TypeScript support with full type definitions
@@ -229,8 +236,7 @@ const adapters = app.get<AuthAdapterInterface[]>(AUTH_ADAPTERS_TOKEN);
 - **RocketsModule**: Core module for application setup
 - **User Module**: Base user management functionality
 - **User Metadata Module**: Extensible user metadata system
-- **Authentication Provider**: Pluggable authentication
-  interface
+- **Authentication Provider**: Pluggable authentication interface
 - **Error Logging Helper**: Centralized error handling
 - **Swagger Integration**: Automatic API documentation via
   `@concepta/nestjs-swagger-ui`

@@ -1,6 +1,7 @@
 # Rockets Server API Documentation
 
-This document describes the API endpoints available in the Rockets Server module.
+This document describes the API endpoints available in the Rockets Server
+module.
 
 ## Base URL
 
@@ -8,12 +9,12 @@ This document describes the API endpoints available in the Rockets Server module
 
 ## Endpoints
 
-*Endpoints will be added as the module is extended with specific functionality.*
+_Endpoints will be added as the module is extended with specific functionality._
 
 ## Authentication
 
-*Authentication details will be added when auth modules are integrated.*
+_Authentication details will be added when auth modules are integrated._
 
 ## Error Handling
 
-*Error handling details will be added as the module is extended.*
+_Error handling details will be added as the module is extended._
