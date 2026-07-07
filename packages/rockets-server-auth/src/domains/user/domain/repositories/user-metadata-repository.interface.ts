@@ -1,6 +1,6 @@
 import { RocketsAuthUserMetadataEntityInterface } from '../../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../interfaces/rockets-auth-user-metadata-updatable.interface';
-import { RepositoryContextInterface } from '@bitwild/rockets-common';
+import { RepositoryContextInterface } from '@bitwild/rockets-core';
 
 export interface UserMetadataRepositoryInterface {
   findByUserId(

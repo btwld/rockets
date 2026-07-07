@@ -31,7 +31,7 @@ import { GetUserMetadataQuery } from '../application/queries/impl/get-user-metad
 
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser } from '../common';
 
 // ────────────────────────────────────────────────────────────────────
 // Fixtures

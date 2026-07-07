@@ -29,7 +29,7 @@ import {
   type ListCodeReviewReportsFilter,
 } from './code-review-report.types';
 import type { CodeReviewReportView } from './code-review-report.view';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 @Injectable()
 export class AnalysisService {

@@ -23,7 +23,7 @@ import {
   InvitationAcceptanceConfig,
   INVITATION_ACCEPTANCE_CONFIG_TOKEN,
 } from '../../infrastructure/config/invitation-acceptance.config';
-import { whitelistedFromDto } from '@bitwild/rockets-common';
+import { whitelistedFromDto } from '@bitwild/rockets-core';
 
 /**
  * Invitation User Acceptance Listener

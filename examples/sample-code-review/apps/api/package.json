@@ -16,7 +16,6 @@
   "dependencies": {
     "@bitwild/rockets": "workspace:^",
     "@bitwild/rockets-adapter-firebase": "workspace:^",
-    "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@bitwild/rockets-repository-firestore": "workspace:^",
     "@bitwild/rockets-zod": "workspace:^",

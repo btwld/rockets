@@ -48,7 +48,7 @@ import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineResource } from '../infrastructure/resource/define-resource';
 import { defineModuleResource } from '../infrastructure/resource/define-module-resource';
 import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '../common';
 import {
   EntityHook,
   type EntityHookContext,

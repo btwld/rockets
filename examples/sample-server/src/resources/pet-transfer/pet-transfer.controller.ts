@@ -19,7 +19,7 @@ import type { AuthorizedUser } from '@bitwild/rockets';
 import type { Pet } from '../pet/pet.schema';
 import { TransferPetOwnershipDto } from './dto/transfer-pet-ownership.dto';
 import { TransferPetOwnershipCommand } from './commands/impl/transfer-pet-ownership.command';
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser } from '@bitwild/rockets-core';
 
 /**
  * HTTP gateway for pet-transfer. Dispatches via `CommandBus.execute` —

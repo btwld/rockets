@@ -214,12 +214,8 @@ export { UpsertUserMetadataHandler } from './application/commands/handlers/upser
 export { GetUserMetadataQuery } from './application/queries/impl/get-user-metadata.query';
 export { AbstractGetUserMetadataHandler } from './application/queries/handlers/abstract-get-user-metadata.handler';
 export { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
-export { AuthUser, InjectDynamicRepository } from '@bitwild/rockets-common';
-export type {
-  SchemaEntityCompiler,
-  SchemaEntityCompilerOptions,
-  SwaggerUiOptionsInterface,
-} from '@bitwild/rockets-common';
+// Shared infrastructure (formerly @bitwild/rockets-common)
+export * from './common';
 
 // Constants
 export {

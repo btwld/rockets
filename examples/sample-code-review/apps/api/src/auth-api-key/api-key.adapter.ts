@@ -7,7 +7,7 @@ import type {
   AuthRequest,
 } from '@bitwild/rockets-core';
 import { ApiKeyEntity } from './api-key.entity';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 /**
  * Authenticates requests via an `X-API-Key` header.

@@ -4,7 +4,7 @@ import {
   CreateOneInterface,
   RemoveOneInterface,
   UpdateOneInterface,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-core';
 
 /**
  * Pet Vaccination Interface

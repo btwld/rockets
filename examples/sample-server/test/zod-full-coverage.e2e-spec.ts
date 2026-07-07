@@ -25,7 +25,7 @@ import type {
   SchemaEntityCompilerOptions,
 } from '@bitwild/rockets';
 import { CrudAdapter, CrudCreateCommand } from '@concepta/nestjs-crud';
-import { CrudCommandHandlerBase, InjectCrudAdapter } from '@bitwild/rockets-common';
+import { CrudCommandHandlerBase, InjectCrudAdapter } from '@bitwild/rockets-core';
 import {
   InjectDynamicRepository,
   RepositoryInterface,

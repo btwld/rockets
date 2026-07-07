@@ -33,7 +33,7 @@ import type {
 } from '../domain/interfaces/auth-adapter.interface';
 import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { createStubAuthBootstrap } from '../infrastructure/auth/create-stub-auth-bootstrap';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '../common';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,

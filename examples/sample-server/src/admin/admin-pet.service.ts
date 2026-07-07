@@ -3,7 +3,7 @@ import type { AppContextInterface } from '@concepta/nestjs-core';
 import { RepositoryInterface, TransactionScope, Where } from '@concepta/nestjs-repository';
 import { PetEntity } from '../resources/pet/pet.schema';
 import type { Pet } from '../resources/pet/pet.schema';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 export interface ListParams {
   readonly withDeleted: boolean;

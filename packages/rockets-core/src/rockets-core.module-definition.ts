@@ -34,7 +34,7 @@ import { ActorOverlay } from './infrastructure/interceptors/actor.overlay';
 import { ZodBodyValidationInterceptor } from './infrastructure/interceptors/zod-body-validation.interceptor';
 import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
 import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
-import { SwaggerUiModule } from '@bitwild/rockets-common';
+import { SwaggerUiModule } from './common';
 
 export const {
   ConfigurableModuleClass: RocketsCoreModuleClass,

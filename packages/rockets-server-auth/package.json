@@ -74,7 +74,6 @@
     "generate-swagger": "ts-node src/generate-swagger.ts"
   },
   "dependencies": {
-    "@bitwild/rockets-common": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
     "@concepta/nestjs-access-control": "8.0.0-alpha.7",
     "@concepta/nestjs-authentication": "8.0.0-alpha.7",

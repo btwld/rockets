@@ -8,12 +8,12 @@ import {
   CrudCreateCommand,
   CrudQueryException,
 } from '@concepta/nestjs-crud';
-import { CrudCommandHandlerBase } from '@bitwild/rockets-common';
-import type { CrudCommandInterface } from '@bitwild/rockets-common';
+import { CrudCommandHandlerBase } from '@bitwild/rockets-core';
+import type { CrudCommandInterface } from '@bitwild/rockets-core';
 import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from './pet.entity';
 import { PetCreatableInterface } from './pet.interface';
-import { InjectCrudAdapter } from '@bitwild/rockets-common';
+import { InjectCrudAdapter } from '@bitwild/rockets-core';
 
 /**
  * Stamps `userId` from the authenticated actor that `ActorOverlay`

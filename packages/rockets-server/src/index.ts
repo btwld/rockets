@@ -105,11 +105,11 @@ export {
   logAndGetErrorDetails,
   getErrorDetails,
   SwaggerUiService,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-core';
 export type {
   ErrorDetails,
   RocketsRepositoryModuleInterface,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-core';
 
 // ── Declarative resource definition (re-exported from core) ──
 export {

@@ -25,7 +25,7 @@ import {
   CreateApiKeyDto,
   CreateApiKeyResponseDto,
 } from './api-key.dto';
-import { AuthUser, InjectDynamicRepository } from '@bitwild/rockets-common';
+import { AuthUser, InjectDynamicRepository } from '@bitwild/rockets-core';
 
 @ApiTags('API Keys')
 @ApiBearerAuth()

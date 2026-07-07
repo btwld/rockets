@@ -1,7 +1,7 @@
 import { ReferenceIdInterface } from '@concepta/nestjs-core';
 import { PetVaccinationEntityInterface } from '../pet-vaccination/pet-vaccination.interface';
 import { PetAppointmentEntityInterface } from '../pet-appointment/pet-appointment.interface';
-import { ByIdInterface } from '@bitwild/rockets-common';
+import { ByIdInterface } from '@bitwild/rockets-core';
 
 // Audit field type aliases for consistency
 export type AuditDateCreated = Date;

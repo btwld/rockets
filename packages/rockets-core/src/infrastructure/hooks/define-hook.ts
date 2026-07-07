@@ -12,7 +12,7 @@ import {
   type RepositoryFindOptions,
 } from '@concepta/nestjs-repository';
 
-import { deriveEntityKey } from '@bitwild/rockets-common';
+import { deriveEntityKey } from '../../common';
 
 import type { Actor } from '../../domain/interfaces/actor.interface';
 import { getActor } from '../../utils/get-actor.helper';

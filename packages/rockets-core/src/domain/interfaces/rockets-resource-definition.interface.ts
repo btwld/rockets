@@ -1,7 +1,7 @@
 import type { PlainLiteralObject, Provider, Type } from '@nestjs/common';
 import type { RocketsEntityHookForResource } from '../../infrastructure/hooks/entity-hook';
 import type { Operation } from '@concepta/nestjs-core';
-import type { RocketsRepositoryModuleInterface } from '@bitwild/rockets-common';
+import type { RocketsRepositoryModuleInterface } from '../../common';
 import type { ResourceKind } from './resource-kind.enum';
 import type {
   CrudRequestConfig,

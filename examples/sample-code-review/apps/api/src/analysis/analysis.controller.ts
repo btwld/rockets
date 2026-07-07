@@ -30,7 +30,7 @@ import { CodeReviewReportEntity } from './code-review-report.entity';
 import { CodeReviewReportExecutionEntity } from './code-review-report-execution.entity';
 import type { CodeReviewReportView } from './code-review-report.view';
 import { CODE_REVIEW_REPORT_COLLECTION } from '../repository/code-review-reports.persistence';
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser } from '@bitwild/rockets-core';
 
 @ApiTags('Code review')
 @ApiBearerAuth()

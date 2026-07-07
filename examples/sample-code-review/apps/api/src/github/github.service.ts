@@ -9,7 +9,7 @@ import type { AppContextInterface } from '@concepta/nestjs-core';
 import { GithubConfig } from '../config/github.config';
 import { GithubConnectionEntity } from './github-connection.entity';
 import { GithubOAuthStateService } from './github-oauth-state.service';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 import {
   GITHUB_API_CLIENT,
   type GithubApiClientInterface,

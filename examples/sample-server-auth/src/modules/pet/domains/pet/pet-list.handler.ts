@@ -7,11 +7,11 @@ import {
 import {
   CrudQueryHandlerBase,
   type CrudQueryInterface,
-} from '@bitwild/rockets-common';
+} from '@bitwild/rockets-core';
 import { getActor } from '@bitwild/rockets-core';
 import { WhereOperator, type EntityColumn } from '@concepta/nestjs-repository';
 import { PetEntity } from './pet.entity';
-import { InjectCrudAdapter } from '@bitwild/rockets-common';
+import { InjectCrudAdapter } from '@bitwild/rockets-core';
 
 /**
  * List handler: filters pets by the authenticated actor's id so users only

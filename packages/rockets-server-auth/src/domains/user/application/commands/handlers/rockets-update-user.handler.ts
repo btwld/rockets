@@ -5,7 +5,7 @@ import { UpdateUserCommand } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
 
 import { RocketsUpdateUserCommand } from '../impl/rockets-update-user.command';
-import { createRepositoryContext } from '@bitwild/rockets-common';
+import { createRepositoryContext } from '@bitwild/rockets-core';
 
 @CommandHandler(RocketsUpdateUserCommand)
 export class RocketsUpdateUserHandler

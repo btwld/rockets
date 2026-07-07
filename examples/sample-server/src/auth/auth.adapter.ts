@@ -32,7 +32,7 @@ import type {
 } from '@bitwild/rockets';
 import { extractBearerToken } from '@bitwild/rockets';
 import { UserEntity, UserRole } from './user.entity';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 // Hardcoded for demo only — see file header.
 const JWT_SECRET = 'sample-server-secret-do-not-use-in-production';

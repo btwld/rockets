@@ -20,7 +20,7 @@ import type { AuthorizedUser } from '@bitwild/rockets';
 import { PetShareEntity } from './pet-share.entity';
 import { PetShareCreateDto, PetShareResponseDto } from './pet-share.dto';
 import { PetShareService } from './pet-share.service';
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser } from '@bitwild/rockets-core';
 
 /**
  * Thin HTTP gateway. `@Ctx()` resolves the per-request `AppContextHost`

@@ -8,7 +8,7 @@ import {
 } from '@bitwild/rockets-core';
 import { ReminderEntity } from './reminder.schema';
 import { AppointmentEntity } from './appointment.entity';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 /**
  * Scopes reminders to the authenticated user's own appointments.

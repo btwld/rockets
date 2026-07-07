@@ -20,7 +20,7 @@ import type {
 } from '@bitwild/rockets-core';
 import type { RocketsUserMetadataDtoConfig } from '../../rockets.tokens';
 import { ROCKETS_USER_METADATA_DTO_TOKEN } from '../../rockets.tokens';
-import { AuthUser, whitelistedFromDto } from '@bitwild/rockets-common';
+import { AuthUser, whitelistedFromDto } from '@bitwild/rockets-core';
 
 @ApiTags('user')
 @ApiBearerAuth()

@@ -8,7 +8,7 @@ import {
   getCrudContext,
 } from '@bitwild/rockets-core';
 import { AuditAction, AuditLogEntity } from './audit-log.entity';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 /**
  * Repo hook that writes an `audit_logs` row after every mutating

@@ -1,5 +1,5 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import type { RocketsRepositoryModuleInterface } from '@bitwild/rockets-common';
+import type { RocketsRepositoryModuleInterface } from '../../common';
 import type {
   UserMetadataCreatableInterface,
   UserMetadataModelUpdatableInterface,

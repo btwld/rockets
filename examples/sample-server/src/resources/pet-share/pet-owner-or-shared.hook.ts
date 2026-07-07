@@ -10,7 +10,7 @@ import {
 } from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.schema';
 import { PetShareEntity } from './pet-share.entity';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 /**
  * Broadens pet visibility from strict "owner-only" to "owner OR shared

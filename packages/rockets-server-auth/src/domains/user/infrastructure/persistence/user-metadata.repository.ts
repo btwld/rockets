@@ -6,8 +6,8 @@ import { UserMetadataRepositoryInterface } from '../../domain/repositories/user-
 import { RocketsAuthUserMetadataEntityInterface } from '../../interfaces/rockets-auth-user-metadata-entity.interface';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../interfaces/rockets-auth-user-metadata-updatable.interface';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../../shared/constants/repository-entity-keys.constants';
-import { RepositoryContextInterface } from '@bitwild/rockets-common';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { RepositoryContextInterface } from '@bitwild/rockets-core';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 @Injectable()
 export class UserMetadataRepository implements UserMetadataRepositoryInterface {

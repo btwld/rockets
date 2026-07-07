@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { UserMetadataUpdateDto } from './user-metadata.schema';
 import { patchMePatchOpenApi } from './swagger/patch-me-openapi';
-import { SwaggerUiService } from '@bitwild/rockets-common';
+import { SwaggerUiService } from '@bitwild/rockets-core';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

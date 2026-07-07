@@ -21,7 +21,7 @@ import {
 } from '@concepta/nestjs-repository';
 import { Specification } from '@concepta/nestjs-core';
 import type { RocketsCrudContext } from '../../domain/interfaces/rockets-crud-context.interface';
-import { deriveEntityKey } from '@bitwild/rockets-common';
+import { deriveEntityKey } from '../../common';
 
 /**
  * # When to reach for `EntityHook` vs Guard / Interceptor / Subscriber

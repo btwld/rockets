@@ -8,8 +8,8 @@ import {
   UserMetadataUpdatableInterface,
 } from '../../../domain/interfaces/user-metadata.interface';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../rockets-core.constants';
-import { stripUndefined } from '@bitwild/rockets-common';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { stripUndefined } from '../../../common';
+import { InjectDynamicRepository } from '../../../common';
 
 @Injectable()
 export class UpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandler {

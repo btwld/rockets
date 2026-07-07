@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { AppContextInterface } from '@concepta/nestjs-core';
 import { RepositoryInterface, Where, type WhereClause } from '@concepta/nestjs-repository';
 import { AuditAction, AuditLogEntity } from './audit-log.entity';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 export interface AuditQueryFilter {
   readonly resource?: string;

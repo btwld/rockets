@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import type { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '../../common';
 
 interface RequestWithUserAndParams {
   user?: AuthorizedUser;

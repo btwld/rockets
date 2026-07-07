@@ -19,9 +19,6 @@
   "files": [],
   "references": [
     {
-      "path": "packages/rockets-common"
-    },
-    {
       "path": "packages/rockets-core"
     },
     {

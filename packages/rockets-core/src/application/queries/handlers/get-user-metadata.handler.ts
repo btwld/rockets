@@ -4,7 +4,7 @@ import { AbstractGetUserMetadataHandler } from './abstract-get-user-metadata.han
 import { GetUserMetadataQuery } from '../impl/get-user-metadata.query';
 import { UserMetadataEntityInterface } from '../../../domain/interfaces/user-metadata.interface';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../rockets-core.constants';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '../../../common';
 
 @Injectable()
 export class GetUserMetadataHandler extends AbstractGetUserMetadataHandler {

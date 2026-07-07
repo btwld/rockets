@@ -4,7 +4,7 @@ import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 import { UserEntity } from '../auth/user.entity';
 import { FakeEmailGateway } from './email.gateway';
 import { PetCreatedEvent } from './pet-created.event';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 /**
  * Sends a "welcome" email to the pet's owner when a new pet is created.

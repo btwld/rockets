@@ -7,7 +7,7 @@ import {
 import { USER_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';
 import { AbstractAdminUserReadHandler } from '../../commands/handlers/abstract-admin-user-read.handler';
-import { InjectCrudAdapter } from '@bitwild/rockets-common';
+import { InjectCrudAdapter } from '@bitwild/rockets-core';
 
 @Injectable()
 export class AdminUserReadHandler extends AbstractAdminUserReadHandler {

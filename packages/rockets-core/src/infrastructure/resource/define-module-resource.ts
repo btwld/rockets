@@ -6,7 +6,7 @@ import type {
   ModuleResourceEntityInput,
 } from '../../domain/interfaces/module-resource.interface';
 import { ResourceKind } from '../../domain/interfaces/resource-kind.enum';
-import { resolveEntityKey } from '@bitwild/rockets-common';
+import { resolveEntityKey } from '../../common';
 
 /**
  * Normalise a class shorthand or full entry into the canonical

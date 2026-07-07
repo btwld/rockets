@@ -25,7 +25,7 @@ import {
   GithubRepoResponseDto,
 } from './github.dto';
 import { GithubService } from './github.service';
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser } from '@bitwild/rockets-core';
 
 @ApiTags('GitHub')
 @Controller('github')

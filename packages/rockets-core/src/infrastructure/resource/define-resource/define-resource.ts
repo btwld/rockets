@@ -28,7 +28,7 @@ import {
 import { buildPersistenceRelations } from './build-persistence-relations';
 import { buildOperation, mergeProviders } from './build-operation';
 import { materialiseSubResource } from './materialise-sub-resource';
-import { deriveEntityKey } from '@bitwild/rockets-common';
+import { deriveEntityKey } from '../../../common';
 
 type CrudDecorator = ReturnType<typeof applyDecorators>;
 

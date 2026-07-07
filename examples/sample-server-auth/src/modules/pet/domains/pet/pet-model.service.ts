@@ -11,7 +11,7 @@ import {
 import { PetEntity } from './pet.entity';
 import { PetCreateDto, PetUpdateDto } from './pet.dto';
 import { PetNotFoundException } from './pet.exception';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 /**
  * Pet domain service backed by the dynamic repository registered for the

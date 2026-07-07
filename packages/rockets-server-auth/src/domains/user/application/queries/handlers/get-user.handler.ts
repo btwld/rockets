@@ -13,7 +13,7 @@ import { RocketsAuthUserMetadataEntityInterface } from '../../../interfaces/rock
 import { UserException } from '../../../domain/exceptions/user.exception';
 import { GetUserQuery } from '../impl/get-user.query';
 import { GetUserMetadataQuery } from '../impl/get-user-metadata.query';
-import { createRepositoryContext } from '@bitwild/rockets-common';
+import { createRepositoryContext } from '@bitwild/rockets-core';
 
 @QueryHandler(GetUserQuery)
 export class GetUserHandler implements IQueryHandler<GetUserQuery> {

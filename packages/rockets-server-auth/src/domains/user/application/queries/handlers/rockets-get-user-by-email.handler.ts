@@ -5,7 +5,7 @@ import { GetUserByEmailQuery } from '@concepta/nestjs-user';
 import { RocketsEntity } from '../../../../../shared/constants/repository-entity-keys.constants';
 
 import { RocketsGetUserByEmailQuery } from '../impl/rockets-get-user-by-email.query';
-import { createRepositoryContext } from '@bitwild/rockets-common';
+import { createRepositoryContext } from '@bitwild/rockets-core';
 
 @QueryHandler(RocketsGetUserByEmailQuery)
 export class RocketsGetUserByEmailHandler

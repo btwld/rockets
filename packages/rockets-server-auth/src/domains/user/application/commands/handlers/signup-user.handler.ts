@@ -15,7 +15,7 @@ import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth
 import { AbstractSignupUserHandler } from './abstract-signup-user.handler';
 import { SignupUserCommand } from '../impl/signup-user.command';
 import { userAggregateToEntity } from '../../../../../shared/utils/aggregate-mappers';
-import { RepositoryContextInterface } from '@bitwild/rockets-common';
+import { RepositoryContextInterface } from '@bitwild/rockets-core';
 
 /**
  * Drop server-controlled identity fields from a user-supplied metadata

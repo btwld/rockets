@@ -2,8 +2,8 @@ import { Injectable, type PlainLiteralObject, type Type } from '@nestjs/common';
 import { type RepositoryInterface, Where } from '@concepta/nestjs-repository';
 
 import { EntityHook, PassthroughEntityHookBase } from './entity-hook';
-import { deriveEntityKey } from '@bitwild/rockets-common';
-import { InjectDynamicRepository } from '@bitwild/rockets-common';
+import { deriveEntityKey } from '../../common';
+import { InjectDynamicRepository } from '../../common';
 
 /**
  * Re-fetches the persisted row by primary key after an entity is created
