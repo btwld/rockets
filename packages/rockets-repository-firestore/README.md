@@ -6,7 +6,7 @@
 
 > Firestore adapter for the Rockets dynamic-repository contract. Mix Firestore-backed entities with a TypeORM (or any other) default adapter, per entity.
 
-**Status:** preview (`1.0.0-alpha.0`). API stable enough to use, but expect refinements before 1.0.
+**Status:** preview (`1.0.0-alpha.9` on npm, dist-tag `alpha`). API stable enough to use; expect refinements before 1.0.
 
 ---
 
@@ -42,7 +42,8 @@ The package is **per-entity opt-in**, not a wholesale replacement: register it a
 ### Install
 
 ```bash
-yarn add @bitwild/rockets-repository-firestore @bitwild/rockets-repository \
+yarn add @bitwild/rockets-repository-firestore@alpha @bitwild/rockets-core@alpha \
+  @bitwild/rockets-common@alpha \
   firebase-admin
 ```
 

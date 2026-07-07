@@ -6,7 +6,7 @@
 
 > Role-based access control (RBAC) with grant rules per action / possession, on top of [`accesscontrol`](https://www.npmjs.com/package/accesscontrol).
 
-**Status:** stable, but lagging — wraps `@concepta/nestjs-access-control@7.0.0-alpha.10`. The upstream v8 port is on the roadmap; the public API surface is expected to stay the same.
+**Status:** stable (`1.0.0-alpha.9` on npm, dist-tag `alpha`), but lagging — wraps `@concepta/nestjs-access-control@7.0.0-alpha.10`. The upstream v8 port is on the roadmap; the public API surface is expected to stay the same.
 
 ---
 
@@ -42,7 +42,7 @@ It owns the ACL part of Rockets: a grant table, a guard that enforces it, decora
 ### Install
 
 ```bash
-yarn add @bitwild/rockets-access-control @bitwild/rockets-common \
+yarn add @bitwild/rockets-access-control@alpha @bitwild/rockets-common@alpha \
   accesscontrol @nestjs/common reflect-metadata
 ```
 

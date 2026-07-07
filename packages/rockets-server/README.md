@@ -6,7 +6,7 @@
 
 > External-auth NestJS server. One options object → adapter chain, global guard, `/me`, declarative CRUD resources, swagger.
 
-**Status:** stable.
+**Status:** stable (`1.0.0-alpha.9` on npm, dist-tag `alpha`).
 
 **Stack context:** [Repository README](../../README.md#what-problem-each-layer-solves) — Concepta modules are the **motor**; `rockets-core` is the **planner**; **this package** is **Path A** (identity lives outside the app).
 
@@ -78,11 +78,11 @@ Diagram: [`docs/architecture-diagram.html`](../../docs/architecture-diagram.html
 ### Install
 
 ```bash
-yarn add @bitwild/rockets \
+yarn add @bitwild/rockets@alpha \
   class-transformer class-validator reflect-metadata rxjs
 ```
 
-`@bitwild/rockets` pulls in `rockets-core`, `rockets-common`, `rockets-crud`, `rockets-repository`, and the matching `@concepta/nestjs-*` motors transitively. Add TypeORM (`@concepta/nestjs-repository-typeorm`, `typeorm`, `@nestjs/typeorm`, driver) only when you use SQL. Add other `@bitwild/*` packages only if you import from them directly.
+`@bitwild/rockets` pulls in `rockets-core`, `rockets-common`, `rockets-access-control`, and the matching `@concepta/nestjs-*` motors transitively (repository + CRUD via `@bitwild/rockets-common`). Add TypeORM (`@concepta/nestjs-repository-typeorm`, `typeorm`, `@nestjs/typeorm`, driver) only when you use SQL. Add other `@bitwild/*` packages only if you import from them directly.
 
 ### Minimal working app
 

@@ -5,6 +5,8 @@
 
 > Reference app for `@bitwild/rockets-auth` — built-in user system (signup, login, OTP, password recovery, invitations, admin user CRUD) with role-based access control and ownership-scoped resources.
 
+Monorepo dev: `@bitwild/*` resolves via `workspace:^`. External apps: `yarn add @bitwild/rockets-auth@alpha`.
+
 ---
 
 ## 1. Introduction

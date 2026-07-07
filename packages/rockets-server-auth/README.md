@@ -5,7 +5,7 @@
 
 > Complete built-in auth system for Rockets: signup, login, password recovery, OTP, invitations, roles, admin user CRUD — wired as a single `defineRocketsAuth()` integration.
 
-**Status:** alpha (`1.0.0-alpha.8`, published on npm as `@bitwild/rockets-auth@alpha`). API on the `defineRocketsAuth()` surface is stable; the OAuth submodule is parked pending upstream v8 ports (see [Known limitations](#known-limitations)).
+**Status:** alpha (`1.0.0-alpha.9`, published on npm as `@bitwild/rockets-auth@alpha`). API on the `defineRocketsAuth()` surface is stable; the OAuth submodule is parked pending upstream v8 ports (see [Known limitations](#known-limitations)).
 
 ---
 
@@ -13,7 +13,7 @@
 
 `@bitwild/rockets-auth` is what you reach for when your application owns its users. It is the alternative to `@bitwild/rockets` for the case where you do **not** delegate authentication to an external IdP.
 
-It composes the v8 line of `@concepta/nestjs-*` **identity motors** (`user`, `password`, `otp`, `role`, `invitation`, `federated`, `email`, `event`, plus `authentication`) into a single configuration shape and exposes them as an `AuthBootstrap` for `RocketsModule.forRoot({ auth: ... })` from `@bitwild/rockets`. It does **not** replace repository/CRUD/hook motors — those still come from core + `@bitwild/rockets-repository` / `crud` / `common`.
+It composes the v8 line of `@concepta/nestjs-*` **identity motors** (`user`, `password`, `otp`, `role`, `invitation`, `federated`, `email`, `event`, plus `authentication`) into a single configuration shape and exposes them as an `AuthBootstrap` for `RocketsModule.forRoot({ auth: ... })` from `@bitwild/rockets`. It does **not** replace repository/CRUD/hook motors — those still come from core + `@bitwild/rockets-common`.
 
 ### What it gives you
 
@@ -45,8 +45,8 @@ It composes the v8 line of `@concepta/nestjs-*` **identity motors** (`user`, `pa
 ### Install
 
 ```bash
-yarn add @bitwild/rockets-auth @bitwild/rockets @bitwild/rockets-core \
-  @bitwild/rockets-common @bitwild/rockets-repository @bitwild/rockets-crud \
+yarn add @bitwild/rockets-auth@alpha @bitwild/rockets@alpha @bitwild/rockets-core@alpha \
+  @bitwild/rockets-common@alpha \
   @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger @nestjs/jwt @nestjs/passport \
   class-transformer class-validator reflect-metadata rxjs
 ```

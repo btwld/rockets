@@ -6,7 +6,7 @@
 
 > Firebase Authentication adapter for Rockets. Validates Firebase ID tokens, maps the decoded payload to `AuthorizedUser`, and plugs into the standard `auth` chain.
 
-**Status:** preview (`1.0.0-alpha.0`). API expected to stay shape-compatible through 1.0.
+**Status:** preview (`1.0.0-alpha.9` on npm, dist-tag `alpha`). API expected to stay shape-compatible through 1.0.
 
 ---
 
@@ -38,7 +38,7 @@ The adapter has **no firebase-admin compile-time dependency**. `firebase-admin` 
 ### Install
 
 ```bash
-yarn add @bitwild/rockets-adapter-firebase firebase-admin
+yarn add @bitwild/rockets-adapter-firebase@alpha firebase-admin
 ```
 
 `firebase-admin` is an optional peer dependency — required when you let the module wrap the SDK (the common case).

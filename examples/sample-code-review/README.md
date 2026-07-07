@@ -17,7 +17,7 @@
 - A non-CRUD `defineModuleResource` feature (`analysisFeature`) that calls OpenAI and writes reports through the dynamic-repository contract.
 - A separate React frontend that authenticates with Firebase client SDK and forwards the ID token to the API.
 
-The layout intentionally mirrors [`rockets-starter`](https://github.com/btwld/rockets-starter) (`apps/api` + `apps/web`), but every `@bitwild/*` import resolves to the local `packages/*` via `workspace:^` — so this app is the live integration test for in-development SDK changes.
+The layout intentionally mirrors [`rockets-starter`](https://github.com/btwld/rockets-starter) (`apps/api` + `apps/web`). In this monorepo every `@bitwild/*` import resolves to local `packages/*` via `workspace:^` — live integration test for in-development SDK changes. Published packages: `1.0.0-alpha.9` on npm (`@alpha` dist-tag).
 
 ```
 rockets/                           (SDK monorepo, source of truth)
@@ -251,7 +251,7 @@ Order is preserved end-to-end — Firebase tries first; API key is the fallback.
 
 | `rockets-starter` (GitHub) | This example |
 |---|---|
-| `@bitwild/rockets@1.0.0-alpha.X` from npm | `workspace:^` → local `packages/*` |
+| `@bitwild/rockets@1.0.0-alpha.9` from npm | `workspace:^` → local `packages/*` (integration test for in-development SDK) |
 | Built-in `@bitwild/rockets-auth` | Firebase via `defineFirebaseAuth()` |
 | Next.js web | Vite + React (same ports `3000` / `3001`) |
 | PostgreSQL | SQLite + Firestore |

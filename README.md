@@ -10,7 +10,7 @@
 
 > Configuration-driven NestJS stack. One options object becomes a working API — auth, dynamic repositories, generated CRUD controllers, hooks, swagger.
 
-**Status:** pre-1.0 (`1.0.0-alpha.8`, on npm under `@bitwild/*` with dist-tag `alpha`). The public surface (`AuthAdapterInterface`, `defineResource`, `defineModuleResource`, `RepositoryInterface`, the `RocketsModule.forRoot` options shape) is stable; field renames are still possible before 1.0. Pin exact versions in production.
+**Status:** pre-1.0 (`1.0.0-alpha.9`, on npm under `@bitwild/*` with dist-tag `alpha`). The public surface (`AuthAdapterInterface`, `defineResource`, `defineModuleResource`, `RepositoryInterface`, the `RocketsModule.forRoot` options shape) is stable; field renames are still possible before 1.0. Pin exact versions in production.
 
 ## Table of contents
 
@@ -70,7 +70,7 @@ Be explicit about **who owns which problem** — Rockets is not one monolith.
 
 | Layer | Package(s) | Problem it solves |
 |---|---|---|
-| **Motor** | `@concepta/nestjs-*` (via `@bitwild/rockets-repository`, `rockets-crud`, …) | Reimplementing repository access, CRUD shape, hooks, and ACL primitives on every NestJS project. |
+| **Motor** | `@concepta/nestjs-*` (via `@bitwild/rockets-common`, `rockets-access-control`, …) | Reimplementing repository access, CRUD shape, hooks, and ACL primitives on every NestJS project. |
 | **Composition** | `@bitwild/rockets-core` | Manually stitching Nest modules, entity registration, guard + adapter chain, and swagger for every new service — even when you already use Concepta motors. |
 | **Path A — external identity** | `@bitwild/rockets` | **Micro app runtime** — shared guard, `/me`, auth chain, declarative `resources[]`. Users live outside the app (Firebase, Auth0, central JWT). Primary choice for Stargate-provisioned workflow APIs. See [packages/rockets-server/README.md](packages/rockets-server/README.md). |
 | **Path B — built-in identity** | `@bitwild/rockets-auth` | The app **is** the user system (signup, login, OTP, roles, invitations) and you do not want to wire seven Concepta identity modules yourself. |
@@ -165,7 +165,7 @@ interface AuthorizedUser {
 
 **`RepositoryInterface<T>`** — the only thing the framework asks of your persistence.
 
-The contract is provided by `@bitwild/rockets-repository` (a curated re-export of `@concepta/nestjs-repository`). Adapters that satisfy it: TypeORM (`@concepta/nestjs-repository-typeorm`), Firestore (`@bitwild/rockets-repository-firestore`), any custom adapter you write. Domain code uses `@InjectDynamicRepository(EntityClass)` and `RepositoryInterface<EntityClass>` — never `@InjectRepository`. The same handler runs against any adapter.
+The contract lives in `@concepta/nestjs-repository` (import via `@bitwild/rockets-common` or `@bitwild/rockets-core`). Adapters that satisfy it: TypeORM (`@concepta/nestjs-repository-typeorm`), Firestore (`@bitwild/rockets-repository-firestore`), any custom adapter you write. Domain code uses `@InjectDynamicRepository(EntityClass)` and `RepositoryInterface<EntityClass>` — never `@InjectRepository`. The same handler runs against any adapter.
 
 **`ResourceInput`** — the configuration shape that becomes a feature.
 
@@ -209,18 +209,27 @@ Your business logic, your DTOs, your entity classes, your custom hooks, your acc
 Install (minimal — one Rockets entry package is enough):
 
 ```bash
-yarn add @bitwild/rockets \
+yarn add @bitwild/rockets@alpha \
   @concepta/nestjs-repository-typeorm typeorm @nestjs/typeorm sqlite3 \
   class-transformer class-validator reflect-metadata rxjs
 ```
 
-**What installs automatically** when you add `@bitwild/rockets` (transitive `dependencies`):
+**What installs automatically** when you add `@bitwild/rockets@alpha` (transitive `dependencies`):
 
 | Pulled in for you | Packages |
 |---|---|
-| Other `@bitwild/*` | `rockets-core`, `rockets-common`, `rockets-crud`, `rockets-repository`, `rockets-access-control` |
-| Upstream motor | `@concepta/nestjs-{repository,crud,hook,common,authentication,access-control,swagger-ui}` (via the graph above) |
+| Other `@bitwild/*` | `rockets-core`, `rockets-common`, `rockets-access-control` |
+| Upstream motor | `@concepta/nestjs-{repository,crud,hook,common,authentication,access-control,swagger-ui}` (via `@bitwild/rockets-common` re-exports) |
 | Nest (Rockets runtime) | `@nestjs/common`, `@nestjs/core`, `@nestjs/cqrs`, `@nestjs/swagger`, `@nestjs/config` |
+
+Optional add-ons (install when you need them):
+
+| Package | When |
+|---|---|
+| `@bitwild/rockets-zod` + `@bitwild/rockets-zod-typeorm` + `zod` + `nestjs-zod` | Schema-first resources (`zodResource`) |
+| `@bitwild/rockets-adapter-firebase` | Firebase ID tokens |
+| `@bitwild/rockets-repository-firestore` | Firestore persistence |
+| `@bitwild/rockets-auth@alpha` | Built-in signup/login (Path B) |
 
 **What you still add explicitly** (and why):
 
@@ -570,8 +579,8 @@ export class AppModule {}
 **What you write in services/handlers** — same for CRUD handlers, custom services, and access-query services:
 
 ```typescript
-import { InjectDynamicRepository } from '@bitwild/rockets-repository';
-import type { RepositoryInterface } from '@bitwild/rockets-repository';
+import { InjectDynamicRepository } from '@bitwild/rockets-core';
+import type { RepositoryInterface } from '@bitwild/rockets-common';
 
 @Injectable()
 export class PetModelService {
@@ -659,7 +668,7 @@ CRUD-generated controllers don't expose method signatures you can decorate. Use 
 
 ```typescript
 import { CommandHandler } from '@nestjs/cqrs';
-import { CrudCreateCommand, CrudWithBodyCommandHandler } from '@bitwild/rockets-crud';
+import { CrudCreateCommand, CrudWithBodyCommandHandler } from '@concepta/nestjs-crud';
 import { getActor } from '@bitwild/rockets-core';
 
 @CommandHandler(CrudCreateCommand)
@@ -755,11 +764,11 @@ The **runtime motor** is the Concepta Nest modules (`@concepta/nestjs-repository
 
 Rockets **does not reimplement** that behaviour. It **configures and registers** it: one `RocketsModule.forRoot({ ... })` object is split by `buildAppRegistrationPlan` into the upstream `RepositoryModule`, `CrudModule`, `HookModule`, and related imports your app would otherwise wire by hand.
 
-| Upstream motor | `@bitwild/*` facade | Used for |
+| Motor | `@bitwild/*` import path | Used for |
 |---|---|---|
-| `@concepta/nestjs-repository` | `@bitwild/rockets-repository` | `RepositoryInterface`, dynamic repositories, transactions, repo hooks |
-| `@concepta/nestjs-crud` | `@bitwild/rockets-crud` | Generated controllers, CQRS commands/queries, default handlers |
-| `@concepta/nestjs-hook` | `@bitwild/rockets-common` (with `common`, `authentication`, `swagger-ui`) | `HookModule`, specifications, shared exceptions, Swagger UI |
+| `@concepta/nestjs-repository` | `@bitwild/rockets-common` (re-export) | `RepositoryInterface`, dynamic repositories, transactions, repo hooks |
+| `@concepta/nestjs-crud` | `@bitwild/rockets-common` (re-export) | Generated controllers, CQRS commands/queries, default handlers |
+| `@concepta/nestjs-hook` | `@bitwild/rockets-common` | `HookModule`, specifications, shared exceptions, Swagger UI |
 | `@concepta/nestjs-access-control` | `@bitwild/rockets-access-control` | Grant table, `AccessControlGuard`, route decorators |
 | `@concepta/nestjs-repository-typeorm` (app dep) | app-local `defineTypeOrmRepository` | SQL adapter — intentionally **not** a `@bitwild/*` package |
 | `@concepta/nestjs-user`, `role`, `otp`, `password`, `invitation`, `federated`, `email`, `event` | wired inside `@bitwild/rockets-auth` | Built-in auth HTTP + persistence rows (path B only) |
@@ -794,44 +803,44 @@ If you maintain `@concepta/nestjs-*` modules, Rockets is a **consumer and config
 | **Repo migration** | Moving all of `nestjs-modules` into this git repo is **optional** for product validation. Shipping fixes against published `@concepta/*` alphas is fine; monorepo colocation is for AI context and version lock, not a prerequisite to use Rockets. |
 | **Safe to keep building on** | These are intentional, tested surfaces — not throwaway experiments: `AuthAdapterInterface.authenticate`, `RepositoryInterface` + dynamic repository keys (class **or** string token), `defineResource` / planner-driven entity registration, `defineRocketsAuth({ persistence: { module } })` sharing one `repository` instance with `RocketsModule.forRoot`. |
 
-**Custom validation / business rules:** use upstream `@concepta/nestjs-hook` (`Spec`, `UseHooks`, repository hooks) or replace a CRUD operation handler. Throw domain exceptions from `@concepta/nestjs-common` (`ModelValidationException`, etc.) so filters map them to 4xx — a bare `Error` in a hook often surfaces as 500.
+**Custom validation / business rules:** use `defineHook` from `@bitwild/rockets-core` for simple entity lifecycle rules, upstream `@concepta/nestjs-hook` (`Spec`, `UseHooks`, repository hooks) for class-based hooks, or replace a CRUD operation handler. Throw domain exceptions from `@concepta/nestjs-common` (`ModelValidationException`, etc.) so filters map them to 4xx — a bare `Error` in a hook often surfaces as 500.
 
 ### Package matrix
 
 | Package | npm name | Purpose | Docs | Status |
 |---|---|---|---|---|
-| `packages/rockets-common` | `@bitwild/rockets-common` | Curated re-exports of `@concepta/nestjs-{hook,common,authentication,swagger-ui}` + 6 local helpers (`deriveEntityKey`, `whitelistedFromDto`, `stripUndefined`, `createRepositoryContext`, `getErrorDetails`, `logAndGetErrorDetails`). | [README](packages/rockets-common/README.md) | stable |
-| `packages/rockets-repository` | `@bitwild/rockets-repository` | Abstract data-access contract: `RepositoryInterface`, `Where`/`OrderBy`/`Join` helpers, transactions, hooks. Local class-or-string variant of `InjectDynamicRepository`. | [README](packages/rockets-repository/README.md) | stable |
-| `packages/rockets-repository-firestore` | `@bitwild/rockets-repository-firestore` | Firestore adapter implementing `RepositoryAdapter`. Per-entity opt-in via `defineFirestoreRepository()` + `collection` on the entity row. Tests inject `InMemoryFirestoreBackend` explicitly. | [README](packages/rockets-repository-firestore/README.md) | preview |
-| `packages/rockets-crud` | `@bitwild/rockets-crud` | Generic CRUD module + `ConfigurableCrudBuilder`. Base CQRS handler classes (`CrudCreateHandler`, etc.) and the `Crud*Command` / `Crud*Query` pairs. | [README](packages/rockets-crud/README.md) | stable |
+| `packages/rockets-common` | `@bitwild/rockets-common` | Re-exports `@concepta/nestjs-{hook,common,authentication,repository,crud,swagger-ui}` + local helpers (`deriveEntityKey`, `InjectDynamicRepository`, …). | [README](packages/rockets-common/README.md) | stable |
 | `packages/rockets-access-control` | `@bitwild/rockets-access-control` | RBAC: `AccessControlModule`, `AccessControlGuard`, operation decorators, `CanAccess` query checks. | [README](packages/rockets-access-control/README.md) | stable (upstream still on v7) |
-| `packages/rockets-core` | `@bitwild/rockets-core` | Composition planner (not the data/CRUD motor). Auth chain, `buildAppRegistrationPlan`, `defineResource` / `defineModuleResource` / `defineSubResource`, owner / audit / path-scope hooks, swagger registration. | [README](packages/rockets-core/README.md) | stable |
+| `packages/rockets-core` | `@bitwild/rockets-core` | Composition planner. Auth chain, `buildAppRegistrationPlan`, `defineResource` / `defineModuleResource` / `defineSubResource`, `defineHook`, owner/path hooks, swagger registration. | [README](packages/rockets-core/README.md) | stable |
+| `packages/rockets-zod` | `@bitwild/rockets-zod` | Zod-first resources: `zodResource`, field metadata, DTO + entity compilation via `SchemaEntityCompiler`. | [README](packages/rockets-zod/README.md) | stable |
+| `packages/rockets-zod-typeorm` | `@bitwild/rockets-zod-typeorm` | TypeORM `SchemaEntityCompiler` for `@bitwild/rockets-zod`. | [README](packages/rockets-zod-typeorm/README.md) | stable |
+| `packages/rockets-repository-firestore` | `@bitwild/rockets-repository-firestore` | Firestore adapter implementing `RepositoryAdapter`. Per-entity opt-in. | [README](packages/rockets-repository-firestore/README.md) | preview |
+| `packages/rockets-adapter-firebase` | `@bitwild/rockets-adapter-firebase` | Firebase Auth adapter implementing `AuthAdapterInterface`. | [README](packages/rockets-adapter-firebase/README.md) | preview |
 | `packages/rockets-server` | `@bitwild/rockets` | External-auth presentation layer. `MeController`, `APP_GUARD` opt-in, `auth` chain. | [README](packages/rockets-server/README.md) | stable |
 | `packages/rockets-server-auth` | `@bitwild/rockets-auth` | Built-in auth: signup, login, OTP, recovery, invitations, roles, admin user CRUD. `defineRocketsAuth()`. | [README](packages/rockets-server-auth/README.md) | alpha |
-| `packages/rockets-adapter-firebase` | `@bitwild/rockets-adapter-firebase` | Firebase Auth adapter implementing `AuthAdapterInterface`. | [README](packages/rockets-adapter-firebase/README.md) | preview |
 
 ### Repository layout
 
 ```
 rockets/
 ├── packages/
-│   ├── rockets-common/                  @concepta hook/common/auth/swagger re-exports
-│   ├── rockets-repository/              Abstract data-access contract
-│   ├── rockets-repository-firestore/    Firestore adapter
-│   ├── rockets-crud/                    Generic CRUD
+│   ├── rockets-common/                  @concepta re-exports + repository/CRUD helpers
 │   ├── rockets-access-control/          RBAC
-│   ├── rockets-core/                    Planner + auth wiring (motor = @concepta/*)
-│   ├── rockets-server/                  External-auth presentation
-│   ├── rockets-server-auth/             Built-in auth
-│   └── rockets-adapter-firebase/        Firebase auth adapter
-├── examples/                            sample-server-auth (identity), sample-server (micro app), sample-code-review (micro app + mixed DB)
+│   ├── rockets-core/                    Planner + auth wiring
+│   ├── rockets-zod/                     Schema-first resources
+│   ├── rockets-zod-typeorm/             TypeORM entity compiler for zod
+│   ├── rockets-repository-firestore/    Firestore adapter
+│   ├── rockets-adapter-firebase/        Firebase auth adapter
+│   ├── rockets-server/                  External-auth presentation (@bitwild/rockets)
+│   └── rockets-server-auth/             Built-in auth (@bitwild/rockets-auth)
+├── examples/                            sample-server, sample-server-auth, sample-code-review
 ├── docs/                                architecture-diagram.html, ops-micro-apps-pattern.md
 └── package.json                         Yarn 4 workspace root
 ```
 
 ### Versions
 
-- **Rockets packages**: `1.0.0-alpha.8` on npm (`yarn add @bitwild/rockets@alpha`, or pin `1.0.0-alpha.8`). Monorepo packages keep `workspace:^` for local development.
+- **Rockets packages**: `1.0.0-alpha.9` on npm (`yarn add @bitwild/rockets@alpha`, or pin `1.0.0-alpha.9`). Monorepo packages keep `workspace:^` for local development.
 - **Upstream Concepta packages**: v8 line at `8.0.0-alpha.5`. Three packages still on v7 (`@concepta/nestjs-access-control`, `@concepta/nestjs-email`, `@concepta/nestjs-event`) pending the v8 port — version-mismatched intentionally and tested in CI.
 - **NestJS**: `^11.0.0`, pinned to `11.1.18` via root `resolutions`.
 - **Node**: `>=18.0.0`.
@@ -840,6 +849,7 @@ rockets/
 
 | Command | Purpose |
 |---|---|
+| `yarn publish:bitwild` | Build + publish all `@bitwild/*` packages to npm (`--tag alpha`). See `scripts/publish-bitwild-order.txt`. |
 | `yarn install && yarn build` | Bootstrap + compile every local `@bitwild/*` package. |
 | `yarn test` | Unit tests (jest, 30s timeout). |
 | `yarn test:e2e` | E2E tests across all packages and sample apps. |

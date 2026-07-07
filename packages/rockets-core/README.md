@@ -6,13 +6,13 @@
 
 > Configuration-driven composition layer: one options object → planner → upstream `@concepta/nestjs-*` modules registered as Nest imports.
 
-**Stack context:** [Repository README](../../README.md#what-problem-each-layer-solves) — Concepta = motor; **this package** = planner; `@bitwild/rockets` / `@bitwild/rockets-auth` = Path A / Path B entry points.
+**Status:** stable (`1.0.0-alpha.9` on npm, dist-tag `alpha`).
 
 ---
 
 ## 1. Introduction
 
-`@bitwild/rockets-core` is the **planner and wiring layer** — not the repository/CRUD/hook motor. It solves: *“I already use Concepta motors, but I still hand-wire Nest modules, entity lists, and auth guards on every new service.”* The motor is `@concepta/nestjs-repository`, `@concepta/nestjs-crud`, and `@concepta/nestjs-hook` (imported via `@bitwild/rockets-repository`, `@bitwild/rockets-crud`, `@bitwild/rockets-common`). Core owns:
+`@bitwild/rockets-core` is the **planner and wiring layer** — not the repository/CRUD/hook motor. It solves: *“I already use Concepta motors, but I still hand-wire Nest modules, entity lists, and auth guards on every new service.”* The motor is `@concepta/nestjs-repository`, `@concepta/nestjs-crud`, and `@concepta/nestjs-hook` (imported via `@bitwild/rockets-common`). Core owns:
 
 - An auth contract (`AuthAdapterInterface`) and a global guard that runs adapters in a chain.
 - A resource planner (`buildAppRegistrationPlan`) that turns a list of feature bundles into Nest imports, dynamic repository registrations, and CRUD controllers.
@@ -38,7 +38,7 @@ Both packages above re-export almost everything in core, so you usually depend o
 ### Install
 
 ```bash
-yarn add @bitwild/rockets-core \
+yarn add @bitwild/rockets-core@alpha \
   @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger \
   class-transformer class-validator
 ```
@@ -153,6 +153,22 @@ defineResource({
 
 The hooks run at the repository layer, so direct (non-HTTP) calls are scoped too.
 
+### Functional entity hooks (`defineHook`)
+
+For validation, normalization, or uniqueness checks without a Nest `@Injectable` class, use `defineHook`. It returns a hook token you pass in `hooks:` like the built-ins:
+
+```typescript
+import { defineHook } from '@bitwild/rockets-core';
+import { PetEntity } from './pet.entity';
+
+export const PetNameNormalizeHook = defineHook(PetEntity, {
+  beforeCreate: (payload) => ({ ...payload, name: payload.name.trim() }),
+  beforeUpdate: (payload) => ({ ...payload, name: payload.name.trim() }),
+});
+```
+
+Lifecycle callbacks receive `(payload | options, ctx, tools)` where `tools.repo` is the entity repository and `tools.actor` is the authenticated user. For cross-service logic, author a class hook with `@EntityHook` instead.
+
 ### Mix two persistence adapters
 
 The default adapter goes in `repository:`. Override per entity inside `defineModuleResource` with a `RepositoryBootstrap` (same pattern as TypeORM):
@@ -187,7 +203,7 @@ import {
   InjectDynamicRepository,
   RepositoryInterface,
   Where,
-} from '@bitwild/rockets-repository';
+} from '@bitwild/rockets-core';
 
 @Injectable()
 export class PetService {
@@ -243,10 +259,10 @@ export class HealthController {
 
 ### Upstream engine
 
-| Motor (`@concepta/nestjs-*`) | Facade in this monorepo | What core does with it |
+| Motor (`@concepta/nestjs-*`) | Import path | What core does with it |
 |---|---|---|
-| `repository` | `@bitwild/rockets-repository` | `buildAppRegistrationPlan` calls `repository.forRoot(entities)` and `forFeature` per resource row |
-| `crud` | `@bitwild/rockets-crud` | Each `defineResource` becomes a `CrudModule.forFeature` import |
+| `repository` | `@bitwild/rockets-common` | `buildAppRegistrationPlan` calls `repository.forRoot(entities)` and `forFeature` per resource row |
+| `crud` | `@bitwild/rockets-common` | Each `defineResource` becomes a `CrudModule.forFeature` import |
 | `hook`, `common`, `authentication`, `swagger-ui` | `@bitwild/rockets-common` | `HookModule.forRoot` in `createCoreImports`; swagger from options |
 | `access-control` | `@bitwild/rockets-access-control` | Optional; apps register `AccessControlModule` when they need RBAC |
 
@@ -301,6 +317,7 @@ The guard iterates adapters in order. `{ matched: false }` → try next. `{ matc
 | `getActor(ctx)` | Read authenticated user from a CRUD context. |
 | `getCrudContext(ctx)` | Read the full CRUD context (request, params, …). |
 | `OwnerStampHook.for(Entity, column?)` | Stamp `userId` on create/update. |
+| `defineHook(Entity, fns)` | Functional entity hook (lifecycle fns + `tools.repo` / `tools.actor`). |
 | `OwnerScopeHook.for(Entity, column?)` | Filter list/read/update/delete by `userId`. |
 | `AfterCreateReloadHook.for(Entity)` | Reload an entity after create (for eager relations). |
 | `PathScopeHook.for(Entity, paramName, fkColumn)` | Filter sub-resource by parent URL param. |

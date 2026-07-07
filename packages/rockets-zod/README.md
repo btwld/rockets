@@ -1,10 +1,23 @@
 # @bitwild/rockets-zod
 
+[![NPM](https://img.shields.io/npm/v/@bitwild/rockets-zod)](https://www.npmjs.com/package/@bitwild/rockets-zod)
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+
 Zod-first resource layer for Rockets. A single `zod` schema is the source
 of truth: it compiles to `nestjs-zod` DTO classes (create / update /
 replace / response) and a `defineResource()` call. Database-agnostic —
 entity generation is delegated to a `SchemaEntityCompiler` adapter
 (`@bitwild/rockets-zod-typeorm`, or your own for another store).
+
+**Status:** stable (`1.0.0-alpha.9` on npm, dist-tag `alpha`).
+
+## Install
+
+```bash
+yarn add @bitwild/rockets-zod@alpha @bitwild/rockets-core@alpha zod nestjs-zod
+# TypeORM apps also need:
+yarn add @bitwild/rockets-zod-typeorm@alpha
+```
 
 ## What it owns
 

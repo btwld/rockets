@@ -1,10 +1,20 @@
 # @bitwild/rockets-zod-typeorm
 
+[![NPM](https://img.shields.io/npm/v/@bitwild/rockets-zod-typeorm)](https://www.npmjs.com/package/@bitwild/rockets-zod-typeorm)
+
 TypeORM implementation of the `SchemaEntityCompiler` contract used by
 [`@bitwild/rockets-zod`](../rockets-zod). It compiles a zod object schema
 into a decorated TypeORM entity class at module-load time — to TypeORM
 and the dynamic repository layer the result is indistinguishable from a
 handwritten entity.
+
+**Status:** stable (`1.0.0-alpha.9` on npm, dist-tag `alpha`).
+
+## Install
+
+```bash
+yarn add @bitwild/rockets-zod-typeorm@alpha @bitwild/rockets-zod@alpha
+```
 
 ## Why a separate package
 

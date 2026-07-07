@@ -3,7 +3,9 @@
 [![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-> Canonical reference app for `@bitwild/rockets` micro apps — JWT auth, resource bundles, owner scoping, and `defineTypeOrmRepository`.
+> Canonical reference app for `@bitwild/rockets` micro apps — JWT auth, zod-first resources, owner scoping, and `defineTypeOrmRepository`.
+
+Monorepo dev: `@bitwild/*` resolves via `workspace:^` to local `packages/*`. External apps install from npm (`@bitwild/rockets@alpha`).
 
 For **Firebase / external IdP** auth, use [sample-code-review](../sample-code-review) instead.
 
@@ -21,14 +23,14 @@ For **Firebase / external IdP** auth, use [sample-code-review](../sample-code-re
 
 | Bundle | Kind | What it shows |
 |---|---|---|
-| `petResource` | `defineResource` | Basic CRUD with `OwnerStampHook` + `OwnerScopeHook`. |
-| `petVaccinationResource` | `defineSubResource` | Nested CRUD (`/pets/:petId/vaccinations`) with path-scoped access. |
-| `tagResource` | `defineResource` | Many-to-many helper via `relation()`. |
-| `appointmentResource` / `reminderResource` | `defineResource` | CRUD + custom hooks for date-window filtering. |
-| `petShareFeature` | `defineModuleResource` | Junction-table feature + custom controller for share/unshare. |
-| `petTransferFeature` | `defineModuleResource` | Cross-resource workflow (transfer ownership). |
-| `adminFeature` | `defineModuleResource` | Admin-only routes guarded by a custom `AdminGuard` exposed via `exports`. |
-| `auditFeature` | `defineModuleResource` | Cross-cutting audit trail consuming `adminFeature`'s exported guard. |
+| `petResource` | `zodResource` | Full zod schema → entity + DTOs + hooks + sub-resource (`/pets/:petId/tags`). |
+| `tagZodResource` | `zodResource` | Minimal zod CRUD (`/tags`). |
+| `petVaccinationResource` | `defineSubResource` | Nested CRUD with handwritten entity/DTOs. |
+| `appointmentResource` / `reminderResource` | `zodResource` | Zod + custom hooks. |
+| `petShareFeature` | `defineModuleResource` | Junction-table feature + custom controller. |
+| `petTransferFeature` | `defineModuleResource` | Cross-resource workflow. |
+| `adminFeature` | `defineModuleResource` | Admin-only routes via exported guard. |
+| `auditFeature` | `defineModuleResource` | Cross-cutting audit trail. |
 | `eventsFeature` | `defineModuleResource` | Domain-event listeners. |
 | `defineSampleAuth` / `sampleAuthUserResource` | `AuthBootstrap` + entity row | In-process JWT signup + login. |
 
@@ -96,15 +98,16 @@ curl http://localhost:3000/pets -H "Authorization: Bearer $TOKEN"
 
 `OwnerStampHook` writes `userId`; `OwnerScopeHook` filters reads.
 
-### Add a new CRUD entity in five files
+### Add a new zod CRUD resource
 
-1. `src/resources/<thing>/<thing>.entity.ts` — TypeORM entity (with `userId` if owner-scoped).
-2. `src/resources/<thing>/<thing>.dto.ts` — `Create`, `Update`, `Response` DTOs (every public field needs `@ApiProperty()` / `@ApiPropertyOptional()`).
-3. `src/resources/<thing>/<thing>.resource.ts` — `defineResource({ entity, hooks })`.
-4. `src/resources/<thing>/index.ts` — re-export.
-5. `src/app.module.ts` — add the new resource to the `resources: [...]` array.
+1. `src/resources/<thing>/<thing>.schema.ts` — zod schema + `f.*` field helpers (`@bitwild/rockets-zod`).
+2. `src/resources/<thing>/<thing>.resource.ts` — `zodResource({ schema, hooks?, operations })`.
+3. `src/resources/<thing>/index.ts` — re-export.
+4. `src/app.module.ts` — add to `resources: [...]`.
 
-Then `yarn workspace sample-server start:dev` and the routes (`GET/POST/PATCH/DELETE /things`) are live with validation, swagger, and ownership scoping.
+Entity, create/update/response DTOs, and OpenAPI fields are compiled from the schema. See `src/resources/tag/` (minimal) and `src/resources/pet/` (full hooks + sub-resource).
+
+Handwritten entity + DTO path still demonstrated in `pet-vaccination/` for comparison.
 
 ---
 
@@ -116,6 +119,7 @@ Then `yarn workspace sample-server start:dev` and the routes (`GET/POST/PATCH/DE
 examples/sample-server
 ├── src/
 │   ├── auth/                       AuthBootstrap + JWT signup/login
+│   ├── zod-bindings.ts             bindZodResources(typeOrmZodEntityCompiler)
 │   ├── resources/                  CRUD + sub-resource + module bundles
 │   ├── admin/                      Admin gate (defineModuleResource)
 │   ├── audit/                      Cross-cutting audit (consumes adminFeature)
