@@ -262,6 +262,36 @@ access-control rules. Rockets does not pretend to write those for you.
 - A database adapter — TypeORM with any supported driver is the most common.
   Firestore works via `@bitwild/rockets-repository-firestore`.
 
+### Installing from GitHub (pre-release)
+
+While the current layout stabilises, consume the packages straight from
+this repository instead of npm. With yarn 4, a git dependency can target a
+single workspace of the monorepo (each package builds itself on install via
+its `prepack` script):
+
+```bash
+yarn add @bitwild/rockets@git@github.com:btwld/rockets.git#workspace=@bitwild/rockets
+```
+
+One caveat: at pack time yarn rewrites the internal `workspace:^` ranges to
+`^1.0.0-alpha.9`, which resolves against the (older) npm alphas. Force every
+`@bitwild/*` package to the same git commit with `resolutions` in the
+consuming app:
+
+```json
+{
+  "resolutions": {
+    "@bitwild/rockets": "btwld/rockets#workspace=@bitwild/rockets&commit=<sha>",
+    "@bitwild/rockets-core": "btwld/rockets#workspace=@bitwild/rockets-core&commit=<sha>",
+    "@bitwild/rockets-repository-typeorm": "btwld/rockets#workspace=@bitwild/rockets-repository-typeorm&commit=<sha>"
+  }
+}
+```
+
+Pin `&commit=<sha>` (or `#<branch>` while iterating) so installs stay
+reproducible. For day-to-day development inside this repo, the examples
+already consume the workspaces directly — nothing to configure.
+
 ### Path A — External auth (minimal app, ~30 lines)
 
 Install (minimal — one Rockets entry package is enough):

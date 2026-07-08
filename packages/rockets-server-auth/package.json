@@ -65,6 +65,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "yarn run -T build",
     "build:watch": "tsc -p tsconfig.json --watch",
     "test": "jest",
     "test:watch": "jest --watch",
