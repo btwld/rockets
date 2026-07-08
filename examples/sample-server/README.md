@@ -100,7 +100,7 @@ curl http://localhost:3000/pets -H "Authorization: Bearer $TOKEN"
 
 ### Add a new zod CRUD resource
 
-1. `src/resources/<thing>/<thing>.schema.ts` — zod schema + `f.*` field helpers (`@bitwild/rockets-zod`).
+1. `src/resources/<thing>/<thing>.schema.ts` — zod schema + `f.*` field helpers (`@bitwild/rockets-core/zod`).
 2. `src/resources/<thing>/<thing>.resource.ts` — `zodResource({ schema, hooks?, operations })`.
 3. `src/resources/<thing>/index.ts` — re-export.
 4. `src/app.module.ts` — add to `resources: [...]`.

@@ -115,11 +115,11 @@ yarn add @bitwild/rockets@alpha \
   class-transformer class-validator reflect-metadata rxjs
 ```
 
-`@bitwild/rockets` pulls in `rockets-core`, `rockets-common`,
-`rockets-access-control`, and the matching `@concepta/nestjs-*` motors
-transitively (repository + CRUD via `@bitwild/rockets-common`). Add TypeORM
-(`@concepta/nestjs-repository-typeorm`, `typeorm`, `@nestjs/typeorm`, driver)
-only when you use SQL. Add other `@bitwild/*` packages only if you import from
+`@bitwild/rockets` pulls in `rockets-core` and the matching `@concepta/nestjs-*`
+motors transitively (repository + CRUD re-exported by `@bitwild/rockets-core`).
+Add TypeORM (`@bitwild/rockets-repository-typeorm`, `typeorm`, `@nestjs/typeorm`,
+driver) only when you use SQL. Add other `@bitwild/*` packages only if you import
+from
 them directly.
 
 ### Minimal working app
@@ -414,10 +414,7 @@ Everything most apps need:
   `USER_MODULE_USER_ENTITY_KEY`.
 - Exceptions: `RocketsCoreExceptionsFilter` (also exported as `ExceptionsFilter`
   for back-compat).
-
-### Re-exports from `@bitwild/rockets-common`
-
-`logAndGetErrorDetails`, `getErrorDetails`, `ErrorDetails`.
+- Error helpers: `logAndGetErrorDetails`, `getErrorDetails`, `ErrorDetails`.
 
 ### Swagger generation
 

@@ -62,7 +62,6 @@ Other entities continue on the default adapter (TypeORM, in most apps).
 
 ```bash
 yarn add @bitwild/rockets-repository-firestore@alpha @bitwild/rockets-core@alpha \
-  @bitwild/rockets-common@alpha \
   firebase-admin
 ```
 

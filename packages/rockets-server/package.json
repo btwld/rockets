@@ -1,7 +1,7 @@
 {
   "name": "@bitwild/rockets",
   "version": "1.0.0-alpha.9",
-  "description": "Rockets server \u2014 external-auth composition layer: AuthAdapterInterface, /me, declarative CRUD resources, and database-agnostic persistence",
+  "description": "Rockets server — external-auth composition layer: AuthAdapterInterface, /me, declarative CRUD resources, and database-agnostic persistence",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
   "main": "dist/index.js",

@@ -868,7 +868,7 @@ export function zodSubResource(
  *
  * ```ts
  * import { bindZodResources } from '@bitwild/rockets-core/zod';
- * import { typeOrmZodEntityCompiler } from '@bitwild/rockets-repository-typeorm';
+ * import { typeOrmZodEntityCompiler } from '@bitwild/rockets-repository-typeorm/zod';
  *
  * export const zodEntityCompiler = typeOrmZodEntityCompiler;
  * export const { zodResource, zodSubResource } =

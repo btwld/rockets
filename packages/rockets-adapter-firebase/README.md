@@ -178,12 +178,12 @@ FirebaseAuthModule.forRootAsync({
 ### Read the user inside a handler
 
 The adapter writes the `AuthorizedUser` onto the request the same way every
-Rockets adapter does. Use `@AuthUser()` from `@bitwild/rockets-common` in
+Rockets adapter does. Use `@AuthUser()` from `@bitwild/rockets-core` in
 controllers, or `getActor(context)` from `@bitwild/rockets-core` inside CRUD
 command/query handlers.
 
 ```typescript
-import { AuthUser } from '@bitwild/rockets-common';
+import { AuthUser } from '@bitwild/rockets-core';
 import type { AuthorizedUser } from '@bitwild/rockets-core';
 
 @Controller('profile')

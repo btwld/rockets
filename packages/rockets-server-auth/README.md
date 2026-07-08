@@ -25,7 +25,7 @@ It composes the v8 line of `@concepta/nestjs-*` **identity motors** (`user`,
 `authentication`) into a single configuration shape and exposes them as an
 `AuthBootstrap` for `RocketsModule.forRoot({ auth: ... })` from
 `@bitwild/rockets`. It does **not** replace repository/CRUD/hook motors — those
-still come from core + `@bitwild/rockets-common`.
+still come from core (which re-exports the `@concepta/nestjs-*` motors).
 
 ### What it gives you
 
@@ -69,7 +69,6 @@ still come from core + `@bitwild/rockets-common`.
 
 ```bash
 yarn add @bitwild/rockets-auth@alpha @bitwild/rockets@alpha @bitwild/rockets-core@alpha \
-  @bitwild/rockets-common@alpha \
   @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger @nestjs/jwt @nestjs/passport \
   class-transformer class-validator reflect-metadata rxjs
 ```

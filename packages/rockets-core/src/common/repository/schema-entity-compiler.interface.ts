@@ -32,13 +32,12 @@ export interface SchemaEntityCompilerOptions {
  *
  * ## Dependency rule
  *
- * `@bitwild/rockets-repository` stays free of any validation-library
+ * The repository abstraction stays free of any validation-library
  * dependency, so `schema` is typed `unknown`. Implementations narrow it
  * to the schema type they support (e.g. `instanceof z.ZodObject`) and
  * MUST throw a descriptive error for anything else — a wrong schema
  * type is a boot-time configuration bug, never a silent fallback. This
- * is the same vendor-neutral posture as the Standard Schema validation
- * contract in `@bitwild/rockets-crud`.
+ * is the same vendor-neutral posture Rockets keeps for CRUD validation.
  *
  * ## Implementing for an adapter
  *
@@ -58,7 +57,7 @@ export interface SchemaEntityCompilerOptions {
  * The TypeORM reference implementation is
  * `@bitwild/rockets-repository-typeorm/zod` (`typeOrmZodEntityCompiler`); the
  * DB-agnostic zod resource layer that consumes this contract is
- * `@bitwild/rockets-zod`.
+ * `@bitwild/rockets-core/zod`.
  *
  * Wire it up by exposing the compiler on the adapter's
  * {@link RepositoryModuleInterface.entityCompiler} so schema layers can
