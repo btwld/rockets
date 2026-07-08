@@ -6,13 +6,14 @@ import {
   Logger,
   Provider,
 } from '@nestjs/common';
-import { SafeCrudContextInterceptor } from '@bitwild/rockets-core';
+import {
+  SafeCrudContextInterceptor,
+  buildAccessControlImport,
+} from '@bitwild/rockets-core';
 import { PassportModule } from '@nestjs/passport';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@nestjs/config';
-
-import { AccessControlModule } from '@concepta/nestjs-access-control';
 import {
   AuthenticationModule,
   AuthenticationOptionsInterface,
@@ -523,30 +524,7 @@ export function createRocketsAuthImports(importOptions: {
   ];
 
   if (importOptions.extras?.accessControl) {
-    imports.push(
-      AccessControlModule.forRoot({
-        service: importOptions.extras.accessControl.service,
-        settings: importOptions.extras.accessControl.settings,
-        appFilter: importOptions.extras.accessControl.appFilter,
-        // `appGuard` is forwarded from extras AS-IS (no defaulting). The
-        // upstream `createAccessControlAppGuardProvider` treats `false`
-        // as "no global guard" and any nullish value as "use the default
-        // `AccessControlGuard` instance from DI as APP_GUARD". This is
-        // load-bearing because the upstream
-        // `AccessControlGuard.getQueryService` uses a STRICT
-        // `moduleRef.resolve()` that only sees providers on the SAME
-        // module the guard instance lives in. When the guard is wired
-        // here as APP_GUARD, its host module is `AccessControlModule` —
-        // the same module that receives `queryServices: [...]` — so the
-        // strict resolve succeeds. Using `@UseGuards(AccessControlGuard)`
-        // on a controller would instantiate the guard in the controller's
-        // CrudModule scope, where queryServices are NOT registered, and
-        // every request would 500 with `UnknownElementException`.
-        appGuard: importOptions.extras.accessControl.appGuard,
-        imports: importOptions.extras.accessControl.imports,
-        queryServices: importOptions.extras.accessControl.queryServices,
-      }),
-    );
+    imports.push(buildAccessControlImport(importOptions.extras.accessControl));
   }
 
   return imports;

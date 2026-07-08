@@ -6761,6 +6761,7 @@ __metadata:
     firebase-admin: "npm:^13.0.0"
     helmet: "npm:^8.0.0"
     jest: "npm:^29.7.0"
+    nestjs-zod: "npm:^5.4.0"
     reflect-metadata: "npm:^0.1.14"
     rxjs: "npm:^7.8.1"
     sqlite3: "npm:^5.1.7"

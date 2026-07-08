@@ -170,6 +170,7 @@ export type {
   RocketsCoreOptionsExtrasInterface,
   RocketsAccessControlConfig,
 } from './infrastructure/config/interfaces/rockets-core-options-extras.interface';
+export { buildAccessControlImport } from './infrastructure/access-control/build-access-control-import';
 export type { RocketsCoreSettingsInterface } from './infrastructure/config/interfaces/rockets-core-settings.interface';
 
 // User entity contracts

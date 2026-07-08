@@ -76,7 +76,6 @@
   },
   "dependencies": {
     "@bitwild/rockets-core": "workspace:^",
-    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@concepta/nestjs-access-control": "8.0.0-alpha.7",
     "@concepta/nestjs-authentication": "8.0.0-alpha.7",
     "@concepta/nestjs-common": "8.0.0-alpha.5",
@@ -109,6 +108,7 @@
   },
   "devDependencies": {
     "@bitwild/rockets": "workspace:^",
+    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@concepta/nestjs-typeorm-ext": "7.0.0-alpha.10",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-express": "^11.1.18",

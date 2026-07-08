@@ -68,7 +68,6 @@
   },
   "devDependencies": {
     "@bitwild/rockets-repository-typeorm": "workspace:^",
-    "@concepta/nestjs-repository": "8.0.0-alpha.7",
     "@nestjs/testing": "11.1.18",
     "@nestjs/typeorm": "11.0.0",
     "@types/pluralize": "^0.0.33",

@@ -8,7 +8,6 @@ import {
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConfigModule } from '@nestjs/config';
-import { AccessControlModule } from '@concepta/nestjs-access-control';
 import { RepositoryModule } from '@concepta/nestjs-repository';
 import { CrudModule, CrudContextOverlay } from '@concepta/nestjs-crud';
 import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
@@ -36,6 +35,7 @@ import { ZodBodyValidationInterceptor } from './infrastructure/interceptors/zod-
 import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
 import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
 import { SwaggerUiModule } from './common';
+import { buildAccessControlImport } from './infrastructure/access-control/build-access-control-import';
 
 export const {
   ConfigurableModuleClass: RocketsCoreModuleClass,
@@ -168,27 +168,7 @@ function createCoreImports(
   // Access control is opt-in: no `accessControl` config → no ACL module,
   // guard, or provider is registered at all.
   if (extras.accessControl) {
-    imports.push(
-      AccessControlModule.forRoot({
-        service: extras.accessControl.service,
-        settings: extras.accessControl.settings,
-        appFilter: extras.accessControl.appFilter,
-        // `appGuard` is forwarded AS-IS (no defaulting). Upstream treats
-        // `false` as "no global guard" and any nullish value as "use the
-        // default `AccessControlGuard` as APP_GUARD". This matters because
-        // `AccessControlGuard.getQueryService` uses a STRICT
-        // `moduleRef.resolve()` that only sees providers on the SAME module
-        // the guard instance lives in — as APP_GUARD its host module is
-        // `AccessControlModule`, which also receives `queryServices`, so
-        // the strict resolve succeeds. Guarding a controller with
-        // `@UseGuards(AccessControlGuard)` instead would instantiate the
-        // guard in the controller's module scope, where queryServices are
-        // NOT registered, and every request would 500.
-        appGuard: extras.accessControl.appGuard,
-        imports: extras.accessControl.imports,
-        queryServices: extras.accessControl.queryServices,
-      }),
-    );
+    imports.push(buildAccessControlImport(extras.accessControl));
   }
 
   return imports;
