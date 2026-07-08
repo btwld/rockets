@@ -2,7 +2,7 @@ import { bindZodResources } from '@bitwild/rockets-core/zod';
 import {
   typeOrmZodEntityCompiler,
   compileEntity,
-} from '@bitwild/rockets-zod-typeorm';
+} from '@bitwild/rockets-repository-typeorm/zod';
 
 /**
  * THE app-level persistence-compiler choice — one line, one place.

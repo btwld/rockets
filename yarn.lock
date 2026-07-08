@@ -702,6 +702,7 @@ __metadata:
   dependencies:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
+    "@bitwild/rockets-repository-typeorm": "workspace:^"
     "@concepta/nestjs-access-control": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-authentication": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
@@ -714,7 +715,6 @@ __metadata:
     "@concepta/nestjs-otp": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-password": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.7"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-role": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-typeorm-ext": "npm:7.0.0-alpha.10"
@@ -761,11 +761,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@bitwild/rockets-core@workspace:packages/rockets-core"
   dependencies:
+    "@bitwild/rockets-repository-typeorm": "workspace:^"
     "@concepta/nestjs-authentication": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.7"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.7"
     "@nestjs/common": "npm:^11.1.18"
     "@nestjs/config": "npm:^4.0.0"
     "@nestjs/core": "npm:^11.1.18"
@@ -818,11 +818,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@bitwild/rockets-zod-typeorm@workspace:^, @bitwild/rockets-zod-typeorm@workspace:packages/rockets-zod-typeorm":
+"@bitwild/rockets-repository-typeorm@workspace:^, @bitwild/rockets-repository-typeorm@workspace:packages/rockets-repository-typeorm":
   version: 0.0.0-use.local
-  resolution: "@bitwild/rockets-zod-typeorm@workspace:packages/rockets-zod-typeorm"
+  resolution: "@bitwild/rockets-repository-typeorm@workspace:packages/rockets-repository-typeorm"
   dependencies:
     "@bitwild/rockets-core": "workspace:^"
+    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.7"
     "@nestjs/common": "npm:11.1.18"
     "@nestjs/testing": "npm:11.1.18"
     jest: "npm:^29.7.0"
@@ -832,9 +833,15 @@ __metadata:
     zod: "npm:^4.1.0"
   peerDependencies:
     "@nestjs/common": ^11.0.0
+    nestjs-zod: ^5.0.0
     reflect-metadata: ^0.1.13 || ^0.2.0
     typeorm: ^0.3.0
     zod: ^4.0.0
+  peerDependenciesMeta:
+    nestjs-zod:
+      optional: true
+    zod:
+      optional: true
   languageName: unknown
   linkType: soft
 
@@ -843,9 +850,9 @@ __metadata:
   resolution: "@bitwild/rockets@workspace:packages/rockets-server"
   dependencies:
     "@bitwild/rockets-core": "workspace:^"
+    "@bitwild/rockets-repository-typeorm": "workspace:^"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.7"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.7"
     "@nestjs/common": "npm:^11.1.18"
     "@nestjs/config": "npm:^4.0.0"
     "@nestjs/core": "npm:^11.1.18"
@@ -6732,10 +6739,9 @@ __metadata:
     "@bitwild/rockets-adapter-firebase": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
     "@bitwild/rockets-repository-firestore": "workspace:^"
-    "@bitwild/rockets-zod-typeorm": "workspace:^"
+    "@bitwild/rockets-repository-typeorm": "workspace:^"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.7"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.7"
     "@nestjs/cli": "npm:^11.0.0"
     "@nestjs/common": "npm:11.1.18"
     "@nestjs/config": "npm:4.0.0"
@@ -17592,6 +17598,7 @@ __metadata:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-auth": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
+    "@bitwild/rockets-repository-typeorm": "workspace:^"
     "@concepta/nestjs-access-control": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-authentication": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-common": "npm:8.0.0-alpha.5"
@@ -17600,7 +17607,6 @@ __metadata:
     "@concepta/nestjs-event": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-hook": "npm:8.0.0-alpha.5"
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.7"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-role": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-swagger-ui": "npm:7.0.0-alpha.10"
     "@concepta/nestjs-typeorm-ext": "npm:7.0.0-alpha.10"
@@ -17641,11 +17647,10 @@ __metadata:
   dependencies:
     "@bitwild/rockets": "workspace:^"
     "@bitwild/rockets-core": "workspace:^"
-    "@bitwild/rockets-zod-typeorm": "workspace:^"
+    "@bitwild/rockets-repository-typeorm": "workspace:^"
     "@concepta/nestjs-core": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-crud": "npm:8.0.0-alpha.7"
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.7"
-    "@concepta/nestjs-repository-typeorm": "npm:8.0.0-alpha.7"
     "@nestjs/cli": "npm:^11.0.0"
     "@nestjs/common": "npm:11.1.18"
     "@nestjs/core": "npm:11.1.18"

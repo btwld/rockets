@@ -34,7 +34,7 @@
       "path": "packages/rockets-repository-firestore"
     },
     {
-      "path": "packages/rockets-zod-typeorm"
+      "path": "packages/rockets-repository-typeorm"
     }
   ]
 }

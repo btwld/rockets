@@ -56,7 +56,7 @@ export interface SchemaEntityCompilerOptions {
  *    relations) and ignore the rest explicitly.
  *
  * The TypeORM reference implementation is
- * `@bitwild/rockets-zod-typeorm` (`typeOrmZodEntityCompiler`); the
+ * `@bitwild/rockets-repository-typeorm/zod` (`typeOrmZodEntityCompiler`); the
  * DB-agnostic zod resource layer that consumes this contract is
  * `@bitwild/rockets-zod`.
  *

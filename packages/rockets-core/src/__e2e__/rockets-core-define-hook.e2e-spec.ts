@@ -26,7 +26,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
 import {
   getDynamicRepositoryToken,
   type RepositoryInterface,

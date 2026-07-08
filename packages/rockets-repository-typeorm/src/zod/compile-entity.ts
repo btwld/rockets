@@ -51,7 +51,7 @@ import { z } from 'zod';
  * This is the TypeORM implementation of the adapter-neutral
  * {@link SchemaEntityCompiler} contract — the DB-specific half of the
  * zod layer. The DB-agnostic translation (DTOs, projections, the
- * schema→entity registry) lives in `@bitwild/rockets-zod`.
+ * schema→entity registry) lives in `@bitwild/rockets-core/zod`.
  */
 export interface CompileEntityOptions {
   /** Class name, e.g. `TagEntity` — drives `deriveEntityKey`. */

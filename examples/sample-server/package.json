@@ -13,11 +13,10 @@
   "dependencies": {
     "@bitwild/rockets": "workspace:^",
     "@bitwild/rockets-core": "workspace:^",
-    "@bitwild/rockets-zod-typeorm": "workspace:^",
+    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@concepta/nestjs-core": "8.0.0-alpha.7",
     "@concepta/nestjs-crud": "8.0.0-alpha.7",
     "@concepta/nestjs-repository": "8.0.0-alpha.7",
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.7",
     "@nestjs/common": "11.1.18",
     "@nestjs/core": "11.1.18",
     "@nestjs/cqrs": "11.0.3",

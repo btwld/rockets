@@ -1,4 +1,4 @@
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import {
   defineModuleResource,

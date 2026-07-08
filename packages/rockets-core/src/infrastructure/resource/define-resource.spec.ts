@@ -2,7 +2,7 @@ import { Injectable, type PlainLiteralObject } from '@nestjs/common';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { Operation } from '@concepta/nestjs-core';
 import { Where } from '@concepta/nestjs-repository';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
 import {
   CrudOperationResolver,
   type ConfigurableCrudGeneratedOptions,

@@ -3,7 +3,7 @@ import './patch-crud-module-for-e2e.bootstrap';
 import { RocketsAuthExceptionsFilter } from '../../shared/compatibility/rockets-auth-exceptions.filter';
 import { EmailSendInterface } from '@concepta/nestjs-common';
 import { EventModule } from '@concepta/nestjs-event';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
 import {
   DynamicModule,
   INestApplication,

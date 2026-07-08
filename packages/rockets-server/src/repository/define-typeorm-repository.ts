@@ -1,6 +1,6 @@
 import type { DynamicModule, PlainLiteralObject, Type } from '@nestjs/common';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { TypeOrmRepositoryModule } from '@concepta/nestjs-repository-typeorm';
+import { TypeOrmRepositoryModule } from '@bitwild/rockets-repository-typeorm';
 import type { RepositoryBootstrap } from '@bitwild/rockets-core';
 import type {
   DynamicRepositoryModule,

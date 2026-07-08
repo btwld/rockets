@@ -70,8 +70,8 @@
   },
   "dependencies": {
     "@bitwild/rockets-core": "workspace:^",
+    "@bitwild/rockets-repository-typeorm": "workspace:^",
     "@concepta/nestjs-core": "8.0.0-alpha.7",
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.7",
     "@nestjs/common": "^11.1.18",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.1.18",
@@ -81,7 +81,6 @@
   },
   "devDependencies": {
     "@concepta/nestjs-crud": "8.0.0-alpha.7",
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.7",
     "@nestjs/platform-express": "^11.1.18",
     "@nestjs/testing": "^11.1.18",
     "@nestjs/typeorm": "^11.0.0",
