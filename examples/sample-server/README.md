@@ -1,6 +1,6 @@
 # sample-server
 
-[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![NestJS](https://img.shields.io/badge/NestJS-12-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 > Canonical reference app for `@bitwild/rockets` micro apps — JWT auth,
@@ -23,6 +23,8 @@ For **Firebase / external IdP** auth, use
   (CRUD), `defineSubResource()` (nested CRUD), `defineModuleResource()`
   (Nest slice with controllers + services), and `AuthBootstrap` pairs
   (`defineSampleAuth()` + entity resource).
+- Show Nest 12's native Standard Schema validation path alongside the
+  zod-first resource layer.
 - Show the canonical wiring of a `RepositoryBootstrap`
   (`defineTypeOrmRepository`) — entities are declared **once**, inside
   the bundle that owns them, then collected by the planner.
@@ -32,20 +34,20 @@ For **Firebase / external IdP** auth, use
 
 ### Modules demonstrated
 
-| Bundle | Kind | What it shows |
-|---|---|---|
-| `petResource` | `zodResource` | Full zod schema → entity + DTOs + hooks + sub-resource (`/pets/:petId/tags`). |
-| `tagZodResource` | `zodResource` | Minimal zod CRUD (`/tags`). |
-| `petVaccinationResource` | `defineSubResource` | Nested CRUD with handwritten entity/DTOs. |
-| `authorZodResource` / `bookZodResource` | `zodResource` | DTO field roles (create-only / write-only), FK relation meta with response projection, keyed `operations` (soft delete + restore + replace). |
-| `appointmentResource` | `defineResource` | Handwritten entity/DTOs; custom create handler wraps appointment + reminder writes in one `txScope`. |
-| `reminderZodResource` | `zodResource` | Zod-driven; FK relation meta back to the (classic) appointment entity. |
-| `petShareFeature` | `defineModuleResource` | Junction-table feature + custom controller. |
-| `petTransferFeature` | `defineModuleResource` | Cross-resource workflow. |
-| `adminFeature` | `defineModuleResource` | Admin-only routes via exported guard. |
-| `auditFeature` | `defineModuleResource` | Cross-cutting audit trail. |
-| `eventsFeature` | `defineModuleResource` | Domain-event listeners. |
-| `defineSampleAuth` / `sampleAuthUserResource` | `AuthBootstrap` + entity row | In-process JWT signup + login. |
+| Bundle                                        | Kind                         | What it shows                                                                                                                                |
+| --------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `petResource`                                 | `zodResource`                | Full zod schema → entity + DTOs + hooks + sub-resource (`/pets/:petId/tags`).                                                                |
+| `tagZodResource`                              | `zodResource`                | Minimal zod CRUD (`/tags`).                                                                                                                  |
+| `petVaccinationResource`                      | `defineSubResource`          | Nested CRUD with handwritten entity/DTOs.                                                                                                    |
+| `authorZodResource` / `bookZodResource`       | `zodResource`                | DTO field roles (create-only / write-only), FK relation meta with response projection, keyed `operations` (soft delete + restore + replace). |
+| `appointmentResource`                         | `defineResource`             | Handwritten entity/DTOs; custom create handler wraps appointment + reminder writes in one `txScope`.                                         |
+| `reminderZodResource`                         | `zodResource`                | Zod-driven; FK relation meta back to the (classic) appointment entity.                                                                       |
+| `petShareFeature`                             | `defineModuleResource`       | Junction-table feature + custom controller.                                                                                                  |
+| `petTransferFeature`                          | `defineModuleResource`       | Cross-resource workflow.                                                                                                                     |
+| `adminFeature`                                | `defineModuleResource`       | Admin-only routes via exported guard.                                                                                                        |
+| `auditFeature`                                | `defineModuleResource`       | Cross-cutting audit trail.                                                                                                                   |
+| `eventsFeature`                               | `defineModuleResource`       | Domain-event listeners.                                                                                                                      |
+| `defineSampleAuth` / `sampleAuthUserResource` | `AuthBootstrap` + entity row | In-process JWT signup + login.                                                                                                               |
 
 ---
 
@@ -158,11 +160,11 @@ DTOs from it (same pattern as every zod resource in `resources/`).
 
 ### Environment variables
 
-| Var | Default | Purpose |
-|---|---|---|
-| `PORT` | `3000` | HTTP port. |
-| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowlist. |
-| `SWAGGER_UI_PATH` | `api` | Path where Swagger UI mounts (`http://host/<path>`). |
+| Var               | Default | Purpose                                              |
+| ----------------- | ------- | ---------------------------------------------------- |
+| `PORT`            | `3000`  | HTTP port.                                           |
+| `ALLOWED_ORIGINS` | `*`     | Comma-separated CORS allowlist.                      |
+| `SWAGGER_UI_PATH` | `api`   | Path where Swagger UI mounts (`http://host/<path>`). |
 
 `src/auth/auth.adapter.ts` signs/verifies JWTs with a **hardcoded**
 dev-only secret (`JWT_SECRET` literal in that file) — it is not read
@@ -171,9 +173,9 @@ key from a secret manager/env var instead.
 
 ### Related examples
 
-| Example | Use when |
-|---|---|
-| [sample-code-review](../sample-code-review) | Firebase auth, API-key chain, mixed SQL + Firestore |
+| Example                                     | Use when                                              |
+| ------------------------------------------- | ----------------------------------------------------- |
+| [sample-code-review](../sample-code-review) | Firebase auth, API-key chain, mixed SQL + Firestore   |
 | [sample-server-auth](../sample-server-auth) | Built-in identity (Path B) with `defineRocketsAuth()` |
 
 ---

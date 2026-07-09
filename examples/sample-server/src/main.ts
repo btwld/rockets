@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { StandardSchemaValidationPipe, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
-import { cleanupOpenApiDoc, ZodValidationPipe } from 'nestjs-zod';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { AppModule } from './app.module';
 import { ExceptionsFilter } from '@bitwild/rockets';
 
@@ -19,10 +19,10 @@ async function bootstrap() {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
     credentials: true,
   });
-  // ZodValidationPipe must run before ValidationPipe so zod DTOs get their
-  // required-field and constraint checks before class-validator whitelist runs.
+  // StandardSchemaValidationPipe must run before ValidationPipe so zod
+  // schema-backed DTOs get validated before class-validator whitelist runs.
   app.useGlobalPipes(
-    new ZodValidationPipe(),
+    new StandardSchemaValidationPipe(),
     new ValidationPipe({ transform: true, whitelist: true }),
   );
 

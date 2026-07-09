@@ -9,7 +9,7 @@ import {
 } from '@concepta/nestjs-email';
 import { OtpOptionsInterface } from '@concepta/nestjs-otp';
 import { PasswordOptionsInterface } from '@concepta/nestjs-password';
-import { SwaggerUiOptionsInterface } from '@concepta/nestjs-swagger-ui';
+import type { SwaggerUiOptionsInterface } from '@bitwild/rockets-core';
 import type {
   FederatedOptionsInterface,
   FederatedUserPortSettings,

@@ -9,6 +9,7 @@ import {
 import {
   SafeCrudContextInterceptor,
   buildAccessControlImport,
+  SwaggerUiModule,
 } from '@bitwild/rockets-core';
 import { PassportModule } from '@nestjs/passport';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -49,7 +50,6 @@ import {
 } from '@concepta/nestjs-password';
 import { RepositoryModule } from '@concepta/nestjs-repository';
 import { RoleModule } from '@concepta/nestjs-role';
-import { SwaggerUiModule } from '@concepta/nestjs-swagger-ui';
 import {
   CreateUserCommand,
   GetUserQuery,

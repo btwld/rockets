@@ -1,8 +1,11 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  StandardSchemaValidationPipe,
+  ValidationPipe,
+} from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ExceptionsFilter } from '@bitwild/rockets';
-import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { FakeEmailGateway } from '../src/events';
@@ -15,7 +18,7 @@ describe('Sample Server (e2e)', () => {
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: ['error'] });
     app.useGlobalPipes(
-      new ZodValidationPipe(),
+      new StandardSchemaValidationPipe(),
       new ValidationPipe({ transform: true, whitelist: true }),
     );
     const httpAdapterHost = app.get(HttpAdapterHost);
@@ -28,6 +31,13 @@ describe('Sample Server (e2e)', () => {
   });
 
   describe('Auth', () => {
+    it('POST /auth/signup — rejects invalid payload with 400', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/signup')
+        .send({ email: 'invalid-email', password: '' })
+        .expect(400);
+    });
+
     it('POST /auth/signup — creates user and returns JWT', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/signup')
@@ -308,9 +318,7 @@ describe('Sample Server (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
-        const pet = res.body.data.find(
-          (p: { id: string }) => p.id === petId,
-        );
+        const pet = res.body.data.find((p: { id: string }) => p.id === petId);
         expect(pet.vaccinations).toHaveLength(2);
       });
     });
@@ -617,8 +625,9 @@ describe('Sample Server (e2e)', () => {
           .get(`/pets/${taggedPetId}/tags`)
           .set('Authorization', `Bearer ${userToken}`)
           .expect(200);
-        const blueRow = (list.body.data as Array<{ id: string; tagId: string }>)
-          .find((r) => r.tagId === tagIdBlue);
+        const blueRow = (
+          list.body.data as Array<{ id: string; tagId: string }>
+        ).find((r) => r.tagId === tagIdBlue);
         expect(blueRow).toBeDefined();
 
         await request(app.getHttpServer())
@@ -888,9 +897,9 @@ describe('Sample Server (e2e)', () => {
         .expect(200);
 
       expect(res.body.dateDeleted).toBeTruthy();
-      expect(new Date(res.body.dateDeleted as string).getTime()).toBeGreaterThan(
-        0,
-      );
+      expect(
+        new Date(res.body.dateDeleted as string).getTime(),
+      ).toBeGreaterThan(0);
     });
 
     it('GET /pets does not include the soft-deleted pet', async () => {
@@ -1323,17 +1332,21 @@ describe('Sample Server (e2e)', () => {
       auditPetId = pet.body.id as string;
 
       const after = await request(app.getHttpServer())
-        .get(`/admin/audit-logs?resource=pet&action=create&resourceId=${auditPetId}`)
+        .get(
+          `/admin/audit-logs?resource=pet&action=create&resourceId=${auditPetId}`,
+        )
         .set('Authorization', `Bearer ${auditAdminToken}`)
         .expect(200);
 
       expect(countEntries(after.body)).toBe(1);
-      const entry = (after.body.data as {
-        actorId: string;
-        resourceId: string;
-        action: string;
-        snapshot: string;
-      }[])[0];
+      const entry = (
+        after.body.data as {
+          actorId: string;
+          resourceId: string;
+          action: string;
+          snapshot: string;
+        }[]
+      )[0];
       expect(entry.resourceId).toBe(auditPetId);
       expect(entry.action).toBe('create');
       expect(typeof entry.actorId).toBe('string');
@@ -1356,7 +1369,9 @@ describe('Sample Server (e2e)', () => {
         .expect(200);
 
       const res = await request(app.getHttpServer())
-        .get(`/admin/audit-logs?resource=pet&action=update&resourceId=${auditPetId}`)
+        .get(
+          `/admin/audit-logs?resource=pet&action=update&resourceId=${auditPetId}`,
+        )
         .set('Authorization', `Bearer ${auditAdminToken}`)
         .expect(200);
 
@@ -1744,9 +1759,7 @@ describe('Sample Server (e2e)', () => {
 
         // Audit trail records both soft-deletes and the restore.
         const audit = await request(app.getHttpServer())
-          .get(
-            `/admin/audit-logs?resource=pet&resourceId=${petId}`,
-          )
+          .get(`/admin/audit-logs?resource=pet&resourceId=${petId}`)
           .set('Authorization', `Bearer ${adminTok}`)
           .expect(200);
         const actions = (audit.body.data as { action: string }[]).map(

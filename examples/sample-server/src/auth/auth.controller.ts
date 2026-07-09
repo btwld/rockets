@@ -1,59 +1,21 @@
-import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiBody,
   ApiProperty,
   ApiPropertyOptional,
 } from '@nestjs/swagger';
-import {
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
 import { AuthPublic } from '@bitwild/rockets-core';
 import { SampleAuthAdapter } from './auth.adapter';
 import { UserRole } from './user.entity';
-
-class SignupDto {
-  @ApiProperty({ example: 'user@example.com' })
-  @IsEmail()
-  @IsNotEmpty()
-  email!: string;
-
-  @ApiProperty({ example: 'password123' })
-  @IsString()
-  @IsNotEmpty()
-  password!: string;
-
-  @ApiPropertyOptional({ example: 'John Doe' })
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  // NOTE: sample-only. A real app would never let a signup request claim
-  // an admin role — admin elevation would be gated by an owner-level
-  // workflow or a bootstrapping migration. We accept it here so the e2e
-  // suite can stand up an admin without a dedicated seeder.
-  @ApiPropertyOptional({ enum: UserRole, example: UserRole.USER })
-  @IsEnum(UserRole)
-  @IsOptional()
-  role?: UserRole;
-}
-
-class LoginDto {
-  @ApiProperty({ example: 'user@example.com' })
-  @IsEmail()
-  @IsNotEmpty()
-  email!: string;
-
-  @ApiProperty({ example: 'password123' })
-  @IsString()
-  @IsNotEmpty()
-  password!: string;
-}
+import {
+  LoginDto,
+  type LoginBody,
+  SignupDto,
+  type SignupBody,
+} from './auth.dto';
 
 class SignupResponseDto {
   @ApiProperty({ description: 'Generated UUID for the new account' })
@@ -85,9 +47,16 @@ export class AuthController {
   @Post('signup')
   @AuthPublic()
   @ApiOperation({ summary: 'Create a new account' })
-  @ApiResponse({ status: 201, type: SignupResponseDto, description: 'Account created, returns JWT' })
+  @ApiBody({ type: SignupDto })
+  @ApiResponse({
+    status: 201,
+    type: SignupResponseDto,
+    description: 'Account created, returns JWT',
+  })
   @ApiResponse({ status: 409, description: 'Email is already registered' })
-  async signup(@Body() dto: SignupDto): Promise<SignupResponseDto> {
+  async signup(
+    @Body({ schema: SignupDto.schema }) dto: SignupBody,
+  ): Promise<SignupResponseDto> {
     const { user, accessToken } = await this.authAdapter.signup(
       dto.email,
       dto.password,
@@ -107,9 +76,16 @@ export class AuthController {
   @AuthPublic()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
-  @ApiResponse({ status: 200, type: LoginResponseDto, description: 'Returns JWT' })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    type: LoginResponseDto,
+    description: 'Returns JWT',
+  })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
+  async login(
+    @Body({ schema: LoginDto.schema }) dto: LoginBody,
+  ): Promise<LoginResponseDto> {
     return this.authAdapter.login(dto.email, dto.password);
   }
 }
