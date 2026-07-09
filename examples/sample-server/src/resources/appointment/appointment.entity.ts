@@ -1,7 +1,15 @@
 import { z } from 'zod';
-import { f, rocketsFieldMeta } from '@bitwild/rockets-core/zod';
+import { f, rocketsFieldMeta, WireRow, SchemaPersistenceRow } from '@bitwild/rockets-core/zod';
 import { compileZodEntity } from '../../zod-bindings';
 import { ReminderEntity } from './reminder.schema';
+
+/** Wire-shape mirror for the eager `reminders` relation (no schema import — breaks the appointment ↔ reminder inference cycle). */
+const reminderRelationElement = z.object({
+  id: z.uuid(),
+  appointmentId: z.uuid(),
+  sendAt: z.iso.datetime(),
+  sent: z.boolean(),
+});
 
 export enum AppointmentStatus {
   PENDING = 'pending',
@@ -37,13 +45,10 @@ export const appointmentSchema = z.object({
   }),
   notes: f.string({ text: true }).optional(),
   dateCreated: z.date().register(rocketsFieldMeta, { db: { createdAt: true } }),
-  reminders: z.array(z.unknown()).register(rocketsFieldMeta, {
-    relation: {
-      kind: 'hasMany',
-      target: () => ReminderEntity,
-      mappedBy: 'appointmentId',
-      eager: true,
-    },
+  reminders: f.hasMany(reminderRelationElement, {
+    target: (): unknown => ReminderEntity,
+    mappedBy: 'appointmentId',
+    eager: true,
   }),
 });
 
@@ -51,5 +56,7 @@ export const AppointmentEntity = compileZodEntity(appointmentSchema, {
   name: 'AppointmentEntity',
   table: 'appointments',
 });
-/** Row type — shares the name with the entity value for type-position uses. */
-export type AppointmentEntity = z.output<typeof appointmentSchema>;
+/** OpenAPI / request wire shape. */
+export type Appointment = WireRow<typeof appointmentSchema>;
+/** Loaded persistence row (`Date` columns, eager relations). */
+export type AppointmentRow = SchemaPersistenceRow<typeof appointmentSchema>;

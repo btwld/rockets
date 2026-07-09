@@ -319,6 +319,52 @@ bindZodResources(typeOrmZodEntityCompiler);
 
 See `examples/sample-server/src/zod-bindings.ts` for the canonical wiring.
 
+#### Wire vs persistence typing
+
+- **`WireRow<S>`** — OpenAPI / request / response shape
+  (`z.output<S>`). Use in controllers and client contracts.
+- **`SchemaPersistenceRow<S>`** — in-memory row after load
+  (`Date` for ISO datetime columns). Use in hooks, handlers,
+  `@InjectDynamicRepository`.
+- Generated entity classes are typed as
+  `Type<SchemaPersistenceRow<S>>`, not the wire shape.
+
+#### Field helpers (`f.*`)
+
+| Helper | Use for |
+|--------|---------|
+| `f.pk()` | UUID primary key |
+| `f.createdAt()` / `f.updatedAt()` / `f.deletedAt()` | Audit columns |
+| `f.version()` | Optimistic lock |
+| `f.owner()` | Owner stamp column |
+| `f.fk(target, opts)` | FK + `manyToOne` / `oneToOne` |
+| `f.hasMany(elementSchema, opts)` | `@OneToMany` inverse — **never** `z.array(z.unknown())` |
+| `f.string` / `f.int` / `f.bool` / `f.enum` | Scalars |
+| `f.compute(schema, fn)` | Response-only computed fields |
+
+Eager `compileEntity` in `*.schema.ts` is only for import-cycle breaks
+(`@EntityHook`, inverse `@OneToMany`). Default: let
+`zodResource({ schema })` compile.
+
+#### Capability matrix (meta → layers)
+
+| Meta flag | Entity compiler | DTO projection | E2E reference |
+|-----------|-----------------|----------------|---------------|
+| `db.pk` | `@PrimaryGeneratedColumn('uuid')` | update id | tag, pet |
+| `db.createdAt` / `updatedAt` / `deletedAt` | audit decorators | create/update omit | auditableEntity |
+| `db.unique` / `db.index` | column / class decorators | — | pet `uniqueRef` |
+| `db.column` | raw TypeORM override | — | `zod-full-coverage` decimal/json |
+| `rocketsEntityMeta.unique` / `indexes` | composite constraints | — | pet-tag, full-coverage |
+| `relation.manyToOne` | FK + `@JoinColumn` | expose nested | zod-parity author/book |
+| `relation.hasMany` | `@OneToMany`, no column | expose array | full-coverage, pet |
+| `relation.shape` | — | classic entity expose | pet vaccinations |
+| `dto.create/update/response` | — | projection | zod-parity |
+| `compute` | skipped (no column) | response only | pet `tags` |
+| `owner` | — | OwnerStampHook | pet |
+
+Unsupported without `db.column`: arbitrary zod types (record, union, …).
+Many-to-many: junction sub-resource + two FKs — no `@ManyToMany`.
+
 ### Add role-based access control (opt-in `accessControl`)
 
 ACL is opt-in. Pass the `accessControl` option (type
@@ -378,6 +424,7 @@ expect.
 | `accessControl` | `RocketsAccessControlConfig`                        | optional  | Opt-in ACL: `{ service, settings: { rules }, appGuard?, appFilter?, imports?, queryServices? }` forwarded to upstream `AccessControlModule.forRoot`. Omitted → no ACL wiring.                                                        |
 | `providers`    | `Provider[]`                                         | optional  | Extra providers registered on the module.                                                                                                                                                                                            |
 | `global`       | `boolean` (default `true`)                           | optional  | Module is global — exports visible app-wide.                                                                                                                                                                                         |
+| `swagger`      | `SwaggerUiOptionsInterface`                          | optional  | Swagger UI customization (`settings`, `documentBuilder`). Core always registers Swagger UI; this only tunes it.                                                                                                                      |
 
 † `auth` is required at the presentation layer (e.g. `@bitwild/rockets` always
 needs an auth source). Core itself boots without it for tests.

@@ -52,7 +52,7 @@ Other entities continue on the default adapter (TypeORM, in most apps).
 
 - You need ACID transactions across multiple entities — stay on a SQL adapter
   for cross-entity transactional flows.
-- You only want SQL — install `@concepta/nestjs-repository-typeorm` instead.
+- You only want SQL — install `@bitwild/rockets-repository-typeorm` instead.
 
 ---
 
@@ -166,17 +166,16 @@ FirestoreRepositoryModule.forFeature(entities, {
 });
 ```
 
-### Configure soft delete
+### Soft delete
 
-Pass `softDeleteField` on the provider row when auto-detection is not enough:
-
-```typescript
-{
-  entity: AuditLogEntity,
-  repository: firestoreRepository,
-  softDeleteField: 'removedAt',
-}
-```
+The soft-delete column is **auto-detected only** — the adapter checks the
+entity instance for a `dateRemoved` or `deletedAt` property
+(`FIRESTORE_DEFAULT_SOFT_DELETE_FIELD` / `FIRESTORE_ALT_SOFT_DELETE_FIELD`).
+`ModuleResourceEntityEntry` (the shape accepted by
+`defineModuleResource({ entities: [...] })`) has no `softDeleteField`
+override — name the column `dateRemoved` or `deletedAt` on the entity class.
+If neither name is present, `delete()` calls throw at runtime with a message
+naming both supported column names.
 
 ---
 

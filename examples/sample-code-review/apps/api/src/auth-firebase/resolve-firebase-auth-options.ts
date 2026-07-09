@@ -10,6 +10,10 @@ import { SampleFakeFirebaseVerifier } from './sample-fake-firebase-verifier';
  */
 export function resolveFirebaseAuthModuleOptions(): FirebaseAuthModuleOptions {
   if (process.env.FIREBASE_USE_FAKE === 'true') {
+    // The fake verifier avoids live Firebase Auth calls, but the app still
+    // needs a Firebase Admin singleton so the Firestore repository backend can
+    // bootstrap during `RocketsModule.forRoot()`.
+    createFirebaseAdminApp();
     return { verifier: SampleFakeFirebaseVerifier };
   }
 

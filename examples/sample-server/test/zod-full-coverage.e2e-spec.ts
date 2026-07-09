@@ -36,7 +36,7 @@ import {
   UserMetadataUpdateDto,
 } from '../src/user-metadata.schema';
 import { defineSampleAuth, sampleAuthUserResource } from '../src/auth';
-import { rocketsEntityMeta, rocketsFieldMeta } from '@bitwild/rockets-core/zod';
+import { rocketsEntityMeta, rocketsFieldMeta, f } from '@bitwild/rockets-core/zod';
 import { typeOrmZodEntityCompiler } from '@bitwild/rockets-repository-typeorm/zod';
 import { zodResource } from '../src/zod-bindings';
 
@@ -88,13 +88,9 @@ export const categorySchema = z.object({
     .uuid()
     .register(rocketsFieldMeta, { db: { pk: true, generated: true } }),
   name: z.string().min(1).max(100),
-  products: z.array(productSchema).register(rocketsFieldMeta, {
-    relation: {
-      kind: 'hasMany',
-      target: (): unknown => productSchema,
-      mappedBy: 'categoryId',
-      expose: true,
-    },
+  products: f.hasMany(productSchema, {
+    mappedBy: 'categoryId',
+    expose: true,
   }),
   dateCreated: z.iso
     .datetime()

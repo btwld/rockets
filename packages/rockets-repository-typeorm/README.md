@@ -1,5 +1,9 @@
 # @bitwild/rockets-repository-typeorm
 
+[![NPM](https://img.shields.io/npm/v/@bitwild/rockets-repository-typeorm)](https://www.npmjs.com/package/@bitwild/rockets-repository-typeorm)
+[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
 TypeORM implementation of the Rockets dynamic repository contract.
 
 This is a **thin wrapper** over

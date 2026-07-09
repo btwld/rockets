@@ -220,6 +220,45 @@ const compute = <T extends z.ZodType>(
   return schema;
 };
 
+/** `f.hasMany` options: relation meta (minus `target` / `kind`) — see {@link fk}. */
+interface HasManyOpts
+  extends Omit<RocketsRelationFieldMeta, 'target' | 'kind'> {
+  /**
+   * Related zod schema or entity class (thunk). Defaults to
+   * `elementSchema` when it is a `z.object()` — pass explicitly for
+   * classic entity targets or when the array element is a wire-shape
+   * mirror (`shape` / `expose`).
+   */
+  readonly target?: RocketsRelationFieldMeta['target'];
+}
+
+/**
+ * `@OneToMany` inverse side: typed `z.array(elementSchema)` plus relation
+ * meta. Prefer this over `z.array(z.unknown()).register(...)` — the
+ * element schema documents and validates the collection shape.
+ */
+const hasMany = <T extends z.ZodType>(
+  elementSchema: T,
+  o: HasManyOpts,
+): z.ZodArray<T> => {
+  const { target: targetOverride, ...relationRest } = o;
+  const target: RocketsRelationFieldMeta['target'] =
+    targetOverride ??
+    ((): unknown => {
+      if (elementSchema instanceof z.ZodObject) {
+        return elementSchema;
+      }
+      throw new Error(
+        '[f.hasMany] "target" is required when elementSchema is not a z.object().',
+      );
+    });
+  const arraySchema = z.array(elementSchema);
+  registerFieldMeta(arraySchema, {
+    relation: { kind: 'hasMany', target, ...relationRest },
+  });
+  return arraySchema;
+};
+
 export const f = {
   pk,
   createdAt,
@@ -228,6 +267,7 @@ export const f = {
   version,
   owner,
   fk,
+  hasMany,
   string,
   int,
   bool,

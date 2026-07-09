@@ -50,7 +50,6 @@ versions in production.
   - [Repository layout](#repository-layout)
   - [Versions](#versions)
   - [Common scripts](#common-scripts-from-the-monorepo-root)
-  - [Architecture diagram (HTML)](docs/architecture-diagram.html)
 - [5. Contributing](#5-contributing)
 - [6. Security](#6-security)
 - [7. License](#7-license)
@@ -796,8 +795,7 @@ works across both.
 
 Canonical mixed-store example: [sample-code-review](examples/sample-code-review)
 (`defineTypeOrmRepository` at root + `defineFirestoreRepository` on report
-entities). OPS layout:
-[ops-micro-apps-pattern.md](docs/ops-micro-apps-pattern.md).
+entities).
 
 ### Scope rows to the authenticated user
 
@@ -957,7 +955,7 @@ it: one `RocketsModule.forRoot({ ... })` object is split by
 | `@concepta/nestjs-crud`                                                                         | `@bitwild/rockets-core` (re-export)                            | Generated controllers, CQRS commands/queries, default handlers        |
 | `@concepta/nestjs-core`, `@concepta/nestjs-authentication`                                      | `@bitwild/rockets-core`                                        | Hook resolution (`CoreModule`), shared exceptions, auth primitives    |
 | `@concepta/nestjs-access-control`                                                               | opt-in `accessControl` option (import symbols from upstream)   | Grant table, `AccessControlGuard`, route decorators                   |
-| `@concepta/nestjs-repository-typeorm` (vendored)                                                | `@bitwild/rockets-repository-typeorm` + app-local bootstrap    | SQL adapter — workspace package, wrapped by `defineTypeOrmRepository` |
+| `@concepta/nestjs-repository-typeorm`                                                           | `@bitwild/rockets-repository-typeorm` (thin wrapper) + app-local bootstrap | SQL adapter — `@bitwild/rockets-repository-typeorm`'s main entry re-exports the upstream package verbatim; wrapped by `defineTypeOrmRepository` |
 | `@concepta/nestjs-user`, `role`, `otp`, `password`, `invitation`, `federated`, `email`, `event` | wired inside `@bitwild/rockets-auth`                           | Built-in auth HTTP + persistence rows (path B only)                   |
 
 | Rockets layer               | Role                                                                                                                               |
@@ -983,10 +981,6 @@ server package. They are sibling packages over core, not parent/child.
 **Override a default CRUD handler:** set `operations.<op>.commandHandler` or
 `queryHandler` on the resource config — upstream `CrudModule` uses your class
 instead of the default; the defaults exist for convenience only.
-
-**Docs:** [`architecture-diagram.html`](docs/architecture-diagram.html)
-(Stargate · identity · micro apps) ·
-[`ops-micro-apps-pattern.md`](docs/ops-micro-apps-pattern.md).
 
 ### Upstream contributors and integration scope
 
@@ -1014,7 +1008,7 @@ to 4xx — a bare `Error` in a hook often surfaces as 500.
 | Package                                 | npm name                                | Purpose                                                                                                                                                                                                                            | Docs                                                      | Status  |
 | --------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ------- |
 | `packages/rockets-core`                 | `@bitwild/rockets-core`                 | Composition planner. Auth chain, `buildAppRegistrationPlan`, `defineResource` / `defineModuleResource` / `defineSubResource`, `defineHook`, owner/path hooks, swagger registration, shared helpers, zod layer at `@bitwild/rockets-core/zod`, opt-in `accessControl`. | [README](packages/rockets-core/README.md)                 | stable  |
-| `packages/rockets-repository-typeorm`   | `@bitwild/rockets-repository-typeorm`   | TypeORM adapter for the dynamic repository contract (vendored from upstream `@concepta/nestjs-repository-typeorm`), plus the zod `SchemaEntityCompiler` at `@bitwild/rockets-repository-typeorm/zod`.                              | [README](packages/rockets-repository-typeorm/README.md)   | stable  |
+| `packages/rockets-repository-typeorm`   | `@bitwild/rockets-repository-typeorm`   | TypeORM adapter for the dynamic repository contract — a thin wrapper whose main entry re-exports upstream `@concepta/nestjs-repository-typeorm` verbatim, plus the zod `SchemaEntityCompiler` at `@bitwild/rockets-repository-typeorm/zod`.                              | [README](packages/rockets-repository-typeorm/README.md)   | stable  |
 | `packages/rockets-repository-firestore` | `@bitwild/rockets-repository-firestore` | Firestore adapter implementing `RepositoryAdapter`. Per-entity opt-in.                                                                                                                                                             | [README](packages/rockets-repository-firestore/README.md) | preview |
 | `packages/rockets-adapter-firebase`     | `@bitwild/rockets-adapter-firebase`     | Firebase Auth adapter implementing `AuthAdapterInterface`.                                                                                                                                                                         | [README](packages/rockets-adapter-firebase/README.md)     | preview |
 | `packages/rockets-server`               | `@bitwild/rockets`                      | External-auth presentation layer. `MeController`, `APP_GUARD` opt-in, `auth` chain.                                                                                                                                                | [README](packages/rockets-server/README.md)               | stable  |
@@ -1032,7 +1026,6 @@ rockets/
 │   ├── rockets-server/                  External-auth presentation (@bitwild/rockets)
 │   └── rockets-server-auth/             Built-in auth (@bitwild/rockets-auth)
 ├── examples/                            sample-server, sample-server-auth, sample-code-review
-├── docs/                                architecture-diagram.html, ops-micro-apps-pattern.md
 └── package.json                         Yarn 4 workspace root
 ```
 

@@ -140,6 +140,15 @@ the user has already had to fix more than once.
     (the symbol the outer `useFactory` injects); `AuthController` and
     the entity stay internal.
 
+15. **Zod-first resources — review checklist.**
+    - Schema is source of truth; use `f.*` helpers, not raw `.register` unless necessary.
+    - Relations: `f.fk()` / `f.hasMany(childSchema)` — reject `z.array(z.unknown())`.
+    - Types: `WireRow<S>` for API; `SchemaPersistenceRow<S>` for hooks/repos — not the entity class.
+    - Compile entity in `*.schema.ts` only to break import cycles; default is `zodResource({ schema })`.
+    - Persistence hints in `rocketsFieldMeta` / `rocketsEntityMeta`, API docs in `.meta()` — never `db` in `.meta()`.
+    - Unsupported column types need `db.column`; many-to-many is a junction sub-resource.
+    - Capability matrix: `packages/rockets-core/README.md` (Zod-first section).
+
 ## How to work with the project owner
 
 When replying to the project owner or maintainer:

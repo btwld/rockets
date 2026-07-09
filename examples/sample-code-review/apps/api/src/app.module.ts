@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { RocketsModule } from '@bitwild/rockets';
 import { defineFirebaseAuth } from '@bitwild/rockets-adapter-firebase';
 import { defineModuleResource } from '@bitwild/rockets-core';
+import { createFirebaseAdminApp } from './auth-firebase';
 
 import { resolveFirebaseAuthModuleOptions } from './auth-firebase';
 import { UserEntity } from './auth/user.entity';
@@ -15,6 +16,10 @@ import {
 import { defineTypeOrmRepository } from './repository/define-typeorm-repository';
 import { githubFeature } from './github';
 import { analysisFeature } from './analysis';
+
+if (process.env.FIREBASE_USE_FAKE === 'true') {
+  createFirebaseAdminApp();
+}
 
 @Module({
   imports: [

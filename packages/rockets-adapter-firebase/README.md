@@ -193,6 +193,7 @@ export class ProfileController {
     return user;
   }
 }
+```
 
 ---
 
@@ -279,4 +280,3 @@ export class ProfileController {
 ## License
 
 BSD-3-Clause
-```

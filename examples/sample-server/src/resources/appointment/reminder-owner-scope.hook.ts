@@ -7,7 +7,7 @@ import {
   getActor,
 } from '@bitwild/rockets-core';
 import { ReminderEntity } from './reminder.schema';
-import { AppointmentEntity } from './appointment.entity';
+import { AppointmentEntity, type AppointmentRow } from './appointment.entity';
 import { InjectDynamicRepository } from '@bitwild/rockets-core';
 
 /**
@@ -34,7 +34,7 @@ import { InjectDynamicRepository } from '@bitwild/rockets-core';
 export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<PlainLiteralObject> {
   constructor(
     @InjectDynamicRepository(AppointmentEntity)
-    private readonly apptRepo: RepositoryInterface<AppointmentEntity>,
+    private readonly apptRepo: RepositoryInterface<AppointmentRow>,
   ) {
     super();
   }
@@ -62,7 +62,7 @@ export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<PlainLiter
     if (!actor?.id) return options;
 
     const appointments = await this.apptRepo.find({
-      where: Where.eq<AppointmentEntity>('userId', actor.id),
+      where: Where.eq<AppointmentRow>('userId', actor.id),
     });
     const appointmentIds = appointments.map((a) => a.id);
 

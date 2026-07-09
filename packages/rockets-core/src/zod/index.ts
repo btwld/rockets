@@ -28,22 +28,31 @@ export type {
   UnwrappedField,
 } from './field-meta';
 export { f } from './fields';
-export { createdEntity, baseEntity, auditableEntity } from './base-entity';
 export {
-  zodResource,
-  zodSubResource,
-  bindZodResources,
-  defineZodUserMetadata,
-} from './zod-resource';
+  WireRow,
+  PersistenceRow,
+  SchemaPersistenceRow,
+} from './persistence-row';
+export { createdEntity, baseEntity, auditableEntity } from './base-entity';
+export { zodResource, zodSubResource, bindZodResources } from './zod-resource';
+export { zodModuleResource } from './zod-module-resource';
+export { defineZodUserMetadata } from './zod-user-metadata';
+export type {
+  ZodResourceDefinition,
+  ZodSubResourceDefinition,
+  ZodResourceDtos,
+  ZodResourceManifest,
+} from './zod-resource-contracts';
 export type {
   ZodCrudOperation,
   ZodOperationConfig,
   ZodDeleteOperationConfig,
   ZodRestoreOperationConfig,
-  ZodResourceDefinition,
-  ZodSubResourceDefinition,
   ZodResourceOperations,
-  ZodResourceDtos,
-  ZodResourceManifest,
-  ZodUserMetadataOptions,
-} from './zod-resource';
+} from './zod-operations';
+export type {
+  ZodModuleResourceEntityDefinition,
+  ZodModuleResourceEntityInput,
+  ZodModuleResourceInput,
+} from './zod-module-resource';
+export type { ZodUserMetadataOptions } from './zod-user-metadata';

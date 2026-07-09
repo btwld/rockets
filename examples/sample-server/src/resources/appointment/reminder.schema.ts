@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createdEntity, f } from '@bitwild/rockets-core/zod';
+import { createdEntity, f, SchemaPersistenceRow } from '@bitwild/rockets-core/zod';
 import { zodEntityCompiler } from '../../zod-bindings';
 import { AppointmentEntity } from './appointment.entity';
 
@@ -40,6 +40,7 @@ export const reminderSchema = createdEntity({
  * static typing — never the generated entity class.
  */
 export type Reminder = z.infer<typeof reminderSchema>;
+export type ReminderRow = SchemaPersistenceRow<typeof reminderSchema>;
 
 /**
  * Generated entity class (named `ReminderEntity`, table `reminders`).

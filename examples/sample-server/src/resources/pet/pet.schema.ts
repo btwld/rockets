@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { auditableEntity, f, rocketsFieldMeta } from '@bitwild/rockets-core/zod';
+import { auditableEntity, f } from '@bitwild/rockets-core/zod';
 import { zodEntityCompiler } from '../../zod-bindings';
 import { tagSchema } from '../tag/tag.schema';
-import { PetTagEntity } from './pet-tag.schema';
+import { PetTagEntity, petTagSchema } from './pet-tag.schema';
 import type { PetTagRow } from './pet-tag.schema';
 import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.schema';
 
@@ -69,16 +69,13 @@ export const petSchema = auditableEntity({
    * gains the `@OneToMany`; the response projects the explicit zod
    * mirror (`shape`) since a classic entity has no schema of its own.
    */
-  vaccinations: z.array(z.unknown()).register(rocketsFieldMeta, {
-    relation: {
-      kind: 'hasMany',
-      target: (): unknown => PetVaccinationEntity,
-      shape: (): unknown => vaccinationResponseShape,
-      mappedBy: 'petId',
-      expose: true,
-      eager: true,
-      include: 'default',
-    },
+  vaccinations: f.hasMany(vaccinationResponseShape, {
+    target: (): unknown => PetVaccinationEntity,
+    shape: (): unknown => vaccinationResponseShape,
+    mappedBy: 'petId',
+    expose: true,
+    eager: true,
+    include: 'default',
   }),
   /**
    * Eager-loaded junction rows. Not exposed — the flat `tags` computed
@@ -86,14 +83,11 @@ export const petSchema = auditableEntity({
    * dedicated sub-resource (`/pets/:petId/tags`), never the parent
    * payload.
    */
-  petTags: z.array(z.unknown()).register(rocketsFieldMeta, {
-    relation: {
-      kind: 'hasMany',
-      target: (): unknown => PetTagEntity,
-      mappedBy: 'petId',
-      eager: true,
-      include: 'default',
-    },
+  petTags: f.hasMany(petTagSchema, {
+    target: (): unknown => PetTagEntity,
+    mappedBy: 'petId',
+    eager: true,
+    include: 'default',
   }),
   /**
    * Flat tag projection derived from the eager-loaded `petTags`

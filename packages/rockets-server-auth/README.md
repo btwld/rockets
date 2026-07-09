@@ -1,5 +1,6 @@
 # @bitwild/rockets-auth
 
+[![NPM](https://img.shields.io/npm/v/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
 [![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
@@ -74,7 +75,7 @@ yarn add @bitwild/rockets-auth@alpha @bitwild/rockets@alpha @bitwild/rockets-cor
 ```
 
 Bring the upstream `@concepta/nestjs-*` packages and a repository adapter your
-app supports (e.g. `@concepta/nestjs-repository-typeorm` + `typeorm`).
+app supports (e.g. `@bitwild/rockets-repository-typeorm` + `typeorm`).
 
 ### Minimal working example
 
@@ -210,8 +211,9 @@ monorepo root for a full working app.
 
 ### Reuse the user's roles inside Access Control
 
-`AccessControlServiceInterface` lives in `@bitwild/rockets-auth` (re-exported).
-Implement `getUserRoles` by reading `userRoles` off the request —
+`AccessControlServiceInterface` comes from upstream
+`@concepta/nestjs-access-control` (not re-exported by this package — import it
+directly). Implement `getUserRoles` by reading `userRoles` off the request —
 `RocketsJwtAuthAdapter` populates that shape from the user-role join
 automatically.
 
@@ -221,7 +223,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AccessControlServiceInterface } from '@bitwild/rockets-auth';
+import { AccessControlServiceInterface } from '@concepta/nestjs-access-control';
 
 @Injectable()
 export class ACService implements AccessControlServiceInterface {
@@ -407,14 +409,15 @@ when you need built-in auth HTTP and `/me`.
 Every public type and CQRS class from the auth, user, otp, role, and invitation
 domains is re-exported under the package root:
 
-- **Auth**: `SignupUserCommand`, `AbstractSignupUserHandler`,
-  `MePasswordController` factory, `RocketsAuthTokenController`,
-  `RocketsJwtAuthAdapter`.
-- **User**: `AbstractAdminUserListHandler`, `AbstractAdminUserReadHandler`,
+- **Auth**: `buildMePasswordController` factory (`/me/password`),
+  `RocketsAuthTokenController`, `RocketsJwtAuthAdapter`.
+- **User**: `SignupUserCommand`, `AbstractSignupUserHandler`,
+  `AbstractAdminUserListHandler`, `AbstractAdminUserReadHandler`,
   `AbstractAdminUserUpdateHandler`, `AbstractAdminDeleteUserHandler`,
   `RocketsAuthUserInterface`, `RocketsAuthUserMetadata*Interface`.
 - **Role**: `RocketsAuthRoleInterface`, role CRUD entities and DTOs.
-- **OTP**: `OtpModule` re-export, OTP controllers and extras.
+- **OTP**: `buildRocketsAuthOtpController` factory, OTP CQRS handlers
+  (`RocketsCreateOtpHandler`, `RocketsValidateOtpHandler`, …) and DTOs.
 - **Invitation**: invitation entities, DTOs, controllers, and the four
   factory-built controllers (`invitation`, `acceptance`, `revocation`,
   `reattempt`).
@@ -428,8 +431,9 @@ Saved here so consumers don't dual-import from
 `AccessControlContext`, `AccessControlService`, every
 `@AccessControl{Create,Read,Update,Replace,Delete,Recover}*` decorator,
 `@AccessControlGrant`, `@AccessControlQuery`, `ActionEnum`, `PossessionEnum`,
-`AccessControlAction`, `CanAccess`, `AccessControlOptionsInterface`,
-`AccessControlContextInterface`.
+`CanAccess`, `AccessControlOptionsInterface`, `AccessControlContextInterface`.
+Other upstream symbols (e.g. `AccessControlServiceInterface`) are not
+re-exported — import them directly from `@concepta/nestjs-access-control`.
 
 ### Known limitations
 
@@ -438,10 +442,11 @@ Saved here so consumers don't dual-import from
   v8. The folder `src/domains/oauth/` is parked with the v7 wiring preserved as
   a comment and `TODO(upstream:)` markers. `extras.auth.guards` exists for
   forward-compat plumbing but routes resolve only after the upstream ports ship.
-- **Email module** is on v7 (`@concepta/nestjs-email@7.0.0-alpha.10`) and
-  `@concepta/nestjs-access-control@7.0.0-alpha.10` — the cross-version mix is
-  intentional while the v8 port is in flight. No code change required when those
-  land.
+- **Email and event modules** are on v7 (`@concepta/nestjs-email@7.0.0-alpha.10`,
+  `@concepta/nestjs-event@7.0.0-alpha.10`) while the rest of the stack —
+  including `@concepta/nestjs-access-control` — is on v8. The cross-version mix
+  is intentional while the v8 email/event ports are in flight. No code change
+  required when those land.
 
 Dump OpenAPI from a running auth app: `yarn generate-swagger` at the monorepo
 root (uses the `rockets-auth-swagger` CLI bin).

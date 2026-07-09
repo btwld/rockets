@@ -21,10 +21,10 @@ import {
  */
 export const zodEntityCompiler = typeOrmZodEntityCompiler;
 /**
- * Typed entity compiler — returns `Type<z.output<S>>` so a generated
- * entity can satisfy class-typed APIs (`OwnerScopeHook.for`,
- * `defineResource`) and let consumers type rows directly off the class,
- * without a hand-written `z.infer` row type beside it.
+ * Typed entity compiler — returns `Type<SchemaPersistenceRow<S>>` so a
+ * generated entity can satisfy class-typed APIs (`OwnerScopeHook.for`,
+ * `defineResource`) with the in-memory persistence row shape (ISO
+ * datetimes as `Date`), not the OpenAPI wire shape.
  */
 export const compileZodEntity = compileEntity;
 export const { zodResource, zodSubResource, defineUserMetadata } =

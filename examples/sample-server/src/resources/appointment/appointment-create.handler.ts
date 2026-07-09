@@ -12,9 +12,9 @@ import { RepositoryInterface, TransactionScope, Where } from '@concepta/nestjs-r
 import { getActor } from '@bitwild/rockets-core';
 import { PetEntity } from '../pet/pet.schema';
 import type { Pet } from '../pet/pet.schema';
-import { AppointmentEntity } from './appointment.entity';
+import { AppointmentEntity, type AppointmentRow } from './appointment.entity';
 import { ReminderEntity } from './reminder.schema';
-import type { Reminder } from './reminder.schema';
+import type { ReminderRow } from './reminder.schema';
 import { InjectCrudAdapter, InjectDynamicRepository } from '@bitwild/rockets-core';
 
 type AppointmentCreatePayload = PlainLiteralObject & {
@@ -37,9 +37,9 @@ export class AppointmentCreateHandler extends CrudCommandHandlerBase<PlainLitera
     @InjectCrudAdapter(AppointmentEntity)
     readonly crudAdapter: CrudAdapter<PlainLiteralObject>,
     @InjectDynamicRepository(AppointmentEntity)
-    private readonly apptRepo: RepositoryInterface<AppointmentEntity>,
+    private readonly apptRepo: RepositoryInterface<AppointmentRow>,
     @InjectDynamicRepository(ReminderEntity)
-    private readonly reminderRepo: RepositoryInterface<Reminder>,
+    private readonly reminderRepo: RepositoryInterface<ReminderRow>,
     @InjectDynamicRepository(PetEntity)
     private readonly petRepo: RepositoryInterface<Pet>,
     private readonly txScope: TransactionScope,

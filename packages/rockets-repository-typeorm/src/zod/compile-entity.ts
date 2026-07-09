@@ -10,6 +10,7 @@ import {
   resolveRelationTarget,
   unwrapField,
   RocketsRelationFieldMeta,
+  type SchemaPersistenceRow,
 } from '@bitwild/rockets-core/zod';
 import {
   Column,
@@ -88,7 +89,7 @@ export const typeOrmZodEntityCompiler: SchemaEntityCompiler = {
 export function compileEntity<S extends z.ZodObject>(
   schema: S,
   options: CompileEntityOptions,
-): Type<z.output<S>> {
+): Type<SchemaPersistenceRow<S>> {
   const cls = class {};
   Object.defineProperty(cls, 'name', { value: options.name });
 
@@ -107,13 +108,11 @@ export function compileEntity<S extends z.ZodObject>(
 
   Entity(options.table)(cls);
   registerSchemaEntity(schema, cls);
-  // The ONE sanctioned boundary assertion in the zod→entity bridge: the
-  // class gains the schema's shape at RUNTIME via the decorators applied
-  // above, which TS cannot observe structurally. Asserting `Type<z.output<S>>`
-  // lets callers type rows (and satisfy class-typed APIs like
-  // `OwnerScopeHook.for` / `defineResource`) from the schema, instead of
-  // re-declaring a `z.infer` row type beside every generated entity.
-  return cls as Type<z.output<S>>;
+  // Sanctioned boundary assertion: decorators apply the persistence shape at
+  // runtime — TS cannot observe them structurally. {@link SchemaPersistenceRow}
+  // types loaded rows (ISO datetimes → Date); {@link WireRow} stays the API
+  // contract.
+  return cls as Type<SchemaPersistenceRow<S>>;
 }
 
 function compileColumn(
