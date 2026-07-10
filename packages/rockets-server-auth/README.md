@@ -1,7 +1,7 @@
 # @bitwild/rockets-auth
 
 [![NPM](https://img.shields.io/npm/v/@bitwild/rockets-auth)](https://www.npmjs.com/package/@bitwild/rockets-auth)
-[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![NestJS](https://img.shields.io/badge/NestJS-12-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 > Complete built-in auth system for Rockets: signup, login, password recovery,
@@ -374,7 +374,7 @@ when you need built-in auth HTTP and `/me`.
 | Field                               | Type                                                                         | Required | Purpose                                                                                                                                                                                                    |
 | ----------------------------------- | ---------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `persistence.module`                | `RepositoryModuleInterface`                                                  | yes      | Same adapter instance as `RocketsModule.forRoot({ repository })` — typically a `defineTypeOrmRepository(...)` bootstrap, not raw `TypeOrmRepositoryModule` alone.                                          |
-| `persistence.entities`              | `{ user, userCredentials?, userOtp?, role?, userRole?, federatedIdentity? }` | yes      | Entity classes for the auth tables. Provide what you use.                                                                                                                                                  |
+| `persistence.entities`              | `{ user, userCredentials?, userOtp?, role?, userRole?, federatedIdentity? }` | yes      | **Your** TypeORM entity classes for auth tables. No `@concepta/nestjs-typeorm-ext` — declare columns explicitly (see `examples/sample-server-auth`). |
 | `invitationEntity`                  | `Type`                                                                       | optional | Adds an `invitation` repository row + enables invitation routes.                                                                                                                                           |
 | `userMetadata`                      | `RocketsUserMetadataConfig`                                                  | yes      | Forwarded to `/me`; also used as the default `userCrud.userMetadataConfig`.                                                                                                                                |
 | `userCrud`                          | `UserCrudOptionsExtrasInterface`                                             | yes      | `model`, `dto.createOne` / `updateOne`, `handlers`, controller extras.                                                                                                                                     |
@@ -392,7 +392,7 @@ when you need built-in auth HTTP and `/me`.
 | `user`, `password`, `otp`, `email`, `crud`, `role`, `federated`, `invitation` | Per-module config blocks, forwarded as-is to upstream modules.                                                                                                             |
 | `services.mailerService`                                                      | Required mailer adapter. Use a logger fallback for dev.                                                                                                                    |
 | `services.userAccessQueryService`                                             | Optional `CanAccess` for access-control queries.                                                                                                                           |
-| `swagger`                                                                     | Forwarded to `SwaggerUiModule`.                                                                                                                                            |
+| `swagger`                                                                     | Forwarded to `SwaggerUiModule` from `@bitwild/rockets-core`.                                                                                                                                            |
 
 ### Module-level extras
 
@@ -447,6 +447,11 @@ re-exported — import them directly from `@concepta/nestjs-access-control`.
   including `@concepta/nestjs-access-control` — is on v8. The cross-version mix
   is intentional while the v8 email/event ports are in flight. No code change
   required when those land.
+- **Persistence entities are app-owned.** Do not use `@concepta/nestjs-typeorm-ext`
+  (v7-only). Supply TypeORM entity classes (or zod-compiled entities) via
+  `defineRocketsAuth({ persistence: { entities } })`. See
+  `examples/sample-server-auth/src/shared/persistence/` and
+  `src/modules/user/entities/`.
 
 Dump OpenAPI from a running auth app: `yarn generate-swagger` at the monorepo
 root (uses the `rockets-auth-swagger` CLI bin).

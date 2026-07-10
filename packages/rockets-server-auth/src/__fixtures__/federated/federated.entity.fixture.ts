@@ -1,13 +1,16 @@
-import { Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { ReferenceIdInterface } from '@concepta/nestjs-core';
-import { FederatedSqliteEntity } from '@concepta/nestjs-typeorm-ext';
+import { AuditedSqliteEntityFixture } from '../persistence/audited-sqlite.entity.fixture';
 import { UserFixture } from '../user/user.entity.fixture';
 
-/**
- * Federated Entity Fixture
- */
 @Entity()
-export class FederatedEntityFixture extends FederatedSqliteEntity {
+export class FederatedEntityFixture extends AuditedSqliteEntityFixture {
+  @Column()
+  provider!: string;
+
+  @Column()
+  subject!: string;
+
   @ManyToOne(() => UserFixture)
   user!: ReferenceIdInterface;
 }

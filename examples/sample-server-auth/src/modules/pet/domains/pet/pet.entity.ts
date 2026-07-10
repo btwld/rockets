@@ -1,12 +1,12 @@
 import { Column, Entity, OneToMany } from 'typeorm';
-import { CommonSqliteEntity } from '@concepta/nestjs-typeorm-ext';
+import { AuditedSqliteEntity } from '../../../../shared/persistence/audited-sqlite.entity';
 import { PetEntityInterface, PetStatus } from './pet.interface';
 import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
 import { PetAppointmentEntity } from '../pet-appointment/pet-appointment.entity';
 
 @Entity('pets')
 export class PetEntity
-  extends CommonSqliteEntity
+  extends AuditedSqliteEntity
   implements PetEntityInterface
 {
   @Column({ type: 'varchar', length: 255, nullable: false })

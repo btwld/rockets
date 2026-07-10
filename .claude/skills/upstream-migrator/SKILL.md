@@ -12,7 +12,8 @@ restructures packages between alphas. Work through this checklist; do not assume
 
 - For each package the user lists, run `npm view <pkg>@<version> dependencies peerDependencies version`.
 - Build the dependency graph: note which `@concepta/*` packages the new version **drops** or **renames**
-  (historically `nestjs-common` → `nestjs-core`; `email`/`event`/`swagger-ui`/`typeorm-ext` had no 8.x).
+  (historically `nestjs-common` → `nestjs-core`; `email`/`event` had no 8.x;
+  `swagger-ui` → `@bitwild/rockets-core`; `typeorm-ext` removed — app-owned entities).
 - Check what the repo's source actually imports from the dropped packages:
   `grep -rl "@concepta/nestjs-common" packages/*/src`. Those are your migration sites.
 

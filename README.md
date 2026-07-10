@@ -1034,12 +1034,15 @@ rockets/
 - **Rockets packages**: `1.0.0-alpha.9` on npm
   (`yarn add @bitwild/rockets@alpha`, or pin `1.0.0-alpha.9`). Monorepo packages
   keep `workspace:^` for local development.
-- **Upstream Concepta packages**: v8 line at `8.0.0-alpha.7` (a few modules on
-  `8.0.0-alpha.5`). Three packages still on v7
-  (`@concepta/nestjs-swagger-ui`, `@concepta/nestjs-email`,
-  `@concepta/nestjs-event`) pending the v8 port — version-mismatched
-  intentionally and tested in CI.
-- **NestJS**: `^11.0.0`, pinned to `11.1.18` via root `resolutions`.
+- **Upstream Concepta packages**: v8 line at `8.0.0-alpha.7` (`nestjs-common` /
+  `nestjs-hook` at `8.0.0-alpha.6`). Two modules still on v7
+  (`@concepta/nestjs-email`, `@concepta/nestjs-event`) pending the v8 port.
+  Swagger UI ships from `@bitwild/rockets-core`. Auth persistence entities are
+  app-owned TypeORM classes — do not use `@concepta/nestjs-typeorm-ext`.
+- **NestJS**: `12.0.0-alpha.5` core (`common`, `core`, `platform-express`,
+  `testing`); satellite packages (`cqrs`, `typeorm`, `jwt`, `passport`,
+  `config`, `throttler`) remain on their current stable majors until a Nest 12
+  line is published.
 - **Node**: `>=18.0.0`.
 
 ### Common scripts (from the monorepo root)

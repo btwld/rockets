@@ -1,13 +1,19 @@
 import { Column, Entity } from 'typeorm';
-import { UserPasswordHistorySqliteEntity } from '@concepta/nestjs-typeorm-ext';
 import { ReferenceActive } from '@concepta/nestjs-core';
+import { AuditedSqliteEntity } from '../../../shared/persistence/audited-sqlite.entity';
 
-/**
- * Password credentials row for nestjs-user v8 (`CreateUserCredentialCommand`).
- * Register in TypeOrmExt `forFeature` with key `USER_CREDENTIALS_ENTITY_KEY`.
- */
+/** Password credentials row for `@concepta/nestjs-user` v8 (`CreateUserCredentialCommand`). */
 @Entity()
-export class UserCredentialEntity extends UserPasswordHistorySqliteEntity {
+export class UserCredentialEntity extends AuditedSqliteEntity {
+  @Column({ type: 'text', nullable: true })
+  passwordHash?: string;
+
+  @Column({ type: 'text', nullable: true })
+  passwordSalt?: string;
+
+  @Column({ type: 'uuid' })
+  userId!: string;
+
   @Column({ type: 'boolean', default: true })
   active!: ReferenceActive;
 

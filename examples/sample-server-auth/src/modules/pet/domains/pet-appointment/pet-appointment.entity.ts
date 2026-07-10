@@ -1,34 +1,16 @@
-import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
-import { CommonSqliteEntity } from '@concepta/nestjs-typeorm-ext';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { AuditedSqliteEntity } from '../../../../shared/persistence/audited-sqlite.entity';
 import {
   PetAppointmentEntityInterface,
   PetAppointmentStatus,
 } from './pet-appointment.interface';
 import type { PetEntity } from '../pet/pet.entity';
 
-/**
- * Pet Appointment Entity
- *
- * Tracks appointment records for pets including:
- * - Appointment date and type (checkup, surgery, etc.)
- * - Veterinarian and reason for visit
- * - Status tracking (scheduled, completed, cancelled, no-show)
- * - Diagnosis and treatment notes
- */
 @Entity('pet_appointments')
 export class PetAppointmentEntity
-  extends CommonSqliteEntity
+  extends AuditedSqliteEntity
   implements PetAppointmentEntityInterface
 {
-  @PrimaryGeneratedColumn('uuid')
-  declare id: string;
-
   @Column({ type: 'varchar', length: 255, nullable: false })
   petId!: string;
 

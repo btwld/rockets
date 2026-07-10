@@ -1,9 +1,15 @@
-import { Entity, ManyToOne } from 'typeorm';
-import { FederatedSqliteEntity } from '@concepta/nestjs-typeorm-ext';
+import { Column, Entity, ManyToOne } from 'typeorm';
+import { AuditedSqliteEntity } from '../../../shared/persistence/audited-sqlite.entity';
 import { UserEntity } from './user.entity';
 
 @Entity('federated')
-export class FederatedEntity extends FederatedSqliteEntity {
+export class FederatedEntity extends AuditedSqliteEntity {
+  @Column()
+  provider!: string;
+
+  @Column()
+  subject!: string;
+
   @ManyToOne(() => UserEntity, (user) => user.federatedAccounts)
   assignee!: UserEntity;
 }

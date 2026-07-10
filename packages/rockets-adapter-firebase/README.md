@@ -1,7 +1,7 @@
 # @bitwild/rockets-adapter-firebase
 
 [![NPM](https://img.shields.io/npm/v/@bitwild/rockets-adapter-firebase)](https://www.npmjs.com/package/@bitwild/rockets-adapter-firebase)
-[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![NestJS](https://img.shields.io/badge/NestJS-12-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 > Firebase Authentication adapter for Rockets. Validates Firebase ID tokens,

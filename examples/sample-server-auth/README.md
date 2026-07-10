@@ -1,6 +1,6 @@
 # sample-server-auth
 
-[![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![NestJS](https://img.shields.io/badge/NestJS-12-ea2845?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 > Reference app for `@bitwild/rockets-auth` — built-in user system
@@ -170,6 +170,7 @@ examples/sample-server-auth
 │   ├── access-control.service.ts    AccessControlServiceInterface impl
 │   ├── main.ts                      Bootstrap (helmet, validation, swagger)
 │   ├── repository/                  defineTypeOrmRepository bootstrap (shared with defineRocketsAuth)
+│   ├── shared/persistence/          AuditedSqliteEntity (app-owned audit columns)
 │   ├── modules/
 │   │   ├── user/                    UserEntity + credential / otp / role-link entities + DTOs
 │   │   ├── role/                    RoleEntity + DTOs
@@ -213,6 +214,20 @@ from `resources[]`, `userMetadata.entity`, and the auth
 `TypeOrmModule.forRoot({ entities: [...] })` to keep in sync. Pet
 resources omit per-resource `persistence` so they inherit the root
 adapter.
+
+### Entity definitions (app-owned persistence)
+
+Auth and domain tables use **explicit TypeORM entity classes** in this
+sample — not `@concepta/nestjs-typeorm-ext` (v7-only, deprecated).
+Shared audit columns (`id`, `dateCreated`, `dateUpdated`, `dateDeleted`,
+`version`) live in `src/shared/persistence/audited-sqlite.entity.ts`;
+each entity declares its domain columns and relations on top.
+
+Pass those classes to `defineRocketsAuth({ persistence: { entities } })`
+and register app resources via `defineResource()` as usual. For
+zod-first CRUD (as in `sample-server`), use `zodResource` +
+`typeOrmZodEntityCompiler` instead of hand-written entities where that
+fits your resource shape.
 
 ---
 
