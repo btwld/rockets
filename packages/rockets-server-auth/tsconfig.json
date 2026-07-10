@@ -26,5 +26,10 @@
     "src/**/__tests__/**",
     "src/**/__fixtures__/**",
     "src/**/__e2e__/**"
+  ],
+  "references": [
+    { "path": "../rockets-core" },
+    { "path": "../rockets-server" },
+    { "path": "../rockets-repository-typeorm" }
   ]
 }
