@@ -12,7 +12,6 @@ import {
   PassthroughEntityHookBase,
 } from './entity-hook';
 
-/** Default owner column name. */
 export const DEFAULT_OWNER_COLUMN = 'userId';
 
 /**

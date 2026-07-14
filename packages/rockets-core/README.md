@@ -477,6 +477,27 @@ stop, throw.
 
 ---
 
+## Final Review Checklist
+
+Start with the
+[root checklist](../../README.md#final-review-checklist), then verify the core
+specific rules:
+
+- Keep core policy-free. `OwnerScopeHook` scopes to an owner; `PathScopeGuard`
+  verifies parent ownership. Role bypasses belong in app/auth policy code.
+- Keep zod storage adapter-agnostic. Zod metadata describes schema intent;
+  concrete entity generation stays behind `SchemaEntityCompiler`.
+- Keep `zodResource({ owner })` as owner-column stamping/metadata only. Add
+  read scoping explicitly with `OwnerScopeHook` or a custom hook.
+- Register persistence through `repository` + `resources[]`; do not add
+  feature-local `TypeOrmModule.forFeature()`.
+- When changing public exports, confirm the symbol is real runtime surface and
+  documented here.
+- Run `yarn build`, `yarn test`, `yarn test:e2e`, and `yarn lint` from the
+  repository root.
+
+---
+
 ## License
 
 BSD-3-Clause

@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets",
-  "version": "0.0.1",
+  "version": "1.0.0-alpha.10",
   "description": "Rockets server — external-auth composition layer: AuthAdapterInterface, /me, declarative CRUD resources, and database-agnostic persistence",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
@@ -70,8 +70,8 @@
     "generate-swagger": "ts-node src/generate-swagger.ts"
   },
   "dependencies": {
-    "@bitwild/rockets-core": "workspace:^",
-    "@bitwild/rockets-repository-typeorm": "workspace:^",
+    "@bitwild/rockets-core": "1.0.0-alpha.10",
+    "@bitwild/rockets-repository-typeorm": "1.0.0-alpha.10",
     "@concepta/nestjs-core": "8.0.0-alpha.7",
     "@nestjs/common": "12.0.0-alpha.5",
     "@nestjs/config": "^4.0.4",

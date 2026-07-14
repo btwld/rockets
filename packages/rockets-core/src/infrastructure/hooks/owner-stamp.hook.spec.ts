@@ -1,5 +1,7 @@
 import type { PlainLiteralObject } from '@nestjs/common';
+import type { OverlayRef } from '@concepta/nestjs-core';
 import { OwnerStampHook } from './owner-stamp.hook';
+import { ActorCtx } from '../interceptors/actor.overlay';
 import type { EntityHookContext, OwnedEntity } from './entity-hook';
 
 interface Pet extends OwnedEntity {
@@ -34,7 +36,22 @@ function fakeCtx(actor?: { id: string; type: 'user' }): EntityHookContext {
     options: {},
     operation: 'create',
     action: 'write',
-    with: () => actor,
+    supports: (ref: OverlayRef<string, PlainLiteralObject, unknown[]>) =>
+      ref === ActorCtx || ref.name === 'withAuthUser',
+    with: (ref: OverlayRef<string, PlainLiteralObject, unknown[]>) => {
+      if (ref === ActorCtx) return actor;
+      if (ref.name === 'withAuthUser') {
+        return {
+          user: actor
+            ? {
+                id: actor.id,
+                sub: actor.id,
+              }
+            : undefined,
+        };
+      }
+      return undefined;
+    },
   };
   return ctx as unknown as EntityHookContext;
 }
@@ -140,6 +157,19 @@ describe('OwnerStampHook — 4-case anti-spoofing matrix (beforeUpdate)', () => 
     const instance = new Hook();
     const payload: Pet = { id: '1', name: 'X', userId: '' };
     expect(() => instance.beforeUpdate(payload, fakeCtx())).toThrow();
+  });
+
+  it('stampOn create strips client-supplied owner on update', () => {
+    const CreateOnlyHook = OwnerStampHook.for<Pet>(PetEntity, {
+      stampOn: 'create',
+    });
+    const instance = new CreateOnlyHook();
+    const payload: Pet = { id: '1', name: 'X', userId: 'spoofed-owner' };
+    const result = instance.beforeUpdate(
+      payload,
+      fakeCtx({ id: 'actor-update', type: 'user' }),
+    );
+    expect(result.userId).toBeUndefined();
   });
 });
 

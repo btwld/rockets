@@ -1,6 +1,7 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
 import { z } from 'zod';
 import type {
+  OwnerStampHookOptions,
   RocketsResourceDefinition,
   RocketsSubResourceInput,
   SchemaEntityCompiler,
@@ -24,8 +25,12 @@ export interface ZodResourceDefinition
   readonly table?: string;
   readonly entityCompiler?: SchemaEntityCompiler;
   readonly operations?: readonly ZodCrudOperation[] | ZodResourceOperations;
-  readonly owner?: string;
+  readonly owner?: string | ZodOwnerConfig;
   readonly ownerStamp?: boolean;
+}
+
+export interface ZodOwnerConfig extends OwnerStampHookOptions {
+  readonly column: string;
 }
 
 export interface ZodResourceDtos {

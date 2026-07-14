@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-repository-typeorm",
-  "version": "0.0.1",
+  "version": "1.0.0-alpha.10",
   "description": "TypeORM implementation of the Rockets dynamic repository contract (re-exported from @concepta/nestjs-repository-typeorm), plus the TypeORM SchemaEntityCompiler for the zod layer at the /zod subpath.",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
@@ -50,7 +50,7 @@
     "test": "cd ../.. && jest --testPathPattern=rockets-repository-typeorm"
   },
   "dependencies": {
-    "@bitwild/rockets-core": "workspace:^",
+    "@bitwild/rockets-core": "1.0.0-alpha.10",
     "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.7"
   },
   "devDependencies": {

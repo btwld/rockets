@@ -11,13 +11,13 @@ import { ActorCtx } from '../infrastructure/interceptors/actor.overlay';
  * produced outside HTTP (jobs, CLI).
  *
  * Returns `undefined` when no overlay is defined. Hooks consume this when
- * they only need "who" — for richer authorization data (roles, claims),
- * `getAuthorizedUserFromCrudContext` is the right helper.
+ * they only need "who".
  */
 export function getActor<T extends PlainLiteralObject>(
   context: T | undefined,
 ): Actor | undefined {
   if (!hasOverlayAccessor(context)) return undefined;
+  if (!context.supports(ActorCtx)) return undefined;
   return context.with(ActorCtx);
 }
 
@@ -56,6 +56,8 @@ function hasOverlayAccessor(value: unknown): value is AppContextInterface {
     typeof value === 'object' &&
     value !== null &&
     'with' in value &&
-    typeof (value as { with: unknown }).with === 'function'
+    typeof (value as { with: unknown }).with === 'function' &&
+    'supports' in value &&
+    typeof (value as { supports: unknown }).supports === 'function'
   );
 }

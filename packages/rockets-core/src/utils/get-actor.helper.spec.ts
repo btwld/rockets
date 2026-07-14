@@ -1,3 +1,6 @@
+import type { PlainLiteralObject } from '@nestjs/common';
+import type { OverlayRef } from '@concepta/nestjs-core';
+import { ActorCtx } from '../infrastructure/interceptors/actor.overlay';
 import { getActor, getCrudContext } from './get-actor.helper';
 
 describe('getActor', () => {
@@ -11,15 +14,22 @@ describe('getActor', () => {
 
   it('reads the actor from the overlay when .with(ActorCtx) is callable', () => {
     const ctx = {
-      with: jest.fn().mockReturnValue({ id: 'user-1', type: 'user' as const }),
+      supports: jest.fn(
+        (ref: OverlayRef<string, PlainLiteralObject, unknown[]>) =>
+          ref === ActorCtx,
+      ),
+      with: jest.fn((ref: OverlayRef<string, PlainLiteralObject, unknown[]>) =>
+        ref === ActorCtx ? { id: 'user-1', type: 'user' as const } : undefined,
+      ),
     };
     const actor = getActor(ctx as unknown as Record<string, unknown>);
     expect(actor).toEqual({ id: 'user-1', type: 'user' });
+    expect(ctx.supports).toHaveBeenCalledWith(ActorCtx);
     expect(ctx.with).toHaveBeenCalled();
   });
 
   it('returns whatever the overlay returns (undefined included)', () => {
-    const ctx = { with: () => undefined };
+    const ctx = { supports: () => true, with: () => undefined };
     expect(getActor(ctx as unknown as Record<string, unknown>)).toBeUndefined();
   });
 });

@@ -66,6 +66,7 @@ export function zodResource(
       core.ownerColumns,
       passthrough.hooks,
       ownerStamp,
+      owner,
     ),
   });
 
@@ -112,6 +113,7 @@ export function zodSubResource(
       core.ownerColumns,
       passthrough.hooks,
       ownerStamp,
+      undefined,
     ),
   });
 

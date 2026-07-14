@@ -50,12 +50,18 @@ export class OwnerStampHook<
 > extends PassthroughEntityHookBase<E> {
   protected readonly ownerColumn: keyof E & string =
     DEFAULT_OWNER_COLUMN as keyof E & string;
+  protected readonly stampOn: Required<OwnerStampHookOptions>['stampOn'] =
+    'create-update';
 
   override beforeCreate(payload: E, ctx?: EntityHookContext): E {
     return this.stamp(payload, ctx);
   }
 
   override beforeUpdate(payload: E, ctx?: EntityHookContext): E {
+    if (this.stampOn === 'create') {
+      delete (payload as Record<string, unknown>)[this.ownerColumn];
+      return payload;
+    }
     return this.stamp(payload, ctx);
   }
 
@@ -66,16 +72,27 @@ export class OwnerStampHook<
    * resulting subclass is decorated with `@EntityHook({ entity })` to
    * fence the hook off from foreign-entity writes.
    */
-  static for<E extends OwnedEntity>(entity: Type<E>): Type<OwnerStampHook<E>>;
+  static for<E extends OwnedEntity>(
+    entity: Type<E>,
+    options?: OwnerStampHookOptions,
+  ): Type<OwnerStampHook<E>>;
   static for<E extends PlainLiteralObject, C extends keyof E & string>(
     entity: Type<E>,
     column: C & (E[C] extends string ? C : never),
+    options?: OwnerStampHookOptions,
   ): Type<OwnerStampHook<E>>;
   static for(
     entity: Type<PlainLiteralObject>,
-    column: string = DEFAULT_OWNER_COLUMN,
+    columnOrOptions: string | OwnerStampHookOptions = DEFAULT_OWNER_COLUMN,
+    maybeOptions: OwnerStampHookOptions = {},
   ): Type<OwnerStampHook<PlainLiteralObject>> {
-    return getOwnerStampSubclass(entity, column);
+    const column =
+      typeof columnOrOptions === 'string'
+        ? columnOrOptions
+        : DEFAULT_OWNER_COLUMN;
+    const options =
+      typeof columnOrOptions === 'string' ? maybeOptions : columnOrOptions;
+    return getOwnerStampSubclass(entity, column, options);
   }
 
   private stamp(payload: E, ctx?: EntityHookContext): E {
@@ -105,6 +122,10 @@ export class OwnerStampHook<
   }
 }
 
+export interface OwnerStampHookOptions {
+  readonly stampOn?: 'create' | 'create-update';
+}
+
 const ownerStampSubclassCache = new Map<
   Type<PlainLiteralObject>,
   Map<string, Type<OwnerStampHook<PlainLiteralObject>>>
@@ -113,24 +134,28 @@ const ownerStampSubclassCache = new Map<
 function getOwnerStampSubclass(
   entity: Type<PlainLiteralObject>,
   column: string,
+  options: OwnerStampHookOptions,
 ): Type<OwnerStampHook<PlainLiteralObject>> {
+  const stampOn = options.stampOn ?? 'create-update';
   const perEntity =
     ownerStampSubclassCache.get(entity) ??
     new Map<string, Type<OwnerStampHook<PlainLiteralObject>>>();
-  const existing = perEntity.get(column);
+  const cacheKey = `${column}::${stampOn}`;
+  const existing = perEntity.get(cacheKey);
   if (existing) return existing;
 
-  const className = `OwnerStampHook_${entity.name}_${column}`;
+  const className = `OwnerStampHook_${entity.name}_${column}_${stampOn}`;
   const ctor = {
     [className]: class extends OwnerStampHook<PlainLiteralObject> {
       protected override readonly ownerColumn: string = column;
+      protected override readonly stampOn = stampOn;
     },
   }[className] as Type<OwnerStampHook<PlainLiteralObject>>;
 
   EntityHook({ entity })(ctor);
   Injectable()(ctor);
 
-  perEntity.set(column, ctor);
+  perEntity.set(cacheKey, ctor);
   ownerStampSubclassCache.set(entity, perEntity);
   return ctor;
 }

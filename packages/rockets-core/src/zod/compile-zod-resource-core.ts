@@ -17,7 +17,7 @@ import {
 } from './zod-operations';
 import { hasDeletedAtField, projectSchema } from './zod-projections';
 import { resolveOwnerColumns } from './zod-resource-composition';
-import type { ZodResourceDtos } from './zod-resource-contracts';
+import type { ZodOwnerConfig, ZodResourceDtos } from './zod-resource-contracts';
 
 export interface ZodCoreInput {
   readonly name: string;
@@ -25,7 +25,7 @@ export interface ZodCoreInput {
   readonly entity?: Type<PlainLiteralObject>;
   readonly table?: string;
   readonly operations?: readonly ZodCrudOperation[] | ZodResourceOperations;
-  readonly owner?: string;
+  readonly owner?: string | ZodOwnerConfig;
   readonly entityCompiler?: SchemaEntityCompiler;
   readonly repository?: RocketsResourceDefinition<PlainLiteralObject>['repository'];
 }

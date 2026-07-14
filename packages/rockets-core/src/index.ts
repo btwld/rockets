@@ -72,7 +72,10 @@ export {
   OwnerScopeHook,
   DEFAULT_OWNER_COLUMN,
 } from './infrastructure/hooks/owner-scope.hook';
-export { OwnerStampHook } from './infrastructure/hooks/owner-stamp.hook';
+export {
+  OwnerStampHook,
+  type OwnerStampHookOptions,
+} from './infrastructure/hooks/owner-stamp.hook';
 export { AfterCreateReloadHook } from './infrastructure/hooks/after-create-reload.hook';
 
 // Exceptions filter

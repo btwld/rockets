@@ -1,6 +1,6 @@
 {
   "name": "@bitwild/rockets-core",
-  "version": "0.0.1",
+  "version": "1.0.0-alpha.10",
   "description": "Rockets Core - auth-provider-agnostic server infrastructure",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
@@ -67,7 +67,7 @@
     "pluralize": "^8.0.0"
   },
   "devDependencies": {
-    "@bitwild/rockets-repository-typeorm": "workspace:^",
+    "@bitwild/rockets-repository-typeorm": "1.0.0-alpha.10",
     "@nestjs/testing": "12.0.0-alpha.5",
     "@nestjs/typeorm": "11.0.3",
     "@types/pluralize": "^0.0.33",

@@ -1,6 +1,8 @@
 import type { PlainLiteralObject } from '@nestjs/common';
+import type { OverlayRef } from '@concepta/nestjs-core';
 import { OwnerScopeHook, DEFAULT_OWNER_COLUMN } from './owner-scope.hook';
 import { OwnerStampHook } from './owner-stamp.hook';
+import { ActorCtx } from '../interceptors/actor.overlay';
 import type { EntityHookContext, OwnedEntity } from './entity-hook';
 
 interface BlogPost extends PlainLiteralObject {
@@ -37,7 +39,11 @@ class BlogPostEntity {
  * Lets the lifecycle methods use `getActor(ctx)` without needing the
  * full overlay-system wiring in a unit test.
  */
-function fakeCtx(actor?: { id: string; type: 'user' }): EntityHookContext {
+function fakeCtx(
+  args: {
+    actor?: { id: string; type: 'user' };
+  } = {},
+): EntityHookContext {
   const ctx = {
     entity: 'pet',
     params: {},
@@ -45,7 +51,12 @@ function fakeCtx(actor?: { id: string; type: 'user' }): EntityHookContext {
     options: {},
     operation: 'list',
     action: 'read',
-    with: () => actor,
+    supports: (ref: OverlayRef<string, PlainLiteralObject, unknown[]>) =>
+      ref === ActorCtx,
+    with: (ref: OverlayRef<string, PlainLiteralObject, unknown[]>) => {
+      if (ref === ActorCtx) return args.actor;
+      return undefined;
+    },
   };
   return ctx as unknown as EntityHookContext;
 }
@@ -90,7 +101,7 @@ describe('OwnerScopeHook.for() factory', () => {
     it('beforeFindOne adds owner clause when actor is present', () => {
       const Hook = OwnerScopeHook.for<Pet>(PetEntity);
       const instance = new Hook();
-      const ctx = fakeCtx({ id: 'user-123', type: 'user' });
+      const ctx = fakeCtx({ actor: { id: 'user-123', type: 'user' } });
       const result = instance.beforeFindOne({}, ctx);
       // The result has a where clause (Where.eq composed at runtime).
       expect((result as PlainLiteralObject).where).toBeDefined();
@@ -122,7 +133,7 @@ describe('OwnerScopeHook.for() factory', () => {
       // (e.g. accidentally typoing the lifecycle key on one) is caught.
       const Hook = OwnerScopeHook.for<Pet>(PetEntity);
       const instance = new Hook();
-      const ctx = fakeCtx({ id: 'user-123', type: 'user' });
+      const ctx = fakeCtx({ actor: { id: 'user-123', type: 'user' } });
       const result = instance.beforeFindAndCount({}, ctx);
       expect((result as PlainLiteralObject).where).toBeDefined();
     });
@@ -142,7 +153,7 @@ describe('OwnerScopeHook.for() factory', () => {
       // wrap both clauses under `$and` so the owner constraint survives.
       const Hook = OwnerScopeHook.for<Pet>(PetEntity);
       const instance = new Hook();
-      const ctx = fakeCtx({ id: 'authoritative', type: 'user' });
+      const ctx = fakeCtx({ actor: { id: 'authoritative', type: 'user' } });
       // Use a where shape the upstream `Where.and` understands; we're only
       // asserting the result contains BOTH clauses (no neutering).
       const original = { where: { foo: 'bar' } } as PlainLiteralObject;
@@ -168,8 +179,14 @@ describe('OwnerScopeHook.for() factory', () => {
       // is the only thing changing across calls.
       const Hook = OwnerScopeHook.for<Pet>(PetEntity);
       const instance = new Hook();
-      const a = instance.beforeFindOne({}, fakeCtx({ id: 'A', type: 'user' }));
-      const b = instance.beforeFindOne({}, fakeCtx({ id: 'B', type: 'user' }));
+      const a = instance.beforeFindOne(
+        {},
+        fakeCtx({ actor: { id: 'A', type: 'user' } }),
+      );
+      const b = instance.beforeFindOne(
+        {},
+        fakeCtx({ actor: { id: 'B', type: 'user' } }),
+      );
       expect(JSON.stringify(a)).not.toBe(JSON.stringify(b));
     });
   });
@@ -201,7 +218,7 @@ describe('OwnerStampHook.for() factory', () => {
     it('beforeCreate stamps the owner column from actor.id', () => {
       const Hook = OwnerStampHook.for<Pet>(PetEntity);
       const instance = new Hook();
-      const ctx = fakeCtx({ id: 'actor-1', type: 'user' });
+      const ctx = fakeCtx({ actor: { id: 'actor-1', type: 'user' } });
       const payload: Pet = { id: '1', name: 'Rex', userId: 'spoofed' };
       const result = instance.beforeCreate(payload, ctx);
       // Actor wins — spoofed userId is overwritten with actor.id.
@@ -221,7 +238,7 @@ describe('OwnerStampHook.for() factory', () => {
     it('beforeUpdate uses the same stamping logic', () => {
       const Hook = OwnerStampHook.for<Pet>(PetEntity);
       const instance = new Hook();
-      const ctx = fakeCtx({ id: 'actor-2', type: 'user' });
+      const ctx = fakeCtx({ actor: { id: 'actor-2', type: 'user' } });
       const payload: Pet = { id: '1', name: 'Buddy', userId: 'spoofed' };
       const result = instance.beforeUpdate(payload, ctx);
       expect(result.userId).toBe('actor-2');
@@ -233,7 +250,7 @@ describe('OwnerStampHook.for() factory', () => {
         'authorId',
       );
       const instance = new Hook();
-      const ctx = fakeCtx({ id: 'actor-3', type: 'user' });
+      const ctx = fakeCtx({ actor: { id: 'actor-3', type: 'user' } });
       const payload: BlogPost = {
         id: '1',
         authorId: 'spoofed',

@@ -50,6 +50,7 @@ versions in production.
   - [Repository layout](#repository-layout)
   - [Versions](#versions)
   - [Common scripts](#common-scripts-from-the-monorepo-root)
+- [Final Review Checklist](#final-review-checklist)
 - [5. Contributing](#5-contributing)
 - [6. Security](#6-security)
 - [7. License](#7-license)
@@ -1061,6 +1062,27 @@ rockets/
 | `yarn generate-swagger`       | Dump the OpenAPI spec from `sample-server-auth`.                                                           |
 
 ---
+
+## Final Review Checklist
+
+Use this before saying a change is done. It is intentionally short so a person
+or coding agent can run it every time.
+
+- Read the package README for every package you changed.
+- Keep layer ownership intact: core owns shared wiring; `@bitwild/rockets` owns
+  external-auth presentation; `@bitwild/rockets-auth` owns built-in auth.
+- Keep persistence adapter-agnostic: feature code uses
+  `RepositoryInterface` + `@InjectDynamicRepository`, not ORM-specific APIs.
+- Keep ownership separate from authorization policy. Generic hooks and guards
+  must not contain role-name bypasses such as `admin`; put policy in app/auth
+  code or an explicit policy hook.
+- For zod resources, `owner` / `f.owner()` marks and stamps owner columns. Add
+  `OwnerScopeHook` or a custom scope hook explicitly when reads must be scoped.
+- Do not add unused public types, flags, or options. If a field is not consumed
+  by runtime behavior, remove it.
+- Update docs and tests for any changed public behavior.
+- Run, in order: `yarn build`, `yarn test`, `yarn test:e2e`, `yarn lint`.
+- If an example app covers the behavior, run its targeted e2e too.
 
 ## 5. Contributing
 

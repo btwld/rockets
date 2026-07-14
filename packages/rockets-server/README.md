@@ -429,6 +429,28 @@ resources.
 
 ---
 
+## Final Review Checklist
+
+Start with the
+[root checklist](../../README.md#final-review-checklist), then verify the
+external-auth server rules:
+
+- Keep this package focused on Path A: auth chain composition, default global
+  guard, `/me`, and metadata handlers.
+- Do not add signup/login/OTP/role-admin behavior here. Built-in identity
+  belongs in `@bitwild/rockets-auth`.
+- Keep auth adapters responsible for identity resolution only. Resource
+  ownership and app authorization stay in resource hooks, guards, or app policy
+  code.
+- Keep `/me` tied to `userMetadata.entity` through dynamic repositories; do not
+  hard-code a storage adapter.
+- If `RocketsModule.forRoot` / `forRootAsync` behavior changes, update both
+  docs and e2e coverage.
+- Run `yarn build`, `yarn test`, `yarn test:e2e`, and `yarn lint` from the
+  repository root.
+
+---
+
 ## License
 
 BSD-3-Clause
