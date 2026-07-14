@@ -27,6 +27,7 @@ export type {
   RocketsRelationTarget,
   UnwrappedField,
 } from './field-meta';
+export { compileDtoClass, namedZodDto } from './zod-dto';
 export { f } from './fields';
 export {
   WireRow,
