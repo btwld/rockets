@@ -63,6 +63,15 @@ export class RocketsJwtAuthAdapter implements AuthAdapterInterface {
     }
 
     const user = userAggregateToEntity(userResult);
+
+    // Honor the user's active flag on EVERY request, matching login semantics
+    // (LocalService throws LocalUserInactiveException): a deactivated user's
+    // outstanding access tokens must stop working immediately.
+    if (user.active !== true) {
+      this.logger.warn(`User inactive for subject: ${payload.sub}`);
+      throw new UnauthorizedException('User inactive');
+    }
+
     const userRoles = await resolveUserRoles(this.queryBus, user.id);
 
     this.logger.log(`Successfully validated token for user: ${payload.sub}`);
