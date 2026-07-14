@@ -21,6 +21,7 @@ const files = [
   'node_modules/@concepta/nestjs-common/dist/model/exceptions/model-id-no-match.exception.js',
   'node_modules/@concepta/nestjs-crud/dist/infrastructure/exceptions/crud.exception.js',
   'node_modules/@concepta/nestjs-crud/dist/infrastructure/exceptions/crud-query.exception.js',
+  'node_modules/@concepta/nestjs-repository/dist/exceptions/repository-query.exception.js',
 ];
 
 const needle = 'Object.assign({}, super.context)';
