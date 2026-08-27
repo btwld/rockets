@@ -8,7 +8,6 @@ import type { PlainLiteralObject } from '@nestjs/common';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
 
 import { PasswordCreationService } from '@concepta/nestjs-password';
-import { TransactionScope } from '@concepta/nestjs-repository';
 import { AssignRoleCommand } from '@concepta/nestjs-role';
 import { InvitationAcceptedEvent } from '@concepta/nestjs-invitation';
 
@@ -29,7 +28,11 @@ import {
   InvitationAcceptanceConfig,
   INVITATION_ACCEPTANCE_CONFIG_TOKEN,
 } from '../../infrastructure/config/invitation-acceptance.config';
-import { AppContextHost, validateWithSchema } from '@concepta/rockets-core';
+import {
+  AppContextHost,
+  validateWithSchema,
+  TransactionScope,
+} from '@concepta/rockets-core';
 
 /**
  * A validated metadata patch is an object by construction (the schema

@@ -142,5 +142,40 @@ module.exports = {
         ],
       },
     },
+    // AGENTS.md rule 2: feature packages consume the persistence contract
+    // through rockets-core's re-exports; only core and adapter packages
+    // import @concepta/nestjs-repository directly.
+    {
+      files: [
+        'packages/rockets-server/src/**/*.ts',
+        'packages/rockets-server-auth/src/**/*.ts',
+      ],
+      excludedFiles: [
+        'packages/rockets-server/src/**/*.spec.ts',
+        'packages/rockets-server/src/**/*.e2e-spec.ts',
+        'packages/rockets-server/src/**/__fixtures__/**',
+        'packages/rockets-server/src/**/__e2e__/**',
+        'packages/rockets-server-auth/src/**/*.spec.ts',
+        'packages/rockets-server-auth/src/**/*.e2e-spec.ts',
+        'packages/rockets-server-auth/src/**/__fixtures__/**',
+        'packages/rockets-server-auth/src/**/__e2e__/**',
+      ],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: '@concepta/nestjs-repository',
+                message:
+                  'Import the repository contract (RepositoryInterface, Where, ' +
+                  'getDynamicRepositoryToken, TransactionScope, …) from ' +
+                  '@concepta/rockets-core (AGENTS.md rule 2).',
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
 };

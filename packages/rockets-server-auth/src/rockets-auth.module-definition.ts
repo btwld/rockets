@@ -6,7 +6,10 @@ import {
   Logger,
   Provider,
 } from '@nestjs/common';
-import { buildAccessControlImport } from '@concepta/rockets-core';
+import {
+  buildAccessControlImport,
+  TransactionScope,
+} from '@concepta/rockets-core';
 import { PassportModule } from '@nestjs/passport';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
@@ -46,7 +49,6 @@ import {
   PasswordModule,
   ValidatePasswordHistoryCommand,
 } from '@concepta/nestjs-password';
-import { TransactionScope } from '@concepta/nestjs-repository';
 import { RoleModule, RoleOptionsInterface } from '@concepta/nestjs-role';
 import {
   CreateUserCommand,

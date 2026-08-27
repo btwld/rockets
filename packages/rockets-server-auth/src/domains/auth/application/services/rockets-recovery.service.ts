@@ -14,7 +14,7 @@ import type {
   ReferenceIdInterface,
 } from '@concepta/nestjs-core';
 import { ConsumeOtpCommand } from '@concepta/nestjs-otp';
-import { TransactionScope } from '@concepta/nestjs-repository';
+import { TransactionScope } from '@concepta/rockets-core';
 
 /**
  * This class is registered under the upstream `RecoveryService` DI token, so it

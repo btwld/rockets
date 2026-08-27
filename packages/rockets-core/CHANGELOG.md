@@ -68,6 +68,9 @@
   was skipped when the plan had no CRUD resource): auth bootstraps mount
   upstream CRUD controllers outside the plan and used to carry their own
   registration for that case.
+- `TransactionScope` is re-exported from the main entry next to `Where` /
+  `RepositoryInterface`, so feature packages open transaction scopes without
+  depending on `@concepta/nestjs-repository` directly.
 - `RocketsCoreModule` re-exports upstream `RepositoryModule`, so
   `TransactionScope` is injectable from any bundle (and from
   `@concepta/rockets-auth`) without a second `RepositoryModule.forRoot`.

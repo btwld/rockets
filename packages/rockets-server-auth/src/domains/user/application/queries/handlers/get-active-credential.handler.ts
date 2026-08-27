@@ -1,10 +1,11 @@
 import {
   AppContextHost,
   InjectDynamicRepository,
+  RepositoryInterface,
+  Where,
 } from '@concepta/rockets-core';
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { UserCredentialEntityInterface } from '@concepta/nestjs-user';
-import { RepositoryInterface, Where } from '@concepta/nestjs-repository';
 
 import { USER_CREDENTIALS_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
 import { GetActiveCredentialQuery } from '../impl/get-active-credential.query';

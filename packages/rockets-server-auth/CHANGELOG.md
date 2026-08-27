@@ -116,6 +116,10 @@ and this project adheres to
   the password, OTP and user handlers. `AppContextHost.from()` throws on
   a non-empty non-host value.
 
+- Every repository symbol (`RepositoryInterface`, `Where`,
+  `getDynamicRepositoryToken`, `RepositoryModuleInterface`,
+  `TransactionScope`) is imported from `@concepta/rockets-core`; the package
+  no longer imports `@concepta/nestjs-repository` directly.
 - `RocketsAuthModule` no longer registers `CqrsModule`, `RepositoryModule`,
   `CrudModule` or `SwaggerUiModule` itself: it always boots inside
   `RocketsCoreModule`, which registers each of them once (the Swagger
