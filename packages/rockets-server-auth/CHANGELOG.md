@@ -11,6 +11,12 @@ and this project adheres to
 
 ### Security
 
+- Invitation trust model, now explicit: inviting an address that already
+  has an account creates no user; accepting the invitation activates that
+  account and sets the supplied password. The passcode only reaches the
+  mailbox owner (same model as password recovery), and inviting is
+  admin-only — so an admin can re-activate a deactivated user by inviting
+  them, by design.
 - **A consumer-supplied `userCrud.model` / `roleCrud.model` is checked like
   every other response schema.** The signup and admin CRUD modules hand the
   model straight to upstream CRUD serialization (no `defineResource`
