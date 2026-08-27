@@ -492,6 +492,12 @@ when you need built-in auth HTTP and `/me`.
 | `auth.appGuard`                                                                       | Override the global `APP_GUARD` from `AuthenticationModule`.                                                                                                                                |
 | `auth.controller` / `otp.controller` / `invitation.controllers.*` / `role.controller` | Per-controller decorator extras (`classDecorators`, `routes[*].decorators`).                                                                                                                |
 
+Worked example of the extension points (handler override via
+`userCrud.handlers.signupHandler`, per-route decorators via
+`otp.controller.routes`, an app-owned `RocketsAuthException` subclass):
+`examples/sample-server-auth/src/modules/user/signup/` +
+`examples/sample-server-auth/test/auth-extension-points.e2e-spec.ts`.
+
 ### Domain re-exports
 
 Every public type and CQRS class from the auth, user, otp, role, and invitation
