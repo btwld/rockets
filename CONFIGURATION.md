@@ -1519,6 +1519,62 @@ byte-by-byte. It covers the one thing every HMAC-signing provider needs
 (GitHub, Stripe, and most others sign the same way); a vendor-specific
 webhook pack (parsing Stripe's own event types, say) stays app code.
 
+### 6f. Request deadline and disconnect signal (issue #78)
+
+Every operation carries `ctx.signal: AbortSignal`. It fires in two cases:
+
+- The operation declares `deadlineMs` and that much time elapses. The
+  client then gets `504 Gateway Timeout` — `ctx.signal` firing does not
+  stop the handler by itself, it just stops the client from waiting on it.
+- The client disconnects before the handler settles. Nothing is written
+  back (the socket is already gone); the only point of the signal firing
+  here is to let a cooperative handler stop wasted work. This is not an
+  application error, so it never reaches the exceptions filter — no 5xx,
+  no error log — even for a handler that never reads `ctx.signal`.
+
+```ts
+export const ops = operationResource({
+  path: 'reports',
+  operations: (op) => ({
+    generate: op.write({
+      deadlineMs: 30_000,
+      input: z.object({ reportId: z.string() }),
+      output: z.object({ url: z.string() }),
+      handler: async (ctx) => {
+        // Passed straight through to whatever does the actual waiting —
+        // a fetch, a query builder that accepts an AbortSignal, a manual
+        // race against ctx.signal like the deadline e2e spec does.
+        const result = await generateReport(ctx.input.reportId, {
+          signal: ctx.signal,
+        });
+        return { url: result.url };
+      },
+    }),
+  }),
+});
+```
+
+A handler that never reads `ctx.signal` keeps running in the background
+after the 504 is sent — the deadline bounds what the CLIENT waits for,
+not the work itself. `deadlineMs` is absent by default (no deadline).
+Scope, stated plainly: this covers `operationResource` operations only.
+CRUD command handlers have the same gap (a long-running create, e.g. PDF
+generation) and are not covered in this pass.
+
+`op.sse()` (§6c) exposes no `deadlineMs`, for the same reason it exposes
+no `transactional`: the handler returns its `Observable` immediately, so
+a deadline would race the setup call rather than the stream, and an SSE
+connection staying open is the point rather than a fault.
+
+On an SSE operation `ctx.signal` is present but **inert** — it never
+fires. The guard is torn down as soon as the handler returns its
+Observable, which is before the first event is emitted, so there is no
+disconnect listener left to abort it. Do not reach for `ctx.signal` to
+notice an SSE client going away: Nest unsubscribes from the Observable on
+disconnect, and that unsubscription is the hook to use (`finalize`, or a
+`takeUntil` you own). Bound the stream itself the same way when it needs
+an upper limit.
+
 ---
 
 ## 6. `defineModuleResource()` — persistence rows + custom Nest slice

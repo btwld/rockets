@@ -82,6 +82,11 @@ interface SharedBuilderFields<
    */
   readonly acl?: OperationAclConfig;
   readonly transactional?: boolean;
+  /**
+   * Milliseconds before `ctx.signal` aborts and the response resolves
+   * `504 Gateway Timeout` (issue #78). Absent means no deadline.
+   */
+  readonly deadlineMs?: number;
   readonly input?: TInput;
   /** Required: schema to whitelist, or `false` to opt out explicitly. */
   readonly output: TOutput;
@@ -172,6 +177,7 @@ export interface PendingOperation<
   readonly public: boolean | undefined;
   readonly acl: OperationAclConfig | undefined;
   readonly transactional: boolean | undefined;
+  readonly deadlineMs: number | undefined;
   readonly input: z.ZodObject | undefined;
   readonly output: OperationOutputConfig;
   readonly handler: OperationHandlerRef<TInput, TOutput, TParams>;
@@ -193,6 +199,7 @@ export type OperationRecord = {
     readonly public: boolean | undefined;
     readonly acl: OperationAclConfig | undefined;
     readonly transactional: boolean | undefined;
+    readonly deadlineMs: number | undefined;
     readonly input: z.ZodObject | undefined;
     readonly output: OperationOutputConfig;
     readonly handler: unknown;
@@ -481,6 +488,7 @@ function compileOperation(
     public: pending.public,
     acl: pending.acl,
     transactional: pending.transactional,
+    deadlineMs: pending.deadlineMs,
     inputSchema,
     output,
     handler: pending.handler,
@@ -506,6 +514,7 @@ function toPendingRead<
     public: config.public,
     acl: config.acl,
     transactional: config.transactional,
+    deadlineMs: config.deadlineMs,
     input: config.input,
     output: config.output,
     handler: config.handler,
@@ -530,6 +539,7 @@ function toPendingWrite<
     public: config.public,
     acl: config.acl,
     transactional: config.transactional,
+    deadlineMs: config.deadlineMs,
     input: config.input,
     output: config.output,
     handler: config.handler,
@@ -554,6 +564,7 @@ function toPendingDelete<
     public: config.public,
     acl: config.acl,
     transactional: config.transactional,
+    deadlineMs: config.deadlineMs,
     input: config.input,
     output: config.output,
     handler: config.handler,
@@ -581,6 +592,12 @@ function toPendingSse<
     public: config.public,
     acl: config.acl,
     transactional: undefined,
+    // Always absent, and `SseBuilderConfig` deliberately exposes no
+    // `deadlineMs` to set it: the handler returns its Observable
+    // immediately, so a deadline would fire against the setup call rather
+    // than the stream, and a long-lived SSE connection is exactly what a
+    // request deadline must not cut. Bound the stream itself instead.
+    deadlineMs: undefined,
     input: config.input,
     output: false,
     handler: config.handler,

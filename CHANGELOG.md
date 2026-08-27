@@ -7,6 +7,27 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
 
 ### Added
 
+- **`operationResource` request deadline and disconnect signal (issue
+  #78).** Every operation now carries `ctx.signal: AbortSignal`, exposed
+  via an optional `deadlineMs` on the operation descriptor. Elapsing the
+  deadline aborts the signal and resolves `504 Gateway Timeout`; a client
+  disconnecting before the handler settles aborts it too, though nothing
+  is written back since the socket is already gone, and it is never
+  surfaced as an application error (no 5xx, no error log). A handler passes
+  `ctx.signal` through to whatever does the actual waiting to stop wasted
+  work; one that never reads it keeps running in the background after the
+  timeout response is sent — the deadline bounds what the CLIENT waits
+  for, not the work itself. Scoped to `operationResource` in this pass;
+  CRUD command handlers have the same gap and are not covered. See
+  `CONFIGURATION.md` §6f. **Type-level breaking change:** `OperationContext`
+  gained a required `signal` field — a hand-constructed context (e.g. a
+  unit test mocking one instead of reading it from a route) needs to add
+  it; the framework-constructed context every route receives already does.
+  `op.sse()` takes no `deadlineMs` and its `ctx.signal` is inert: the
+  handler returns its Observable before the guard is torn down, so an SSE
+  client going away is observed through the Observable's own
+  unsubscription instead.
+
 - **Background job dispatch port (issue #53).**
   `JobDispatchServiceInterface` (`enqueue` / `claim` / `heartbeat` /
   `complete` / `fail`) under `JOB_DISPATCH_SERVICE_TOKEN` — named tasks
