@@ -1,3 +1,4 @@
+import { AppContextHost } from '@concepta/rockets-core';
 import {
   CommandBus,
   CommandHandler,
@@ -51,7 +52,7 @@ export class RocketsAuthValidatePasswordPortHandler
     const userId = command.target.id;
     const credential: UserCredentialEntityInterface | null =
       await this.queryBus.execute(
-        new GetActiveCredentialQuery(userId, command.ctx),
+        new GetActiveCredentialQuery(command.ctx, userId),
       );
 
     if (!credential) {

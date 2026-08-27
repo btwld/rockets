@@ -116,6 +116,12 @@ and this project adheres to
   the password, OTP and user handlers. `AppContextHost.from()` throws on
   a non-empty non-host value.
 
+- `GetActiveCredentialQuery` takes the repository context first and requires
+  it (`new GetActiveCredentialQuery(ctx, userId)`), like every other Rockets
+  command and query. Its handler now requires the credentials repository:
+  `userCredentials` is a mandatory persistence entity, so a missing
+  repository is a wiring error that fails boot instead of answering "no
+  credential" (a 401) at login time.
 - **Hand-written auth request bodies keep their OpenAPI component names.**
   `POST /token/password`, `POST /token/refresh` and the four `/recovery`
   bodies are documented as `LocalLoginDto`, `RefreshDto` and
@@ -209,6 +215,9 @@ and this project adheres to
 
 ### Removed
 
+- `ConceptaRepositoryCompatModule` — an empty global module left over from
+  the pre-v8 repository bridge — and the `resolveConceptadevAppContext`
+  helper that accompanied it.
 - `RocketsAuthExceptionsFilter` (issue #87). Internal-only and never
   exported from `src/index.ts`, so no consumer could import it and no
   application's behaviour changes — apps register
