@@ -1133,13 +1133,13 @@
         "name": "GetActiveCredentialHandler",
         "kind": "class",
         "runtime": true,
-        "signature": "export declare class GetActiveCredentialHandler implements IQueryHandler<GetActiveCredentialQuery, UserCredentialEntityInterface | null> {\n    private readonly credentialsRepo?;\n    constructor(credentialsRepo?: RepositoryInterface<UserCredentialEntityInterface> | undefined);\n    execute(query: GetActiveCredentialQuery): Promise<UserCredentialEntityInterface | null>;\n}"
+        "signature": "export declare class GetActiveCredentialHandler implements IQueryHandler<GetActiveCredentialQuery, UserCredentialEntityInterface | null> {\n    private readonly credentialsRepo;\n    constructor(credentialsRepo: RepositoryInterface<UserCredentialEntityInterface>);\n    execute(query: GetActiveCredentialQuery): Promise<UserCredentialEntityInterface | null>;\n}"
       },
       {
         "name": "GetActiveCredentialQuery",
         "kind": "class",
         "runtime": true,
-        "signature": "export declare class GetActiveCredentialQuery {\n    readonly userId: string;\n    readonly ctx?: PlainLiteralObject | undefined;\n    constructor(userId: string, ctx?: PlainLiteralObject | undefined);\n}"
+        "signature": "export declare class GetActiveCredentialQuery {\n    readonly ctx: PlainLiteralObject;\n    readonly userId: string;\n    constructor(ctx: PlainLiteralObject, userId: string);\n}"
       },
       {
         "name": "GetUserHandler",
@@ -1409,7 +1409,7 @@
         "name": "RocketsAuthOptionsInterface",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface RocketsAuthOptionsInterface {\n    settings: RocketsAuthSettingsInterface;\n    swagger?: SwaggerUiOptionsInterface;\n    authentication?: Omit<AuthenticationOptionsInterface, 'ports'> & {\n        ports?: Partial<AuthenticationPortsInterface>;\n    };\n    federated?: Omit<FederatedOptionsInterface, 'userPort'> & {\n        userPort?: Partial<FederatedUserPortSettings>;\n    };\n    user?: {\n        settings?: UserSettingsInterface;\n        ports?: {\n            password?: Partial<UserPasswordPortSettings>;\n        };\n    } & Omit<UserOptionsInterface, 'settings' | 'ports'>;\n    password?: PasswordOptionsInterface;\n    otp?: OtpOptionsInterface;\n    email?: Partial<EmailOptionsInterface>;\n    crud?: CrudModuleOptions;\n    role?: Partial<RoleOptionsInterface>;\n    invitation?: {\n        settings?: InvitationSettingsInterface;\n        ports?: {\n            otp?: Partial<InvitationOtpPortSettings>;\n            user?: Partial<InvitationUserPortSettings>;\n            notification?: Partial<InvitationNotificationPortSettings>;\n        };\n    };\n    services: {\n        mailerService: EmailServiceInterface;\n        userAccessQueryService?: CanAccess;\n    };\n}"
+        "signature": "export interface RocketsAuthOptionsInterface {\n    settings: RocketsAuthSettingsInterface;\n    authentication?: Omit<AuthenticationOptionsInterface, 'ports'> & {\n        ports?: Partial<AuthenticationPortsInterface>;\n    };\n    federated?: Omit<FederatedOptionsInterface, 'userPort'> & {\n        userPort?: Partial<FederatedUserPortSettings>;\n    };\n    user?: {\n        settings?: UserSettingsInterface;\n        ports?: {\n            password?: Partial<UserPasswordPortSettings>;\n        };\n    } & Omit<UserOptionsInterface, 'settings' | 'ports'>;\n    password?: PasswordOptionsInterface;\n    otp?: OtpOptionsInterface;\n    email?: Partial<EmailOptionsInterface>;\n    role?: Partial<RoleOptionsInterface>;\n    invitation?: {\n        settings?: InvitationSettingsInterface;\n        ports?: {\n            otp?: Partial<InvitationOtpPortSettings>;\n            user?: Partial<InvitationUserPortSettings>;\n            notification?: Partial<InvitationNotificationPortSettings>;\n        };\n    };\n    services: {\n        mailerService: EmailServiceInterface;\n        userAccessQueryService?: CanAccess;\n    };\n}"
       },
       {
         "name": "RocketsAuthOtpException",
@@ -4328,14 +4328,6 @@
         "signature": "type AuthenticationUserWithRoles = (NonNullable<AuthenticationUserResult> & UserRolesView & {\n    sub: string;\n}) | null;",
         "referencedBy": [
           "RocketsGetUserBySubjectHandler"
-        ]
-      },
-      {
-        "name": "CrudModuleOptions",
-        "kind": "type",
-        "signature": "type CrudModuleOptions = Parameters<typeof CrudModule.forRoot>[0];",
-        "referencedBy": [
-          "RocketsAuthOptionsInterface"
         ]
       },
       {

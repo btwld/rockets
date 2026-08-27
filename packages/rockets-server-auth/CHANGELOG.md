@@ -116,6 +116,11 @@ and this project adheres to
   the password, OTP and user handlers. `AppContextHost.from()` throws on
   a non-empty non-host value.
 
+- `RocketsAuthModule` no longer registers `CqrsModule`, `RepositoryModule`,
+  `CrudModule` or `SwaggerUiModule` itself: it always boots inside
+  `RocketsCoreModule`, which registers each of them once (the Swagger
+  registration in particular is global, so the second one competed with
+  core's for the same document).
 - `GetActiveCredentialQuery` takes the repository context first and requires
   it (`new GetActiveCredentialQuery(ctx, userId)`), like every other Rockets
   command and query. Its handler now requires the credentials repository:
@@ -215,6 +220,9 @@ and this project adheres to
 
 ### Removed
 
+- `RocketsAuthOptionsInterface.swagger` and `.crud` — they only fed the
+  duplicate registrations above; configure `swagger` on `RocketsModule` /
+  `RocketsCoreModule` instead.
 - `ConceptaRepositoryCompatModule` — an empty global module left over from
   the pre-v8 repository bridge — and the `resolveConceptadevAppContext`
   helper that accompanied it.

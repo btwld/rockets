@@ -145,18 +145,19 @@ function createCoreImports(
     imports.push(featureModule);
   }
 
-  // CRUD routes. Upstream `CrudContextOverlay.attach()` no-ops on handlers
-  // without CRUD metadata (nestjs-crud `5249672`), so mixed CRUD + custom
-  // controllers share one `CrudModule.forRoot()` safely.
-  if (plan.crudResources.length) {
-    imports.push(
-      CrudModule.forRoot({
-        settings: {},
-      }),
-    );
-    for (const resource of plan.crudResources) {
-      imports.push(CrudModule.forFeature(resource));
-    }
+  // CRUD engine, registered once and unconditionally: auth bootstraps
+  // (`rockets-auth` signup / admin modules) mount upstream CRUD controllers
+  // outside the plan, so an app with no `defineResource()` still needs it.
+  // Upstream `CrudContextOverlay.attach()` no-ops on handlers without CRUD
+  // metadata (nestjs-crud `5249672`), so mixed CRUD + custom controllers
+  // share this one `CrudModule.forRoot()` safely.
+  imports.push(
+    CrudModule.forRoot({
+      settings: {},
+    }),
+  );
+  for (const resource of plan.crudResources) {
+    imports.push(CrudModule.forFeature(resource));
   }
 
   // Swagger UI is registered here so all Rockets entrypoints share the same docs
@@ -293,6 +294,10 @@ function createCoreExports(options: {
     AUTH_ADAPTERS_TOKEN,
     ROCKETS_CORE_SETTINGS_TOKEN,
     AuthServerGuard,
+    // `RepositoryModule.forRoot` is not global; re-exporting it from this
+    // (global) module is what lets bundles and `rockets-auth` inject
+    // `TransactionScope` without registering the repository layer a second time.
+    RepositoryModule,
   ];
 
   // The service is always registered, so it is always exported: a
