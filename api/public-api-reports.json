@@ -2090,6 +2090,12 @@
         "signature": "rocketsAuthUserMetadataUpdateSchema: z.ZodObject<{}, z.core.$strip>"
       },
       {
+        "name": "rocketsAuthUserRoleSchema",
+        "kind": "value",
+        "runtime": true,
+        "signature": "rocketsAuthUserRoleSchema: import(\"zod\").ZodObject<{\n    dateCreated: import(\"zod\").ZodDate;\n    dateUpdated: import(\"zod\").ZodDate;\n    dateDeleted: import(\"zod\").ZodNullable<import(\"zod\").ZodDate>;\n    version: import(\"zod\").ZodNumber;\n    id: import(\"zod\").ZodString;\n    roleId: import(\"zod\").ZodString;\n    assigneeId: import(\"zod\").ZodString;\n}, import(\"zod/v4/core\").$strip>"
+      },
+      {
         "name": "rocketsAuthUserSchema",
         "kind": "function",
         "runtime": true,
