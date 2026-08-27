@@ -10,7 +10,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { Injectable } from '@nestjs/common';
 
-import { PasswordCreationService } from '@concepta/nestjs-password';
+import { RocketsAuthSetPasswordPortCommand } from '../../../shared/authentication/rockets-auth-password-port.commands';
 import { TransactionScope } from '@concepta/nestjs-repository';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import {
@@ -27,10 +27,7 @@ import {
   InvitationInterface,
 } from '@concepta/nestjs-invitation';
 import { ReferenceIdInterface } from '@concepta/nestjs-core';
-import {
-  INVITATION_ACCEPTANCE_LISTENER_TOKEN,
-  RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN,
-} from '../modules/rockets-auth-invitation-acceptance.module-definition';
+import { RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN } from '../modules/rockets-auth-invitation-acceptance.module-definition';
 import { RocketsAuthInvitationAcceptanceModule } from '../modules/rockets-auth-invitation-acceptance.module';
 import { AssignDefaultRoleCommand } from '../../user/application/commands/impl/assign-default-role.command';
 import { SaveUserMetadataCommand } from '../../user/application/commands/impl/save-user-metadata.command';
@@ -48,7 +45,6 @@ describe('InvitationUserAcceptanceListener', () => {
   let mockUserPortService: Mocked<
     Pick<RocketsAuthUserPortService, 'byId' | 'update'>
   >;
-  let mockPasswordService: Mocked<PasswordCreationService>;
   let mockCommandBus: Mocked<Pick<CommandBus, 'execute'>>;
 
   const mockUser = {
@@ -107,10 +103,6 @@ describe('InvitationUserAcceptanceListener', () => {
       update: vi.fn(),
     } as Mocked<Pick<RocketsAuthUserPortService, 'byId' | 'update'>>;
 
-    mockPasswordService = {
-      create: vi.fn(),
-    } as unknown as Mocked<PasswordCreationService>;
-
     mockCommandBus = {
       execute: vi.fn(),
     } as Mocked<Pick<CommandBus, 'execute'>>;
@@ -130,10 +122,6 @@ describe('InvitationUserAcceptanceListener', () => {
         {
           provide: ROCKETS_AUTH_USER_PORT_TOKEN,
           useValue: mockUserPortService,
-        },
-        {
-          provide: PasswordCreationService,
-          useValue: mockPasswordService,
         },
         {
           provide: CommandBus,
@@ -157,7 +145,7 @@ describe('InvitationUserAcceptanceListener', () => {
     }).compile();
 
     listener = module.get<InvitationUserAcceptanceListener>(
-      INVITATION_ACCEPTANCE_LISTENER_TOKEN,
+      InvitationUserAcceptanceListener,
     );
   });
 
@@ -185,10 +173,6 @@ describe('InvitationUserAcceptanceListener', () => {
       });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockResolvedValue({
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      } as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
@@ -198,15 +182,13 @@ describe('InvitationUserAcceptanceListener', () => {
         expect.anything(),
         'user-123',
       );
-      expect(mockPasswordService.create).toHaveBeenCalledWith('Test123!');
       expect(mockUserPortService.update).toHaveBeenCalledWith(
         expect.anything(),
-        {
-          id: 'user-123',
-          passwordHash: 'hashed-password',
-          passwordSalt: 'salt',
-          active: true,
-        },
+        { id: 'user-123', active: true },
+      );
+      // v8 keeps the password in user credentials: never on the user row.
+      expect(mockCommandBus.execute).toHaveBeenCalledWith(
+        expect.any(RocketsAuthSetPasswordPortCommand),
       );
       expect(mockCommandBus.execute).toHaveBeenCalledWith(
         expect.any(AssignDefaultRoleCommand),
@@ -225,7 +207,9 @@ describe('InvitationUserAcceptanceListener', () => {
 
       await listener.handle(event);
 
-      expect(mockPasswordService.create).not.toHaveBeenCalled();
+      expect(mockCommandBus.execute).not.toHaveBeenCalledWith(
+        expect.any(RocketsAuthSetPasswordPortCommand),
+      );
       expect(mockUserPortService.update).toHaveBeenCalledWith(
         expect.anything(),
         { id: 'user-123', active: true },
@@ -249,10 +233,6 @@ describe('InvitationUserAcceptanceListener', () => {
       });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockResolvedValue({
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      } as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
@@ -279,10 +259,6 @@ describe('InvitationUserAcceptanceListener', () => {
       );
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockResolvedValue({
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      } as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
@@ -304,10 +280,6 @@ describe('InvitationUserAcceptanceListener', () => {
       );
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockResolvedValue({
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      } as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
@@ -322,10 +294,6 @@ describe('InvitationUserAcceptanceListener', () => {
       });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockResolvedValue({
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      } as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockResolvedValue(undefined as never);
 
@@ -349,23 +317,31 @@ describe('InvitationUserAcceptanceListener', () => {
         expect.anything(),
         'user-123',
       );
-      expect(mockPasswordService.create).not.toHaveBeenCalled();
+      expect(mockCommandBus.execute).not.toHaveBeenCalledWith(
+        expect.any(RocketsAuthSetPasswordPortCommand),
+      );
       expect(mockUserPortService.update).not.toHaveBeenCalled();
     });
 
-    it('should catch error when password creation fails', async () => {
+    it('should catch error when setting the password fails', async () => {
       const event = createInvitationAcceptedEvent(mockInvitation, {
         password: 'Test123!',
       });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockRejectedValue(
-        new Error('Password hash failed'),
-      );
+      mockUserPortService.update.mockResolvedValue(undefined as never);
+      mockCommandBus.execute.mockImplementation(async (command: unknown) => {
+        if (command instanceof RocketsAuthSetPasswordPortCommand) {
+          throw new Error('Password set failed');
+        }
+      });
 
       await listener.handle(event);
 
-      expect(mockUserPortService.update).not.toHaveBeenCalled();
+      // Role assignment comes after the password: nothing past the failure runs.
+      expect(mockCommandBus.execute).not.toHaveBeenCalledWith(
+        expect.any(AssignDefaultRoleCommand),
+      );
     });
 
     it('should catch error when user update fails', async () => {
@@ -374,10 +350,6 @@ describe('InvitationUserAcceptanceListener', () => {
       });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockResolvedValue({
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      } as never);
       mockUserPortService.update.mockRejectedValue(new Error('Update failed'));
 
       await listener.handle(event);
@@ -391,10 +363,6 @@ describe('InvitationUserAcceptanceListener', () => {
       });
 
       mockUserPortService.byId.mockResolvedValue(mockUser as never);
-      mockPasswordService.create.mockResolvedValue({
-        passwordHash: 'hashed-password',
-        passwordSalt: 'salt',
-      } as never);
       mockUserPortService.update.mockResolvedValue(undefined as never);
       mockCommandBus.execute.mockRejectedValue(
         new Error('Role assignment failed'),
@@ -412,7 +380,9 @@ describe('InvitationUserAcceptanceListener', () => {
 
       await listener.handle(event);
 
-      expect(mockPasswordService.create).not.toHaveBeenCalled();
+      expect(mockCommandBus.execute).not.toHaveBeenCalledWith(
+        expect.any(RocketsAuthSetPasswordPortCommand),
+      );
     });
 
     it('should handle undefined data payload', async () => {
@@ -443,10 +413,6 @@ describe('InvitationUserAcceptanceListener', () => {
             useValue: mockUserPortService,
           },
           {
-            provide: PasswordCreationService,
-            useValue: mockPasswordService,
-          },
-          {
             provide: CommandBus,
             useValue: mockCommandBus,
           },
@@ -455,16 +421,12 @@ describe('InvitationUserAcceptanceListener', () => {
             useValue: mockSettings,
           },
           CustomInvitationUserAcceptanceListener,
-          {
-            provide: INVITATION_ACCEPTANCE_LISTENER_TOKEN,
-            useExisting: CustomInvitationUserAcceptanceListener,
-          },
         ],
       }).compile();
 
       const customListener = customModule.get<
         IEventHandler<InvitationAcceptedEvent>
-      >(INVITATION_ACCEPTANCE_LISTENER_TOKEN);
+      >(CustomInvitationUserAcceptanceListener);
 
       const event = createInvitationAcceptedEvent(mockInvitation, {
         password: 'Test123!',

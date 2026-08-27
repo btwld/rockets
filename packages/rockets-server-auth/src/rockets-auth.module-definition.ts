@@ -37,6 +37,11 @@ import {
   SendInvitationEmailCommand,
   SendAcceptedEmailCommand,
 } from './domains/invitation/application/commands/impl/send-invitation-email.command';
+import { RocketsInviteUserByEmailHandler } from './domains/invitation/application/commands/handlers/invite-user-by-email.handler';
+import {
+  SendAcceptedEmailHandler,
+  SendInvitationEmailHandler,
+} from './domains/invitation/application/commands/handlers/send-invitation-email.handler';
 import {
   ConsumeOtpCommand,
   ClearOtpsCommand,
@@ -618,6 +623,9 @@ export function createRocketsAuthProviders(options: {
     AdminGuard,
     RocketsGetRoleByNameHandler,
     RocketsGetRolesByIdsHandler,
+    RocketsInviteUserByEmailHandler,
+    SendInvitationEmailHandler,
+    SendAcceptedEmailHandler,
     ChangeMyPasswordHandler,
     RocketsAuthValidatePasswordPortHandler,
     RocketsAuthCreateOtpPortHandler,

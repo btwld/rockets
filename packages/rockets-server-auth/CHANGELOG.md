@@ -55,6 +55,11 @@ and this project adheres to
 
 ### Breaking
 
+- `RocketsAuthInvitationResponseDto` no longer carries `emailSent` /
+  `emailError`: the invitation email is dispatched from the transaction's
+  commit hook, after the response is built, so the route cannot know the
+  delivery outcome. Delivery failures are logged by the email handler; use
+  `POST /admin/invitations/:code/reattempt` to re-send.
 - Authentication is now fail-closed on `active`: a user authenticates only when
   `active === true`. Deactivated users are rejected on both access and refresh
   tokens, and any persisted row with `active` unset/null (or an admin-created
@@ -214,6 +219,39 @@ and this project adheres to
 
 ### Fixed
 
+- **Invitations work again end to end** (first package e2e for the four
+  invitation routes found all of this):
+  - `POST /admin/invitations` answered 500 for any address without an
+    account: upstream v8's `CreateInvitationByEmailCommand` only resolves an
+    existing user. The new `RocketsInviteUserByEmailCommand` creates the
+    invited account inactive (activated on acceptance) in the same
+    transaction scope as the invitation.
+  - `SendInvitationEmailHandler` / `SendAcceptedEmailHandler` were declared
+    as the invitation notification port but never registered as providers,
+    so no invitation email was ever sent.
+  - The controller sent the invitation a second time after creating it;
+    upstream `create()` already does, and the second send issued a new OTP
+    that deactivated the passcode the invitee had received — acceptance
+    always failed.
+  - `InvitationAcceptedEvent` reached the acceptance listener twice: the
+    listener was also provided under an alias token (`useExisting`), and
+    Nest CQRS registers an event handler once per provider wrapper that
+    holds its instance. Two concurrent onboarding transactions raced per
+    acceptance — fatal on SQLite's single connection, a duplicate role
+    assignment elsewhere.
+  - The invitation entity needs `dateAccepted` / `dateRevoked` columns:
+    upstream v8 derives `active` / "already accepted" from them, and an
+    entity without them reads every invitation as accepted.
+    `DefineRocketsAuthInput.invitationEntity` is now typed
+    `Type<InvitationEntityInterface>` so a missing column fails to compile;
+    the sample entity and the e2e fixture carry both columns.
+  - Accepting an already-accepted invitation is a 409
+    (`ROCKETS_AUTH_INVITATION_ALREADY_ACCEPTED_ERROR`) and a revoked one a
+    410 (`ROCKETS_AUTH_INVITATION_REVOKED_ERROR`) instead of 500s: the
+    upstream exceptions carry no HTTP status.
+  - Acceptance sets the password through the same set-password port as
+    recovery (user credentials); it used to write v7-style `passwordHash`
+    columns onto the user row, which v8 login never reads.
 - **Admin user / role update bodies are validated again.** Both admin CRUD
   modules declared the update body at controller level; upstream stamps the
   validation pipe from the OPERATION-level body only, so `PATCH /admin/users/:id`
@@ -228,6 +266,9 @@ and this project adheres to
 
 ### Removed
 
+- `INVITATION_ACCEPTANCE_LISTENER_TOKEN` (an alias of the acceptance
+  listener provider; see the double-delivery fix). Inject the listener
+  class, or the class passed as `listenerService`, directly.
 - Dead dependencies: `jsonwebtoken`, `passport`, `passport-jwt`,
   `passport-strategy`, `@nestjs/jwt`, `accesscontrol` were declared but never
   imported — upstream `@concepta/nestjs-authentication` /

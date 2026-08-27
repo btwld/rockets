@@ -40,7 +40,6 @@ export {
 // Modules
 export {
   RocketsAuthInvitationAcceptanceModule,
-  INVITATION_ACCEPTANCE_LISTENER_TOKEN,
   type InvitationAcceptedEventHandler,
 } from './modules/rockets-auth-invitation-acceptance.module';
 
@@ -58,3 +57,7 @@ export {
   RocketsAuthInvitationSendFailedException,
   RocketsAuthInvitationNotAcceptedException,
 } from './domain/exceptions/invitation.exception';
+
+// Application — Commands
+export { RocketsInviteUserByEmailCommand } from './application/commands/impl/invite-user-by-email.command';
+export { RocketsInviteUserByEmailHandler } from './application/commands/handlers/invite-user-by-email.handler';

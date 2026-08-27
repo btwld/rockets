@@ -7,7 +7,6 @@ import {
 import type { PlainLiteralObject } from '@nestjs/common';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
 
-import { PasswordCreationService } from '@concepta/nestjs-password';
 import { AssignRoleCommand } from '@concepta/nestjs-role';
 import { InvitationAcceptedEvent } from '@concepta/nestjs-invitation';
 
@@ -15,6 +14,7 @@ import {
   RocketsAuthUserPortService,
   ROCKETS_AUTH_USER_PORT_TOKEN,
 } from '../../../../shared/ports/rockets-auth-user-port.service';
+import { RocketsAuthSetPasswordPortCommand } from '../../../../shared/authentication/rockets-auth-password-port.commands';
 import {
   ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
   RocketsAuthSettingsInterface,
@@ -72,8 +72,6 @@ export class InvitationUserAcceptanceListener
   constructor(
     @Inject(ROCKETS_AUTH_USER_PORT_TOKEN)
     public readonly userModelService: RocketsAuthUserPortService,
-    @Inject(PasswordCreationService)
-    public readonly passwordService: PasswordCreationService,
     public readonly commandBus: CommandBus,
     @Inject(ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN)
     public readonly settings: RocketsAuthSettingsInterface,
@@ -110,15 +108,8 @@ export class InvitationUserAcceptanceListener
         });
         if (!userExists) return;
 
-        const passwordFields = await this.getPasswordFields(
-          password,
-          invitation.userId,
-        );
-        await this.updateUserActivation(
-          txCtx,
-          invitation.userId,
-          passwordFields,
-        );
+        await this.updateUserActivation(txCtx, invitation.userId);
+        await this.setPassword(txCtx, invitation.userId, password);
 
         await this.updateUserMetadata({
           ctx: txCtx,
@@ -167,27 +158,29 @@ export class InvitationUserAcceptanceListener
     return true;
   }
 
-  private async getPasswordFields(
-    password: InvitationAcceptanceDataInterface['password'],
-    userId: string,
-  ): Promise<Record<string, unknown>> {
-    if (!password || typeof password !== 'string') return {};
-    const passwordHash = await this.passwordService.create(password);
-    this.logger.debug('Password hashed successfully', { userId });
-    return { ...passwordHash };
-  }
-
   private async updateUserActivation(
     ctx: PlainLiteralObject,
     userId: string,
-    passwordFields: Record<string, unknown>,
   ): Promise<void> {
-    await this.userModelService.update(ctx, {
-      id: userId,
-      ...passwordFields,
-      active: true,
-    });
-    this.logger.debug('User updated successfully', { userId });
+    await this.userModelService.update(ctx, { id: userId, active: true });
+    this.logger.debug('User activated', { userId });
+  }
+
+  /**
+   * v8 keeps passwords in the user-credentials table: the password goes
+   * through the same set-password port recovery uses (no current password
+   * to verify — the invited account has none), never onto the user row.
+   */
+  private async setPassword(
+    ctx: PlainLiteralObject,
+    userId: string,
+    password: InvitationAcceptanceDataInterface['password'],
+  ): Promise<void> {
+    if (!password || typeof password !== 'string') return;
+    await this.commandBus.execute(
+      new RocketsAuthSetPasswordPortCommand(ctx, password, userId),
+    );
+    this.logger.debug('Password set', { userId });
   }
 
   private async updateUserMetadata(options: {

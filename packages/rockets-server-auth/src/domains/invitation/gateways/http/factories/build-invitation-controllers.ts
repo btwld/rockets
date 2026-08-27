@@ -27,9 +27,10 @@ import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { AuthPublic } from '@concepta/nestjs-authentication';
 import {
   AcceptInvitationCommand,
-  CreateInvitationByEmailCommand,
   FindInvitationByCodeQuery,
+  InvitationAlreadyAcceptedException,
   InvitationNotFoundException,
+  InvitationRevokedException,
   RevokeInvitationsCommand,
   SendInvitationCommand,
   type Invitation,
@@ -45,7 +46,12 @@ import { rocketsAuthInvitationAcceptSchema } from '../../../infrastructure/schem
 import { rocketsAuthInvitationCreateSchema } from '../../../infrastructure/schemas/rockets-auth-invitation-create.schema';
 import { rocketsAuthInvitationResponseSchema } from '../../../infrastructure/schemas/rockets-auth-invitation-response.schema';
 import { rocketsAuthInvitationRevokeSchema } from '../../../infrastructure/schemas/rockets-auth-invitation-revoke.schema';
-import { RocketsAuthInvitationNotAcceptedException } from '../../../domain/exceptions/invitation.exception';
+import {
+  RocketsAuthInvitationAlreadyAcceptedException,
+  RocketsAuthInvitationNotAcceptedException,
+  RocketsAuthInvitationRevokedException,
+} from '../../../domain/exceptions/invitation.exception';
+import { RocketsInviteUserByEmailCommand } from '../../../application/commands/impl/invite-user-by-email.command';
 import type {
   InvitationAcceptanceControllerExtras,
   InvitationControllerExtras,
@@ -77,13 +83,13 @@ export function buildInvitationController(
     @ApiOperation({
       summary: 'Create and send invitation (Admin only)',
       description:
-        'Creates a new user invitation and sends an email with OTP for acceptance. ' +
-        'If email sending fails, the invitation is still returned. Check emailSent field ' +
-        'and use POST /admin/invitations/:code/reattempt to retry.',
+        'Creates the invited account (inactive) when it does not exist, creates ' +
+        'the invitation and sends the acceptance passcode by email once the ' +
+        'transaction commits. Use POST /admin/invitations/:code/reattempt to ' +
+        're-send it.',
     })
     @ApiCreatedResponse({
-      description:
-        'Invitation created. Check emailSent field to verify if email was sent successfully.',
+      description: 'Invitation created.',
       standardSchema: rocketsAuthInvitationResponseSchema,
     })
     async create(
@@ -93,33 +99,15 @@ export function buildInvitationController(
     ): Promise<InvitationResponse> {
       const ctx = getAppContext(req);
       const invitation: Invitation = await this.commandBus.execute(
-        new CreateInvitationByEmailCommand(ctx, body),
+        new RocketsInviteUserByEmailCommand(ctx, body),
       );
-      let emailError: string | undefined;
-      try {
-        await this.commandBus.execute(
-          new SendInvitationCommand(ctx, invitation.id),
-        );
-        this.logger.log('Invitation sent successfully', {
-          invitationId: invitation.id,
-          email: body.email,
-        });
-      } catch (e) {
-        emailError = e instanceof Error ? e.message : String(e);
-        this.logger.error('Failed to send invitation', {
-          invitationId: invitation.id,
-          email: body.email,
-          error: emailError,
-        });
-      }
+      this.logger.log('Invitation created', {
+        invitationId: invitation.id,
+        email: body.email,
+      });
 
       // `active` is an aggregate getter, not a prop — `toPlain()` omits it.
-      return {
-        ...invitation.toPlain(),
-        active: invitation.active,
-        emailSent: emailError === undefined,
-        emailError,
-      };
+      return { ...invitation.toPlain(), active: invitation.active };
     }
   }
 
@@ -163,9 +151,21 @@ export function buildInvitationAcceptanceController(
     ): Promise<void> {
       const ctx = getAppContext(req);
       const { passcode, payload } = body;
-      const result: Invitation | null = await this.commandBus.execute(
-        new AcceptInvitationCommand(ctx, code, { passcode, payload }),
-      );
+      let result: Invitation | null;
+      try {
+        result = await this.commandBus.execute(
+          new AcceptInvitationCommand(ctx, code, { passcode, payload }),
+        );
+      } catch (error) {
+        // Upstream raises these without an HTTP status (→ 500).
+        if (error instanceof InvitationAlreadyAcceptedException) {
+          throw new RocketsAuthInvitationAlreadyAcceptedException();
+        }
+        if (error instanceof InvitationRevokedException) {
+          throw new RocketsAuthInvitationRevokedException();
+        }
+        throw error;
+      }
       if (!result) {
         throw new RocketsAuthInvitationNotAcceptedException();
       }

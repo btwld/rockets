@@ -1,5 +1,4 @@
 import { withOpenApi } from '@concepta/rockets-core';
-import { z } from 'zod';
 
 import { rocketsAuthInvitationSchema } from './rockets-auth-invitation.schema';
 
@@ -9,16 +8,6 @@ import { rocketsAuthInvitationSchema } from './rockets-auth-invitation.schema';
  * can retry through `POST /admin/invitations/:code/reattempt`.
  */
 export const rocketsAuthInvitationResponseSchema = withOpenApi(
-  rocketsAuthInvitationSchema.extend({
-    emailSent: z.boolean().meta({
-      description: 'Whether the invitation email was sent successfully',
-      example: true,
-    }),
-    emailError: z.string().optional().meta({
-      description:
-        'Error message if email sending failed. Use POST /admin/invitations/:code/reattempt to retry.',
-      example: 'SMTP connection timeout',
-    }),
-  }),
+  rocketsAuthInvitationSchema.extend({}),
   'RocketsAuthInvitationResponseDto',
 );

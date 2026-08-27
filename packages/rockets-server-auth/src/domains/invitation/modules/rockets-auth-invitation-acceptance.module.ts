@@ -34,7 +34,4 @@ export class RocketsAuthInvitationAcceptanceModule extends RocketsAuthInvitation
 }
 
 // Re-export for convenience
-export {
-  INVITATION_ACCEPTANCE_LISTENER_TOKEN,
-  type InvitationAcceptedEventHandler,
-} from './rockets-auth-invitation-acceptance.module-definition';
+export { type InvitationAcceptedEventHandler } from './rockets-auth-invitation-acceptance.module-definition';

@@ -1095,16 +1095,6 @@
             "format": "date-time",
             "type": "string"
           },
-          "emailError": {
-            "description": "Error message if email sending failed. Use POST /admin/invitations/:code/reattempt to retry.",
-            "example": "SMTP connection timeout",
-            "type": "string"
-          },
-          "emailSent": {
-            "description": "Whether the invitation email was sent successfully",
-            "example": true,
-            "type": "boolean"
-          },
           "id": {
             "type": "string"
           },
@@ -1127,8 +1117,7 @@
           "category",
           "userId",
           "dateAccepted",
-          "dateRevoked",
-          "emailSent"
+          "dateRevoked"
         ],
         "type": "object"
       },
@@ -1353,6 +1342,50 @@
           "email",
           "username",
           "active"
+        ],
+        "type": "object"
+      },
+      "RocketsAuthUserRoleDto": {
+        "additionalProperties": false,
+        "properties": {
+          "assigneeId": {
+            "description": "Assignee ID",
+            "minLength": 1,
+            "type": "string"
+          },
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateDeleted": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "dateUpdated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "roleId": {
+            "description": "Role ID",
+            "minLength": 1,
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "dateCreated",
+          "dateUpdated",
+          "dateDeleted",
+          "id",
+          "version",
+          "roleId",
+          "assigneeId"
         ],
         "type": "object"
       },
@@ -1588,7 +1621,7 @@
   "paths": {
     "/admin/invitations": {
       "post": {
-        "description": "Creates a new user invitation and sends an email with OTP for acceptance. If email sending fails, the invitation is still returned. Check emailSent field and use POST /admin/invitations/:code/reattempt to retry.",
+        "description": "Creates the invited account (inactive) when it does not exist, creates the invitation and sends the acceptance passcode by email once the transaction commits. Use POST /admin/invitations/:code/reattempt to re-send it.",
         "operationId": "InvitationController_create",
         "parameters": [],
         "requestBody": {
@@ -1610,7 +1643,7 @@
                 }
               }
             },
-            "description": "Invitation created. Check emailSent field to verify if email was sent successfully."
+            "description": "Invitation created."
           }
         },
         "security": [
@@ -2310,7 +2343,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Roles for the user"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RocketsAuthUserRoleDto"
+                }
+              }
+            },
+            "description": "Role assignments for the user"
           },
           "401": {
             "description": "Unauthorized"

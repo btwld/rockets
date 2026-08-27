@@ -2,6 +2,7 @@ import { JwtGuard } from '@concepta/nestjs-authentication';
 import { DynamicModule } from '@nestjs/common';
 import type { PlainLiteralObject, Type } from '@nestjs/common';
 import { FEDERATED_MODULE_DEFAULT_ENTITY_KEY } from '@concepta/nestjs-federated';
+import type { InvitationEntityInterface } from '@concepta/nestjs-invitation';
 import { OtpModule } from '@concepta/nestjs-otp';
 import type {
   AuthAdapterInterface,
@@ -55,7 +56,7 @@ function toUserMetadataConfig(
  */
 export function buildRocketsAuthResources(
   persistence: RocketsAuthRepositoryPersistenceOptions,
-  invitationEntity?: Type<PlainLiteralObject>,
+  invitationEntity?: Type<InvitationEntityInterface>,
 ): ReadonlyArray<ResourceInput> {
   const { module: repositoryModule, entities } = persistence;
   const entityRows: Array<{
@@ -135,7 +136,7 @@ export type DefineRocketsAuthInput = RocketsAuthAsyncOptions & {
   /** Used by core `/me` and upstream `UserModule` (`userCrud.userMetadataConfig`). */
   readonly userMetadata: RocketsUserMetadataConfig;
   readonly userCrud: NonNullable<RocketsAuthAsyncOptions['userCrud']>;
-  readonly invitationEntity?: Type<PlainLiteralObject>;
+  readonly invitationEntity?: Type<InvitationEntityInterface>;
   readonly rocketsDefaults?: Readonly<{ readonly enableGlobalGuard?: boolean }>;
   readonly authAdapter?: Type<AuthAdapterInterface>;
 };

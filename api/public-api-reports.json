@@ -1103,7 +1103,7 @@
         "name": "DefineRocketsAuthInput",
         "kind": "type",
         "runtime": false,
-        "signature": "export type DefineRocketsAuthInput = RocketsAuthAsyncOptions & {\n    readonly persistence: RocketsAuthRepositoryPersistenceOptions;\n    readonly userMetadata: RocketsUserMetadataConfig;\n    readonly userCrud: NonNullable<RocketsAuthAsyncOptions['userCrud']>;\n    readonly invitationEntity?: Type<PlainLiteralObject>;\n    readonly rocketsDefaults?: Readonly<{\n        readonly enableGlobalGuard?: boolean;\n    }>;\n    readonly authAdapter?: Type<AuthAdapterInterface>;\n};"
+        "signature": "export type DefineRocketsAuthInput = RocketsAuthAsyncOptions & {\n    readonly persistence: RocketsAuthRepositoryPersistenceOptions;\n    readonly userMetadata: RocketsUserMetadataConfig;\n    readonly userCrud: NonNullable<RocketsAuthAsyncOptions['userCrud']>;\n    readonly invitationEntity?: Type<InvitationEntityInterface>;\n    readonly rocketsDefaults?: Readonly<{\n        readonly enableGlobalGuard?: boolean;\n    }>;\n    readonly authAdapter?: Type<AuthAdapterInterface>;\n};"
       },
       {
         "name": "DuplicateUserException",
@@ -1164,12 +1164,6 @@
         "kind": "class",
         "runtime": true,
         "signature": "export declare class GetUserQuery {\n    readonly ctx: PlainLiteralObject;\n    readonly id: ReferenceId;\n    constructor(ctx: PlainLiteralObject, id: ReferenceId);\n}"
-      },
-      {
-        "name": "INVITATION_ACCEPTANCE_LISTENER_TOKEN",
-        "kind": "value",
-        "runtime": true,
-        "signature": "INVITATION_ACCEPTANCE_LISTENER_TOKEN = \"INVITATION_ACCEPTANCE_LISTENER\""
       },
       {
         "name": "InvitationAcceptanceControllerExtras",
@@ -1784,6 +1778,18 @@
         "signature": "export declare class RocketsGetUserByUsernameQuery {\n    readonly ctx: PlainLiteralObject;\n    readonly username: string;\n    constructor(ctx: PlainLiteralObject, username: string);\n}"
       },
       {
+        "name": "RocketsInviteUserByEmailCommand",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class RocketsInviteUserByEmailCommand extends Command<Invitation> {\n    readonly ctx: PlainLiteralObject;\n    readonly dto: RocketsInviteUserByEmailInput;\n    constructor(ctx: PlainLiteralObject, dto: RocketsInviteUserByEmailInput);\n}"
+      },
+      {
+        "name": "RocketsInviteUserByEmailHandler",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class RocketsInviteUserByEmailHandler implements ICommandHandler<RocketsInviteUserByEmailCommand, Invitation> {\n    private readonly commandBus;\n    private readonly queryBus;\n    private readonly txScope;\n    constructor(commandBus: CommandBus, queryBus: QueryBus, txScope: TransactionScope);\n    execute(command: RocketsInviteUserByEmailCommand): Promise<Invitation>;\n}"
+      },
+      {
         "name": "RocketsJwtAuthAdapter",
         "kind": "class",
         "runtime": true,
@@ -1961,7 +1967,7 @@
         "name": "buildRocketsAuthResources",
         "kind": "function",
         "runtime": true,
-        "signature": "export declare function buildRocketsAuthResources(persistence: RocketsAuthRepositoryPersistenceOptions, invitationEntity?: Type<PlainLiteralObject>): ReadonlyArray<ResourceInput>;"
+        "signature": "export declare function buildRocketsAuthResources(persistence: RocketsAuthRepositoryPersistenceOptions, invitationEntity?: Type<InvitationEntityInterface>): ReadonlyArray<ResourceInput>;"
       },
       {
         "name": "defineRocketsAuth",
@@ -2015,7 +2021,7 @@
         "name": "rocketsAuthInvitationResponseSchema",
         "kind": "value",
         "runtime": true,
-        "signature": "rocketsAuthInvitationResponseSchema: z.ZodObject<{\n    dateCreated: z.ZodDate;\n    dateUpdated: z.ZodDate;\n    dateDeleted: z.ZodNullable<z.ZodDate>;\n    version: z.ZodNumber;\n    id: z.ZodString;\n    active: z.ZodDefault<z.ZodBoolean>;\n    code: z.ZodString;\n    category: z.ZodString;\n    constraints: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;\n    userId: z.ZodString;\n    dateAccepted: z.ZodNullable<z.ZodDate>;\n    dateRevoked: z.ZodNullable<z.ZodDate>;\n    emailSent: z.ZodBoolean;\n    emailError: z.ZodOptional<z.ZodString>;\n}, z.core.$strip>"
+        "signature": "rocketsAuthInvitationResponseSchema: import(\"zod\").ZodObject<{\n    dateCreated: import(\"zod\").ZodDate;\n    dateUpdated: import(\"zod\").ZodDate;\n    dateDeleted: import(\"zod\").ZodNullable<import(\"zod\").ZodDate>;\n    version: import(\"zod\").ZodNumber;\n    id: import(\"zod\").ZodString;\n    active: import(\"zod\").ZodDefault<import(\"zod\").ZodBoolean>;\n    code: import(\"zod\").ZodString;\n    category: import(\"zod\").ZodString;\n    constraints: import(\"zod\").ZodOptional<import(\"zod\").ZodNullable<import(\"zod\").ZodRecord<import(\"zod\").ZodString, import(\"zod\").ZodUnknown>>>;\n    userId: import(\"zod\").ZodString;\n    dateAccepted: import(\"zod\").ZodNullable<import(\"zod\").ZodDate>;\n    dateRevoked: import(\"zod\").ZodNullable<import(\"zod\").ZodDate>;\n}, import(\"zod/v4/core\").$strip>"
       },
       {
         "name": "rocketsAuthInvitationRevokeSchema",
@@ -4481,6 +4487,14 @@
         "referencedBy": [
           "RocketsAuthOtpPortService",
           "RocketsCreateOtpCommand"
+        ]
+      },
+      {
+        "name": "RocketsInviteUserByEmailInput",
+        "kind": "type",
+        "signature": "export type RocketsInviteUserByEmailInput = z.output<typeof rocketsAuthInvitationCreateSchema>;",
+        "referencedBy": [
+          "RocketsInviteUserByEmailCommand"
         ]
       },
       {
