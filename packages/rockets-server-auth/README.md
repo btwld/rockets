@@ -77,7 +77,7 @@ still come from core (which re-exports the `@concepta/nestjs-*` motors).
 
 ```bash
 yarn add @concepta/rockets-auth@alpha @concepta/rockets@alpha @concepta/rockets-core@alpha \
-  @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger @nestjs/jwt @nestjs/passport \
+  @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger @nestjs/passport \
   reflect-metadata rxjs
 ```
 

@@ -224,6 +224,17 @@ and this project adheres to
 
 ### Removed
 
+- Dead dependencies: `jsonwebtoken`, `passport`, `passport-jwt`,
+  `passport-strategy`, `@nestjs/jwt`, `accesscontrol` were declared but never
+  imported — upstream `@concepta/nestjs-authentication` /
+  `nestjs-access-control` own them. `@types/passport-jwt` and
+  `@types/passport-strategy` stay as runtime dependencies on purpose:
+  upstream's published `.d.ts` reference those modules while it lists the
+  types packages only as devDependencies, so a consumer's `tsc` fails
+  without them (the packed-consumer check proves it).
+  `@concepta/nestjs-repository` and
+  `accesscontrol` move to devDependencies (test fixtures only; the runtime
+  contract comes through `@concepta/rockets-core`).
 - `RocketsAuthOptionsInterface.swagger` and `.crud` — they only fed the
   duplicate registrations above; configure `swagger` on `RocketsModule` /
   `RocketsCoreModule` instead.
