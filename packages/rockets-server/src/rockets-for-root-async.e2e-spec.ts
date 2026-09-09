@@ -2,37 +2,12 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
 import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
 import type { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
-import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
-import {
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
-} from './domain/interfaces/user-metadata.interface';
+import { userMetadataConfigFixture } from './__fixtures__/schemas/user-metadata.schema.fixture';
 import { RocketsModule } from './rockets.module';
 import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
-
-class AsyncE2eMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  userId!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-}
-
-class AsyncE2eMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-}
 
 describe('RocketsModule.forRootAsync (e2e)', () => {
   let app: INestApplication;
@@ -44,17 +19,12 @@ describe('RocketsModule.forRootAsync (e2e)', () => {
   });
 
   it('boots with useFactory-only async options and serves GET /me', async () => {
-    const userMetadata = {
-      entity: StubUserMetadataEntity,
-      createDto: AsyncE2eMetadataCreateDto,
-      updateDto: AsyncE2eMetadataUpdateDto,
-    };
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsModule.forRootAsync({
           useFactory: (): RocketsOptionsInterface => ({ settings: {} }),
           auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-          userMetadata,
+          userMetadata: userMetadataConfigFixture,
           repository: E2eFakeRepositoryModule,
         }),
       ],
@@ -78,17 +48,12 @@ describe('RocketsModule.forRootAsync (e2e)', () => {
   });
 
   it('resolves auth adapter through extras (no useFactory dance)', async () => {
-    const userMetadata = {
-      entity: StubUserMetadataEntity,
-      createDto: AsyncE2eMetadataCreateDto,
-      updateDto: AsyncE2eMetadataUpdateDto,
-    };
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsModule.forRootAsync({
           useFactory: (): RocketsOptionsInterface => ({ settings: {} }),
           auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-          userMetadata,
+          userMetadata: userMetadataConfigFixture,
           repository: E2eFakeRepositoryModule,
         }),
       ],

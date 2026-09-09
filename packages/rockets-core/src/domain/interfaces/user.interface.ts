@@ -29,19 +29,3 @@ export interface UserUpdatableInterface {
 export interface UserModelUpdatableInterface extends UserUpdatableInterface {
   id: string;
 }
-
-export class BaseUserDto {
-  id?: string;
-  sub?: string;
-  email?: string;
-  roles?: string[];
-  claims?: Record<string, unknown>;
-}
-
-export class BaseUserCreateDto extends BaseUserDto {
-  sub!: string;
-}
-
-export class BaseUserUpdateDto extends BaseUserDto {
-  userMetadata?: Record<string, unknown>;
-}

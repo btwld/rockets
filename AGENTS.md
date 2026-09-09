@@ -22,7 +22,7 @@ the user has already had to fix more than once.
    `rockets-core` = shared infrastructure (auth abstraction, guard, CQRS,
    declarative resources, repository config, Swagger UI registration).
    `rockets` (server) = presentation + composition for external auth
-   integration (`MeController`, `APP_GUARD` opt-in).
+   integration (`buildMeController`, `APP_GUARD` opt-in).
    Before placing a component, ask:
    *"Would `rockets-server-auth` also need this?"* Yes → core. No → server.
    **Controllers belong in server or auth, never in core. Swagger IS in
@@ -57,8 +57,9 @@ the user has already had to fix more than once.
 4. **One `repository` adapter at the root, every bundle owns its own
    entity.** `RocketsCoreModule` / `RocketsModule` options carry a single
    top-level `repository: RepositoryModuleInterface` (default adapter)
-   plus a `userMetadata` config (`entity` + DTOs, optional per-entity
-   `repository` override). All other persistence rows are contributed by
+   plus a `userMetadata` config (`entity` + named `updateSchema` /
+   `responseSchema`, optional per-entity `repository` override — what
+   `defineZodUserMetadata` returns). All other persistence rows are contributed by
    bundles inside `resources[]`:
    - `defineResource()` — CRUD-shaped, auto-contributes its entity row.
    - `defineSubResource()` — nested CRUD under a parent path param.
@@ -80,10 +81,27 @@ the user has already had to fix more than once.
    become invisible to Nest. Check this every time a module-definition file
    is edited.
 
-6. **Every DTO field that must show in Swagger needs `@ApiProperty()` or
-   `@ApiPropertyOptional()`.** The `@nestjs/swagger` CLI plugin is NOT
-   enabled. Type inference alone will not populate the schema. `@Expose()`
-   from class-transformer is unrelated to Swagger.
+6. **Every wire shape is a named zod schema.** Request bodies and
+   responses — generated CRUD, `operationResource`, `/me`, hand-written
+   controllers, `rockets-server-auth` — are zod schemas wrapped **last**
+   with `withOpenApi(schema, 'ComponentName')` (re-exported from
+   `@concepta/rockets-core`): the id is the OpenAPI component name, the
+   bridge is what documents it. There are no DTO classes, no
+   `@ApiProperty()`, no class-validator / class-transformer. A call
+   chained after the wrap (`.extend()`, `.strict()`, `.optional()`,
+   `.pick()`, `.array()`) returns a clone without the id —
+   `assertNamedSchema` rejects it at boot. Never `withNamedComponent`
+   (module-global registry; throws on the second registration).
+   Hand-written routes: class-level
+   `@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))`,
+   `@Body({ schema })` typed `z.output<typeof schema>` (never a class),
+   `@ApiResponse({ standardSchema })`; a response serialized by schema
+   adds `@SerializeOptions({ schema })` + `StandardSchemaSerializerInterceptor`.
+   Never register a **global** `StandardSchemaValidationPipe` — every
+   Rockets route carries its own, and core rejects a global one at boot.
+   The reverse is checked too: a `{ schema }` parameter that no
+   `StandardSchemaValidationPipe` reaches (Nest installs none for
+   `schema`) fails the boot as `requireSchemaPipe`.
 
 7. **Verify compilation after edits.** Do not declare done based on IDE
    green state alone. Run `yarn build` and the relevant type/test command;
@@ -91,9 +109,10 @@ the user has already had to fix more than once.
    and wrong-package auto-imports are caught by the real toolchain, not by
    editor confidence.
 
-8. **Do not trust IDE auto-imports.** `@Expose` from `class-transformer`
-   is NOT `@ApiProperty` from `@nestjs/swagger`. Verify the imported symbol
-   actually does what you intend.
+8. **Do not trust IDE auto-imports.** `withNamedComponent` from
+   `@concepta/nestjs-core` is NOT `withOpenApi` (it registers the id in a
+   module-global map and throws the second time). Verify the imported
+   symbol actually does what you intend.
 
 9. **No undocumented workarounds.** Bridge modules, lazy placeholders,
    fake providers, and unchecked assertions must not conceal a design or
@@ -156,8 +175,19 @@ the user has already had to fix more than once.
       necessary.
     - Relations: `f.fk()` / `f.hasMany(childSchema)` — reject
       `z.array(z.unknown())`.
-    - Types: `WireRow<S>` for API; `SchemaPersistenceRow<S>` for hooks/repos —
-      not the entity class.
+    - Types: `WireRow<S>` for API (JSON-encoded: `Date` → ISO string);
+      `SchemaPersistenceRow<S>` (`z.output<S>`, `Date` columns) for
+      hooks/repos — not the entity class.
+    - Dates: `f.createdAt()` / `f.updatedAt()` / `f.deletedAt()` are
+      `z.date()`; a writable datetime is `f.date()` (`z.coerce.date()`).
+      A response-exposed `z.iso.datetime()` fails at definition time —
+      rows carry `Date` objects and the response schema validates them.
+    - Response schemas fail closed: `.passthrough()` / `.catchall()`
+      anywhere in a response is rejected; `f.compute()` returns
+      `z.output<schema>` and is validated at serialization.
+    - Component ids are the old DTO names (`${Name}ResponseDto`,
+      `${Name}CreateDto`, `${Name}ResponseDtoPaginatedDto`, …); the
+      Swagger document `$ref`s them through `SwaggerUiService.createDocument`.
     - Compile entity in `*.schema.ts` only to break import cycles; default is
       `zodResource({ schema })`.
     - Persistence hints belong in `rocketsFieldMeta` / `rocketsEntityMeta`;
@@ -181,17 +211,17 @@ the user has already had to fix more than once.
     the scope you opened with `TransactionScope.run` — which **starts no
     transaction by itself**. The outermost `run()` installs a
     `TransactionManager` on `txCtx` and owns commit/rollback; a *nested*
-    `run()` joins the outer manager and returns straight through,
-    committing nothing and ignoring its own `readOnly`/`timeout`. The
-    adapter starts the real transaction lazily, on the first repository
-    call that forwards `txCtx`. `propagation` is
-    `'SUPPORTS' | 'MANDATORY'`; there is no `'REQUIRED'`. It only checks
-    `registry.count > 0` — "some transaction factory exists", not one for
-    the store you are writing — so `SUPPORTS` runs unprotected and
-    `MANDATORY` throws `TransactionRequiredException` only when *nothing*
-    is registered. `transactional: true` exists only
-    on CRUD and operation-resource operations; anything else opens its
-    own scope. One exception: an `op.sse()` operation REJECTS
+    `run()` joins the outer manager, committing nothing and ignoring its
+    own `timeout` — but a nested `readOnly` that CONTRADICTS the scope it
+    joined throws `TransactionReadOnlyConflictException` and aborts the
+    outer scope. The adapter starts the real transaction lazily, on the
+    first repository call that forwards `txCtx`. There is **no
+    `propagation` option** (upstream `8.0.0-alpha.10` removed it, and
+    `TransactionRequiredException` with it): `run()` always fails OPEN, so
+    a scope with no transaction factory registered for the store you are
+    writing runs unprotected and nothing warns. `transactional: true`
+    exists only on CRUD and operation-resource operations; anything else
+    opens its own scope. One exception: an `op.sse()` operation REJECTS
     `Transactional()` at definition time (on the operation or on the
     resource) — the handler returns its Observable immediately, so the
     transaction would commit before any event is emitted. Open one
@@ -242,14 +272,14 @@ of it.
   **zod-first resource layer** at the `@concepta/rockets-core/zod` subpath
   (`zodResource`/`zodSubResource`/`operationResource`/`bindZodResources`,
   `f.*` field helpers, `rocketsFieldMeta`/`rocketsEntityMeta` registries,
-  `defineZodUserMetadata`). Zod is the first-class schema layer of Rockets;
-  `zod` + `nestjs-zod` are **optional peers** and the main entry stays
-  zod-free, so non-zod consumers pay nothing. The zod layer is still ORM-free:
-  entity generation is delegated to a `SchemaEntityCompiler` adapter.
-  Hand-written controllers can use the vendor-neutral, opt-in
-  `@concepta/rockets-core/standard-schema` and `/standard-schema/swagger`
-  subpaths; generated CRUD resources keep their dedicated validation and
-  class-transformer serialization path.
+  `defineZodUserMetadata`). Zod is THE schema layer of Rockets: `zod` is a
+  dependency of the main entry, every resource's request/response contract
+  is a named zod schema, and one engine — Nest 12's native Standard Schema
+  pipe per route, upstream's schema serializer for CRUD responses, the
+  schema's own JSON Schema bridge for OpenAPI — serves generated CRUD,
+  `operationResource`, `/me` and hand-written controllers alike. The zod
+  layer is still ORM-free: entity generation is delegated to a
+  `SchemaEntityCompiler` adapter.
   Imported by both server and auth.
 - `packages/rockets-repository-typeorm`
   (`@concepta/rockets-repository-typeorm`): TypeORM implementation of the

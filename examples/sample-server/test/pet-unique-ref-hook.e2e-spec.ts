@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ExceptionsFilter } from '@concepta/rockets';
@@ -16,9 +16,6 @@ describe('Pet uniqueRef beforeCreate hook (e2e)', () => {
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: ['error'] });
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     await app.init();

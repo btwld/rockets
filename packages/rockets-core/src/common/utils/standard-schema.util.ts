@@ -1,9 +1,41 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  type StandardSchemaValidationPipeOptions,
+} from '@nestjs/common';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import { attachErrorDetails } from './validation-error-details.util';
 
-export { getCarriedStandardSchema } from '../../standard-schema/schema';
+/**
+ * Pipe options every Rockets route validates with: the 400 carries
+ * structured `details` (issue #55) instead of Nest's bare message list.
+ * Generated CRUD passes it as `request.validation`; hand-written routes
+ * use `@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))`.
+ */
+export const rocketsSchemaValidation: StandardSchemaValidationPipeOptions = {
+  exceptionFactory: standardSchemaBadRequest,
+};
+
+/** Returns whether a value implements Standard Schema V1. */
+export function isStandardSchema(value: unknown): value is StandardSchemaV1 {
+  if (!isObjectLike(value)) {
+    return false;
+  }
+
+  const standard = value['~standard'];
+
+  return (
+    isObjectLike(standard) &&
+    standard.version === 1 &&
+    typeof standard.validate === 'function'
+  );
+}
+
+function isObjectLike(value: unknown): value is Record<PropertyKey, unknown> {
+  return (
+    (typeof value === 'object' && value !== null) || typeof value === 'function'
+  );
+}
 
 export function standardSchemaIssuesToMessages(
   issues: ReadonlyArray<StandardSchemaV1.Issue>,

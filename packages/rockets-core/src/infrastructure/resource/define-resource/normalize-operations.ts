@@ -1,6 +1,12 @@
+import { assertNoHiddenFields } from '../../../zod/zod-projections';
 import type { Type } from '@nestjs/common';
 import { Operation } from '@concepta/nestjs-core';
-import { createPaginatedDto } from '../paginated-dto.factory';
+import type { z } from 'zod';
+import {
+  assertFailClosedResponse,
+  assertNamedSchema,
+  buildPaginatedSchema,
+} from '../../../common/utils/open-api-schema.util';
 import type {
   ResourceDtoConfig,
   ResourceHandlerOverrides,
@@ -67,13 +73,13 @@ export function normalizeOperationsInput(
     Record<ResourceOperationName, InternalOperationOverride>
   > = {};
 
-  const dto: { -readonly [K in keyof ResourceDtoConfig]: Type } = {
+  const dto: { -readonly [K in keyof ResourceDtoConfig]: z.ZodType } = {
     ...ctx.dto,
   };
 
   if (!dto.response) {
     // Resource-level default for operations that declare no `output` of
-    // their own (and the base the auto-paginated DTO is built from).
+    // their own (and the base the auto-paginated schema is built from).
     // `read` is the canonical single-item shape, so it wins over `list`.
     // Operations that DO declare an `output` are unaffected — the route
     // carries its own response metadata (see `buildOperationDecorators`).
@@ -121,14 +127,54 @@ export function normalizeOperationsInput(
     if (cfg.transactional !== undefined) next.transactional = cfg.transactional;
     if (cfg.hooks !== undefined) next.hooks = cfg.hooks as readonly Type[];
     if (cfg.decorators !== undefined) next.extraDecorators = cfg.decorators;
-    if (cfg.requestOverride !== undefined) next.request = cfg.requestOverride;
-    if (cfg.responseOverride !== undefined)
+    if (cfg.requestOverride !== undefined) {
+      // `input` is checked below; the escape hatch reaches the same
+      // request body and must clear the same bar (rule 6 — every wire
+      // shape is a named component). Without this an unnamed schema
+      // here documents inline while every sibling body is a `$ref`.
+      if (cfg.requestOverride.body !== undefined) {
+        assertNamedSchema(
+          cfg.requestOverride.body,
+          `defineResource(${resourceKey}): operations.${label}.requestOverride.body`,
+        );
+      }
+      if (cfg.requestOverride.bodyBatch !== undefined) {
+        assertNamedSchema(
+          cfg.requestOverride.bodyBatch,
+          `defineResource(${resourceKey}): operations.${label}.requestOverride.bodyBatch`,
+        );
+      }
+      next.request = cfg.requestOverride;
+    }
+    if (cfg.responseOverride !== undefined) {
+      // Same bar as `output` / `paginated`: the escape hatch is handed to
+      // `buildOperationDecorators` as the serializer, so a schema that
+      // reaches the wire through here must be a named component, must
+      // strip undeclared keys, and must not carry a column the resource
+      // declared hidden. Without this, the one config path that skips
+      // every response check was the one meant for the hardest cases.
+      // `collection` is declared by the upstream config type but read
+      // nowhere in `@concepta/nestjs-crud`, so it reaches no response and
+      // is not checked here — add it the moment upstream consumes it.
+      for (const slot of ['resource', 'paginated'] as const) {
+        const schema = cfg.responseOverride[slot];
+        if (schema === undefined) continue;
+        const context = `defineResource(${resourceKey}): operations.${label}.responseOverride.${slot}`;
+        assertNamedSchema(schema, context);
+        assertFailClosedResponse(schema, context);
+        assertNoHiddenFields(schema, context);
+      }
       next.response = cfg.responseOverride;
+    }
     if (cfg.input !== undefined) {
+      assertNamedSchema(
+        cfg.input,
+        `defineResource(${resourceKey}): operations.${label}.input`,
+      );
       next.request = { ...(next.request ?? {}), body: cfg.input };
     }
-    // A list route serializes through the PAGINATED type, not the
-    // resource type. `paginated` is therefore meaningful on its own, and
+    // A list route serializes through the PAGINATED schema, not the
+    // resource schema. `paginated` is therefore meaningful on its own, and
     // was previously read only alongside `output` — so declaring it by
     // itself was accepted and dropped.
     if (cfg.paginated !== undefined) {
@@ -138,17 +184,25 @@ export function normalizeOperationsInput(
             `meaningful on \`list\` — no other operation serializes a collection.`,
         );
       }
+      const paginatedContext = `defineResource(${resourceKey}): operations.${label}.paginated`;
+      assertNamedSchema(cfg.paginated, paginatedContext);
+      assertFailClosedResponse(cfg.paginated, paginatedContext);
+      assertNoHiddenFields(cfg.paginated, paginatedContext);
       next.response = { ...(next.response ?? {}), paginated: cfg.paginated };
     }
     if (cfg.output !== undefined) {
+      const context = `defineResource(${resourceKey}): operations.${label}.output`;
+      assertNamedSchema(cfg.output, context);
+      assertFailClosedResponse(cfg.output, context);
+      assertNoHiddenFields(cfg.output, context);
       next.response = {
         ...(next.response ?? {}),
         resource: cfg.output,
-        // Derive the wrapper from the override unless the caller supplied
+        // Derive the envelope from the override unless the caller supplied
         // their own, otherwise a `list` override would be ignored on the
         // wire and in the OpenAPI document.
         ...(cfg.paginated === undefined && op === Operation.List
-          ? { paginated: createPaginatedDto(cfg.output) }
+          ? { paginated: buildPaginatedSchema(cfg.output, context) }
           : {}),
       };
     }

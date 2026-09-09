@@ -232,10 +232,17 @@ describe('InvitationUserAcceptanceListener', () => {
       );
     });
 
-    it('should create user metadata when provided', async () => {
+    // The module is registered WITHOUT `userCrud.userMetadataConfig`
+    // (see `forRoot({})` above): the acceptance path must then fall back to
+    // the base update schema, which strips every key — the same deny-by-
+    // default signup and admin apply. Before the fallback existed the raw
+    // record went straight to `SaveUserMetadataCommand`, and on the update
+    // branch a smuggled `userId` rewrote the row's owner.
+    it('strips every key of userMetadata when no update schema is configured', async () => {
       const event = createInvitationAcceptedEvent(mockInvitation, {
         password: 'Test123!',
         userMetadata: {
+          userId: 'someone-else',
           bio: 'Test bio',
           phoneNumber: '+1234567890',
         },
@@ -256,13 +263,7 @@ describe('InvitationUserAcceptanceListener', () => {
       );
       expect(metadataCall).toBeDefined();
       expect(metadataCall![0]).toEqual(
-        expect.objectContaining({
-          userId: 'user-123',
-          data: {
-            bio: 'Test bio',
-            phoneNumber: '+1234567890',
-          },
-        }),
+        expect.objectContaining({ userId: 'user-123', data: {} }),
       );
     });
 

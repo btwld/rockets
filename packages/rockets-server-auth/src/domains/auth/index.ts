@@ -17,8 +17,8 @@ export {
 } from './application/commands/handlers/abstract-change-my-password.handler';
 export { ChangeMyPasswordHandler } from './application/commands/handlers/change-my-password.handler';
 
-// Infrastructure — DTOs
-export { RocketsAuthChangePasswordDto } from './infrastructure/dto/rockets-auth-change-password.dto';
+// Schemas
+export { rocketsAuthChangePasswordSchema } from './infrastructure/schemas/rockets-auth-change-password.schema';
 
 // Public interfaces (controller extras)
 export type {

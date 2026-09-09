@@ -1,52 +1,29 @@
-import { z } from 'zod';
+import type { z } from 'zod';
 
 /**
- * API / OpenAPI wire shape inferred from a zod object schema. Prefer this
- * over `z.infer` in resource code — the name signals "document contract".
+ * Row shape as loaded from persistence and seen by hooks, handlers and
+ * `@InjectDynamicRepository` call sites: exactly the schema's output —
+ * `Date` for `f.date()` / `f.createdAt()` columns, nested objects for
+ * eager relations.
  */
-export type WireRow<S extends z.ZodObject> = z.output<S>;
+export type SchemaPersistenceRow<S extends z.ZodType> = z.output<S>;
 
-/** ISO datetime wire values become `Date` in loaded persistence rows. */
-type CoerceIsoDateTime<V> = V extends string
-  ? Date
-  : V extends string | null
-  ? Date | null
-  : V extends string | undefined
-  ? Date | undefined
-  : V extends string | null | undefined
-  ? Date | null | undefined
-  : V;
-
-/** Field names that the TypeORM compiler maps to datetime columns. */
-type PersistenceDateTimeKey =
-  | 'dateCreated'
-  | 'dateUpdated'
-  | 'dateDeleted'
-  | 'sendAt';
-
-type TransformPersistenceValue<T> = T extends readonly (infer U)[]
-  ? PersistenceRow<U>[]
-  : T extends Record<string, unknown>
-  ? PersistenceRow<T>
+/**
+ * JSON encoding of a value: `Date` becomes its ISO string, recursively
+ * through arrays and objects. Nothing else changes shape.
+ */
+export type JsonEncoded<T> = T extends Date
+  ? string
+  : T extends ReadonlyArray<infer U>
+  ? JsonEncoded<U>[]
+  : T extends object
+  ? { [K in keyof T]: JsonEncoded<T[K]> }
   : T;
 
 /**
- * In-memory row shape after loading from persistence (TypeORM entity
- * instances / plain rows). ISO datetime strings from {@link WireRow}
- * become `Date`; nested objects and relation arrays recurse.
- *
- * Use in hooks, handlers and `@InjectDynamicRepository` call sites.
- * Controllers and OpenAPI stay on {@link WireRow}.
+ * API / OpenAPI wire shape of a schema: its output after JSON encoding.
+ * Prefer this over `z.infer` in controller and client code — the name
+ * signals "document contract", and it is what a client actually receives
+ * (`dateCreated` is a string on the wire, a `Date` in the row).
  */
-export type PersistenceRow<T> = T extends Record<string, unknown>
-  ? {
-      [K in keyof T]: K extends PersistenceDateTimeKey
-        ? CoerceIsoDateTime<T[K]>
-        : TransformPersistenceValue<T[K]>;
-    }
-  : T;
-
-/** {@link PersistenceRow} for a zod object schema's wire output. */
-export type SchemaPersistenceRow<S extends z.ZodObject> = PersistenceRow<
-  WireRow<S>
->;
+export type WireRow<S extends z.ZodType> = JsonEncoded<z.output<S>>;

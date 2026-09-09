@@ -9,7 +9,6 @@ import {
   PetStatus,
 } from './pet.interface';
 import { PetEntity } from './pet.entity';
-import { PetCreateDto, PetUpdateDto } from './pet.dto';
 import { PetNotFoundException } from './pet.exception';
 import { InjectDynamicRepository } from '@concepta/rockets-core';
 
@@ -20,9 +19,6 @@ import { InjectDynamicRepository } from '@concepta/rockets-core';
  */
 @Injectable()
 export class PetModelService implements PetModelServiceInterface {
-  public readonly createDto = PetCreateDto;
-  public readonly updateDto = PetUpdateDto;
-
   constructor(
     @InjectDynamicRepository(PetEntity)
     private readonly repo: RepositoryInterface<PetEntity>,

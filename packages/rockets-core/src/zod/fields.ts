@@ -85,21 +85,57 @@ function decorate<T extends z.ZodType>(schema: T, o: FieldOpts): T {
 const pk = () =>
   z.uuid().register(rocketsFieldMeta, { db: { pk: true, generated: true } });
 
-/** `@CreateDateColumn` — ISO datetime on the wire. */
+/**
+ * `@CreateDateColumn` — a `Date` in rows (what every adapter returns),
+ * an ISO string on the wire (JSON encoding), `string/date-time` in
+ * OpenAPI.
+ */
 const createdAt = () =>
-  z.iso.datetime().register(rocketsFieldMeta, { db: { createdAt: true } });
+  z.date().register(rocketsFieldMeta, { db: { createdAt: true } });
 
 /** `@UpdateDateColumn`. */
 const updatedAt = () =>
-  z.iso.datetime().register(rocketsFieldMeta, { db: { updatedAt: true } });
+  z.date().register(rocketsFieldMeta, { db: { updatedAt: true } });
 
 /** `@DeleteDateColumn` — nullable + optional so soft-deleted rows validate. */
 const deletedAt = () =>
-  z.iso
-    .datetime()
+  z
+    .date()
     .register(rocketsFieldMeta, { db: { deletedAt: true } })
     .nullable()
     .optional();
+
+const isDateInput = (value: unknown): value is string | number | Date =>
+  typeof value === 'string' ||
+  typeof value === 'number' ||
+  value instanceof Date;
+
+/**
+ * Writable datetime column. Accepts an ISO string (or a `Date`) on the
+ * way in and yields a `Date` — the row shape — so a request body, a hook
+ * and a loaded row all agree. Documented as `string/date-time`; the
+ * response emits the ISO string. Accepts numeric timestamps too
+ * (`z.coerce.date()` semantics) — a documented trade-off, not a feature.
+ *
+ * Bare `z.coerce.date()` would also coerce `null` and booleans to the
+ * epoch (`new Date(null)` is 1970) and persist them. The input guard in
+ * front of the coercion rejects anything that is not a string, number or
+ * `Date`. It is a `z.custom` (not `z.preprocess`) on purpose: a
+ * transform is optional-in for zod, which would drop the field from the
+ * documented `required` list. The guard's `.meta()` keeps the input side
+ * documented as `string/date-time`; `unwrapField` sees through the pipe
+ * to the `ZodDate`, so column mapping and projections are unchanged.
+ */
+const date = (o: FieldOpts = {}) =>
+  decorate(
+    z
+      .custom<string | number | Date>(isDateInput, {
+        message: 'Expected an ISO 8601 datetime string',
+      })
+      .meta({ type: 'string', format: 'date-time' })
+      .pipe(z.coerce.date()),
+    o,
+  );
 
 /** Optimistic-lock counter — excluded from create/update DTOs. */
 const version = () =>
@@ -237,44 +273,23 @@ const enumField = <const T extends Record<string, string>>(
 };
 
 /**
- * The declared wire shape, relaxed where persistence legitimately
- * differs from it: any key documented as a `string` may also arrive as a
- * `Date`, because computed fields routinely re-emit rows loaded by the
- * ORM (`f.createdAt()` documents an ISO string; TypeORM hands back a
- * `Date`, and the serializer converts it downstream).
- *
- * Everything else stays strict, which is the point: a hand-built object
- * with the wrong type on a key, or a key read from a property that does
- * not exist on the source row, fails to COMPILE instead of silently
- * shipping `42` where the schema promised a string, or `undefined` where
- * it promised a value.
- */
-type ComputeResult<T> = T extends string
-  ? string | Date
-  : T extends ReadonlyArray<infer E>
-  ? ReadonlyArray<ComputeResult<E>>
-  : T extends object
-  ? { readonly [K in keyof T]: ComputeResult<T[K]> }
-  : T;
-
-/**
  * Response-only COMPUTED field. `fn` receives the raw row (after eager
  * relations load) and returns the projected value; the passed `schema`
- * documents its shape in OpenAPI. The `row` parameter is typed here, so
- * the callback needs no annotation — unlike a raw
- * `.register(rocketsFieldMeta, { compute })` inside a generic composer,
- * where contextual typing breaks and forces a manual `row` type.
+ * documents its shape in OpenAPI AND validates the value at
+ * serialization time. The `row` parameter is typed here, so the callback
+ * needs no annotation — unlike a raw `rocketsFieldMeta` registration with
+ * a `compute` callback inside a generic composer, where contextual typing
+ * breaks and forces a manual `row` type.
  *
- * The RETURN is checked against {@link ComputeResult} of the schema:
- * TypeScript is the contract for value types, and the runtime strip in
- * `compileDtoClass` is the contract for which KEYS may ship. Undeclared
- * keys are removed at serialization time (they cannot leak); wrong value
- * types are caught in the editor (runtime `parse` would reject the
- * legitimate `Date` case above).
+ * The RETURN must be the schema's output: date columns are `Date`
+ * (`f.date()`, `f.createdAt()`), so a computed value built from loaded
+ * rows matches without conversion. Undeclared keys are stripped by the
+ * response schema; a wrong value type is a loud 500, never a silently
+ * coerced payload.
  */
 const compute = <T extends z.ZodType>(
   schema: T,
-  fn: (row: Readonly<Record<string, unknown>>) => ComputeResult<z.output<T>>,
+  fn: (row: Readonly<Record<string, unknown>>) => z.output<T>,
 ): T => {
   registerFieldMeta(schema, { compute: fn });
   return schema;
@@ -331,6 +346,7 @@ export const f = {
   string,
   int,
   bool,
+  date,
   enum: enumField,
   compute,
 } as const;

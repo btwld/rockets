@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import swc from 'unplugin-swc';
 import { defineProject } from 'vitest/config';
 
@@ -29,6 +30,14 @@ export default defineProject({
     // present. Stricter than the NestJS recipe on purpose.
     globals: false,
     environment: 'node',
+    // Preloads the ESM `@nestjs/core` graph so a CommonJS `require()` of it
+    // (from `@nestjs/cqrs`) never lands mid-evaluation — Node 20.19 throws
+    // ERR_REQUIRE_CYCLE_MODULE there. See the file for the full note.
+    // Absolute: `setupFiles` resolves against each PROJECT's root (the
+    // example workspaces included), not this file's directory.
+    setupFiles: [
+      fileURLToPath(new URL('./vitest.setup.preload-nest-core.mts', import.meta.url)),
+    ],
     // Fresh process per spec file. These suites boot full Nest + TypeORM
     // apps; sharing a process flaked ~25% of full runs under Jest.
     pool: 'forks',

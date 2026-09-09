@@ -7,7 +7,10 @@ import { RocketsAuthUserMetadataEntityInterface } from '../../interfaces/rockets
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../interfaces/rockets-auth-user-metadata-updatable.interface';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../../../../shared/constants/repository-entity-keys.constants';
 import type { PlainLiteralObject } from '@nestjs/common';
-import { InjectDynamicRepository } from '@concepta/rockets-core';
+import {
+  InjectDynamicRepository,
+  USER_METADATA_MANAGED_FIELDS,
+} from '@concepta/rockets-core';
 
 @Injectable()
 export class UserMetadataRepository implements UserMetadataRepositoryInterface {
@@ -40,11 +43,30 @@ export class UserMetadataRepository implements UserMetadataRepositoryInterface {
     data: RocketsAuthUserMetadataUpdatableInterface,
   ): Promise<RocketsAuthUserMetadataEntityInterface> {
     const existing = await this.findByUserId(ctx, userId);
+    // `userId` is pinned on BOTH branches: ownership comes from the caller,
+    // never from the payload, whatever an app-supplied update schema admits.
+    // The rest of the server-owned columns are dropped for the same reason
+    // — an `id` in the payload would send `repo.update` at another row.
+    const owned = dropManagedFields(data);
     if (existing) {
-      return this.repo.update(existing, dropUndefined(data), { ctx });
+      return this.repo.update(
+        existing,
+        { ...dropUndefined(owned), userId },
+        { ctx },
+      );
     }
-    return this.repo.create({ ...data, userId }, { ctx });
+    return this.repo.create({ ...owned, userId }, { ctx });
   }
+}
+
+function dropManagedFields(
+  data: RocketsAuthUserMetadataUpdatableInterface,
+): RocketsAuthUserMetadataUpdatableInterface {
+  const out: Record<string, unknown> = { ...data };
+  for (const field of USER_METADATA_MANAGED_FIELDS) {
+    delete out[field];
+  }
+  return out as RocketsAuthUserMetadataUpdatableInterface;
 }
 
 /**

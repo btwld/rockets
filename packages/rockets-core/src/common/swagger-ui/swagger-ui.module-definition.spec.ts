@@ -1,4 +1,4 @@
-import { ConfigModule } from '@nestjs/config';
+import { SWAGGER_UI_DEFAULT_SETTINGS_TOKEN } from './swagger-ui.constants';
 import { describe, expect, it } from 'vitest';
 
 import { SwaggerUiModule } from './swagger-ui.module';
@@ -15,14 +15,14 @@ describe('SwaggerUiModule definition', () => {
     expect(definition.imports).toContain(SecretsModule);
   });
 
-  it('appends the package-owned Swagger configuration import', () => {
+  it('registers the package-owned default settings provider', () => {
     const definition = SwaggerUiModule.registerAsync({
       imports: [SecretsModule],
       useFactory: () => ({}),
     });
 
-    expect(definition.imports).toContainEqual(
-      expect.objectContaining({ module: ConfigModule }),
+    expect(definition.providers).toContainEqual(
+      expect.objectContaining({ provide: SWAGGER_UI_DEFAULT_SETTINGS_TOKEN }),
     );
   });
 

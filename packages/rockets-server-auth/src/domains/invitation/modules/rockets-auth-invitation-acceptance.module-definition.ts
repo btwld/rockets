@@ -11,6 +11,7 @@ import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rocke
 import { buildInvitationAcceptanceController } from '../gateways/http/factories/build-invitation-controllers';
 import { InvitationAcceptanceControllerExtras } from '../interfaces/invitation-controller-extras.interface';
 import { InvitationUserAcceptanceListener } from '../application/listeners/invitation-user-acceptance.listener';
+import { resolveUserMetadataSchemas } from '../../user/infrastructure/schemas/rockets-auth-user-metadata.schema';
 import {
   INVITATION_ACCEPTANCE_CONFIG_TOKEN,
   InvitationAcceptanceConfig,
@@ -38,6 +39,14 @@ export interface InvitationAcceptanceOptionsInterface {
 type InvitationAcceptanceExtrasInterface =
   InvitationAcceptanceOptionsInterface & {
     global?: boolean;
+    /**
+     * Extra modules this one imports. Rockets Auth passes its single
+     * `RocketsAuthRateLimitModule` registration here: the acceptance
+     * controller is declared by THIS module, so its `RateLimitGuard`
+     * resolves the store from this injector, and without the import it
+     * would read whichever global registration won.
+     */
+    imports?: DynamicModule['imports'];
   };
 
 export const {
@@ -72,6 +81,9 @@ function definitionTransform(
   return {
     ...definition,
     global: extras.global,
+    // The definition's own imports come FIRST and are never dropped —
+    // async factory dependencies live there (AGENTS.md rule 5).
+    imports: [...(definition.imports ?? []), ...(extras.imports ?? [])],
     controllers: [buildInvitationAcceptanceController(extras.controller)],
     providers: createInvitationAcceptanceProviders({ providers, extras }),
     exports: [
@@ -98,7 +110,11 @@ function createInvitationAcceptanceProviders(options: {
       useFactory: (
         opts: InvitationAcceptanceOptionsInterface,
       ): InvitationAcceptanceConfig => ({
-        userMetadataUpdateDto: opts.userCrud?.userMetadataConfig?.updateDto,
+        // Same default as signup and admin: with no app schema the base
+        // update schema (`{}`) strips every client-supplied key.
+        userMetadataUpdateSchema: resolveUserMetadataSchemas(
+          opts.userCrud?.userMetadataConfig,
+        ).updateSchema,
       }),
     },
     ListenerClass,

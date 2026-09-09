@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
 import { RoleEntity } from '../src/modules/role/role.entity';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CommandBus } from '@nestjs/cqrs';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
@@ -27,10 +27,8 @@ describe('Auth & Me Endpoints (e2e)', () => {
       logger: ['error', 'warn'],
     });
 
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
-
+    // Same filter `main.ts` installs; no global pipe there either — every
+    // route validates against its own zod schema.
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
 

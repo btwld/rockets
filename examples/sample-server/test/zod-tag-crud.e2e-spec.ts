@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ExceptionsFilter } from '@concepta/rockets';
 import request from 'supertest';
@@ -7,11 +7,10 @@ import { AppModule } from '../src/app.module';
 
 /**
  * Runtime contract of the zod-driven tag resource (`tagZodResource`,
- * registered in AppModule): the nestjs-zod DTOs carry the source zod
- * schema as a Standard Schema, so the rockets-crud pipe must enforce
- * every constraint (including `.refine()`) and strip unknown keys —
- * with the same bootstrap as main.ts (global ValidationPipe included,
- * which must NOT interfere with schema-validated bodies).
+ * registered in AppModule): the source zod schema is the Standard Schema
+ * the per-route pipe validates with, so it must enforce every constraint
+ * (including `.refine()`) and strip unknown keys — with the same
+ * bootstrap as main.ts (no global pipe).
  */
 describe('zod-compiled tag resource CRUD (e2e)', () => {
   let app: INestApplication;
@@ -20,7 +19,6 @@ describe('zod-compiled tag resource CRUD (e2e)', () => {
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: ['error'] });
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     await app.init();
@@ -96,9 +94,8 @@ describe('zod-compiled tag resource CRUD (e2e)', () => {
   });
 
   it('POST /tags — 400 on zod-only .refine() rule (Standard Schema pipe)', async () => {
-    // No class-validator decorator can express this rule — only the
-    // CrudStandardSchemaValidationPipe (validating with the source zod
-    // schema) can reject it.
+    // Only the Standard Schema pipe (validating with the source zod
+    // schema) can express and reject this rule.
     const res = await request(app.getHttpServer())
       .post('/tags')
       .set('Authorization', `Bearer ${accessToken}`)

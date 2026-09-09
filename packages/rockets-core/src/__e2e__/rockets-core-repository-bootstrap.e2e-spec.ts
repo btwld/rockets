@@ -14,8 +14,8 @@ import type {
   RepositoryProviderOptions,
 } from '@concepta/nestjs-repository';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { Expose } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { withOpenApi } from '@concepta/nestjs-core';
+import { z } from 'zod';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
@@ -56,13 +56,15 @@ class StubMetadataEntity {
   id!: string;
 }
 
-class StubMetadataCreateDto {
-  @Expose() @ApiProperty() userId!: string;
-}
+const stubMetadataUpdateSchema = withOpenApi(
+  z.object({}),
+  'StubMetadataUpdateDto',
+);
 
-class StubMetadataUpdateDto {
-  @Expose() @ApiProperty() id!: string;
-}
+const stubMetadataResponseSchema = withOpenApi(
+  z.object({ id: z.string(), userId: z.string() }),
+  'StubMetadataResponseDto',
+);
 
 class InMemoryRepoStub {
   async findOne() {
@@ -144,8 +146,8 @@ function createFixture() {
 
   const metadataConfig = {
     entity: StubMetadataEntity,
-    createDto: StubMetadataCreateDto,
-    updateDto: StubMetadataUpdateDto,
+    updateSchema: stubMetadataUpdateSchema,
+    responseSchema: stubMetadataResponseSchema,
   };
 
   return {

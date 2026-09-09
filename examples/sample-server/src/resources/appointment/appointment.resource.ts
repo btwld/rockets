@@ -5,9 +5,9 @@ import { AppointmentEntity } from './appointment.entity';
 const AppointmentOwnerScope = OwnerScopeHook.for(AppointmentEntity);
 import { ReminderEntity } from './reminder.schema';
 import {
-  AppointmentCreateDto,
-  AppointmentResponseDto,
-} from './appointment.dto';
+  appointmentCreateSchema,
+  appointmentResponseSchema,
+} from './appointment.schemas';
 import { AppointmentCreateHandler } from './appointment-create.handler';
 
 /**
@@ -27,11 +27,11 @@ export const appointmentResource = defineResource({
   relations: (relation) => [relation(() => ReminderEntity, 'reminders')],
   hooks: [AppointmentOwnerScope],
   operations: {
-    list: { output: AppointmentResponseDto },
-    read: { output: AppointmentResponseDto },
+    list: { output: appointmentResponseSchema },
+    read: { output: appointmentResponseSchema },
     create: {
-      input: AppointmentCreateDto,
-      output: AppointmentResponseDto,
+      input: appointmentCreateSchema,
+      output: appointmentResponseSchema,
       handler: AppointmentCreateHandler,
     },
     delete: {},

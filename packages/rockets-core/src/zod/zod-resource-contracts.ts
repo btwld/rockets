@@ -10,14 +10,15 @@ import type { ZodCrudOperation, ZodResourceOperations } from './zod-operations';
 
 /**
  * Declarative resource definition with a zod schema as the single
- * source of truth: DTOs AND the entity class are compiled from it.
+ * source of truth: request/response schemas AND the entity class are
+ * compiled from it.
  */
 export interface ZodResourceDefinition
   extends Omit<
     RocketsResourceDefinition<PlainLiteralObject>,
     'entity' | 'dto' | 'operations'
   > {
-  /** PascalCase base for generated class names (`Tag` → `TagCreateDto`, `TagEntity`). */
+  /** PascalCase base for generated names (`Tag` → `TagCreateDto`, `TagEntity`). */
   readonly name: string;
   readonly schema: z.ZodObject;
   readonly entity?: Type<PlainLiteralObject>;
@@ -40,16 +41,28 @@ export interface ZodOwnerConfig extends OwnerStampHookOptions {
   readonly column: string;
 }
 
-export interface ZodResourceDtos {
-  readonly response: Type<object>;
-  readonly create?: Type<object>;
-  readonly update?: Type<object>;
-  readonly replace?: Type<object>;
+/**
+ * The named OpenAPI schemas a zod resource compiles to. Every entry is
+ * wrapped with `withOpenApi(schema, id)` — the ids are the component
+ * names in the generated document (`TagResponseDto`, `TagCreateDto`, …).
+ */
+export interface ZodResourceSchemas {
+  readonly request: {
+    readonly create?: z.ZodType;
+    readonly update?: z.ZodType;
+    readonly replace?: z.ZodType;
+  };
+  readonly response: {
+    /** Single-item response (`${Name}ResponseDto`). */
+    readonly resource: z.ZodType;
+    /** List envelope (`${Name}ResponseDtoPaginatedDto`). */
+    readonly paginated: z.ZodType;
+  };
 }
 
 export interface ZodResourceManifest {
   readonly definition: ZodResourceDefinition | ZodSubResourceDefinition;
-  readonly dtos: ZodResourceDtos;
+  readonly schemas: ZodResourceSchemas;
   readonly entity: Type<PlainLiteralObject>;
 }
 

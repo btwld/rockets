@@ -9,7 +9,6 @@ import {
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { IsString } from 'class-validator';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import {
@@ -20,8 +19,6 @@ import {
   type AuthAttemptResult,
   type AuthBootstrap,
   type AuthRequest,
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
 } from '@concepta/rockets-core';
 import {
   InjectDynamicRepository,
@@ -29,7 +26,7 @@ import {
 } from '@concepta/rockets-core';
 import request from 'supertest';
 import { RocketsModule } from '../rockets.module';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 
 @Entity('bundle_users')
@@ -80,13 +77,6 @@ class BundleAuthController {
   }
 }
 
-class BundleMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsString() userId!: string;
-}
-class BundleMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsString() id!: string;
-}
-
 const bundleAuthResource = defineModuleResource({
   entities: [BundleUserEntity],
 });
@@ -119,9 +109,7 @@ describe('RocketsModule — auth: AuthBootstrap (e2e)', () => {
         RocketsModule.forRoot({
           auth: defineBundleAuth(),
           userMetadata: {
-            entity: StubUserMetadataEntity,
-            createDto: BundleMetadataCreateDto,
-            updateDto: BundleMetadataUpdateDto,
+            ...userMetadataConfigFixture,
             repository: E2eFakeRepositoryModule,
           },
           repository: TypeOrmRepositoryModule,

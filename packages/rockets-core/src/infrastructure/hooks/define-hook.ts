@@ -1,12 +1,6 @@
-import {
-  HttpException,
-  Injectable,
-  type PlainLiteralObject,
-  type Type,
-} from '@nestjs/common';
+import { Injectable, type PlainLiteralObject, type Type } from '@nestjs/common';
 import {
   InjectDynamicRepository,
-  RepositoryQueryException,
   type RepositoryInterface,
   type RepositoryFindOneOptions,
   type RepositoryFindOptions,
@@ -162,26 +156,12 @@ export function defineHook<E extends PlainLiteralObject>(
           repo: this.repo,
           actor: ctx === undefined ? undefined : getActor(ctx),
         };
-        let result: unknown;
-        try {
-          result = await fn(arg0, ctx, tools);
-        } catch (e) {
-          if (e instanceof HttpException) {
-            // The repository membrane's onError wraps every thrown error in
-            // RepositoryQueryException, losing the original HttpException in
-            // the process (upstream bug: the subclass constructor overwrites
-            // this.context with Object.assign({}, super.context, …) where
-            // super.context evaluates to undefined for instance properties).
-            // Pre-wrap here as RepositoryQueryException so the membrane
-            // passes it through unchanged, then manually graft the original
-            // HttpException onto context.originalError so the filter's
-            // unwrapToHttpException chain can surface the right status code.
-            const wrapped = new RepositoryQueryException(entity.name, {});
-            wrapped.context.originalError = e;
-            throw wrapped;
-          }
-          throw e;
-        }
+        // A hook throws its domain exception (`ConflictException`,
+        // `ForbiddenException`, …) and the repository membrane wraps it in
+        // `RepositoryQueryException` with the original on
+        // `context.originalError`, which the exceptions filter walks back
+        // to the right status. No pre-wrap needed since alpha.10.
+        const result: unknown = await fn(arg0, ctx, tools);
 
         if (MERGE_BACK_KEYS.has(key)) {
           if (

@@ -25,10 +25,9 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
-import { Expose } from 'class-transformer';
-import { IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { withOpenApi } from '@concepta/nestjs-core';
 import request from 'supertest';
+import { z } from 'zod';
 
 import type {
   AuthAdapterInterface,
@@ -59,19 +58,18 @@ class StrictEntity {
   @Column({ type: 'varchar' }) shelterId!: string;
 }
 
-class CreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose() @IsOptional() @IsString() @ApiPropertyOptional() shelterId?: string;
-}
-class UpdateDto {
-  @Expose() @IsOptional() @IsString() @ApiPropertyOptional() name?: string;
-  @Expose() @IsOptional() @IsString() @ApiPropertyOptional() shelterId?: string;
-}
-class ResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty() shelterId!: string;
-}
+const createSchema = withOpenApi(
+  z.object({ name: z.string(), shelterId: z.string().optional() }),
+  'TenantStampCreateDto',
+);
+const updateSchema = withOpenApi(
+  z.object({ name: z.string().optional(), shelterId: z.string().optional() }),
+  'TenantStampUpdateDto',
+);
+const responseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string(), shelterId: z.string() }),
+  'TenantStampResponseDto',
+);
 
 @Injectable()
 class MultiUserAuthAdapter implements AuthAdapterInterface {
@@ -106,9 +104,9 @@ const looseResource = defineResource<LooseEntity>({
   // Scope only — the state of the world before this fix.
   hooks: [TenantScopeHook.for<LooseEntity>(LooseEntity, shelterScope)],
   operations: {
-    read: { output: ResponseDto },
-    create: { input: CreateDto, output: ResponseDto },
-    update: { input: UpdateDto, output: ResponseDto },
+    read: { output: responseSchema },
+    create: { input: createSchema, output: responseSchema },
+    update: { input: updateSchema, output: responseSchema },
   },
 });
 
@@ -122,9 +120,9 @@ const strictResource = defineResource<StrictEntity>({
     TenantStampHook.for<StrictEntity>(StrictEntity, shelterScope),
   ],
   operations: {
-    read: { output: ResponseDto },
-    create: { input: CreateDto, output: ResponseDto },
-    update: { input: UpdateDto, output: ResponseDto },
+    read: { output: responseSchema },
+    create: { input: createSchema, output: responseSchema },
+    update: { input: updateSchema, output: responseSchema },
   },
 });
 

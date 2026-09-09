@@ -1,5 +1,4 @@
-import { Type } from '@nestjs/common';
-import { RocketsAuthUserMetadataModelUpdatableInterface } from '../../../user/interfaces/rockets-auth-user-metadata-updatable.interface';
+import type { z } from 'zod';
 
 export const INVITATION_ACCEPTANCE_CONFIG_TOKEN = Symbol(
   '__ROCKETS_INVITATION_ACCEPTANCE_CONFIG__',
@@ -12,9 +11,10 @@ export const INVITATION_ACCEPTANCE_CONFIG_TOKEN = Symbol(
  */
 export interface InvitationAcceptanceConfig {
   /**
-   * Optional update DTO class used to validate user-supplied
-   * `userMetadata` payloads on invitation acceptance. When undefined,
-   * the metadata is forwarded as-is to `SaveUserMetadataCommand`.
+   * Named schema that validates user-supplied `userMetadata` payloads on
+   * invitation acceptance: the app's `userCrud.userMetadataConfig.updateSchema`,
+   * or the base default that strips every key. Never undefined — the
+   * listener has no unvalidated path.
    */
-  userMetadataUpdateDto?: Type<RocketsAuthUserMetadataModelUpdatableInterface>;
+  userMetadataUpdateSchema: z.ZodType;
 }

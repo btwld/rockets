@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { Controller } from '@nestjs/common';
 
 import { collectRouteAudit } from './collect-route-audit';
-import { evaluateRoutePolicy } from './evaluate-route-policy';
+import {
+  evaluateRoutePolicy,
+  openResponseViolations,
+  schemaPipeViolations,
+} from './evaluate-route-policy';
 import type { RouteAuditReport } from './route-audit.types';
 
 class ProbeController {}
@@ -22,6 +26,11 @@ function report(overrides: Partial<RouteAuditReport>): RouteAuditReport {
         aclAction: null,
         aclResource: null,
         aclQuery: null,
+        unvalidatedSchemaParams: [],
+        openResponseSchema: null,
+        hiddenResponseField: false,
+        unvalidatedCrudBody: false,
+        unserializedResponseSchemas: [],
       },
     ],
     globalGuards: ['SomeAuthGuard'],
@@ -163,5 +172,122 @@ describe('collectRouteAudit — path arrays', () => {
       'GET /beta/x',
       'GET /beta/y',
     ]);
+  });
+});
+
+describe('schemaPipeViolations (always on)', () => {
+  const unpiped = report({
+    routes: [
+      {
+        id: 'POST /things',
+        method: 'POST',
+        path: '/things',
+        controller: 'ProbeController',
+        controllerRef: ProbeController,
+        handler: 'create',
+        authentication: 'guarded',
+        sessionAuth: false,
+        aclAction: null,
+        aclResource: null,
+        aclQuery: null,
+        unvalidatedSchemaParams: ['body'],
+        openResponseSchema: null,
+        hiddenResponseField: false,
+        unvalidatedCrudBody: false,
+        unserializedResponseSchemas: [],
+      },
+    ],
+  });
+
+  it('reports a schema parameter no pipe reaches, with no policy declared', () => {
+    const violations = schemaPipeViolations(unpiped);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].rule).toBe('requireSchemaPipe');
+    expect(violations[0].routeId).toBe('POST /things');
+    expect(violations[0].detail).toContain('ProbeController.create: body');
+    expect(violations[0].detail).toContain('rocketsSchemaValidation');
+  });
+
+  it('is exempted only by its own list, never by allow / allowControllers', () => {
+    expect(
+      schemaPipeViolations(unpiped, {
+        allowUnvalidatedSchema: ['POST /things'],
+      }),
+    ).toEqual([]);
+    // An `allow` written for requireAuth must not switch this check off.
+    expect(
+      schemaPipeViolations(unpiped, { allow: ['POST /things'] }),
+    ).toHaveLength(1);
+    expect(
+      schemaPipeViolations(unpiped, { allowControllers: [ProbeController] }),
+    ).toHaveLength(1);
+  });
+
+  it('reports a hidden field in @SerializeOptions({ schema }) as requireClosedResponse', () => {
+    const base = report({});
+    const hidden: RouteAuditReport = {
+      ...base,
+      routes: base.routes.map((route) => ({
+        ...route,
+        hiddenResponseField: true,
+      })),
+    };
+    const violations = openResponseViolations(hidden);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].rule).toBe('requireClosedResponse');
+    expect(violations[0].detail).toContain('dto: { response: false }');
+  });
+
+  it('reports an open @SerializeOptions({ schema }) as requireClosedResponse', () => {
+    const base = report({});
+    const open: RouteAuditReport = {
+      ...base,
+      routes: base.routes.map((route) => ({
+        ...route,
+        openResponseSchema: '$.items[]',
+      })),
+    };
+    const violations = openResponseViolations(open);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].rule).toBe('requireClosedResponse');
+    expect(violations[0].detail).toContain('"$.items[]"');
+    expect(openResponseViolations(report({}))).toEqual([]);
+  });
+
+  it('reports a generated CRUD body with no schema (controller-level body)', () => {
+    const base = report({});
+    const crud: RouteAuditReport = {
+      ...base,
+      routes: base.routes.map((route) => ({
+        ...route,
+        id: 'PATCH /things/:id',
+        method: 'PATCH',
+        handler: 'update',
+        unvalidatedCrudBody: true,
+      })),
+    };
+    const violations = schemaPipeViolations(crud);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].rule).toBe('requireSchemaPipe');
+    expect(violations[0].detail).toContain('OPERATION-level');
+    expect(
+      schemaPipeViolations(crud, {
+        allowUnvalidatedSchema: ['PATCH /things/:id'],
+      }),
+    ).toEqual([]);
+  });
+
+  it('rejects an allowUnvalidatedSchema entry that matches more than one route', () => {
+    const [only] = unpiped.routes;
+    const doubled: RouteAuditReport = { ...unpiped, routes: [only, only] };
+    const violations = schemaPipeViolations(doubled, {
+      allowUnvalidatedSchema: ['POST /things'],
+    });
+    expect(violations.map((v) => v.rule)).toEqual(['staleAllow']);
+    expect(violations[0].detail).toContain('MORE THAN ONE');
+  });
+
+  it('is silent on a validated route', () => {
+    expect(schemaPipeViolations(report({}))).toEqual([]);
   });
 });

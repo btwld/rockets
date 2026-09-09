@@ -28,7 +28,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { ActionEnum } from '@concepta/nestjs-core';
+import { ActionEnum, withOpenApi } from '@concepta/nestjs-core';
 import {
   AccessControlGrant,
   AccessControlQuery,
@@ -38,9 +38,6 @@ import {
   type CanAccess,
 } from '@concepta/nestjs-access-control';
 import { AccessControl } from 'accesscontrol';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
 import { z } from 'zod';
 import type {
@@ -169,13 +166,14 @@ class WidgetNoteEntity {
   @Column({ type: 'uuid' }) widgetId!: string;
 }
 
-class WidgetNoteCreateDto {
-  @Expose() @IsString() @ApiProperty() body!: string;
-}
-class WidgetNoteResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() body!: string;
-}
+const widgetNoteCreateSchema = withOpenApi(
+  z.object({ body: z.string() }),
+  'WidgetNoteCreateDto',
+);
+const widgetNoteResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), body: z.string() }),
+  'WidgetNoteResponseDto',
+);
 
 @Entity('acl_gadgets')
 class GadgetEntity {
@@ -192,16 +190,18 @@ class WidgetEntity {
   notes?: WidgetNoteEntity[];
 }
 
-class WidgetCreateDto {
-  @Expose() @IsString() @ApiProperty() label!: string;
-}
-class WidgetUpdateDto {
-  @Expose() @IsString() @ApiProperty() label!: string;
-}
-class WidgetResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() label!: string;
-}
+const widgetCreateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'WidgetCreateDto',
+);
+const widgetUpdateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'WidgetUpdateDto',
+);
+const widgetResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), label: z.string() }),
+  'WidgetResponseDto',
+);
 
 class StubMetadataRepo {
   async findOne() {
@@ -234,12 +234,12 @@ const widgetResource = defineResource<WidgetEntity>({
   // One line replaces five per-operation `decorators` entries AND the
   // `queryServices` registration.
   acl: { resource: 'widget', query: WidgetAccessQueryService },
-  dto: { response: WidgetResponseDto },
+  dto: { response: widgetResponseSchema },
   operations: {
     list: {},
     read: {},
-    create: { input: WidgetCreateDto },
-    update: { input: WidgetUpdateDto },
+    create: { input: widgetCreateSchema },
+    update: { input: widgetUpdateSchema },
   },
   subResources: {
     notes: defineSubResource<WidgetNoteEntity>({
@@ -254,10 +254,10 @@ const widgetResource = defineResource<WidgetEntity>({
       owner: false,
       // Its OWN resource name. Nothing is inherited from the parent.
       acl: { resource: 'widget-note' },
-      dto: { response: WidgetNoteResponseDto },
+      dto: { response: widgetNoteResponseSchema },
       operations: {
         list: {},
-        create: { input: WidgetNoteCreateDto },
+        create: { input: widgetNoteCreateSchema },
       },
     }),
   },
@@ -275,12 +275,12 @@ const gadgetResource = defineResource<GadgetEntity>({
   path: 'gadgets',
   tags: ['Gadgets'],
   acl: { resource: 'gadget', query: PermissiveQueryService },
-  dto: { response: WidgetResponseDto },
+  dto: { response: widgetResponseSchema },
   operations: {
     read: {},
-    create: {},
+    create: { input: widgetCreateSchema },
     update: {
-      input: WidgetUpdateDto,
+      input: widgetUpdateSchema,
       acl: { action: 'update', query: StrictQueryService },
     },
   },
@@ -468,7 +468,7 @@ describe('declarative resource acl — boot failures', () => {
     entity: WidgetEntity,
     path: 'widgets',
     tags: ['Widgets'],
-    dto: { response: WidgetResponseDto },
+    dto: { response: widgetResponseSchema },
     operations: { list: {} },
   });
 
@@ -478,7 +478,7 @@ describe('declarative resource acl — boot failures', () => {
     path: 'widgets',
     tags: ['Widgets'],
     acl: { resource: 'widget' },
-    dto: { response: WidgetResponseDto },
+    dto: { response: widgetResponseSchema },
     operations: { list: {} },
   });
 
@@ -532,7 +532,7 @@ describe('declarative resource acl — boot failures', () => {
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
-        dto: { response: WidgetResponseDto },
+        dto: { response: widgetResponseSchema },
         operations: { list: { acl: 'read' } },
       }),
     ).toThrow(/needs a resource-level/);
@@ -547,7 +547,7 @@ describe('declarative resource acl — boot failures', () => {
         tags: ['Widgets'],
         public: true,
         acl: { resource: 'widget' },
-        dto: { response: WidgetResponseDto },
+        dto: { response: widgetResponseSchema },
         operations: { list: {} },
       }),
     ).toThrow(/public but carries an `acl` grant/);
@@ -562,7 +562,7 @@ describe('declarative resource acl — boot failures', () => {
         tags: ['Widgets'],
         public: true,
         acl: { resource: 'widget' },
-        dto: { response: WidgetResponseDto },
+        dto: { response: widgetResponseSchema },
         operations: { list: { acl: false } },
       }),
     ).not.toThrow();
@@ -589,7 +589,7 @@ describe('declarative resource acl — boot failures', () => {
       entity: WidgetEntity,
       path: 'widgets',
       tags: ['Widgets'],
-      dto: { response: WidgetResponseDto },
+      dto: { response: widgetResponseSchema },
       operations: { list: { decorators: [AccessControlReadMany('widget')] } },
     });
 

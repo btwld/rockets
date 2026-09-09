@@ -193,6 +193,79 @@ export function evaluateRoutePolicy(
   return violations;
 }
 
+/**
+ * Always-on rule, independent of any declared policy: a route parameter
+ * that declares a `schema` and is reached by no
+ * `StandardSchemaValidationPipe` is documented in OpenAPI and validated
+ * by nothing. No app means that, so it is not a policy an app opts into
+ * — only its own `allowUnvalidatedSchema` list exempts, for a route
+ * validated by a pipe of its own that the audit cannot recognise.
+ */
+export function schemaPipeViolations(
+  report: RouteAuditReport,
+  policy: RoutePolicy = {},
+): readonly RoutePolicyViolation[] {
+  // Only its own list exempts: `allow` / `allowControllers` belong to the
+  // policy rules and must not switch this always-on check off as a side
+  // effect of exempting a route from `requireAuth`.
+  const allowedIds = new Set(policy.allowUnvalidatedSchema ?? []);
+  const violations: RoutePolicyViolation[] = [];
+
+  // Same over-broad-match guard as `allow`: an entry matching more than
+  // one discovered route would exempt them all from an always-on check.
+  const idCounts = new Map<string, number>();
+  for (const route of report.routes) {
+    idCounts.set(route.id, (idCounts.get(route.id) ?? 0) + 1);
+  }
+  for (const id of allowedIds) {
+    if ((idCounts.get(id) ?? 0) > 1) {
+      violations.push({
+        routeId: id,
+        rule: 'staleAllow',
+        detail:
+          'this `allowUnvalidatedSchema` entry matches MORE THAN ONE ' +
+          'discovered route — an exemption must name exactly one. ' +
+          'Disambiguate the routes (version/host qualifiers appear in the ' +
+          'id when declared).',
+      });
+    }
+  }
+
+  for (const route of report.routes) {
+    if (allowedIds.has(route.id)) continue;
+    if (route.unvalidatedCrudBody) {
+      violations.push({
+        routeId: route.id,
+        rule: 'requireSchemaPipe',
+        detail:
+          `${route.controller}.${route.handler}: generated CRUD body carries ` +
+          'no schema, so no StandardSchemaValidationPipe reaches it. Upstream ' +
+          'wires the pipe from the OPERATION-level `request.body` only — a ' +
+          'controller-level body documents the route and validates nothing. ' +
+          'Declare `request.body` on the operation (or list the route in ' +
+          '`allowUnvalidatedSchema` if it is validated some other way).',
+      });
+    }
+    if (route.unvalidatedSchemaParams.length === 0) continue;
+    const params = route.unvalidatedSchemaParams;
+    violations.push({
+      routeId: route.id,
+      rule: 'requireSchemaPipe',
+      detail:
+        `${route.controller}.${route.handler}: ${params.join(', ')} ` +
+        `declare${params.length === 1 ? 's' : ''} a schema but no ` +
+        'StandardSchemaValidationPipe reaches ' +
+        `${params.length === 1 ? 'it' : 'them'}. Nest installs no pipe for ` +
+        '`schema` — the parameter is documented in OpenAPI and validated by ' +
+        'nothing. Add @UsePipes(new StandardSchemaValidationPipe(' +
+        'rocketsSchemaValidation)) at class level, or `pipes` on the ' +
+        'parameter.',
+    });
+  }
+
+  return violations;
+}
+
 /** Which rules the app actually declared, in reporting order. */
 function ruleNames(policy: RoutePolicy): RoutePolicyViolation['rule'][] {
   const names: RoutePolicyViolation['rule'][] = [];
@@ -240,4 +313,43 @@ export function formatPolicyViolations(
     `Rockets route policy rejected ${violations.length} route` +
     `${violations.length === 1 ? '' : 's'}:\n${lines.join('\n')}`
   );
+}
+
+/**
+ * Always-on rule: a hand-written route that serializes with
+ * `@SerializeOptions({ schema })` must strip undeclared keys everywhere
+ * in that schema — serialization IS validation for it, so an open object
+ * ships whatever the row carries. Generated resources get this check at
+ * definition time (`assertFailClosedResponse`); this is the same check
+ * for the routes the planner never sees. No exemption: an open response
+ * is never validated some other way.
+ */
+export function openResponseViolations(
+  report: RouteAuditReport,
+): readonly RoutePolicyViolation[] {
+  const violations: RoutePolicyViolation[] = [];
+  for (const route of report.routes) {
+    if (route.hiddenResponseField) {
+      violations.push({
+        routeId: route.id,
+        rule: 'requireClosedResponse',
+        detail:
+          `${route.controller}.${route.handler}: @SerializeOptions({ schema }) ` +
+          'contains a field declared `dto: { response: false }`. A ' +
+          'hand-written response schema is not projected, so the column ' +
+          'would reach the wire — drop it with .omit({ field: true }).',
+      });
+    }
+    if (route.openResponseSchema === null) continue;
+    violations.push({
+      routeId: route.id,
+      rule: 'requireClosedResponse',
+      detail:
+        `${route.controller}.${route.handler}: @SerializeOptions({ schema }) ` +
+        `is open at "${route.openResponseSchema}" (.passthrough() / ` +
+        '.catchall(), or a pass-through root). Response schemas must ' +
+        'strip undeclared keys — declare the keys you want on the wire.',
+    });
+  }
+  return violations;
 }

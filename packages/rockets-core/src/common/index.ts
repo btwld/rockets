@@ -14,7 +14,7 @@ export {
 } from './utils/error-logging.helper';
 export type { ErrorDetails } from './utils/error-logging.helper';
 export { stripUndefined } from './utils/strip-undefined.helper';
-export { whitelistedFromDto } from './utils/whitelisted-from-dto.util';
+export { validateWithSchema } from './utils/validate-with-schema.util';
 export { deriveEntityKey } from './utils/derive-entity-key.util';
 export { resolveEntityKey } from './utils/resolve-entity-key.util';
 

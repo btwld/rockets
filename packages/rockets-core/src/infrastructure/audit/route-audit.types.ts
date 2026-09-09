@@ -61,6 +61,52 @@ export interface RouteAuditEntry {
    * both while this names one.
    */
   readonly aclQuery: string | null;
+  /**
+   * Route parameters that declare a Standard Schema
+   * (`@Body/@Query/@Param({ schema })`) but reach the handler through no
+   * `StandardSchemaValidationPipe` — the parameter's own `pipes`, the
+   * handler's and the controller's `@UsePipes` are all checked. Nest adds
+   * no implicit pipe for `schema`, so such a parameter is documented in
+   * OpenAPI and validated by nothing. Empty on a sound route.
+   */
+  readonly unvalidatedSchemaParams: readonly string[];
+  /**
+   * Path of the first OPEN object (`.passthrough()` / `.catchall()`) in
+   * the schema a hand-written route serializes with
+   * (`@SerializeOptions({ schema })` on the handler or the class), or
+   * `null` when the route declares none or it strips everywhere.
+   * Serialization IS validation for such a route, so an open object ships
+   * whatever the row carries. Generated resources are checked at
+   * definition time; this is the same check for the hand-written ones.
+   */
+  readonly openResponseSchema: string | null;
+  /**
+   * The schema a hand-written route serializes with
+   * (`@SerializeOptions({ schema })`) declares a `dto: { response: false }`
+   * field. A hand-written schema is not projected, so the column would
+   * reach the wire — the same rule `defineResource` applies at definition
+   * time (`assertNoHiddenFields`), checked here for the routes the planner
+   * never sees. `false` when the route declares no serializer schema.
+   */
+  readonly hiddenResponseField: boolean;
+  /**
+   * A GENERATED CRUD create / update / replace / batch route whose `@Body()`
+   * carries no schema. Upstream wires the validation pipe from the
+   * OPERATION-level `request.body` only; a body declared at controller
+   * level documents the route (the OpenAPI reads the class hierarchy) and
+   * validates nothing — invisible to `unvalidatedSchemaParams`, which needs
+   * a schema on the parameter to fire. The defect class behind the admin
+   * update bodies that shipped unvalidated behind a green suite.
+   */
+  readonly unvalidatedCrudBody: boolean;
+  /**
+   * Status codes this route documents with `@ApiResponse({ standardSchema })`
+   * while serializing through NO `@SerializeOptions({ schema })`: the
+   * document promises a shape nothing enforces. Reported, not enforced —
+   * a documentation-only contract is a legitimate choice, but it should be
+   * a visible one.
+   */
+  readonly unserializedResponseSchemas: readonly string[];
 }
 
 export interface RouteAuditReport {
@@ -93,6 +139,8 @@ export interface RoutePolicyViolation {
     | 'requireAcl'
     | 'requireAclQuery'
     | 'requireCsrf'
+    | 'requireSchemaPipe'
+    | 'requireClosedResponse'
     | 'staleAllow';
   readonly detail: string;
 }
@@ -147,6 +195,16 @@ export interface RoutePolicy {
    * listing every route id would drift as that package changes.
    */
   readonly allowControllers?: readonly Type<unknown>[];
+  /**
+   * Route ids whose `{ schema }` parameters are validated some other way
+   * (a consumer-owned pipe that is not a `StandardSchemaValidationPipe`).
+   *
+   * Its own list on purpose: `allow` / `allowControllers` exempt a route
+   * from the POLICY rules it was listed for, and an entry added for
+   * `requireAuth` must not silently switch off the always-on
+   * `requireSchemaPipe` check as well.
+   */
+  readonly allowUnvalidatedSchema?: readonly string[];
   /**
    * Guard classes recognised as AUTHENTICATION guards, besides
    * `AuthServerGuard`. Compose-your-own-auth apps (an integration-owned

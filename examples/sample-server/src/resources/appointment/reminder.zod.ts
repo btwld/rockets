@@ -1,5 +1,5 @@
 import { zodResource } from '../../zod-bindings';
-import { Reminder, reminderSchema } from './reminder.schema';
+import { reminderSchema } from './reminder.schema';
 import { ReminderOwnerScopeHook } from './reminder-owner-scope.hook';
 
 /**
@@ -7,7 +7,7 @@ import { ReminderOwnerScopeHook } from './reminder-owner-scope.hook';
  * and future workflows (mark-sent, reschedule), not direct CRUD.
  *
  * Fully zod-driven twin of the old `reminder.resource.ts`: the response
- * DTO comes from `reminderSchema`, the entity is the generated
+ * schema comes from `reminderSchema`, the entity is the generated
  * `ReminderEntity` (compiled in reminder.schema.ts and reused here via
  * the schema registry — no `entity:` override), the cross-resource
  * relation to appointments comes from the `relation` meta on
@@ -22,10 +22,10 @@ export const reminderZodResource = zodResource({
 });
 
 /**
- * Generated response DTO (component name `ReminderResponseDto`).
- * `AppointmentResponseDto` nests it for the eager `reminders` array —
- * one class serves both the `/reminders` routes and the nested
- * projection, exactly like the old handwritten DTO did.
+ * Generated response schema (component `ReminderResponseDto`).
+ * `appointmentResponseSchema` nests it for the eager `reminders` array —
+ * one named schema serves both the `/reminders` routes and the nested
+ * projection, so the document carries a single component.
  */
-export const ReminderResponseDto = reminderZodResource.zod.dtos.response;
-export type ReminderResponseDto = Reminder;
+export const reminderResponseSchema =
+  reminderZodResource.zod.schemas.response.resource;

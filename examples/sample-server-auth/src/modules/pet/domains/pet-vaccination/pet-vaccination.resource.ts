@@ -3,10 +3,10 @@ import { Operation } from '@concepta/nestjs-core';
 import { PetVaccinationEntity } from './pet-vaccination.entity';
 import { PetEntity } from '../pet/pet.entity';
 import {
-  PetVaccinationCreateDto,
-  PetVaccinationDto,
-  PetVaccinationUpdateDto,
-} from './pet-vaccination.dto';
+  petVaccinationCreateSchema,
+  petVaccinationResponseSchema,
+  petVaccinationUpdateSchema,
+} from './pet-vaccination.schemas';
 
 export const petVaccinationResource = defineResource({
   entity: PetVaccinationEntity,
@@ -14,9 +14,9 @@ export const petVaccinationResource = defineResource({
   tags: ['Pet Vaccinations'],
   // Inherits the root `repository` adapter from `RocketsModule.forRoot`.
   dto: {
-    response: PetVaccinationDto,
-    create: PetVaccinationCreateDto,
-    update: PetVaccinationUpdateDto,
+    response: petVaccinationResponseSchema,
+    create: petVaccinationCreateSchema,
+    update: petVaccinationUpdateSchema,
   },
   operations: [
     Operation.List,

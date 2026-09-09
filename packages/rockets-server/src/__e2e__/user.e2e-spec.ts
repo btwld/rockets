@@ -5,82 +5,14 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AuthUser } from '@concepta/rockets-core';
 import { AuthorizedUser } from '../domain/interfaces/auth-user.interface';
-import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
-import { IsString, IsOptional } from 'class-validator';
 
 import { ServerAuthAdapterFixture } from '../__fixtures__/providers/server-auth.adapter.fixture';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 import type { RocketsOptions } from '../rockets.module-definition';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { RocketsModule } from '../rockets.module';
 
 import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
-import {
-  BaseUserMetadataCreateDto,
-  BaseUserMetadataUpdateDto,
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../domain/interfaces/user-metadata.interface';
-
-class TestUserMetadataCreateDto
-  extends BaseUserMetadataCreateDto
-  implements UserMetadataCreatableInterface
-{
-  @IsString()
-  userId!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @IsOptional()
-  @IsString()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  bio?: string;
-
-  @IsOptional()
-  @IsString()
-  location?: string;
-
-  [key: string]: unknown;
-}
-
-class TestUserMetadataUpdateDto
-  extends BaseUserMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @IsOptional()
-  @IsString()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  bio?: string;
-
-  @IsOptional()
-  @IsString()
-  location?: string;
-
-  [key: string]: unknown;
-}
 
 @ApiTags('user-test')
 @Controller('user-test')
@@ -109,11 +41,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
   const baseOptions: RocketsOptions = {
     settings: {},
     auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-    userMetadata: {
-      entity: StubUserMetadataEntity,
-      createDto: TestUserMetadataCreateDto,
-      updateDto: TestUserMetadataUpdateDto,
-    },
+    userMetadata: userMetadataConfigFixture,
     repository: E2eFakeRepositoryModule,
   };
 
@@ -161,18 +89,16 @@ describe('RocketsModule - User Integration (e2e)', () => {
       app = moduleRef.createNestApplication();
       await app.init();
 
-      const updateData: UserUpdateDto = {
-        userMetadata: {
-          firstName: 'Updated',
-          lastName: 'Name',
-          bio: 'Updated bio',
-        },
-      };
-
       const res = await request(app.getHttpServer())
         .patch('/me')
         .set('Authorization', 'Bearer valid-token')
-        .send(updateData)
+        .send({
+          userMetadata: {
+            firstName: 'Updated',
+            lastName: 'Name',
+            bio: 'Updated bio',
+          },
+        })
         .expect(200);
 
       expect(res.body).toMatchObject({
@@ -199,11 +125,7 @@ describe('RocketsModule - User Integration (e2e)', () => {
           RocketsModule.forRoot({
             settings: {},
             auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-            userMetadata: {
-              entity: StubUserMetadataEntity,
-              createDto: TestUserMetadataCreateDto,
-              updateDto: TestUserMetadataUpdateDto,
-            },
+            userMetadata: userMetadataConfigFixture,
             repository: E2eFakeRepositoryModule,
           }),
         ],

@@ -1,6 +1,6 @@
 // Zod-first resource layer for Rockets. Database-agnostic: it produces
-// what core already accepts (nestjs-zod DTO classes + defineResource()),
-// and delegates entity generation to a SchemaEntityCompiler adapter
+// what core already accepts (named zod schemas + defineResource()), and
+// delegates entity generation to a SchemaEntityCompiler adapter
 // (e.g. @concepta/rockets-repository-typeorm). Nothing here imports an ORM.
 export {
   getRegisteredEntity,
@@ -28,11 +28,13 @@ export type {
   UnwrappedField,
 } from './field-meta';
 export { f } from './fields';
-export {
+export type {
   WireRow,
-  PersistenceRow,
+  JsonEncoded,
   SchemaPersistenceRow,
 } from './persistence-row';
+export { buildResponseSchema } from './zod-response-schema';
+export type { ComputeFn, SchemaProjections } from './zod-projections';
 export { createdEntity, baseEntity, auditableEntity } from './base-entity';
 export { zodResource, zodSubResource, bindZodResources } from './zod-resource';
 export { zodModuleResource } from './zod-module-resource';
@@ -53,11 +55,10 @@ export type {
   ZodOperationResource,
 } from './zod-operation-resource';
 export { defineZodUserMetadata } from './zod-user-metadata';
-export { compileDtoClass, namedZodDto } from './zod-dto';
 export type {
   ZodResourceDefinition,
   ZodSubResourceDefinition,
-  ZodResourceDtos,
+  ZodResourceSchemas,
   ZodResourceManifest,
 } from './zod-resource-contracts';
 export type {

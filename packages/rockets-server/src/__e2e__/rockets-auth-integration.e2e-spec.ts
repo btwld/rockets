@@ -9,7 +9,6 @@ import {
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { IsString } from 'class-validator';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import {
@@ -20,8 +19,7 @@ import {
   type AuthAttemptResult,
   type AuthBootstrap,
   type AuthRequest,
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
+  type RocketsUserMetadataConfig,
 } from '@concepta/rockets-core';
 import {
   InjectDynamicRepository,
@@ -29,7 +27,7 @@ import {
 } from '@concepta/rockets-core';
 import request from 'supertest';
 import { RocketsModule } from '../rockets.module';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 
 @Entity('integration_users')
@@ -80,15 +78,6 @@ class IntegrationAuthController {
   }
 }
 
-class IntegrationMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsString() userId!: string;
-}
-class IntegrationMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  @IsString() id!: string;
-}
-
 function buildAuthBootstrap(): AuthBootstrap {
   return {
     adapter: IntegrationAuthAdapter,
@@ -100,10 +89,8 @@ function buildAuthBootstrap(): AuthBootstrap {
   };
 }
 
-const integrationUserMetadata = {
-  entity: StubUserMetadataEntity,
-  createDto: IntegrationMetadataCreateDto,
-  updateDto: IntegrationMetadataUpdateDto,
+const integrationUserMetadata: RocketsUserMetadataConfig = {
+  ...userMetadataConfigFixture,
   repository: E2eFakeRepositoryModule,
 };
 

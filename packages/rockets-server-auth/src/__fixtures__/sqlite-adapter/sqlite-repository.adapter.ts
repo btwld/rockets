@@ -1,7 +1,7 @@
 import * as sqlite3 from 'sqlite3';
 import { PlainLiteralObject } from '@nestjs/common';
 import { DeepPartial } from '@concepta/nestjs-core';
-import { ModelQueryException } from '@concepta/nestjs-common';
+import { RepositoryQueryException } from '@concepta/nestjs-repository';
 
 /**
  * Local definition of repository internals for SQLite adapter.
@@ -922,7 +922,7 @@ export class SqliteRepositoryAdapter<Entity extends PlainLiteralObject>
       return entity as T & Entity;
     } catch (e) {
       console.error('Error in save method:', e);
-      throw new ModelQueryException(this.entityName(), {
+      throw new RepositoryQueryException(this.entityName(), {
         originalError: e,
       });
     }
@@ -949,7 +949,7 @@ export class SqliteRepositoryAdapter<Entity extends PlainLiteralObject>
 
       return entity;
     } catch (e) {
-      throw new ModelQueryException(this.entityName(), {
+      throw new RepositoryQueryException(this.entityName(), {
         originalError: e,
       });
     }

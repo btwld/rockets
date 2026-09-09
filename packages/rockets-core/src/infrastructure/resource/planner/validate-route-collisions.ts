@@ -10,11 +10,10 @@ import {
   type StructuredRoutePattern,
 } from './route-pattern';
 import { HOST_METADATA, VERSION_METADATA } from '@nestjs/common/constants';
-import {
-  operationDiscriminator,
-  ROCKETS_GENERATED_DTO_NAME,
-} from '../operation-resource/build-operation-controller';
+import { operationDiscriminator } from '../operation-resource/build-operation-controller';
 import { VERSION_NEUTRAL } from '@nestjs/common';
+import { z } from 'zod';
+import { readSchemaId } from '../../../common/utils/open-api-schema.util';
 
 /**
  * Mirrors `@concepta/nestjs-crud` route defaults
@@ -307,74 +306,75 @@ function validateOperationIdUniqueness(
 }
 
 /**
- * Rejects two DIFFERENT generated DTO classes claiming one OpenAPI
- * component name.
+ * Rejects two DIFFERENT schema instances claiming one OpenAPI component
+ * id across the CRUD and operation resources of the app.
  *
- * `validateOperationIdUniqueness` above keys off an underscore slug
- * while the DTO namer pascal-cases; `foo-bar` and `fooBar` therefore
- * produced DISTINCT operation ids and ONE component name, so the path
- * check passed and the second schema silently overwrote the first in
- * the generated document.
- *
- * Both namers are now shared, but the transform stays lossy on purpose
- * — making it injective would be a guess about which characters carry
- * meaning, where asserting the result is total. This is the assertion.
- *
- * Keyed on class IDENTITY, not on the name plus where it was declared.
- * One compiled DTO reused as the output of several operations is a
- * first-instinct configuration — "this returns a Pet, and so does that
- * one" — and it produces one class, one component, no conflict. An
- * earlier revision compared name plus source string and rejected it,
- * while also swallowing a real collision between two bundles that share
- * a base path, because their source strings matched.
- *
- * Only classes Rockets NAMED are checked. A consumer's hand-written DTO
- * is theirs to name, and `@nestjs/swagger` already resolves those by
- * class reference.
+ * Ids are minted from resource names (`${Name}ResponseDto`, …) and by
+ * consumers on hand-written schemas; two resources named alike, or a
+ * consumer reusing a Rockets-shaped id, would put two shapes under one
+ * component and the document would silently keep the last one written.
+ * Keyed on schema IDENTITY: one schema reused as the output of several
+ * operations is one component, no conflict. The document converter
+ * repeats this check per document; catching it at plan time names the
+ * resources instead of a route.
  */
-function validateGeneratedDtoNameUniqueness(
+function validateSchemaIdUniqueness(
+  generatedResources: ReadonlyArray<CrudResource>,
+  manualResources: ReadonlyArray<RocketsResourceConfig>,
   operationBundles: ReadonlyArray<OperationResource>,
 ): void {
   const seen = new Map<
     string,
-    { readonly dto: object; readonly source: string }
+    { readonly schema: z.ZodType; source: string }
   >();
 
-  const claim = (dto: unknown, source: string): void => {
-    if (typeof dto !== 'function') return;
-    // Own property only, not `Reflect.get`: the brand would otherwise
-    // be inherited by a subclass the consumer named themselves.
-    // `hasOwnProperty` rather than `Object.hasOwn` — the package's
-    // compile target predates the latter.
-    if (
-      !Object.prototype.hasOwnProperty.call(dto, ROCKETS_GENERATED_DTO_NAME)
-    ) {
-      return;
-    }
-
-    const name = dto.name;
-    const prior = seen.get(name);
-    if (prior !== undefined && prior.dto !== dto) {
+  const claim = (schema: unknown, source: string): void => {
+    if (!(schema instanceof z.ZodType)) return;
+    const id = readSchemaId(schema);
+    if (id === undefined) return;
+    const prior = seen.get(id);
+    if (prior !== undefined && prior.schema !== schema) {
       throw new Error(
-        `buildAppRegistrationPlan: generated DTO name "${name}" is claimed by ` +
+        `buildAppRegistrationPlan: OpenAPI component "${id}" is claimed by ` +
           `two different schemas — ${prior.source} and ${source}. Both would ` +
-          `occupy the same OpenAPI component, so one would overwrite the ` +
-          `other. Rename one resource path or operation key so the two differ ` +
-          `by more than punctuation or casing.`,
+          `occupy the same component, so one would overwrite the other. ` +
+          `Reuse one schema instance, or give one of them a distinct name.`,
       );
     }
-    seen.set(name, { dto, source });
+    seen.set(id, { schema, source });
   };
 
+  const walk = (config: RocketsResourceConfig, label: string): void => {
+    const crud = config.crud;
+    const controller = crud.controller;
+    if ('class' in controller) return;
+    claim(controller.response?.resource, label);
+    claim(controller.response?.paginated, label);
+    claim(controller.request?.body, label);
+    if (!('operations' in crud) || !Array.isArray(crud.operations)) return;
+    for (const op of crud.operations) {
+      const source = `${label} (${op.operation})`;
+      claim(op.request?.body, source);
+      claim(op.response?.resource, source);
+      claim(op.response?.paginated, source);
+    }
+  };
+
+  for (const resource of generatedResources) {
+    walk(resource.core, `defineResource(${resource.meta.key})`);
+  }
+  for (const [index, config] of manualResources.entries()) {
+    walk(config, `manualResources[${index}]`);
+  }
+  // `operationDiscriminator` slugifies non-alphanumerics, so `foo-bar` and
+  // `fooBar` are distinct routes that mint ONE component name: claiming
+  // the schemas here is what turns that into a boot error instead of a
+  // silently overwritten document. Params schemas are never named.
   for (const bundle of operationBundles) {
     const base = bundle.definition.path;
-    // `paramsDto` is deliberately NOT claimed: path params are emitted
-    // as inline `ApiParam` entries, never as a `type:` reference, so
-    // that DTO never occupies a component and two resources sharing its
-    // generated name conflict over nothing.
     for (const operation of Object.values(bundle.definition.operations)) {
       const source = `operationResource("${base}").${operation.key}`;
-      claim(operation.inputDto, source);
+      claim(operation.inputSchema, source);
       if (operation.output !== false) claim(operation.output, source);
     }
   }
@@ -392,7 +392,11 @@ export function validateStructuredRouteCollisions(args: {
   readonly operationBundles: ReadonlyArray<OperationResource>;
 }): void {
   validateOperationIdUniqueness(args.operationBundles);
-  validateGeneratedDtoNameUniqueness(args.operationBundles);
+  validateSchemaIdUniqueness(
+    args.generatedResources,
+    args.manualResources,
+    args.operationBundles,
+  );
 
   // No early return on an operation-free app: the check covers
   // CRUD-vs-CRUD and CRUD-vs-sub-resource collisions too, and gating it

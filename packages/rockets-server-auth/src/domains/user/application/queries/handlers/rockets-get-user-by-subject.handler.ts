@@ -3,7 +3,7 @@ import type { AuthenticationUserResult } from '@concepta/nestjs-authentication';
 import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { GetUserBySubjectQuery, UserInterface } from '@concepta/nestjs-user';
 
-import { resolveConceptadevAppContext } from '../../../../../shared/compatibility/resolve-conceptadev-app-context';
+import { AppContextHost } from '@concepta/nestjs-core';
 import { RocketsGetUserBySubjectQuery } from '../impl/rockets-get-user-by-subject.query';
 import {
   resolveUserRoles,
@@ -44,7 +44,7 @@ export class RocketsGetUserBySubjectHandler
       DomainAggregate<UserInterface> | null
     >(
       new GetUserBySubjectQuery(
-        resolveConceptadevAppContext(query.ctx),
+        AppContextHost.from(query.ctx),
         String(query.subject),
       ),
     );

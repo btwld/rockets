@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   ROCKETS_ERROR_DETAILS,
   attachErrorDetails,
-  classValidatorErrorsToDetails,
   readErrorDetails,
 } from './validation-error-details.util';
 
@@ -57,25 +56,5 @@ describe('attachErrorDetails / readErrorDetails', () => {
     attachErrorDetails(err, [{ path: ['b'], message: 'second' }]);
 
     expect(readErrorDetails(err)).toEqual([{ path: ['b'], message: 'second' }]);
-  });
-});
-
-describe('classValidatorErrorsToDetails', () => {
-  it('recurses children with a real path array', () => {
-    expect(
-      classValidatorErrorsToDetails([
-        {
-          property: 'address',
-          children: [
-            {
-              property: 'zip',
-              constraints: { isNotEmpty: 'zip should not be empty' },
-            },
-          ],
-        },
-      ]),
-    ).toEqual([
-      { path: ['address', 'zip'], message: 'zip should not be empty' },
-    ]);
   });
 });

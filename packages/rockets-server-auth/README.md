@@ -78,11 +78,14 @@ still come from core (which re-exports the `@concepta/nestjs-*` motors).
 ```bash
 yarn add @concepta/rockets-auth@alpha @concepta/rockets@alpha @concepta/rockets-core@alpha \
   @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger @nestjs/jwt @nestjs/passport \
-  class-transformer class-validator reflect-metadata rxjs
+  reflect-metadata rxjs
 ```
 
 Bring the upstream `@concepta/nestjs-*` packages and a repository adapter your
 app supports (e.g. `@concepta/rockets-repository-typeorm@alpha` + `typeorm`).
+`zod` — the schema engine every request/response goes through — is a
+dependency of `@concepta/rockets-core`; `class-validator` /
+`class-transformer` are not required.
 
 ### Minimal working example
 
@@ -90,7 +93,7 @@ app supports (e.g. `@concepta/rockets-repository-typeorm@alpha` + `typeorm`).
 import { Module } from '@nestjs/common';
 import { EventModule } from '@concepta/nestjs-event';
 import { RocketsModule } from '@concepta/rockets';
-import { defineRocketsAuth } from '@concepta/rockets-auth';
+import { defineRocketsAuth, rocketsAuthRoleSchema } from '@concepta/rockets-auth';
 import { defineTypeOrmRepository } from '@concepta/rockets-repository-typeorm';
 
 import {
@@ -101,16 +104,14 @@ import {
   UserRoleEntity,
   FederatedEntity,
   InvitationEntity,
-  UserDto,
-  UserCreateDto,
-  SampleUserUpdateDto,
 } from './user';
+// Named zod schemas (`withOpenApi(schema, id)` last) — e.g. the
+// `updateSchema` / `responseSchema` of `defineUserMetadata(userMetadataSchema)`.
 import {
   UserMetadataEntity,
-  UserMetadataCreateDto,
-  UserMetadataUpdateDto,
+  userMetadataUpdateSchema,
+  userMetadataResponseSchema,
 } from './user/metadata';
-import { RoleDto, RoleCreateDto, RoleUpdateDto } from './role';
 
 // The auth integration contributes this repository and all auth-owned rows.
 const repo = defineTypeOrmRepository({
@@ -133,19 +134,18 @@ const rocketsAuthInput = {
     },
   },
   invitationEntity: InvitationEntity,
+  // `/signup`, `/admin/users` and `/me` derive their request/response
+  // schemas from these two — no per-route user DTO to maintain.
   userMetadata: {
     entity: UserMetadataEntity,
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
+    updateSchema: userMetadataUpdateSchema,
+    responseSchema: userMetadataResponseSchema,
   },
-  userCrud: {
-    model: UserDto,
-    dto: { createOne: UserCreateDto, updateOne: SampleUserUpdateDto },
-  },
-  roleCrud: {
-    model: RoleDto,
-    dto: { createOne: RoleCreateDto, updateOne: RoleUpdateDto },
-  },
+  // `model` / `dto` omitted: derived from `userMetadata` as
+  // `RocketsAuthUserDto` / `RocketsAuthUserCreateDto` / `RocketsAuthUserUpdateDto`.
+  userCrud: {},
+  // Request schemas default to `rocketsAuthRoleCreateSchema` / `rocketsAuthRoleUpdateSchema`.
+  roleCrud: { model: rocketsAuthRoleSchema },
   useFactory: () => ({
     services: {
       mailerService: {
@@ -268,8 +268,6 @@ export class SignupWithReferralHandler extends AbstractSignupUserHandler {
 defineRocketsAuth({
   // ...
   userCrud: {
-    model: UserDto,
-    dto: { createOne: UserCreateDto, updateOne: SampleUserUpdateDto },
     handlers: { signupHandler: SignupWithReferralHandler },
   },
 });
@@ -277,6 +275,41 @@ defineRocketsAuth({
 
 Available slots: `signupHandler`, `adminList`, `adminRead`, `adminUpdate`,
 `adminDelete` (all under `userCrud.handlers`).
+
+### Override the user request/response schemas
+
+`userCrud.model` (response of `/signup` and `/admin/users`) and
+`userCrud.dto.createOne` / `updateOne` (request bodies) are named zod
+schemas (`z.ZodType`). When omitted they are derived from your
+`userMetadata` schemas; pass them only to change the wire shape. Extend
+the package builders so the component ids stay unique — `withOpenApi`
+must be the **last** call, so re-wrap after `.extend()`:
+
+```typescript
+import { z } from 'zod';
+import { withOpenApi } from '@concepta/rockets-core';
+import {
+  rocketsAuthUserSchema,
+  rocketsAuthUserCreateSchema,
+  rocketsAuthUserUpdateSchema,
+} from '@concepta/rockets-auth';
+
+defineRocketsAuth({
+  // ...
+  userCrud: {
+    model: rocketsAuthUserSchema(userMetadataResponseSchema),
+    dto: {
+      createOne: withOpenApi(
+        rocketsAuthUserCreateSchema(userMetadataUpdateSchema).extend({
+          referralCode: z.string().optional(),
+        }),
+        'SignupWithReferralDto',
+      ),
+      updateOne: rocketsAuthUserUpdateSchema(userMetadataUpdateSchema),
+    },
+  },
+});
+```
 
 ### Disable specific controllers
 
@@ -359,22 +392,32 @@ when another host-owned layer enforces equivalent limits.
 ### Customise a controller without subclassing
 
 Every factory-built controller accepts a `controller.classDecorators` array and
-a `controller.routes[*].decorators` map. Use them to attach throttling, ACL
-decorators, or rate limits.
+a `controller.routes[*].decorators` map. Use them to attach rate limits, ACL
+decorators, or custom metadata.
 
 ```typescript
+import { RateLimit } from '@concepta/rockets-core';
+
 defineRocketsAuth({
   // ...
   otp: {
     controller: {
       routes: {
-        issue: { decorators: [Throttle({ default: { limit: 3, ttl: 60 } })] },
-        verify: { decorators: [Throttle({ default: { limit: 10, ttl: 60 } })] },
+        issue: {
+          decorators: [RateLimit({ default: { limit: 3, windowMs: 60_000 } })],
+        },
+        verify: {
+          decorators: [RateLimit({ default: { limit: 10, windowMs: 60_000 } })],
+        },
       },
     },
   },
 });
 ```
+
+A route-level `RateLimit` overrides the named dimension and inherits the
+rest of the app-wide policy — the per-IP ceiling stays where
+`extras.throttling` put it.
 
 The same pattern applies to `extras.auth.controller` (for `/me/password`),
 `extras.invitation.controllers.*`, and `extras.role.controller` (admin role
@@ -421,8 +464,8 @@ when you need built-in auth HTTP and `/me`.
 | `persistence.module`                | `RepositoryModuleInterface`                                                  | yes      | Repository contributed to the surrounding Rockets server — typically `defineTypeOrmRepository(...)`, or a lower-level repository module when the host owns root registration.                              |
 | `persistence.entities`              | `{ user, userCredentials?, userOtp?, role?, userRole?, federatedIdentity? }` | yes      | **Your** TypeORM entity classes for auth tables. No `@concepta/nestjs-typeorm-ext` — declare columns explicitly (see `examples/sample-server-auth`).                                                       |
 | `invitationEntity`                  | `Type`                                                                       | optional | Adds an `invitation` repository row + enables invitation routes.                                                                                                                                           |
-| `userMetadata`                      | `RocketsUserMetadataConfig`                                                  | yes      | Forwarded to `/me`; also used as the default `userCrud.userMetadataConfig`.                                                                                                                                |
-| `userCrud`                          | `UserCrudOptionsExtrasInterface`                                             | yes      | `model`, `dto.createOne` / `updateOne`, `handlers`, controller extras.                                                                                                                                     |
+| `userMetadata`                      | `RocketsUserMetadataConfig`                                                  | yes      | `{ entity, updateSchema, responseSchema }` — forwarded to `/me`; also the default `userCrud.userMetadataConfig` the signup/admin schemas derive from.                                                     |
+| `userCrud`                          | `UserCrudOptionsExtrasInterface`                                             | yes      | `{}` is valid. Optional `model`, `dto.createOne` / `updateOne` (named zod schemas; derived from `userMetadata` when omitted), `handlers`, controller extras.                                              |
 | `roleCrud`                          | `RoleCrudOptionsExtrasInterface`                                             | optional | Same shape, for the role admin routes.                                                                                                                                                                     |
 | `authAdapter`                       | `Type<AuthAdapterInterface>`                                                 | optional | Override the JWT adapter (e.g. inject a custom claim transformer).                                                                                                                                         |
 | `rocketsDefaults.enableGlobalGuard` | `boolean`                                                                    | optional | Override the contributed Rockets guard default (`false`; upstream JWT guard owns built-in-auth requests).                                                                                                  |

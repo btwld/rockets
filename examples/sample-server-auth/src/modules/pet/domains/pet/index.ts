@@ -4,8 +4,8 @@ export * from './pet.entity';
 // Interface
 export * from './pet.interface';
 
-// DTOs
-export * from './pet.dto';
+// Schemas
+export * from './pet.schemas';
 
 // Types
 export * from './pet.types';

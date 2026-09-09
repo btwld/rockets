@@ -1,12 +1,18 @@
 import { DynamicModule, Module } from '@nestjs/common';
-import { MeController } from './gateways/http/me.controller';
+import type { RocketsUserMetadataConfig } from '@concepta/rockets-core';
+import { buildMeController } from './gateways/http/build-me-controller';
 
 @Module({})
 export class UserModule {
-  static register(): DynamicModule {
+  static register(
+    userMetadata: Pick<
+      RocketsUserMetadataConfig,
+      'updateSchema' | 'responseSchema'
+    >,
+  ): DynamicModule {
     return {
       module: UserModule,
-      controllers: [MeController],
+      controllers: [buildMeController(userMetadata)],
     };
   }
 }

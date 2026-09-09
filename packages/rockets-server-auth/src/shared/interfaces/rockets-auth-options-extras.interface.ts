@@ -10,12 +10,7 @@ import type {
 } from '@nestjs/common';
 import type { AuthenticationOptionsExtrasInterface } from '@concepta/nestjs-authentication';
 import type { RoleExtrasInterface } from '@concepta/nestjs-role';
-import type { RocketsAuthUserMetadataCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-creatable.interface';
-import type { RocketsAuthUserCreatableInterface } from '../../domains/user/interfaces/rockets-auth-user-creatable.interface';
-import type { RocketsAuthUserUpdatableInterface } from '../../domains/user/interfaces/rockets-auth-user-updatable.interface';
-import type { RocketsAuthRoleCreatableInterface } from '../../domains/role/interfaces/rockets-auth-role-creatable.interface';
-import type { RocketsAuthRoleUpdatableInterface } from '../../domains/role/interfaces/rockets-auth-role-updatable.interface';
-import type { RocketsAuthUserMetadataModelUpdatableInterface } from '../../domains/user/interfaces/rockets-auth-user-metadata-updatable.interface';
+import type { z } from 'zod';
 import type { RocketsAuthPortsConfigInterface } from './rockets-auth-ports-config.interface';
 import type {
   AbstractSignupUserHandler,
@@ -28,15 +23,13 @@ import type { AbstractAdminDeleteUserHandler } from '../../domains/user/applicat
 import type { RocketsAuthThrottlingOptions } from './rockets-auth-throttling-options.interface';
 
 /**
- * Generic userMetadata configuration interface
- *
- * Allows clients to provide their own DTO classes for user metadata.
- * Follows the same pattern as rockets-server's UserMetadataConfigInterface.
+ * User-metadata wiring for the auth package — the same contract core's
+ * `RocketsUserMetadataConfig` carries: the entity for the dynamic
+ * repository plus the named zod schemas (`withOpenApi(schema, id)` as the
+ * LAST call) that validate a `userMetadata` patch and project the stored
+ * row onto the wire.
  */
-export interface UserMetadataConfigInterface<
-  TCreateDto extends RocketsAuthUserMetadataCreatableInterface = RocketsAuthUserMetadataCreatableInterface,
-  TUpdateDto extends RocketsAuthUserMetadataModelUpdatableInterface = RocketsAuthUserMetadataModelUpdatableInterface,
-> {
+export interface UserMetadataConfigInterface {
   /**
    * Optional module imports for UserMetadata configuration.
    * Accepts module classes, dynamic modules, or forward references.
@@ -49,12 +42,10 @@ export interface UserMetadataConfigInterface<
    * ALWAYS required - every adapter has an associated entity.
    */
   entity: Type;
-  /**
-   * UserMetadata create DTO class
-   * Must extend RocketsAuthUserMetadataCreatableInterface.
-   */
-  createDto: new () => TCreateDto;
-  updateDto: new () => TUpdateDto;
+  /** Shape of a `userMetadata` patch (signup, admin update, invitation acceptance, `/me`). */
+  updateSchema: z.ZodType;
+  /** Wire projection of the stored row (nested under `user.userMetadata`). */
+  responseSchema: z.ZodType;
 }
 
 export interface UserCrudOptionsExtrasInterface {
@@ -67,12 +58,17 @@ export interface UserCrudOptionsExtrasInterface {
    */
   imports?: DynamicModule['imports'];
   path?: string;
-  model?: Type;
+  /**
+   * Named response schema for `/signup` and `/admin/users`. Defaults to
+   * `rocketsAuthUserSchema(userMetadataConfig.responseSchema)`.
+   */
+  model?: z.ZodType;
   entity?: Type;
   userMetadataConfig?: UserMetadataConfigInterface;
+  /** Named request schemas; default to the `rocketsAuthUser*Schema` builders. */
   dto?: {
-    createOne?: Type<RocketsAuthUserCreatableInterface>;
-    updateOne?: Type<RocketsAuthUserUpdatableInterface>;
+    createOne?: z.ZodType;
+    updateOne?: z.ZodType;
   };
   /** Optional signup command constructor. */
   command?: {
@@ -95,10 +91,12 @@ export interface UserCrudOptionsExtrasInterface {
 export interface RoleCrudOptionsExtrasInterface {
   imports?: DynamicModule['imports'];
   path?: string;
-  model: Type;
+  /** Named response schema for `/admin/roles` (e.g. `rocketsAuthRoleSchema`). */
+  model: z.ZodType;
+  /** Named request schemas; default to `rocketsAuthRoleCreateSchema` / `rocketsAuthRoleUpdateSchema`. */
   dto?: {
-    createOne?: Type<RocketsAuthRoleCreatableInterface>;
-    updateOne?: Type<RocketsAuthRoleUpdatableInterface>;
+    createOne?: z.ZodType;
+    updateOne?: z.ZodType;
   };
   /** Controller decorators and per-route handler overrides. */
   controller?: import('../../domains/role/interfaces/role-controller-extras.interface').RoleControllerExtras;
@@ -194,12 +192,14 @@ export interface RocketsAuthOptionsExtrasInterface
   };
   disableController?: DisableControllerOptionsInterface;
   /**
-   * Request-throttling configuration for the throttler that guards Rockets
-   * Auth's own public routes (signup, login, recovery, otp, invitation
-   * acceptance). Rockets Auth scopes the guard to those controllers — it does
-   * not register an app-wide `APP_GUARD`. Pass `false` to disable Rockets
-   * Auth's throttling entirely (e.g. the host enforces its own limits
-   * upstream).
+   * Request-throttling configuration for the rate limiter that guards
+   * Rockets Auth's own public routes (signup, login, recovery, otp,
+   * invitation acceptance) — core's `RateLimitGuard` over two named
+   * dimensions (`ip` ceiling + per-`(ip, account)` fine limits; see
+   * {@link RocketsAuthThrottlingOptions}). Rockets Auth scopes the guard
+   * to those controllers — it does not register an app-wide `APP_GUARD`.
+   * Pass `false` to disable Rockets Auth's throttling entirely (e.g. the
+   * host enforces its own limits upstream).
    */
   throttling?: false | RocketsAuthThrottlingOptions;
   invitation?: {

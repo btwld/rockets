@@ -1,4 +1,4 @@
-export * from './appointment.dto';
+export * from './appointment.schemas';
 export * from './appointment.entity';
 export * from './appointment.resource';
 export * from './reminder.schema';

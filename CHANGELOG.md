@@ -419,11 +419,6 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
   the unwrap chain stay in the filter deliberately; the two unwrap
   helpers became `protected` for subclasses that need more than the body.
   Default output is unchanged.
-- First-class Standard Schema support for hand-written core controllers via
-  `@concepta/rockets-core/standard-schema`, with typed request/response DTO
-  carriers, opt-in native Nest validation and serialization, plus a dedicated
-  Swagger subpath. Existing generated CRUD/Zod serialization remains
-  unchanged.
 - Firestore adapter transactions (issue #44 P1-1): `runInFirestoreTransaction` /
   `FirestoreRepository.transaction` (callback-scoped, retry-safe),
   `FIRESTORE_BACKEND` DI export, `transactionFactories` + `options.ctx`
@@ -442,6 +437,206 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
 
 ### Changed
 
+- **A request body declared through the escape hatch must be a named
+  component too.** `operations.X.input` was checked at definition time,
+  but `operations.X.requestOverride.body` / `bodyBatch` and the
+  resource-level `request.body` / `bodyBatch` reached the same route
+  unchecked — an unnamed schema there documented inline while every
+  sibling body was a `$ref`. All four now fail the definition with the
+  same `assertNamedSchema` message. Wrap the schema with
+  `withOpenApi(schema, 'ComponentName')`.
+
+- **Upstream `@concepta/nestjs-*` moves to `8.0.0-alpha.10`, and five
+  Rockets-side workarounds are retired with it.** alpha.10 ships the
+  fixes for the three issues filed from this PR
+  (conceptadev/nestjs-modules#466, #467, #468), so the code that worked
+  around them is deleted rather than kept:
+  - `RocketsCrudAdapter` — `RepositoryAdapter.prepare()` no longer
+    rejects a create body that validates to `{}` (#466), so generated
+    resources run on upstream's `CrudAdapter` again. The override also
+    merged route params *selectively* (only onto keys already present in
+    the body) where upstream merges unconditionally; that difference is
+    inert for generated routes, because `context.params` only ever
+    carries params present in the request URL and non-`disabled` — on a
+    create route that is the immediate parent's FK, which is a column on
+    the child by construction.
+  - `restoreNamedRequestBodies` and `liftInlineRequestBodyDefinitions` —
+    CRUD request bodies are stamped as `ApiBody({ standardSchema })` and
+    `$ref` a named component the same way responses do (#467). Nest's own
+    converter already lifts `$defs`/`definitions` and rewrites the refs,
+    so neither shim has anything left to do.
+  - `defineHook`'s error pre-wrap — `RuntimeException` sets
+    `context.originalError` and `RepositoryQueryException` preserves it,
+    so a hook's `ConflictException` reaches
+    `RocketsCoreExceptionsFilter` as a `409` on its own. Hook authors are
+    no longer asked to throw `RepositoryQueryException` directly.
+  - `crud-compat.ts` — `CrudParamOptionInterface`, `CrudRequestConfig`
+    and `CrudResponseConfig` are exported from `@concepta/nestjs-crud`.
+  - `ConceptaRepositoryCompatModule` — a self-declared no-op that was
+    still imported and registered by `rockets-auth`.
+- **Metadata keys are read through upstream's helpers, not mirrored.**
+  `AuthServerGuard` and the route audit call `isAuthPublic(...targets)`;
+  the SSE/`Transactional()` conflict check calls
+  `isTransactional(handler, controllerClass)`. Both replace a local copy
+  of the metadata key (or, for `Transactional`, of the interceptor class
+  it registers) — the point being to stop coupling to how upstream
+  stores the metadata. `isTransactional` also fixes the override order:
+  a route-level `Transactional(false)` under a resource-level
+  `Transactional()` now correctly reads as opted out. `AuthServerGuard`
+  no longer injects `Reflector`.
+- **`resolveConceptadevAppContext` is replaced by upstream
+  `AppContextHost.from()`.** The local helper silently minted a fresh
+  host for any non-host value and discarded whatever the caller passed —
+  inside password, OTP and user handlers, that could drop a live
+  transaction context. `AppContextHost.from()` throws on a non-empty
+  non-host value instead.
+- **`TransactionScope.run` lost `propagation` (upstream alpha.10).**
+  `TransactionRequiredException` is gone with it, so there is no
+  fail-closed mode: every scope fails OPEN. A nested `readOnly` that
+  contradicts the scope it joined now throws
+  `TransactionReadOnlyConflictException` and aborts the outer scope,
+  where it was previously ignored — a loud failure replacing a silent
+  write. `AGENTS.md` rule 16 and `CONFIGURATION.md` §8a are rewritten to
+  match.
+
+- **A route that declares a schema and validates nothing no longer boots.**
+  Nest installs no validator for `@Body/@Query/@Param({ schema })`; a
+  hand-written route missing its `StandardSchemaValidationPipe` documented
+  the body in OpenAPI and let anything through. Core's route audit now runs
+  in every app (policy or not) and fails the boot as `requireSchemaPipe`,
+  naming the controller, handler and parameter. `RouteAuditService` is
+  always registered and injectable; the policy rules stay opt-in.
+- **Hand-written auth request bodies keep their component names.** The
+  `rockets-auth` login, refresh and recovery bodies are `$ref`'d as
+  `LocalLoginDto`, `RefreshDto` and `Recovery*Dto` in the document again;
+  upstream ships those schemas without an id.
+- **Generated CRUD request bodies are named components again.** Upstream
+  stamped them inline (conceptadev/nestjs-modules#467) until
+  `8.0.0-alpha.10`, which routes them through the converter, so
+  `PetCreateDto`, `TagUpdateDto`, `BookReplaceDto`, `RocketsAuthUserCreateDto`…
+  are back in `components.schemas` and every create / update / replace
+  body is a `$ref`, like every response. Both example contracts regenerated
+  (bodies only; nothing else moved).
+- **A create body that validates to `{}` is a valid create.** Rockets
+  shipped a `RocketsCrudAdapter` override for this; upstream
+  `8.0.0-alpha.10` fixed it (nestjs-modules#466) and the override is gone
+  again — see the alpha.10 entry above. A sub-resource whose every
+  column is server-stamped (`PathScopeHook`, `OwnerStampHook`, a consumer
+  hook minting ids) now accepts `POST {}` — the behaviour the class-DTO
+  era only delivered by accident (`class-transformer` left declared
+  fields present as `undefined`).
+- **Invitation acceptance never forwards unvalidated `userMetadata`.**
+  With no app metadata schema configured, `rockets-auth` now applies the
+  same base default as signup and admin (strip every key) instead of
+  passing the record through — a smuggled `userId` can no longer rewrite
+  the metadata row's owner.
+- **Hand-written routes on the native engine; legacy validators removed (RFC
+  #104, stage 6).** The last class DTOs are gone: `rockets-auth`'s OTP,
+  change-password, invitation revoke / acceptance-payload and admin
+  role-assignment bodies are named zod schemas validated by each
+  controller's own Standard Schema pipe (the invitation-acceptance
+  `payload` is now validated — a short password or a non-object
+  `userMetadata` is a `400`); `examples/sample-server`'s pet-share and
+  `examples/sample-code-review`'s DTOs likewise. `class-validator`,
+  `class-transformer` and `nestjs-zod` are removed from every Rockets
+  manifest (no peer, no dependency) — except that `@concepta/rockets-auth`
+  keeps `class-validator` / `class-transformer` as plain dependencies while
+  `@concepta/nestjs-email` / `nestjs-event` (7.x) pull `nestjs-common@7`,
+  which requires them at import; `compileDtoClass` / `namedZodDto` are
+  gone from `@concepta/rockets-core/zod`. Migration: delete any global
+  `ValidationPipe` you registered only for Rockets DTOs (a global
+  class-validator pipe is harmless but dead; a global
+  `StandardSchemaValidationPipe` is rejected at boot); annotate body
+  params with `z.output<typeof schema>`, never a class.
+  Also in `examples/sample-server`: the reminder and pet-share scope hooks
+  now forward `ctx` to their repository lookups (rule 16 — the lookups ran
+  hook-free and outside the operation's transaction).
+- **`operationResource` on the native engine (RFC #104, stage 5).** The
+  generated controller carries a class-level
+  `StandardSchemaValidationPipe(rocketsSchemaValidation)`; the body is
+  `@Body({ schema })` (a named `<Base>Input` component behind a payload-shape
+  guard: missing body → `{}`, array / scalar / `Buffer` → `400` naming the
+  whole body), the query `@Query({ schema })` and the resource `params`
+  `@Param({ schema })` (both documented one parameter per property; extra
+  Nest path params still reach `ctx.params`). Responses are validated
+  inline by the named `<Base>Output` schema (`null` / mismatch → `500`) and
+  documented with `ApiResponse({ standardSchema })`. Compiled descriptors
+  carry `inputSchema` / `paramsSchema` / `output` schemas instead of DTO
+  classes; component-id uniqueness across CRUD and operation resources is
+  one planner check. Removed: class-validator DTO support on
+  `defineOperationResource`, `classValidatorErrorsToDetails`, the
+  generated-DTO brand.
+- **One schema engine — upstream `@concepta/nestjs-*` `8.0.0-alpha.9`, Nest
+  `12.0.0-alpha.6`, `zod` 4.4.3 (RFC #104, stage 4).** Every request body and
+  every response in Rockets is now a **named zod schema**
+  (`withOpenApi(schema, 'ComponentName')`, re-exported from
+  `@concepta/rockets-core`) and one engine serves generated CRUD,
+  `defineResource`, `/me` and `rockets-server-auth`:
+  - **Validation**: Nest's native per-route `StandardSchemaValidationPipe`,
+    configured with `rocketsSchemaValidation` so every `400` carries
+    structured `details[]` (issue #55) — on CRUD routes, the `/me` PATCH,
+    the auth token / recovery / invitation routes.
+  - **Serialization**: upstream serializes CRUD responses through the
+    response schema (`~standard.validate`): undeclared row columns never
+    leave, `Date` columns become ISO strings, a computed field is validated
+    against the schema that documents it. A CRUD route without a response
+    schema is a boot-visible `500`, not an unprojected leak.
+  - **OpenAPI**: from the schema's own JSON Schema bridge; `SwaggerUiService.createDocument`
+    installs a Rockets converter that `$ref`s every named schema as
+    `components/schemas/<id>` (ids keep the old DTO class names:
+    `TagResponseDto`, `TagCreateDto`, `TagResponseDtoPaginatedDto`, …).
+    Two different schema instances claiming one id fail at plan time and
+    at document time. `strictInput` emits `additionalProperties: false`
+    natively — no `cleanupOpenApiDoc`.
+  - **`defineResource`**: `dto.{response,paginated,create,update,replace}` and
+    per-operation `input` / `output` / `paginated` are named schemas
+    (`assertNamedSchema`, response fail-closed); `paginated` derives as
+    `${responseId}PaginatedDto`.
+  - **`userMetadata`** is `{ entity, updateSchema, responseSchema, repository? }`
+    — exactly what `defineZodUserMetadata` returns; `createDto` had no consumer.
+  - **`/me`** is `buildMeController(config)` (factory): PATCH validates
+    `{ userMetadata?: UserMetadataUpdateDto }`, both routes serialize through
+    `UserResponseDto` (hidden userMetadata columns stay hidden), and
+    `userMetadata` is `null` before the first PATCH (was `{}`).
+  - **Dates**: `f.createdAt()` / `f.updatedAt()` / `f.deletedAt()` are
+    `z.date()`; new `f.date()` (`z.coerce.date()`) for writable datetimes; a
+    response-exposed `z.iso.datetime()` is rejected at definition time (rows
+    carry `Date`). `WireRow<S>` is the JSON-encoded output (`JsonEncoded<T>`),
+    `SchemaPersistenceRow<S>` is `z.output<S>`.
+  - `zodResource(...).zod.schemas` (`{ request, response }`) replaces `.zod.dtos`;
+    `f.compute` returns `z.output<schema>`.
+  - A **global** `StandardSchemaValidationPipe` is rejected at boot
+    (`SchemaValidatorConflictCheck`): Rockets routes carry their own, a global
+    one validates every body twice. `realtystack`: delete the
+    `app.useGlobalPipes(new StandardSchemaDtoValidationPipe())` line.
+  - No Rockets package imports `@concepta/nestjs-common` any more (it stays
+    in the graph at 7.x only through `@concepta/nestjs-email` /
+    `nestjs-event`); `mapHttpStatus` (removed upstream) is vendored inside
+    the core filter.
+  - **Upstream gap, since closed upstream:** `@concepta/nestjs-crud`'s
+    `CrudInitApiBody` stamped generated CRUD request bodies as an inline
+    `ApiBody({ schema })` that bypassed the document converter
+    (conceptadev/nestjs-modules#467). Rockets worked around it in
+    `SwaggerUiService.createDocument`; `8.0.0-alpha.10` stamps
+    `ApiBody({ standardSchema })` instead, so the workaround is gone and
+    `${Name}CreateDto` / `UpdateDto` / `ReplaceDto` are `$ref`'d
+    components like every response.
+  Authoring APIs `zodResource` / `zodSubResource` / `operationResource` / `f.*`
+  / hooks / ACL are unchanged.
+- **`@nestjs/config` is no longer a Rockets dependency (RFC #104, stage 1).**
+  `rockets-core`, `rockets` and `rockets-auth` used it only for
+  `registerAs` + `ConfigModule.forFeature` to hand default settings to
+  upstream's `createSettingsProvider`; those defaults are now plain Nest
+  providers (`ROCKETS_CORE_SETTINGS_DEFAULTS_TOKEN`,
+  `SWAGGER_UI_DEFAULT_SETTINGS_TOKEN`, `ROCKETS_SERVER_SETTINGS_DEFAULTS_TOKEN`,
+  `ROCKETS_AUTH_SETTINGS_DEFAULTS_TOKEN`) registered by each module itself.
+  Nothing changes for consumers that pass `settings` or run their own
+  `ConfigModule`. Reason: the upstream `8.0.0-alpha.9` graph pins
+  `@nestjs/config@12.0.0-next.0`, which is ESM-only; a CJS `require()` of it
+  from the Rockets dist fails at runtime while `tsc` stays green. The root
+  `resolutions["@nestjs/config"]` pin is gone so upstream keeps the version
+  it declares. `RocketsModule` (server) no longer reads core's defaults
+  namespace — it registers its own empty defaults provider.
 - **`operationResource` rejects a non-object request payload (issue #43).**
   With an `input` declared, an array, a scalar, or a non-plain object now
   returns `400` instead of being narrowed to `{}`. `POST []` against
@@ -489,6 +684,43 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
 
 ### Removed
 
+- **`RocketsCrudAdapter` and `ROCKETS_DISABLE_GUARDS_TOKEN`.** Both were
+  workarounds for gaps upstream has since closed — see the alpha.10 entry
+  under *Changed*. Apps that referenced `RocketsCrudAdapter` can drop it
+  (upstream's `CrudAdapter` is the default again); apps that read
+  `ROCKETS_DISABLE_GUARDS_TOKEN` should call `isAuthPublic()` from
+  `@concepta/nestjs-authentication`.
+
+- **Class-DTO era APIs (RFC #104, stage 4).** `createPaginatedDto`,
+  `FreeFormJson`, `ROCKETS_TO_INSTANCE_OPTIONS` / `ROCKETS_TO_PLAIN_OPTIONS`
+  (the class-transformer serialization settings), `ZodBodyValidationInterceptor`,
+  `whitelistedFromDto` (→ `validateWithSchema(schema, data)`),
+  `UserUpdateDto` / `UserResponseDto` / `RoleNameDto` / `UserRoleItemDto`,
+  `PersistenceRow`, `ZodResourceDtos`, `MeController` (→ `buildMeController`),
+  `ROCKETS_USER_METADATA_DTO_TOKEN`, the unused `BaseUserDto` /
+  `BaseUserCreateDto` / `BaseUserUpdateDto` / `BaseUserMetadata*Dto` classes.
+  The TypeORM entity compiler no longer
+  maps `z.iso.datetime()` to a datetime column (an ISO string field is a
+  varchar; `z.date()` / `f.date()` are the datetime columns).
+- **`@concepta/rockets-core/standard-schema` and `/standard-schema/swagger`
+  subpaths, and the #83 whitelist shim (RFC #104, stage 2).** The subpath
+  (`StandardSchemaModule`, `createStandardSchemaDto`,
+  `createStandardSchemaResponseDto`, `allowStandardSchemaKeys`,
+  `StandardSchemaAwareValidationPipe`, `StandardSchemaDtoValidationPipe`,
+  `StandardSchemaResponse`, `ApiStandardSchemaResponse`,
+  `withStandardSchemaResponseArrays`, `getStandardSchema`, the DTO brands)
+  had no consumer in Rockets or its examples; it duplicated what Nest 12
+  ships natively (`@Body({ schema })` + `StandardSchemaValidationPipe`,
+  `@SerializeOptions({ schema })`, `ApiResponse({ standardSchema })`).
+  Generated DTOs no longer carry `@Allow()` stamps: the stamp only existed
+  to survive a foreign `ValidationPipe({ whitelist: true })`, a pipe that
+  must not sit in front of schema-validated routes at all (the engine that
+  replaces class-validator lands in the next stages).
+  `isStandardSchema` / `getCarriedStandardSchema` moved to
+  `src/common/utils/standard-schema.util.ts` (internal). Migration: import
+  the native Nest pieces instead; annotate hand-written body params with
+  the inferred type, never a class; remove any global
+  `StandardSchemaDtoValidationPipe`.
 - **`RocketsAuthExceptionsFilter` — dead code, and the auth e2e helper
   was its only caller (issue #87).** No application's behaviour changes.
   The filter was never in `rockets-server-auth`'s `src/index.ts` and the
@@ -550,6 +782,23 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
   overlay via `CrudModule.forRootAsync` beside hand-written controllers.
 
 ### Documentation
+
+- **`defineSubResource({ scope: false })` was documented wrong** (the
+  behaviour is now fixed — see *Fixed*; this entry records what the docs
+  used to claim). It never
+  made the route unscoped: the immediate parent's `:param` stays a CRUD
+  route param whose `field` is the FK column, so upstream resolves every
+  operation through it (`buildWhere` → `Where.eq`, reached by
+  `getOneOrFail`) — a cross-parent `PATCH`/`DELETE` is a `404` — and
+  merges it over every write body. What `scope: false` actually drops is
+  the `PathScopeHook` and the **ownership guard**. At depth 2 that means
+  any authenticated actor reaches another actor's parent's rows. At
+  **depth 3+ it is worse**: ancestor params are `disabled: true` and
+  never enter `buildWhere`, so the guard was the only check on the
+  parent→child link, and `/parents/A/children/CHILD_OF_B/notes` serves
+  `CHILD_OF_B`'s rows where the scoped route answers `404`.
+  `CONFIGURATION.md` is corrected and four e2e tests pin every half,
+  including the depth-3 probe.
 
 - **The non-CRUD transaction seam is documented (issue #60).**
   `CONFIGURATION.md` §8a explains what a repository call without `ctx`
@@ -749,6 +998,102 @@ before running the full e2e suite.
   same projection path `zodResource` uses. Previously it compiled the whole
   schema into the response DTO, so `dto: { response: false }` was silently
   ignored for userMetadata columns.
+- **`f.date()` rejects `null` and booleans instead of storing 1970.** A
+  writable date field answered `201` to `{"expiresAt": null}` and saved the
+  epoch; it is now a `400` addressed at the field. ISO strings, numeric
+  timestamps and `Date` values still coerce as before.
+- **The fail-closed response check reaches every wrapper.** An open
+  object (`.passthrough()` / `.catchall()`) hidden inside an intersection,
+  tuple, record / map / set value, `.readonly()`, `.catch()` or any other
+  wrapper used to pass and ship the whole row; every node that can hold a
+  schema is walked now, and a hand-supplied paginated envelope is checked
+  too, not only named.
+- **Hidden columns stay hidden through every wrapper, on every response
+  path** — computed fields, JSON columns and exposed relations alike
+  (union, intersection, pipe, readonly, lazy are rebuilt; `.default()` /
+  `.catch()` bypass the inner schema and are rejected at definition time
+  with the other wrappers the projection cannot rebuild) — and **the
+  fail-closed check walks the IN side of a transform** (an identity
+  `.transform()` on an open object shipped undeclared keys). Both found in
+  the PR #105 review.
+- **Node 20.19 is the minimum** — the CommonJS build loads the ESM Nest 12
+  line through `require(esm)`; `engines` says so and CI runs the unit and
+  package e2e suites on that floor (the example apps and the packed-consumer
+  contract run on it in release-readiness). Test runners that externalise ESM
+  (this repo's Vitest, a
+  consumer's Jest-ESM) hit `ERR_REQUIRE_CYCLE_MODULE` on 20.19 when
+  `@nestjs/cqrs` (CommonJS) requires the still-evaluating `@nestjs/core`;
+  the fix is a setup file that preloads `@nestjs/core`
+  (`vitest.setup.preload-nest-core.mts`), and the underlying gap is
+  upstream's (nestjs/nest#17583 — remove the file once `@nestjs/cqrs`
+  ships ESM).
+- **Hidden columns stay hidden on the FOURTH response path too** — an
+  `operationResource` output built from an entity schema strips its
+  `dto: { response: false }` fields like computed fields, JSON columns and
+  exposed relations (e2e asserts the secret is absent from the HTTP body).
+  A top-level `.default()` on a field with a hidden column is rejected at
+  definition time instead of being silently dropped (the row would have
+  failed serialization at runtime); a top-level `z.preprocess` is kept;
+  `.prefault()` IS rebuilt (its payload runs through the inner schema). A
+  hand-written response schema (`dto.response`, `operations.*.output`,
+  `userMetadata.responseSchema`) keeps the author's component id and is
+  not projected, so a hidden field inside it is rejected at definition
+  time (drop it with `.omit()`); `rockets-auth` runs the same check (and
+  the fail-closed one) on a consumer-supplied `userCrud.model` /
+  `roleCrud.model`, which reach upstream CRUD directly. The fail-closed
+  check walks a pipe's IN side whenever its OUT passes (some of) its input
+  through (`transform`, `any`, `unknown`, `custom`, or any composite
+  holding one of those — wrappers, unions, arrays, object properties,
+  record values, intersections, nested pipes), not only for transforms;
+  its memo caches only `true`, so the verdict never depends on visit order
+  (an in-progress `false` stored as final had failed open). The route
+  audit also rejects a hand-written `@SerializeOptions({ schema })` that
+  declares a `dto: { response: false }` field.
+- **Hidden columns stay hidden at every depth of a computed field.** A
+  `dto: { response: false }` column nested two or more levels down an
+  `f.compute()` shape was still serialized.
+- **One OpenAPI component describes one side.** A schema used as both a
+  request body and a response is a document-build error now (zod's input
+  and output JSON Schemas differ, and last-wins documented one side with
+  the other's shape). Give the response its own `withOpenApi()` id. Nested
+  named schemas are covered too: one nested id reached from both sides
+  with two shapes is an error, not a silent merge.
+- **Hand-written responses are checked for open objects at boot.** A
+  `@SerializeOptions({ schema })` with `.passthrough()` / `.catchall()`
+  anywhere fails the boot (`requireClosedResponse`) — the check generated
+  resources already get at definition time.
+- **`requireSchemaPipe` is exempted only by its own list.** An `allow` entry
+  written for `requireAuth` no longer switches the schema-pipe check off;
+  use `routePolicy.allowUnvalidatedSchema` for a route validated by a pipe
+  the audit cannot recognise (an entry matching more than one route fails
+  the boot, like `allow`).
+- **A generated CRUD body without a schema fails the boot.** A body declared
+  at controller level (instead of on the operation) documents the route and
+  validates nothing — the defect behind the admin update bodies; the route
+  audit now catches it structurally (`unvalidatedCrudBody`). Routes that
+  document a response with `standardSchema` but serialize through no
+  `@SerializeOptions` are listed in the audit report
+  (`unserializedResponseSchemas`), not enforced.
+- **`/me` metadata handlers forward the request context and pin `userId`**
+  (`rockets-core` / `rockets`): `UpsertUserMetadataCommand(ctx, userId,
+  data)` and `GetUserMetadataQuery(ctx, userId)` — every repository call
+  now runs with hooks on, inside the request transaction, and an
+  app-supplied update schema admitting `userId` cannot move the row.
+  Breaking for apps that override or dispatch these directly: add the
+  context (`getAppContext(req)`) as the first argument.
+- **Migration notes.** A hand-written route with BOTH an explicit
+  `@ApiBody({ schema })` and a named `@Body({ schema })` is documented from
+  the `@Body` schema now (the explicit inline body is dropped); `allow` /
+  `allowControllers` no longer exempt the schema-pipe check.
+- **User-metadata updates pin `userId` from the caller** (`rockets-auth`):
+  the update branch wrote the validated payload as-is, so an app-supplied
+  update schema that admits `userId` could move a row to another user.
+- **Admin `PATCH /admin/users/:id` and `/admin/roles/:id` bodies are validated
+  and the user update no longer 500s** (`rockets-auth`): the body schema
+  moved from the controller to the Update operation (upstream stamps the
+  pipe from the operation only), and the user update runs in one outermost
+  transaction scope (the metadata query used to hit the finished transaction
+  upstream leaves on the context, conceptadev/nestjs-modules#468).
 - **Computed fields respect `dto: { response: false }`.** `f.compute`
   schemas built from entity schemas no longer re-expose columns the owning
   resource hides.
@@ -759,6 +1104,315 @@ before running the full e2e suite.
   e2e coverage (cross-owner nested access returns 404).
 
 ### Fixed
+
+- **One lifted definition, one name — a `z.json()` or recursive field in
+  a response no longer aborts the document.** The generated name for a
+  definition `z.toJSONSchema` had to extract is prefixed with the OWNING
+  component's id, so the same definition reached through two owners was
+  named twice: `JsonDtoRef_<hash>` for the `read` route, then
+  `JsonDtoPaginatedDtoRef_<hash>` inside the `list` envelope. Nothing
+  collided, but `JsonDto`'s own `$ref` moved with it, and the
+  emitted-shape check then aborted `/api/docs-json` blaming a
+  request/response split that does not exist. Generated names are now
+  derived from the definition's CONTENT alone — `RocketsRef_<8 hex>`, a
+  reserved prefix — so the same definition has one name whichever
+  component reaches it first. (The owner prefix also made the name depend
+  on route ORDER: adding a route renamed a published component and churned
+  every generated client, and a definition named after resource A turned
+  up inside resource B.) Reuse is sound because zod extracts one
+  definition per cycle and inlines the rest, so a lifted definition's only
+  `$ref` is to itself. Any response carrying a recursive field or
+  a `z.json()` column on a resource with both `read` and `list` — the
+  ordinary case — was affected. Found in external review.
+
+- **`responseOverride` clears the same bar as `output`.** The low-level
+  escape hatch assigned its schema straight through, while `output` /
+  `paginated` went through `assertNamedSchema` /
+  `assertFailClosedResponse` / `assertNoHiddenFields` — and
+  `buildOperationDecorators` stamps the override as the serializer, so an
+  unnamed or open schema, or one carrying a `dto: { response: false }`
+  column, reached the wire through the one path meant for the hardest
+  cases. (`collection` is declared by the upstream config type but read
+  nowhere in `@concepta/nestjs-crud`, so it reaches no response and is
+  not checked.) Found in external review.
+
+- **`dto: { response: false }` survives a wrapper.** The marker was read
+  only on direct object properties, through the wrappers `unwrapField`
+  peels (optional / nullable / default / non-transform pipe). Anything
+  else the author writes after the field helper — `.readonly()`,
+  `.nonoptional()`, `.prefault()`, `.catch()`, `z.array(...)`,
+  `.transform()` — left it one level down, where the recursive walk could
+  not recover it either: the marked node is a bare leaf with no children.
+  All six were accepted by `assertNoHiddenFields` and kept by the
+  projection. The marker is now read on every node the walker visits, and
+  a computed projection drops the field through the five rebuildable
+  wrappers (a `.transform()` is refused at definition time, like
+  `.default()` / `.catch()`, because its output cannot be rebuilt without
+  the hidden input). A hidden node under a `z.lazy()` is refused at
+  definition time too — the rebuilt getter ran first at SERIALIZATION, so
+  that error arrived as a 500 on the first response the route served.
+  **Breaking for a hand-written response schema — or a
+  `@SerializeOptions({ schema })` route, which the route audit fails at
+  boot — that hides a column behind one of those wrappers**: it was
+  accepted before, and shipping the column is what it did. Found in
+  external review; the lazy case in adversarial review of the fix.
+
+- **A pass-through ROOT is rejected in a response.**
+  `assertFailClosedResponse` only rejected `.passthrough()` / `.catchall()`
+  on an object, so `z.record(z.string(), z.unknown())` — undeclared keys
+  AND unconstrained values, which is `.passthrough()` written differently
+  — passed as a whole response, as did a bare `z.unknown()` / `z.any()` /
+  `z.custom()`. Both are refused now, and "root" is a POSITION rather than
+  a node: it survives every wrapper that names no key (`optional` /
+  `nullable` / `readonly` / `catch` / lazy, an array's or set's element, a
+  union branch, either side of an intersection, a pipe's out side), so
+  `z.array(z.unknown())` is refused exactly like a bare `z.unknown()` — it
+  ships each row verbatim. The root ENDS at an object or a TUPLE, which
+  declares each position the way an object declares each key: inside a
+  declared property (`z.object({ profile: z.record(...) })`,
+  the shape of a JSON column) the author named the key and chose what its
+  value may be — `/me`'s `claims` is exactly that, and stays `z.unknown()`
+  deliberately (its values are the identity provider's; narrowing them to
+  `z.json()` adds a recursive component to every generated client without
+  constraining anything). Its description now says so. **Breaking for a
+  hand-written response schema of one of those shapes**, at definition
+  time for a resource and at boot for a `@SerializeOptions` route. Found
+  in external review; the wrapped roots in adversarial review of the fix.
+
+- **`PATCH /me` cannot be handed a foreign primary key.**
+  `defineZodUserMetadata` omits the server-managed columns from its update
+  projection, but a hand-written `updateSchema` is the documented
+  alternative and nothing checked it: a schema declaring
+  `id: z.string().optional()` let the payload reach
+  `repo.update(existing, …)` with another row's key.
+  `validateRocketsUserMetadataConfig` now rejects an update schema
+  declaring any of `USER_METADATA_MANAGED_FIELDS` (exported from core),
+  and both write paths strip them regardless — the boot check can only
+  read a plain object shape, and a union or a pipe passes it. Found in
+  external review.
+
+- **A rate-limit dimension can no longer be switched off by its own key
+  function.** Widening `key` to return several keys introduced two ways to
+  end up with no counter, both of which made the guard answer `true` for
+  every request — a limiter turned off by ordinary-looking config. An
+  empty array (the natural "this request names no account") now falls back
+  to the route's default key, and `InMemoryRateLimitStore` rejects a
+  `maxKeys` below 1 or non-finite at construction instead of evicting each
+  window as it is written (`Number(process.env.X)` on an unset variable is
+  `NaN`, and `throttling.maxKeys` passes straight through). Both found in
+  adversarial review of this PR's own fixes.
+
+- **A route may override one field of a rate-limit dimension.** The guard
+  documented and implemented a per-field merge, but `RateLimitPolicy`
+  required the whole `{ limit, windowMs }` object, so
+  `@RateLimit({ default: { key: myKey } })` — keep the app-wide numbers,
+  swap the key — did not type-check. Route overrides are now
+  `RateLimitDimensionOverride`: EITHER a complete dimension OR a `key` on
+  its own, which is the only partial the merge needs. `Partial<>` was the
+  first shape and it went further than the requirement — `{ limit }`,
+  `{ windowMs }` and `{}` also compiled, each describing a dimension the
+  author cannot complete, and the mistake surfaced only as a throw on the
+  first request. Those three are back on the compiler, pinned by
+  `rate-limit.decorator.typetest.ts`. App-wide dimensions stay complete by
+  type: they are the base a route merges onto.
+
+  One case stays runtime-only and the guard still throws for it, naming
+  the dimension: a key-only override on a dimension name that no
+  `RATE_LIMIT_DEFAULTS_TOKEN` registers — names are author-chosen strings
+  with no closed set. Verified in a full `rockets-auth` app (it boots,
+  then answers `500`), so this is not a bare-core-only window.
+  A boot-time audit rule for it was **considered and rejected**:
+  `RouteAuditService` is provided by `RocketsCoreModule` and would resolve
+  one app-wide defaults value, while the guard resolves the one visible to
+  the module declaring each controller — so the audit would abort the boot
+  of correct apps that register defaults in a feature module, which is the
+  false-positive class the ACL query check already had to fix.
+  `CONFIGURATION.md` §7d records the decision.
+
+- **A decoy body field no longer defeats the per-account rate limit.**
+  The auth counter key read `email ?? username`, and guards run BEFORE
+  pipes, so the body still carries keys the route's schema strips: a
+  `{ username, password }` login with a rotating `email` minted a fresh
+  counter per request. The 10/min per-`(ip, account)` limit never saw two
+  attempts against the same username, leaving only the 1000/min ceiling
+  between a password-guessing loop and one victim's account — a 100x
+  weakening, triggered by one extra field. `RateLimitOptions.key` may now
+  return SEVERAL keys, counted independently under that dimension's limit
+  (deduplicated), and the auth key function returns one per account field
+  present. The routes whose body names NO account (`/token/refresh`,
+  `PATCH /me/password`, the passcode-only recovery steps, invitation
+  acceptance) key that dimension on the IP explicitly — the same decoy
+  otherwise replaced their IP fallback, taking `/token/refresh` from
+  20/min to the 1000/min ceiling. Not a regression — the deleted
+  `AuthAccountThrottlerGuard` had the same logic — but the swap was the
+  moment to fix it. Found in external review; the account-less half in
+  adversarial review of the fix.
+
+- **`X-RateLimit-Reset` agrees with `Retry-After`.** `Retry-After`
+  correctly used the latest reset among the rejected dimensions;
+  `X-RateLimit-Reset` came from the reported dimension, and when two
+  dimensions both reject they both report `remaining: 0`, so the tie-break
+  picked whichever came first. A client blocked for an hour by the `ip`
+  ceiling saw a reset one minute out next to `Retry-After: 3600`. Both
+  headers now state the same instant on a rejection.
+
+- **The rate-limit counter key is no longer logged.** A store outage
+  wrote `Rate limit store failed for key "<dimension>:<ip>::<account>"` at
+  error level — on the auth routes, every attempted account address plus
+  the client IP, into whatever aggregator the app ships to. The message
+  now carries the dimension name and a stable 8-hex digest, which
+  correlates repeat failures without naming anyone.
+
+- **The auth throttling store cannot be swapped from outside.**
+  `RocketsAuthRateLimitModule` documented that an app providing
+  `RATE_LIMIT_STORE_TOKEN` itself would share one store with the auth
+  routes. It does not: the module provides that token locally, and a
+  module-local provider wins over a global one in its own injector — so
+  the app gets its store for its routes and this one for auth, two stores,
+  and a multi-instance deployment keeps per-process auth limits while the
+  operator believes Redis is wired. The comment now says
+  `throttling.store` is the way, and `throttling.maxKeys` was added for
+  the same reason (`RATE_LIMIT_MAX_KEYS_TOKEN` is constructed in this
+  module's injector, so it had no way in from options).
+
+- **`InMemoryRateLimitStore` is bounded.** It never freed an entry, and
+  the counter key on the routes it protects carries an attacker-supplied
+  account field — guards run BEFORE pipes, so that value is unvalidated
+  and bounded only by the body parser. Every request on a public login /
+  signup / recovery / OTP route therefore inserted a permanent map entry,
+  and the coarse per-IP ceiling could not stop it: each admitted request
+  carries a NEW account value, so growth happened *inside* the policy.
+  The store now enforces a hard key cap (100k, constructor-overridable or
+  `throttling.maxKeys` on the auth registration) and evicts in
+  least-recently-used order: every `consume` re-inserts its key at the
+  back of the map, so eviction drops from the front and expired windows
+  drift there on their own. **Revised in review** — the first cut swept
+  the whole map and then sorted it by expiry on every request past the
+  cap, which made the flood the cap exists for pay O(n log n) on the
+  event loop (measured 1.8 ms per request at 20k keys), and ordering by
+  expiry evicted the coarse per-IP CEILING first: it is created on
+  request one of a flood and only updated after that, so within one
+  window length it is the soonest to expire. The account-rotation traffic
+  the ceiling exists to stop was what reset the ceiling. LRU keeps a hot
+  key by construction and the eviction loop is bounded by the overflow —
+  one entry per request at the cap. The "dropped a live window" warning
+  is coalesced to one message a minute (it fired per request in steady
+  state, an outage of its own). The auth key function
+  also bounds the account field, hashing anything over 128 chars so one
+  request cannot insert a multi-kilobyte key. Not a regression —
+  `@nestjs/throttler`'s own storage map never evicted either — but it is
+  Rockets' default store now. Found in adversarial review.
+
+- **A generated recursive-definition name can no longer collide with an
+  author's component id.** The qualifier named a lifted `z.lazy()` inner
+  object with a counter (`TreeDtoRef0`) — guessable, and an author schema
+  legitimately carrying that id made the outcome depend on route scan
+  order: author converted first, the generated name silently stepped
+  aside; generated first, the document build aborted blaming a
+  request/response split that does not exist. Generated names are now
+  derived from the definition's transitive content under a reserved prefix
+  (`RocketsRef_<8 hex>`), so they stay out of the author namespace by
+  construction and are stable for as long as the shape is. The
+  residual deliberate collision — an author id equal to an
+  already-generated hash name — is a precise error naming the mechanism
+  and the fix, in either conversion order. Found in external review.
+
+- **`npm install @concepta/rockets-auth` resolves on default npm.**
+  `@nestjs/throttler@6.5.0` — the latest published version, unchanged even
+  on its master branch — caps its peers at `@nestjs/common ^11.0.0`, so a
+  clean install against Nest 12 answered `ERESOLVE`. This predates the
+  Nest 12 line (`main`'s `12.0.0-alpha.5` fails identically); the
+  packed-consumer gate never saw it because it installed with
+  `--legacy-peer-deps`.
+
+  Throttler is replaced by core's own rate-limit port, extended for the
+  job: `@RateLimit` and `RateLimitGuard` now support **named dimensions**
+  enforced together (`RATE_LIMIT_DEFAULTS_TOKEN` carries app-wide
+  dimensions; a route override merges **per field** by dimension name, so
+  tightening `limit` keeps the dimension's `key`). Auth keeps its exact
+  policy: a coarse per-IP ceiling no route overrides, and fine
+  per-`(ip, account)` limits per route — the four pre-existing throttling
+  e2e blocks (limit, per-account isolation, proxy-aware IP buckets,
+  `throttling: false`) pass unchanged against the new engine, and the
+  per-field merge is pinned by unit tests that fail against a
+  whole-dimension merge (which silently shared the fine counter across
+  accounts). **Breaking**: `extras.throttling` is now
+  `false | { ip?, default?, store? }` (windows in `windowMs`), replacing
+  the pass-through of `@nestjs/throttler`'s option surface;
+  `@nestjs/throttler` leaves the dependency tree. The consumer gate runs
+  WITHOUT `--legacy-peer-deps` — a default `npm install` of the published
+  tarballs is now the enforced contract. Rate-limit store keys gained a
+  `<dimension>:` prefix, so counters reset once on upgrade.
+
+- **`scope: false` / `owner: false` no longer skip the ancestor-chain
+  check (IDOR).** Both flags dropped `PathScopeGuard` outright. The guard
+  does two separable things: it verifies the addressed chain (the parent
+  exists, is visible to its own hooks, and — at three levels or more —
+  actually contains the middle row) and it verifies ownership. Only the
+  second is an access-control opt-in; a request naming a row through a
+  parent that does not contain it is malformed whoever sends it.
+
+  Ancestor route params are declared `disabled: true`, so they never
+  reach `buildWhere` and cannot substitute for the check. The result was
+  that `/parents/A/children/CHILD_OF_B/notes` served `CHILD_OF_B`'s rows
+  whenever the deep resource opted out, where the scoped route answers
+  `404`.
+
+  `PathScopeGuard` now takes an optional `ownerColumn` and is attached to
+  every sub-resource. Without it the guard skips the actor requirement
+  and the owner clause but still performs the parent lookup with the
+  parent's hooks replayed. **Behaviour changes for existing apps using
+  either flag**: a missing parent is now a `404` rather than an empty
+  list, a parent hidden by its own hooks stays hidden, and a mismatched
+  ancestor is refused. An owner-less route still serves actor-less
+  requests. Pinned by four e2e tests including a depth-3 probe.
+
+  Two review follow-ups. The chain guarantee at depth three runs through
+  the MIDDLE level's `PathScopeHook`, so a middle resource with
+  `scope: false` left its children reachable through any existing
+  grandparent id — a hole opened by a switch two levels up, on a resource
+  whose own routes look correct. `defineResource` now REFUSES a
+  `scope: false` sub-resource that declares `subResources`; the e2e that
+  pinned the hole as "the documented limit" pins the 404 instead.
+  **Breaking for an app that nests under an unscoped level**: the
+  definition throws, naming the segment and the two ways out. And the
+  always-attached guard is new surface on an owner-less nested route:
+  with no `ownerColumn` it runs for unauthenticated callers too, so a
+  public nested route answers `404` for a missing parent where before no
+  guard was attached at all — a parent-existence oracle unless the app
+  gates the route with its own auth guard.
+
+- **A second recursive schema no longer aborts the OpenAPI document.**
+  `z.toJSONSchema` names a definition it had to extract but cannot name —
+  the inner object of a `z.lazy()` recursion is the usual one —
+  positionally, as `__schema0`, and the counter restarts for every schema
+  converted. Two unrelated recursive schemas in one app therefore both
+  claimed `__schema0`, and the second one aborted document generation with
+  a shape-mismatch error that blamed the request/response split instead of
+  the name. The converter now names those definitions from their
+  transitive content (`RocketsRef_<hash>`; originally a counter, then
+  qualified with the owning component id, then content-only — see the two
+  entries below) and rewrites every `$ref` that pointed at
+  them, `#/$defs/…` and `#/definitions/…` included — Swagger normalises
+  those prefixes only after the converter returns, so matching just
+  `#/components/schemas/…` left the document referencing a component that
+  no longer existed. A name changes when the definition's own content
+  changes — not because an unrelated recursive schema was declared
+  elsewhere, and not because a route was added in a different order.
+
+- **A discriminated union is documented as one.** `z.toJSONSchema` renders
+  `z.discriminatedUnion()` as a bare `oneOf`, dropping the tag that makes
+  it discriminated: a generated client had to try each branch in turn
+  instead of switching on the property. When every branch is named with
+  `withOpenApi()` — OpenAPI allows `discriminator` only over `$ref`
+  branches — the converter now emits `discriminator` with an explicit
+  `mapping`, which is required rather than cosmetic: the implicit form
+  matches the tag value against the COMPONENT name, and `'circle'` is not
+  `'CircleDto'`. A union with even one unnamed branch is left alone,
+  because a partial mapping would document some tags and silently drop the
+  rest. Matching is by branch set, not by component name — the same union
+  node is reached under an operation's generated wrapper id and emitted
+  under the authored response id.
 
 - **Entity hooks bound to a key no resource registers now fail the boot
   (issue #69 review).** `@EntityHook({ entity })` bakes
@@ -1008,6 +1662,14 @@ before running the full e2e suite.
 
 ### Testing
 
+- **`examples/sample-server`: class-vs-zod parity fixtures retired (RFC
+  #104, stage 3).** `test/zod-swagger-golden.e2e-spec.ts`,
+  `test/zod-parity.e2e-spec.ts` and their hand-written control resources
+  (`__fixtures__/tag-classic-control.ts`,
+  `__fixtures__/zod-parity/author-book.control.ts`) compared a class-DTO
+  `defineResource` twin against the zod resource. With class-DTO authoring
+  retired, the twin is gone; `test/zod-library.e2e-spec.ts` keeps every
+  document and runtime assertion against the zod author/book pair alone.
 - Package e2e suites run one Jest process per spec file
   (`scripts/run-isolated-e2e.cjs`). Sharing one worker failed ~25% of full
   runs with rotating victims — cumulative process state across ~30 Nest +

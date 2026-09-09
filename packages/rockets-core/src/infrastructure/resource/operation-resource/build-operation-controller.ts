@@ -8,17 +8,12 @@
  * ApiTags is applied immediately below from definition.tags (with a default).
  */
 import {
-  attachErrorDetails,
-  classValidatorErrorsToDetails,
-} from '../../../common/utils/validation-error-details.util';
-import {
   AccessControlGrant,
   AccessControlQuery,
 } from '@concepta/nestjs-access-control';
 import { inspect } from 'node:util';
 import {
   applyDecorators,
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -36,33 +31,28 @@ import {
   RequestMethod,
   Res,
   Sse,
+  StandardSchemaValidationPipe,
   Type,
+  UsePipes,
 } from '@nestjs/common';
 import {
-  INTERCEPTORS_METADATA,
   METHOD_METADATA,
+  PARAMTYPES_METADATA,
   PATH_METADATA,
   SSE_METADATA,
 } from '@nestjs/common/constants';
 import { RuntimeException } from '@concepta/nestjs-core';
 import { ContextIdFactory, ModuleRef } from '@nestjs/core';
-import {
-  Transactional,
-  TransactionInterceptor,
-} from '@concepta/nestjs-repository';
+import { Transactional, isTransactional } from '@concepta/nestjs-repository';
 import { catchError, isObservable, throwError, type Observable } from 'rxjs';
 import { AuthPublic } from '@concepta/nestjs-authentication';
 import {
   ApiBearerAuth,
-  ApiBody,
   ApiOperation,
-  ApiParam,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { instanceToPlain, plainToInstance } from 'class-transformer';
-import { getMetadataStorage, validate } from 'class-validator';
+import type { z } from 'zod';
 
 import { AuthUser } from '../../../common/auth/auth-user.decorator';
 import type { AuthorizedUser } from '../../../domain/interfaces/auth-user.interface';
@@ -74,17 +64,17 @@ import type {
   OperationRequest,
   OperationResourceDefinition,
 } from '../../../domain/interfaces/operation-resource.interface';
+import { rocketsSchemaValidation } from '../../../common/utils/standard-schema.util';
 import {
-  getCarriedStandardSchema,
-  standardSchemaBadRequest,
-} from '../../../common/utils/standard-schema.util';
+  assertNamedSchema,
+  isOpenApiBridged,
+} from '../../../common/utils/open-api-schema.util';
 import {
   ERROR_MESSAGE_FALLBACK,
   unwrapToClientRuntimeException,
   unwrapToHttpException,
 } from '../../filters/exceptions.filter';
 import { getHandlerClass, isHandlerFunction } from './is-handler-class';
-import { readOperationDtoOpenApiFields } from './openapi-dto-metadata';
 
 const logger = new Logger('OperationResource');
 const SWAGGER_API_SECURITY_METADATA = 'swagger/apiSecurity';
@@ -120,217 +110,66 @@ function outputValidationError(
   });
 }
 
-function assertValidatableDto(
-  dto: Type<object> | undefined,
-  label: string,
+/**
+ * Every schema an operation carries must be able to validate AND
+ * document: a body or response schema is a NAMED component, a query or
+ * params schema is bridged (documented one parameter per property).
+ * Definition-time, so a schema that was extended after `withOpenApi()`
+ * fails the resource, not the first request.
+ */
+function assertOperationSchemas(
+  definition: OperationResourceDefinition,
+  operation: CompiledOperationDescriptor,
 ): void {
-  if (dto === undefined) {
-    return;
-  }
-  if (getCarriedStandardSchema(dto)) {
-    return;
-  }
-  const metas = getMetadataStorage().getTargetValidationMetadatas(
-    dto,
-    '',
-    false,
-    false,
-  );
-  if (metas.length === 0) {
-    throw new Error(
-      `operationResource ${label}: DTO "${dto.name}" has neither a Standard ` +
-        `Schema nor class-validator metadata — cannot validate or whitelist. ` +
-        `Pass a zod-compiled DTO (compileDtoClass) or a class-validator DTO.`,
-    );
-  }
-}
-
-/**
- * Validates the request payload against the declared input DTO.
- *
- * A non-record payload is REJECTED rather than coerced. Coercing it to
- * `{}` made `POST []` against `z.object({ note: z.string().optional() })`
- * return 200 with an empty input — zod itself rejects the array, and the
- * same coercion let any array or scalar pass an all-optional
- * class-validator DTO. Silently substituting a valid value for an
- * invalid one is the failure shape to avoid on a validation boundary.
- *
- * A MISSING body still becomes `{}`: `POST` with no payload against an
- * all-optional DTO is legal, and a DTO with required fields still fails
- * validation one line later, with the field-level message rather than a
- * generic shape error.
- */
-async function applyInputDto(
-  dto: Type<object> | undefined,
-  value: unknown,
-): Promise<unknown> {
-  if (dto === undefined) {
-    return value;
-  }
-  if (value === undefined) {
-    return validateAndWhitelistDto(dto, {}, false);
-  }
-  if (!isPlainRecord(value)) {
-    const message = `Expected a JSON object body, received ${describePayload(
-      value,
-    )}`;
-    // Same details channel as every other 400 this file mints — a
-    // whole-body failure addresses the root, so the path is empty.
-    throw attachErrorDetails(
-      new BadRequestException({
-        statusCode: 400,
-        message,
-        error: 'Bad Request',
-      }),
-      [{ path: [], message }],
-    );
-  }
-  return validateAndWhitelistDto(dto, value, false);
-}
-
-/**
- * Whether a value is a plain JSON object.
- *
- * Prototype-checked rather than `typeof value === 'object'`. A `Buffer`
- * from a raw body parser is an object and is not an array, so the looser
- * test let it through to be whitelisted down to `{}` — the same silent
- * substitution the array case is rejected for. `Date`, `Map` and class
- * instances fall out for the same reason; none of them survive a JSON
- * round trip, so nothing a JSON client can send is lost.
- */
-function isPlainRecord(value: unknown): value is object {
-  if (value === null || typeof value !== 'object') return false;
-  const proto: unknown = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
-
-function describePayload(value: unknown): string {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'an array';
-  if (typeof value === 'object') {
-    const name: unknown = value.constructor?.name;
-    return typeof name === 'string' ? `a ${name}` : 'a non-plain object';
-  }
-  return `a ${typeof value}`;
-}
-
-/**
- * Validate declared `params` schema keys, but keep any Nest path params that
- * are not in the schema (e.g. extra `:repoId` on an operation path when the
- * resource-level schema only names base `:orgId`).
- */
-async function resolveOperationParams(
-  paramsDto: Type<object> | undefined,
-  params: Record<string, string>,
-): Promise<Record<string, unknown>> {
-  if (paramsDto === undefined) {
-    return params;
-  }
-  const validated = await applyInputDto(paramsDto, params);
-  if (
-    validated === null ||
-    typeof validated !== 'object' ||
-    Array.isArray(validated)
-  ) {
-    return params;
-  }
-  return { ...params, ...(validated as Record<string, unknown>) };
-}
-
-/**
- * Message-shaped view of the SHARED recursive producer — one walker of
- * the class-validator error tree, not two. `classValidatorErrorsToDetails`
- * (issue #55) is the single implementation; this maps its structured
- * details to the flattened strings this 400 body has always carried.
- */
-function flattenConstraintMessages(
-  details: ReturnType<typeof classValidatorErrorsToDetails>,
-): string[] {
-  return details.map((detail) =>
-    detail.path.length > 1
-      ? `${detail.path.join('.')}: ${detail.message}`
-      : detail.message,
-  );
-}
-
-async function validateAndWhitelistDto(
-  dto: Type<object>,
-  data: object,
-  skipMissingProperties: boolean,
-): Promise<unknown> {
-  const standard = getCarriedStandardSchema(dto);
-  if (standard) {
-    const result = await standard['~standard'].validate(data);
-    if (result.issues !== undefined) {
-      throw standardSchemaBadRequest(result.issues);
+  const label = `operationResource "${definition.path}" op "${operation.key}"`;
+  if (operation.inputSchema !== undefined) {
+    if (operation.method === 'GET' || operation.method === 'DELETE') {
+      assertBridged(operation.inputSchema, `${label} input (query)`);
+    } else {
+      assertNamedSchema(operation.inputSchema, `${label} input`);
     }
-    return result.value ?? {};
   }
-
-  const instance = plainToInstance(dto, data, {
-    enableImplicitConversion: true,
-  });
-  const errors = await validate(instance as object, {
-    whitelist: true,
-    forbidNonWhitelisted: false,
-    forbidUnknownValues: true,
-    skipMissingProperties,
-  });
-  if (errors.length) {
-    const details = classValidatorErrorsToDetails(errors);
-    throw attachErrorDetails(
-      new BadRequestException({
-        statusCode: 400,
-        // Recursive: a @ValidateNested failure carries its constraints in
-        // `children`, not on the root — flattening only the top level
-        // produced a 400 with `message: []`, telling the client nothing.
-        message: flattenConstraintMessages(details),
-        error: 'Bad Request',
-      }),
-      details,
+  if (operation.output !== false) {
+    assertNamedSchema(operation.output, `${label} output`);
+  }
+  if (definition.paramsSchema !== undefined) {
+    assertBridged(
+      definition.paramsSchema,
+      `operationResource "${definition.path}" params`,
     );
   }
-  return instanceToPlain(instance as object);
+}
+
+function assertBridged(schema: z.ZodType, context: string): void {
+  if (!isOpenApiBridged(schema)) {
+    throw new Error(
+      `${context}: schema has no OpenAPI bridge — wrap it LAST with ` +
+        `withOpenApi(schema).`,
+    );
+  }
 }
 
 /**
- * Whitelist / validate handler output. Failures are server bugs → 500,
- * never 400 (clients did not send the response body). The failing issues
- * are logged server-side; the client response stays generic.
+ * Validate handler output against the declared schema. Failures are
+ * server bugs → 500, never 400 (clients did not send the response body).
+ * The failing issues are logged server-side; the client response stays
+ * generic. Inline rather than Nest's serializer interceptor on purpose:
+ * that one passes `null` / `undefined` through and maps arrays per item,
+ * while this contract is "the declared shape, or a loud 500".
  */
-async function applyOutputDto(
-  dto: Type<object> | undefined,
+async function applyOutputSchema(
+  schema: z.ZodType,
   value: unknown,
   label: string,
 ): Promise<unknown> {
-  if (dto === undefined) {
-    return value;
-  }
   if (value === null || value === undefined) {
     throw outputValidationError(label, `handler returned ${String(value)}`);
   }
-
-  const standard = getCarriedStandardSchema(dto);
-  if (standard) {
-    const result = await standard['~standard'].validate(value);
-    if (result.issues !== undefined) {
-      throw outputValidationError(label, result.issues);
-    }
-    return result.value ?? value;
+  const result = await schema['~standard'].validate(value);
+  if (result.issues !== undefined) {
+    throw outputValidationError(label, result.issues);
   }
-
-  if (typeof value !== 'object' || Array.isArray(value)) {
-    throw outputValidationError(label, 'handler returned a non-object value');
-  }
-
-  try {
-    return await validateAndWhitelistDto(dto, value, false);
-  } catch (error) {
-    if (error instanceof BadRequestException) {
-      throw outputValidationError(label, error.getResponse());
-    }
-    throw error;
-  }
+  return result.value;
 }
 
 /**
@@ -406,15 +245,9 @@ function toClientSafeStreamError(error: unknown, label: string): unknown {
     unwrapToClientRuntimeException(error) ??
     error;
 
-  if (unwrapped instanceof HttpException) {
-    // An HttpException body is author-chosen and the filter puts it on
-    // the wire at any status — including 5xx, where it is still logged.
-    if (unwrapped.getStatus() >= 500) {
-      logStreamFailure(label, error);
-    }
-    return unwrapped;
-  }
-
+  // `RuntimeException` extends `HttpException` upstream — checked first,
+  // or its `safeMessage` masking below would never run and a 5xx domain
+  // exception would write its internal `.message` to the stream.
   if (unwrapped instanceof RuntimeException) {
     const status = unwrapped.httpStatus ?? 500;
     if (status < 500) {
@@ -434,6 +267,15 @@ function toClientSafeStreamError(error: unknown, label: string): unknown {
     );
   }
 
+  if (unwrapped instanceof HttpException) {
+    // An HttpException body is author-chosen and the filter puts it on
+    // the wire at any status — including 5xx, where it is still logged.
+    if (unwrapped.getStatus() >= 500) {
+      logStreamFailure(label, error);
+    }
+    return unwrapped;
+  }
+
   // A plain `Error`, a driver failure: a 500 with no declared safe text.
   logStreamFailure(label, error);
   return new InternalServerErrorException(ERROR_MESSAGE_FALLBACK);
@@ -447,62 +289,6 @@ function logStreamFailure(label: string, error: unknown): void {
     `SSE operation "${label}" stream errored`,
     error instanceof Error ? error.stack ?? error.message : inspect(error),
   );
-}
-
-function appendParamsOpenApiDecorators(
-  decorators: Array<ClassDecorator | MethodDecorator | PropertyDecorator>,
-  paramsDto: Type<object> | undefined,
-): void {
-  if (paramsDto === undefined) {
-    return;
-  }
-  const fields = readOperationDtoOpenApiFields(paramsDto);
-  if (fields === undefined) {
-    return;
-  }
-  for (const field of fields) {
-    decorators.push(
-      ApiParam({
-        name: field.name,
-        required: field.required,
-        schema: field.schema,
-      }),
-    );
-  }
-}
-
-function appendInputOpenApiDecorators(
-  decorators: Array<ClassDecorator | MethodDecorator | PropertyDecorator>,
-  operation: CompiledOperationDescriptor,
-): void {
-  if (!operation.inputDto) {
-    return;
-  }
-  if (operation.method === 'GET' || operation.method === 'DELETE') {
-    const fields = readOperationDtoOpenApiFields(operation.inputDto);
-    if (fields) {
-      for (const field of fields) {
-        decorators.push(
-          ApiQuery({
-            name: field.name,
-            required: field.required,
-            schema: field.schema,
-          }),
-        );
-      }
-      return;
-    }
-    decorators.push(
-      ApiQuery({
-        type: operation.inputDto,
-        style: 'deepObject',
-        explode: true,
-        required: false,
-      }),
-    );
-    return;
-  }
-  decorators.push(ApiBody({ type: operation.inputDto }));
 }
 
 function controllerClassName(path: string): string {
@@ -574,32 +360,6 @@ export function operationDtoBaseName(args: {
   )}_${pascalSegment(operationDiscriminator(args.key, args.path))}`;
 }
 
-/**
- * Marks a DTO class whose NAME Rockets minted, as opposed to one the
- * consumer supplied.
- *
- * The distinction matters for the OpenAPI component-uniqueness check:
- * a consumer may legitimately reuse one hand-written DTO across several
- * operations, so asserting global name uniqueness over every DTO would
- * reject valid apps. A generated name colliding, on the other hand, is
- * always a bug — two schemas would claim one component and the second
- * silently overwrites the first.
- *
- * `Symbol.for` so two copies of the package still recognise each
- * other's brands.
- */
-export const ROCKETS_GENERATED_DTO_NAME = Symbol.for(
-  '@concepta/rockets-core/generated-dto-name',
-);
-
-/**
- * Component name for a resource's shared path-params DTO. Same lossy
- * transform, same uniqueness assertion covering it.
- */
-export function operationResourceParamsDtoName(resourcePath: string): string {
-  return `${pascalSegment(resourcePath)}_Params`;
-}
-
 function pascalSegment(value: string): string {
   return value
     .split(/[^a-zA-Z0-9]+/)
@@ -651,18 +411,7 @@ export function buildOperationController(
 
   const routeKeys = new Set<string>();
   for (const operation of Object.values(definition.operations)) {
-    assertValidatableDto(
-      operation.inputDto,
-      `"${definition.path}" op "${operation.key}" inputDto`,
-    );
-    assertValidatableDto(
-      operation.output === false ? undefined : operation.output,
-      `"${definition.path}" op "${operation.key}" output`,
-    );
-    assertValidatableDto(
-      definition.paramsDto,
-      `"${definition.path}" paramsDto`,
-    );
+    assertOperationSchemas(definition, operation);
     // Lowercased: Express matches case-insensitively by default, so
     // two ops differing only in path casing are one wire route.
     const routeKey = `${operation.method}:${operation.path.toLowerCase()}`;
@@ -682,10 +431,14 @@ export function buildOperationController(
       : ['operations'];
   const operations = Object.values(definition.operations);
   const uniqueName = controllerClassName(definition.path);
-  const paramsDto = definition.paramsDto;
+  const paramsSchema = definition.paramsSchema;
 
+  // One per-route Standard Schema pipe for every schema-carrying param
+  // (body, query, params) — the same engine and the same `details`-bearing
+  // 400 as generated CRUD. Params without a schema pass through untouched.
   @Controller(definition.path.replace(/^\//, ''))
   @ApiTags(...tags)
+  @UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
   class OperationResourceController {
     constructor(private readonly moduleRef: ModuleRef) {}
   }
@@ -708,7 +461,7 @@ export function buildOperationController(
       OperationResourceController,
       operation,
       uniqueName,
-      paramsDto,
+      paramsSchema,
       bearerAuth,
       handlerAliases,
       aclDecorators[operation.key],
@@ -788,14 +541,14 @@ function assertRegisteredRouteShape(
     );
   }
 
-  // SSE has no JSON response body to whitelist; the interface documents
+  // SSE has no JSON response body to validate; the interface documents
   // `output` as always `false` for these operations. Reachable through a
   // hand-built descriptor, where it would silently do nothing.
   if (declaredSse && operation.output !== false) {
     throw new Error(
       `operationResource: SSE operation "${operation.key}" declares an ` +
-        `\`output\` DTO. An SSE response body is the event stream, never a ` +
-        `whitelisted JSON value, so the output step never runs — the DTO ` +
+        `\`output\` schema. An SSE response body is the event stream, never ` +
+        `a validated JSON value, so the output step never runs — the schema ` +
         `would be silently ignored. Set \`output: false\`.`,
     );
   }
@@ -832,11 +585,10 @@ function assertRegisteredRouteShape(
     );
   }
 
-  if (
-    declaredSse &&
-    (hasTransactionInterceptor(handler) ||
-      hasTransactionInterceptor(controllerClass))
-  ) {
+  // Handler first, then the class: a resource-level
+  // `decorators: [Transactional()]` applies to every route, and a
+  // route-level `Transactional(false)` opts that one route back out.
+  if (declaredSse && isTransactional(handler, controllerClass)) {
     throw new Error(
       `operationResource: SSE operation "${operation.key}" combines ` +
         `\`responseMode: "sse"\` with Transactional(). The handler returns ` +
@@ -862,34 +614,6 @@ function normalizeRoutePath(value: unknown): string {
   return value.startsWith('/') ? value : `/${value}`;
 }
 
-/**
- * Whether `Transactional()` reached this route — passed either the
- * route handler or the controller class, because `UseInterceptors`
- * writes the same key on both and a resource-level
- * `decorators: [Transactional()]` applies to every route on the class.
- *
- * Detected through the interceptor CLASS it registers rather than its
- * metadata key: upstream exports `TransactionInterceptor` and
- * `Transactional`, but not the `TRANSACTIONAL_KEY` symbol the decorator
- * writes, so the class reference is the only public identity available.
- * `Transactional(false)` — the opt-OUT — registers no interceptor and is
- * correctly not flagged.
- */
-function hasTransactionInterceptor(target: object): boolean {
-  const interceptors: unknown = Reflect.getMetadata(
-    INTERCEPTORS_METADATA,
-    target,
-  );
-  if (!Array.isArray(interceptors)) {
-    return false;
-  }
-  return interceptors.some(
-    (interceptor: unknown) =>
-      interceptor === TransactionInterceptor ||
-      interceptor instanceof TransactionInterceptor,
-  );
-}
-
 function describeRequestMethod(value: unknown): string {
   const name = Object.entries(RequestMethod).find(
     ([, enumValue]) => enumValue === value,
@@ -901,7 +625,7 @@ function attachOperationMethod(
   controllerClass: Type<unknown>,
   operation: CompiledOperationDescriptor,
   controllerName: string,
-  paramsDto: Type<object> | undefined,
+  paramsSchema: z.ZodObject | undefined,
   controllerBearerAuth: boolean,
   handlerAliases: ReadonlyMap<unknown, symbol>,
   aclDecorators: readonly MethodDecorator[] | undefined,
@@ -913,22 +637,25 @@ function attachOperationMethod(
     : METHOD_DECORATOR[operation.method](operation.path);
 
   const label = `${controllerName}.${methodName}`;
+  const readsQuery =
+    operation.method === 'GET' || operation.method === 'DELETE';
 
+  // `body` / `query` / `validatedParams` arrive already validated by the
+  // class-level pipe when the slot carries a schema; `params` is the raw
+  // Nest params map, kept beside the validated one so a path param the
+  // resource schema does not name (an extra `:repoId` on one operation)
+  // still reaches the handler.
   async function routeHandler(
     this: { moduleRef: ModuleRef },
     body: unknown,
     query: Record<string, unknown>,
     params: Record<string, string>,
+    validatedParams: Record<string, unknown>,
     request: NativeRequest,
     response: unknown,
     user: AuthorizedUser | undefined,
   ): Promise<unknown> {
-    const rawInput =
-      operation.method === 'GET' || operation.method === 'DELETE'
-        ? query
-        : body;
-    const input = await applyInputDto(operation.inputDto, rawInput);
-    const validatedParams = await resolveOperationParams(paramsDto, params);
+    const input = readsQuery ? query : body;
 
     const operationRequest: OperationRequest = {
       headers: request.headers ?? {},
@@ -939,7 +666,8 @@ function attachOperationMethod(
 
     const ctx: OperationContext<unknown, object> = {
       input,
-      params: validatedParams,
+      params:
+        paramsSchema === undefined ? params : { ...params, ...validatedParams },
       query,
       request: operationRequest,
       response: { raw: response },
@@ -979,7 +707,7 @@ function attachOperationMethod(
     if (operation.output === false) {
       return result;
     }
-    return applyOutputDto(operation.output, result, label);
+    return applyOutputSchema(operation.output, result, label);
   }
 
   Object.defineProperty(routeHandler, 'name', { value: methodName });
@@ -1019,13 +747,14 @@ function attachOperationMethod(
     );
   } else if (operation.output !== false) {
     decorators.push(
-      ApiResponse({ status: operation.status, type: operation.output }),
+      ApiResponse({
+        status: operation.status,
+        standardSchema: operation.output,
+      }),
     );
   } else {
     decorators.push(ApiResponse({ status: operation.status }));
   }
-  appendParamsOpenApiDecorators(decorators, paramsDto);
-  appendInputOpenApiDecorators(decorators, operation);
   if (operation.decorators?.length) {
     decorators.push(...operation.decorators);
   }
@@ -1094,10 +823,50 @@ function attachOperationMethod(
   }
   Object.defineProperty(proto, methodName, descriptor);
 
-  Body()(proto, methodName, 0);
-  Query()(proto, methodName, 1);
+  // A schema on the slot is what the class-level pipe validates AND what
+  // Swagger documents: the body as a `$ref` to its named component, the
+  // query / params expanded one parameter per property.
+  const bodySchema = readsQuery ? undefined : operation.inputSchema;
+  const querySchema = readsQuery ? operation.inputSchema : undefined;
+  (bodySchema === undefined ? Body() : Body({ schema: bodySchema }))(
+    proto,
+    methodName,
+    0,
+  );
+  (querySchema === undefined ? Query() : Query({ schema: querySchema }))(
+    proto,
+    methodName,
+    1,
+  );
   Param()(proto, methodName, 2);
-  Req()(proto, methodName, 3);
-  Res({ passthrough: true })(proto, methodName, 4);
-  AuthUser()(proto, methodName, 5);
+  (paramsSchema === undefined ? Param() : Param({ schema: paramsSchema }))(
+    proto,
+    methodName,
+    3,
+  );
+  Req()(proto, methodName, 4);
+  Res({ passthrough: true })(proto, methodName, 5);
+  AuthUser()(proto, methodName, 6);
+
+  // Swagger's route-arg scan (`ParameterMetadataAccessor.explore`) reads
+  // `design:paramtypes` FIRST and returns nothing when the method has
+  // none — TypeScript emits that metadata for a decorated class method,
+  // but `routeHandler` is a plain function assigned to the prototype, so
+  // without this stamp every schema above validated and NONE documented
+  // (no request body, no query, no path parameters). `Object` per slot
+  // is what `emitDecoratorMetadata` writes for an untyped parameter: a
+  // slot carrying a schema documents through it, and swagger drops a
+  // schema-less `Object` slot, which is exactly what the raw params /
+  // request / response / user slots should do.
+  Reflect.defineMetadata(
+    PARAMTYPES_METADATA,
+    ROUTE_HANDLER_PARAMTYPES,
+    proto,
+    methodName,
+  );
 }
+
+/** One entry per `routeHandler` parameter: body, query, params, validated params, request, response, user. */
+const ROUTE_HANDLER_PARAMTYPES: readonly unknown[] = Object.freeze(
+  Array.from({ length: 7 }, () => Object),
+);

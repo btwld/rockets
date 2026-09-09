@@ -85,6 +85,13 @@
 
 ### Changed
 
+- **The transaction dirty flag is gone.** `FirestoreTransaction.markDirty()`
+  / `isDirty` and the repository's private `markDirty` are removed:
+  upstream `8.0.0-alpha.10` dropped the same pair from `TypeOrmTransaction`
+  and `TypeOrmRepository`, and nothing ever read the flag. It also removed
+  `TransactionManager.get()`, which was the only way to reach the
+  transaction without starting one.
+
 - `FirestoreRepositoryModule.forRoot({ entities, backend? })` — global bootstrap
   with Admin validation (mirrors `TypeOrmModule.forRoot({ entities })` shape).
   `defineFirestoreRepository().forRoot()` delegates here.

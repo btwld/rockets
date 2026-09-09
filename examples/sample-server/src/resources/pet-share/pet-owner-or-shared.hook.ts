@@ -79,6 +79,7 @@ export class PetOwnerOrSharedHook extends PassthroughEntityHookBase<PlainLiteral
     if (!flags.writeOnly) {
       const shares = await this.shareRepo.find({
         where: Where.eq<PetShareEntity>('userId', actor.id),
+        ctx,
       });
       const sharedPetIds = shares.map((s) => s.petId);
       if (sharedPetIds.length > 0) {

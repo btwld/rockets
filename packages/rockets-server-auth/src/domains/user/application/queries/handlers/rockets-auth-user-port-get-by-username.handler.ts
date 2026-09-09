@@ -3,7 +3,7 @@ import type { AuthenticationUserResult } from '@concepta/nestjs-authentication';
 import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { GetUserByUsernameQuery, UserInterface } from '@concepta/nestjs-user';
 
-import { resolveConceptadevAppContext } from '../../../../../shared/compatibility/resolve-conceptadev-app-context';
+import { AppContextHost } from '@concepta/nestjs-core';
 import { RocketsAuthUserPortGetByUsernameQuery } from '../impl/rockets-auth-user-port-get-by-username.query';
 
 /**
@@ -29,7 +29,7 @@ export class RocketsAuthUserPortGetByUsernameHandler
       DomainAggregate<UserInterface> | null
     >(
       new GetUserByUsernameQuery(
-        resolveConceptadevAppContext(query.ctx),
+        AppContextHost.from(query.ctx),
         query.username,
       ),
     );

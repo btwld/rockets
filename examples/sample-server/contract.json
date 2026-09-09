@@ -8,10 +8,12 @@
             "type": "string"
           },
           "notes": {
+            "nullable": true,
             "type": "string"
           },
           "petId": {
             "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
             "type": "string"
           },
           "reminderSendAt": {
@@ -28,6 +30,7 @@
         "type": "object"
       },
       "AppointmentResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "date": {
             "format": "date-time",
@@ -39,13 +42,15 @@
           },
           "id": {
             "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
             "type": "string"
           },
           "notes": {
+            "nullable": true,
             "type": "string"
           },
           "petId": {
-            "format": "uuid",
+            "maxLength": 255,
             "type": "string"
           },
           "reminders": {
@@ -55,6 +60,7 @@
             "type": "array"
           },
           "status": {
+            "default": "pending",
             "enum": [
               "pending",
               "confirmed",
@@ -63,7 +69,7 @@
             "type": "string"
           },
           "userId": {
-            "format": "uuid",
+            "maxLength": 255,
             "type": "string"
           }
         },
@@ -78,32 +84,27 @@
         "type": "object"
       },
       "AppointmentResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/AppointmentResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -132,15 +133,14 @@
         "type": "object"
       },
       "AuthorResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "dateCreated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "dateUpdated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "id": {
@@ -164,32 +164,27 @@
         "type": "object"
       },
       "AuthorResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/AuthorResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -217,6 +212,37 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "BookAuthorResponseDto": {
+        "additionalProperties": false,
+        "properties": {
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateUpdated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "name": {
+            "example": "Machado de Assis",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "dateCreated",
+          "dateUpdated"
+        ],
         "type": "object"
       },
       "BookCreateDto": {
@@ -280,38 +306,14 @@
         "type": "object"
       },
       "BookResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "author": {
-            "properties": {
-              "dateCreated": {
-                "format": "date-time",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                "type": "string"
-              },
-              "dateUpdated": {
-                "format": "date-time",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                "type": "string"
-              },
-              "id": {
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                "type": "string"
-              },
-              "name": {
-                "example": "Machado de Assis",
-                "maxLength": 100,
-                "minLength": 1,
-                "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookAuthorResponseDto"
               }
-            },
-            "required": [
-              "id",
-              "name",
-              "dateCreated",
-              "dateUpdated"
-            ],
-            "type": "object"
+            ]
           },
           "authorId": {
             "format": "uuid",
@@ -320,18 +322,15 @@
           },
           "dateCreated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "dateDeleted": {
             "format": "date-time",
             "nullable": true,
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "dateUpdated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "id": {
@@ -362,32 +361,27 @@
         "type": "object"
       },
       "BookResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/BookResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -426,7 +420,26 @@
         },
         "type": "object"
       },
+      "LoginDto": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "type": "string"
+          },
+          "password": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object"
+      },
       "LoginResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "accessToken": {
             "description": "Signed JWT — pass as Bearer token",
@@ -448,14 +461,17 @@
           "breed": {
             "example": "Labrador",
             "maxLength": 255,
+            "nullable": true,
             "type": "string"
           },
           "color": {
             "example": "golden",
             "maxLength": 100,
+            "nullable": true,
             "type": "string"
           },
           "description": {
+            "nullable": true,
             "type": "string"
           },
           "name": {
@@ -492,6 +508,7 @@
         "type": "object"
       },
       "PetResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "age": {
             "maximum": 50,
@@ -501,30 +518,30 @@
           "breed": {
             "example": "Labrador",
             "maxLength": 255,
+            "nullable": true,
             "type": "string"
           },
           "color": {
             "example": "golden",
             "maxLength": 100,
+            "nullable": true,
             "type": "string"
           },
           "dateCreated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "dateDeleted": {
             "format": "date-time",
             "nullable": true,
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "dateUpdated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "description": {
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -554,20 +571,20 @@
           },
           "tags": {
             "items": {
+              "additionalProperties": false,
               "properties": {
                 "color": {
                   "example": "#ff0000",
                   "maxLength": 20,
+                  "nullable": true,
                   "type": "string"
                 },
                 "dateCreated": {
                   "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
                   "type": "string"
                 },
                 "dateUpdated": {
                   "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
                   "type": "string"
                 },
                 "id": {
@@ -604,37 +621,7 @@
           },
           "vaccinations": {
             "items": {
-              "properties": {
-                "dateAdministered": {
-                  "example": "2024-01-15",
-                  "type": "string"
-                },
-                "dateExpires": {
-                  "example": "2025-01-15",
-                  "type": "string"
-                },
-                "id": {
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                  "type": "string"
-                },
-                "name": {
-                  "example": "Rabies",
-                  "type": "string"
-                },
-                "petId": {
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "name",
-                "dateAdministered",
-                "petId"
-              ],
-              "type": "object"
+              "$ref": "#/components/schemas/PetVaccinationsResponseDto"
             },
             "type": "array"
           },
@@ -650,39 +637,36 @@
           "name",
           "species",
           "age",
+          "status",
           "userId",
           "dateCreated",
-          "dateUpdated"
+          "dateUpdated",
+          "version"
         ],
         "type": "object"
       },
       "PetResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/PetResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -707,11 +691,50 @@
           "userId": {
             "description": "ID of the user the pet is being shared with.",
             "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
             "type": "string"
           }
         },
         "required": [
           "userId"
+        ],
+        "type": "object"
+      },
+      "PetShareResponseDto": {
+        "additionalProperties": false,
+        "properties": {
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "permission": {
+            "enum": [
+              "read"
+            ],
+            "type": "string"
+          },
+          "petId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "userId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "petId",
+          "userId",
+          "permission",
+          "dateCreated"
         ],
         "type": "object"
       },
@@ -729,10 +752,10 @@
         "type": "object"
       },
       "PetTagResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "dateCreated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "id": {
@@ -746,41 +769,11 @@
             "type": "string"
           },
           "tag": {
-            "properties": {
-              "color": {
-                "example": "#ff0000",
-                "maxLength": 20,
-                "type": "string"
-              },
-              "dateCreated": {
-                "format": "date-time",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                "type": "string"
-              },
-              "dateUpdated": {
-                "format": "date-time",
-                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
-                "type": "string"
-              },
-              "id": {
-                "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                "type": "string"
-              },
-              "name": {
-                "example": "vaccinated",
-                "maxLength": 100,
-                "minLength": 1,
-                "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PetTagTagResponseDto"
               }
-            },
-            "required": [
-              "id",
-              "name",
-              "dateCreated",
-              "dateUpdated"
-            ],
-            "type": "object"
+            ]
           },
           "tagId": {
             "format": "uuid",
@@ -797,32 +790,27 @@
         "type": "object"
       },
       "PetTagResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/PetTagResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -836,6 +824,43 @@
         ],
         "type": "object"
       },
+      "PetTagTagResponseDto": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "example": "#ff0000",
+            "maxLength": 20,
+            "nullable": true,
+            "type": "string"
+          },
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateUpdated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "name": {
+            "example": "vaccinated",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "dateCreated",
+          "dateUpdated"
+        ],
+        "type": "object"
+      },
       "PetUpdateDto": {
         "properties": {
           "age": {
@@ -846,14 +871,17 @@
           "breed": {
             "example": "Labrador",
             "maxLength": 255,
+            "nullable": true,
             "type": "string"
           },
           "color": {
             "example": "golden",
             "maxLength": 100,
+            "nullable": true,
             "type": "string"
           },
           "description": {
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -892,6 +920,7 @@
           },
           "dateExpires": {
             "example": "2025-01-15",
+            "nullable": true,
             "type": "string"
           },
           "name": {
@@ -914,6 +943,7 @@
         "type": "object"
       },
       "PetVaccinationResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "dateAdministered": {
             "example": "2024-01-15",
@@ -921,6 +951,7 @@
           },
           "dateExpires": {
             "example": "2025-01-15",
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -949,32 +980,27 @@
         "type": "object"
       },
       "PetVaccinationResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/PetVaccinationResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -985,6 +1011,41 @@
           "total",
           "page",
           "pageCount"
+        ],
+        "type": "object"
+      },
+      "PetVaccinationsResponseDto": {
+        "additionalProperties": false,
+        "properties": {
+          "dateAdministered": {
+            "example": "2024-01-15",
+            "type": "string"
+          },
+          "dateExpires": {
+            "example": "2025-01-15",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "name": {
+            "example": "Rabies",
+            "type": "string"
+          },
+          "petId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "dateAdministered",
+          "petId"
         ],
         "type": "object"
       },
@@ -1002,6 +1063,7 @@
         "type": "object"
       },
       "PetsPetId_Post_TransferOutput": {
+        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string"
@@ -1017,6 +1079,7 @@
         "type": "object"
       },
       "ReminderResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "appointmentId": {
             "format": "uuid",
@@ -1025,7 +1088,6 @@
           },
           "dateCreated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "id": {
@@ -1035,7 +1097,6 @@
           },
           "sendAt": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "sent": {
@@ -1048,37 +1109,33 @@
           "id",
           "appointmentId",
           "sendAt",
+          "sent",
           "dateCreated"
         ],
         "type": "object"
       },
       "ReminderResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/ReminderResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -1092,20 +1149,37 @@
         ],
         "type": "object"
       },
-      "RoleNameDto": {
+      "SignupDto": {
         "properties": {
+          "email": {
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "type": "string"
+          },
           "name": {
-            "description": "Role name",
-            "example": "admin",
+            "minLength": 1,
+            "type": "string"
+          },
+          "password": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "admin"
+            ],
             "type": "string"
           }
         },
         "required": [
-          "name"
+          "email",
+          "password"
         ],
         "type": "object"
       },
       "SignupResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "accessToken": {
             "description": "Signed JWT — pass as Bearer token",
@@ -1121,6 +1195,7 @@
           },
           "name": {
             "example": "John Doe",
+            "nullable": true,
             "type": "string"
           },
           "role": {
@@ -1145,6 +1220,7 @@
           "color": {
             "example": "#ff0000",
             "maxLength": 20,
+            "nullable": true,
             "type": "string"
           },
           "name": {
@@ -1160,20 +1236,20 @@
         "type": "object"
       },
       "TagResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "color": {
             "example": "#ff0000",
             "maxLength": 20,
+            "nullable": true,
             "type": "string"
           },
           "dateCreated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "dateUpdated": {
             "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
             "type": "string"
           },
           "id": {
@@ -1197,32 +1273,27 @@
         "type": "object"
       },
       "TagResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/TagResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -1241,6 +1312,7 @@
           "color": {
             "example": "#ff0000",
             "maxLength": 20,
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -1257,11 +1329,26 @@
         },
         "type": "object"
       },
-      "UserMetadataUpdateDto": {
+      "UserMetadataResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "bio": {
             "description": "User bio",
             "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dateDeleted": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "dateUpdated": {
+            "format": "date-time",
             "type": "string"
           },
           "firstName": {
@@ -1269,6 +1356,12 @@
             "example": "John",
             "maxLength": 100,
             "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
             "type": "string"
           },
           "lastName": {
@@ -1276,6 +1369,12 @@
             "example": "Doe",
             "maxLength": 100,
             "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "userId": {
+            "example": "user-123",
+            "maxLength": 255,
             "type": "string"
           },
           "username": {
@@ -1283,87 +1382,129 @@
             "example": "johndoe",
             "maxLength": 50,
             "minLength": 3,
+            "nullable": true,
+            "type": "string"
+          },
+          "version": {
+            "default": 1,
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "dateCreated",
+          "dateUpdated",
+          "version"
+        ],
+        "type": "object"
+      },
+      "UserMetadataUpdateDto": {
+        "properties": {
+          "bio": {
+            "description": "User bio",
+            "maxLength": 500,
+            "nullable": true,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "User first name",
+            "example": "John",
+            "maxLength": 100,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "User last name",
+            "example": "Doe",
+            "maxLength": 100,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "username": {
+            "description": "Username",
+            "example": "johndoe",
+            "maxLength": 50,
+            "minLength": 3,
+            "nullable": true,
             "type": "string"
           }
         },
         "type": "object"
       },
       "UserResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "claims": {
-            "description": "User claims from auth provider",
-            "example": {
-              "aud": "app",
-              "iss": "auth-provider"
-            },
+            "additionalProperties": {},
+            "description": "User claims from the auth provider, verbatim — not validated",
             "type": "object"
           },
           "email": {
             "description": "User email from auth provider",
-            "example": "user@example.com",
             "type": "string"
           },
           "id": {
             "description": "User ID from auth provider",
-            "example": "user-123",
             "type": "string"
           },
           "sub": {
             "description": "User subject from auth provider",
-            "example": "user-123",
             "type": "string"
           },
           "userMetadata": {
-            "description": "UserMetadata data - structure is defined dynamically",
-            "type": "object"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserMetadataResponseDto"
+              }
+            ],
+            "nullable": true
           },
           "userRoles": {
             "description": "User roles from auth provider",
-            "example": [
-              {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
                 "role": {
-                  "name": "user"
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
                 }
               },
-              {
-                "role": {
-                  "name": "admin"
-                }
-              }
-            ],
-            "items": {
-              "$ref": "#/components/schemas/UserRoleItemDto"
+              "required": [
+                "role"
+              ],
+              "type": "object"
             },
             "type": "array"
           }
         },
         "required": [
           "id",
-          "sub"
-        ],
-        "type": "object"
-      },
-      "UserRoleItemDto": {
-        "properties": {
-          "role": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RoleNameDto"
-              }
-            ],
-            "description": "Role object"
-          }
-        },
-        "required": [
-          "role"
+          "sub",
+          "userMetadata"
         ],
         "type": "object"
       },
       "UserUpdateDto": {
         "properties": {
           "userMetadata": {
-            "description": "UserMetadata data to update - structure is defined dynamically",
-            "type": "object"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserMetadataUpdateDto"
+              }
+            ]
           }
         },
         "type": "object"
@@ -1713,7 +1854,7 @@
                 }
               }
             },
-            "description": "list AppointmentResponseDto as paginated response."
+            "description": "list AppointmentResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -1777,7 +1918,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete AppointmentResponseDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -1869,22 +2010,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "properties": {
-                  "email": {
-                    "format": "email",
-                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
-                    "type": "string"
-                  },
-                  "password": {
-                    "minLength": 1,
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "email",
-                  "password"
-                ],
-                "type": "object"
+                "$ref": "#/components/schemas/LoginDto"
               }
             }
           },
@@ -1919,33 +2045,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "properties": {
-                  "email": {
-                    "format": "email",
-                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
-                    "type": "string"
-                  },
-                  "name": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "password": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "role": {
-                    "enum": [
-                      "user",
-                      "admin"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "email",
-                  "password"
-                ],
-                "type": "object"
+                "$ref": "#/components/schemas/SignupDto"
               }
             }
           },
@@ -2100,7 +2200,7 @@
                 }
               }
             },
-            "description": "list AuthorResponseDto as paginated response."
+            "description": "list AuthorResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -2164,7 +2264,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete AuthorResponseDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -2420,7 +2520,7 @@
                 }
               }
             },
-            "description": "list BookResponseDto as paginated response."
+            "description": "list BookResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -2737,12 +2837,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "properties": {
-                  "userMetadata": {
-                    "$ref": "#/components/schemas/UserMetadataUpdateDto"
-                  }
-                },
-                "type": "object"
+                "$ref": "#/components/schemas/UserUpdateDto"
               }
             }
           },
@@ -2905,7 +3000,7 @@
                 }
               }
             },
-            "description": "list PetVaccinationResponseDto as paginated response."
+            "description": "list PetVaccinationResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -2969,7 +3064,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete PetVaccinationResponseDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -3181,7 +3276,7 @@
                 }
               }
             },
-            "description": "list PetResponseDto as paginated response."
+            "description": "list PetResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -3430,6 +3525,19 @@
           }
         ],
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PetShareResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
           "404": {
             "description": "Pet not found or not owned by you"
           }
@@ -3467,6 +3575,16 @@
           "required": true
         },
         "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetShareResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
           "404": {
             "description": "Pet not found or not owned by you"
           }
@@ -3656,7 +3774,7 @@
                 }
               }
             },
-            "description": "list PetTagResponseDto as paginated response."
+            "description": "list PetTagResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -3739,7 +3857,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete PetTagResponseDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -4011,7 +4129,7 @@
                 }
               }
             },
-            "description": "list ReminderResponseDto as paginated response."
+            "description": "list ReminderResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -4225,7 +4343,7 @@
                 }
               }
             },
-            "description": "list TagResponseDto as paginated response."
+            "description": "list TagResponseDtoPaginatedDto"
           }
         },
         "security": [

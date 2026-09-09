@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { StandardSchemaValidationPipe, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { server } from './app.module';
 import { ExceptionsFilter } from '@concepta/rockets';
@@ -16,12 +15,9 @@ async function bootstrap() {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
     credentials: true,
   });
-  // StandardSchemaValidationPipe must run before ValidationPipe so zod
-  // schema-backed DTOs get validated before class-validator whitelist runs.
-  app.useGlobalPipes(
-    new StandardSchemaValidationPipe(),
-    new ValidationPipe({ transform: true, whitelist: true }),
-  );
+  // No global pipe: every route (generated CRUD, `/me`, `/auth`,
+  // `pets/:petId/share`) carries its own per-route Standard Schema pipe —
+  // a global `StandardSchemaValidationPipe` is refused at boot.
 
   const swaggerPath = process.env.SWAGGER_UI_PATH ?? 'api';
   // Same builder call the contract-export spec uses, so the pinned

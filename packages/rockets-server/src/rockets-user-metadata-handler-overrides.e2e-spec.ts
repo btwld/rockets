@@ -2,17 +2,15 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { INestApplication, Injectable } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
 import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
 import { UserMetadataEntityFixture } from './__fixtures__/entities/user-metadata.entity.fixture';
-import type { RocketsOptions } from './rockets.module-definition';
 import {
-  type UserMetadataCreatableInterface,
-  type UserMetadataEntityInterface,
-  type UserMetadataModelUpdatableInterface,
-  type UserMetadataUpdatableInterface,
-} from './domain/interfaces/user-metadata.interface';
+  userMetadataResponseSchemaFixture,
+  userMetadataUpdateSchemaFixture,
+} from './__fixtures__/schemas/user-metadata.schema.fixture';
+import type { RocketsOptions } from './rockets.module-definition';
+import type { UserMetadataEntityInterface } from './domain/interfaces/user-metadata.interface';
 import {
   AbstractGetUserMetadataHandler,
   AbstractUpsertUserMetadataHandler,
@@ -21,26 +19,6 @@ import {
 } from '@concepta/rockets-core';
 import { RocketsModule } from './rockets.module';
 import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
-
-class OverrideMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  userId!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-}
-
-class OverrideMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-}
 
 const CUSTOM_GET_MARKER = 'e2e-custom-get-handler';
 
@@ -62,14 +40,9 @@ class E2eCustomUpsertUserMetadataHandler extends AbstractUpsertUserMetadataHandl
   async execute(
     command: UpsertUserMetadataCommand,
   ): Promise<UserMetadataEntityInterface> {
-    const data = command.data as UserMetadataUpdatableInterface & {
-      firstName?: string;
-    };
+    const data = command.data as { firstName?: string };
     return new UserMetadataEntityFixture({
-      id:
-        data && 'id' in data && typeof data.id === 'string'
-          ? data.id
-          : 'override-upsert',
+      id: 'override-upsert',
       userId: command.userId,
       firstName: data.firstName ?? 'e2e-custom-upsert-handler',
     }) as UserMetadataEntityInterface;
@@ -84,8 +57,8 @@ describe('RocketsModule user metadata handler overrides (e2e)', () => {
     auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
     userMetadata: {
       entity: UserMetadataEntityFixture,
-      createDto: OverrideMetadataCreateDto,
-      updateDto: OverrideMetadataUpdateDto,
+      updateSchema: userMetadataUpdateSchemaFixture,
+      responseSchema: userMetadataResponseSchemaFixture,
     },
     repository: E2eFakeRepositoryModule,
   };
@@ -141,16 +114,11 @@ describe('RocketsModule user metadata handler overrides (e2e)', () => {
     const res = await request(app.getHttpServer())
       .patch('/me')
       .set('Authorization', 'Bearer valid-token')
-      .send({
-        userMetadata: {
-          id: 'patch-override-id',
-          firstName: 'patched-by-client',
-        },
-      })
+      .send({ userMetadata: { firstName: 'patched-by-client' } })
       .expect(200);
 
     expect(res.body.userMetadata).toMatchObject({
-      id: 'patch-override-id',
+      id: 'override-upsert',
       firstName: 'patched-by-client',
       userId: 'serverauth-user-1',
     });

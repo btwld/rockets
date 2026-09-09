@@ -1,23 +1,29 @@
-import { CrudResponsePaginatedDto, CrudModule } from '@concepta/nestjs-crud';
+import { CrudModule, type CrudOperationOptions } from '@concepta/nestjs-crud';
 import {
   applyDecorators,
   type DynamicModule,
   Module,
-  type Type,
   UseGuards,
 } from '@nestjs/common';
 import { Operation } from '@concepta/nestjs-core';
-import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
-import { Exclude, Expose, Type as TransformType } from 'class-transformer';
+import {
+  assertFailClosedResponse,
+  assertNamedSchema,
+  assertNoHiddenFields,
+  paginatedSchema,
+  rocketsSchemaValidation,
+  withOpenApi,
+} from '@concepta/rockets-core';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { z } from 'zod';
 
-import { RocketsAuthRoleUpdateDto } from '../infrastructure/dto/rockets-auth-role-update.dto';
-import { RocketsAuthRoleDto } from '../infrastructure/dto/rockets-auth-role.dto';
-import { RocketsAuthRoleCreateDto } from '../infrastructure/dto/rockets-auth-role-create.dto';
+import { rocketsAuthRoleUpdateSchema } from '../infrastructure/schemas/rockets-auth-role-update.schema';
+import { rocketsAuthRoleSchema } from '../infrastructure/schemas/rockets-auth-role.schema';
+import { rocketsAuthRoleCreateSchema } from '../infrastructure/schemas/rockets-auth-role-create.schema';
 import { AdminGuard } from '../../../guards/admin.guard';
 import { ROLE_CRUD_ENTITY_KEY } from '../../../shared/constants/repository-entity-keys.constants';
 import type { RoleCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import type { RocketsAuthRoleEntityInterface } from '../interfaces/rockets-auth-role-entity.interface';
-import type { RocketsAuthRoleInterface } from '../interfaces/rockets-auth-role.interface';
 import { buildAdminUserRolesController } from '../gateways/http/factories/build-admin-user-roles-controller';
 import type {
   AdminRoleResourceExtras,
@@ -36,11 +42,10 @@ function operationExtraDecorators(
 }
 
 function buildOperations(
-  createDto: Type<object>,
-  updateDto: Type<object>,
-  modelDto: Type<object>,
+  createSchema: z.ZodType,
+  updateSchema: z.ZodType,
   resourceExtras: AdminRoleResourceExtras = {},
-) {
+): CrudOperationOptions<RocketsAuthRoleEntityInterface>[] {
   const routes = resourceExtras.routes ?? {};
 
   return [
@@ -56,7 +61,7 @@ function buildOperations(
     },
     {
       operation: Operation.Create,
-      request: { body: createDto },
+      request: { body: createSchema },
       ...operationExtraDecorators(routes.create?.decorators),
       ...(routes.create?.handler
         ? { commandHandler: routes.create.handler }
@@ -64,14 +69,7 @@ function buildOperations(
     },
     {
       operation: Operation.Update,
-      request: {
-        body: updateDto,
-        validation: {
-          whitelist: true,
-          skipMissingProperties: true,
-          forbidUnknownValues: true,
-        },
-      },
+      request: { body: updateSchema },
       api: {
         operation: {
           summary: 'Update role',
@@ -82,14 +80,9 @@ function buildOperations(
           required: true,
           description: 'Role id',
         },
-        body: {
-          type: updateDto,
-          description: 'Role information to update',
-        },
         response: {
           status: 200,
           description: 'Role updated successfully',
-          type: modelDto,
         },
       },
       ...operationExtraDecorators(routes.update?.decorators),
@@ -110,25 +103,36 @@ function buildOperations(
 @Module({})
 export class RocketsAuthRoleAdminModule {
   static register(admin: RoleCrudOptionsExtrasInterface): DynamicModule {
-    const ModelDto = admin.model || RocketsAuthRoleDto;
-    const UpdateDto = admin.dto?.updateOne || RocketsAuthRoleUpdateDto;
-    const CreateDto = admin.dto?.createOne || RocketsAuthRoleCreateDto;
+    const modelSchema = admin.model || rocketsAuthRoleSchema;
+    assertNamedSchema(
+      modelSchema,
+      'RocketsAuthRoleAdminModule: roleCrud.model',
+    );
+    // A consumer-supplied model reaches upstream CRUD serialization
+    // directly (no `defineResource` projection): it must strip undeclared
+    // keys and carry no `dto: { response: false }` field.
+    assertFailClosedResponse(
+      modelSchema,
+      'RocketsAuthRoleAdminModule: roleCrud.model',
+    );
+    assertNoHiddenFields(
+      modelSchema,
+      'RocketsAuthRoleAdminModule: roleCrud.model',
+    );
+    const updateSchema = admin.dto?.updateOne || rocketsAuthRoleUpdateSchema;
+    assertNamedSchema(
+      updateSchema,
+      'RocketsAuthRoleAdminModule: roleCrud.dto.updateOne',
+    );
+    const createSchema = admin.dto?.createOne || rocketsAuthRoleCreateSchema;
+    assertNamedSchema(
+      createSchema,
+      'RocketsAuthRoleAdminModule: roleCrud.dto.createOne',
+    );
     const resourceExtras: AdminRoleResourceExtras =
       admin.controller?.adminResource ?? {};
     const userRolesExtras: AdminUserRolesControllerExtras =
       admin.controller?.userRoles ?? {};
-
-    @Exclude()
-    class AdminRolesPaginatedDto extends CrudResponsePaginatedDto<RocketsAuthRoleInterface> {
-      @Expose()
-      @ApiProperty({
-        type: ModelDto,
-        isArray: true,
-        description: 'Array of Roles',
-      })
-      @TransformType(() => ModelDto)
-      data: RocketsAuthRoleInterface[] = [];
-    }
 
     return {
       module: RocketsAuthRoleAdminModule,
@@ -139,9 +143,17 @@ export class RocketsAuthRoleAdminModule {
             controller: {
               path: admin.path || 'admin/roles',
               entity: ROLE_CRUD_ENTITY_KEY,
+              // `body` lives on the operations (see buildOperations): upstream
+              // stamps the validation pipe from the METHOD-level body only.
+              request: { validation: rocketsSchemaValidation },
               response: {
-                resource: ModelDto,
-                paginated: AdminRolesPaginatedDto,
+                resource: modelSchema,
+                // Component id kept from the class-DTO era — part of the
+                // published OpenAPI contract.
+                paginated: withOpenApi(
+                  paginatedSchema(modelSchema),
+                  'AdminRolesPaginatedDto',
+                ),
               },
               extraDecorators: [
                 applyDecorators(
@@ -155,9 +167,8 @@ export class RocketsAuthRoleAdminModule {
               ],
             },
             operations: buildOperations(
-              CreateDto,
-              UpdateDto,
-              ModelDto,
+              createSchema,
+              updateSchema,
               resourceExtras,
             ),
           },

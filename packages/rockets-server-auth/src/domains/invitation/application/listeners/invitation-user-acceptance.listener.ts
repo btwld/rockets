@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import type { PlainLiteralObject } from '@nestjs/common';
 import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
 
@@ -24,18 +29,34 @@ import {
   InvitationAcceptanceConfig,
   INVITATION_ACCEPTANCE_CONFIG_TOKEN,
 } from '../../infrastructure/config/invitation-acceptance.config';
-import { AppContextHost, whitelistedFromDto } from '@concepta/rockets-core';
+import { AppContextHost, validateWithSchema } from '@concepta/rockets-core';
+
+/**
+ * A validated metadata patch is an object by construction (the schema
+ * parsed it); anything else means the configured update schema does not
+ * describe an object, which is a configuration error, not user input.
+ */
+function toMetadataPatch(
+  value: unknown,
+): RocketsAuthUserMetadataUpdatableInterface {
+  if (typeof value !== 'object' || value === null) {
+    throw new BadRequestException('userMetadata must be an object');
+  }
+  return value;
+}
 
 /**
  * Invitation User Acceptance Listener
  * Handles CQRS {@link InvitationAcceptedEvent} from `@concepta/nestjs-invitation` v8:
  * - Hashes password if provided
- * - Creates or updates user metadata (validated with DTO if configured)
+ * - Creates or updates user metadata (always validated with the update
+ *   schema — the app's, or the base default that strips every key)
  * - Assigns role (from invitation.constraints.roleId set at creation, or default role)
  *
  * SECURITY:
  * - Role assignment is admin-controlled via invitation.constraints.roleId
- * - Only userMetadata is updatable by user (validated with DTO)
+ * - Only userMetadata is updatable by user (validated with the update schema;
+ *   there is no unvalidated path, so a smuggled `userId` never reaches the row)
  * - User fields (active, email, username) are blocked from user updates
  */
 @Injectable()
@@ -174,15 +195,14 @@ export class InvitationUserAcceptanceListener
     const { ctx, userId, userMetadata } = options;
     if (!userMetadata || Object.keys(userMetadata).length === 0) return;
 
-    const MetadataUpdateDto = this.config.userMetadataUpdateDto;
-    let metadata: RocketsAuthUserMetadataUpdatableInterface = userMetadata;
-    if (MetadataUpdateDto) {
-      // Let `whitelistedFromDto`'s validation exception propagate — the
-      // outer `txScope.run` rolls back, and the outer catch logs.
-      metadata = await whitelistedFromDto<
-        RocketsAuthUserMetadataUpdatableInterface & Record<string, unknown>
-      >(MetadataUpdateDto, userMetadata as object);
-    }
+    // Let `validateWithSchema`'s 400 propagate — the outer `txScope.run`
+    // rolls back, and the outer catch logs.
+    const metadata = toMetadataPatch(
+      await validateWithSchema(
+        this.config.userMetadataUpdateSchema,
+        userMetadata,
+      ),
+    );
 
     await this.commandBus.execute(
       new SaveUserMetadataCommand(ctx, userId, metadata),

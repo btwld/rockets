@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
@@ -158,13 +158,9 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidUnknownValues: true,
-    }),
-  );
+  // No global pipe: every route validates its body against its own zod
+  // schema (generated CRUD and the auth package's hand-written controllers
+  // alike), so a class-validator `ValidationPipe` would have nothing to do.
 
   const swaggerUiService = app.get(SwaggerUiService);
   swaggerUiService.builder().addBearerAuth();

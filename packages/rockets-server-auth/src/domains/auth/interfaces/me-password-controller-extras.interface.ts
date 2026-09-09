@@ -1,6 +1,6 @@
 /**
  * Decorator factory shape — anything compatible with `@SetMetadata`,
- * `@UseGuards`, `@Throttle`, `@ApiTags`, custom decorators, etc.
+ * `@UseGuards`, `@RateLimit`, `@ApiTags`, custom decorators, etc.
  *
  * `ClassDecorator` is applied to the controller class itself.
  * `MethodDecorator` is applied to a specific route handler.
@@ -17,7 +17,7 @@ export type RocketsAuthMethodDecorator = MethodDecorator;
  * surface.
  */
 export interface MePasswordRouteExtras {
-  /** Method decorators applied to the route (Throttle, ApiResponse, etc.). */
+  /** Method decorators applied to the route (RateLimit, ApiResponse, etc.). */
   decorators?: RocketsAuthMethodDecorator[];
 }
 

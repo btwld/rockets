@@ -1,5 +1,8 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
-import type { CrudRequestConfig, CrudResponseConfig } from '../../crud-compat';
+import type {
+  CrudRequestConfig,
+  CrudResponseConfig,
+} from '@concepta/nestjs-crud';
 import type { OperationAclConfig } from '../../../domain/interfaces/resource-acl.interface';
 
 export interface InternalOperationOverride {

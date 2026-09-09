@@ -11,14 +11,42 @@ and this project adheres to
 
 ### Security
 
+- **A consumer-supplied `userCrud.model` / `roleCrud.model` is checked like
+  every other response schema.** The signup and admin CRUD modules hand the
+  model straight to upstream CRUD serialization (no `defineResource`
+  projection), so it only had its component name verified; it now also has
+  to strip undeclared keys (`assertFailClosedResponse`) and carry no
+  `dto: { response: false }` field (`assertNoHiddenFields`) — a hidden
+  column in an overridden model would have shipped on `POST /signup`,
+  `/admin/users` and `/admin/roles`. Rejected at boot with a pointer at
+  `.omit()`.
+- **User-metadata updates pin `userId` from the caller.** The update branch
+  of the metadata repository used to write the validated payload as-is, so
+  an app-supplied update schema that admits `userId` could move a row to
+  another user. Ownership now comes from the caller on both the create and
+  the update branch, whatever the schema admits.
+- Invitation acceptance validates `payload.userMetadata` with the same
+  default as signup and admin: when the app configures no
+  `userCrud.userMetadataConfig`, the base update schema (`{}`) strips every
+  client-supplied key. Previously the metadata record was forwarded
+  unvalidated on that path, and a smuggled `userId` could rewrite the
+  metadata row's owner on the update branch. The listener no longer has an
+  unvalidated branch (`InvitationAcceptanceConfig.userMetadataUpdateSchema`
+  is required).
+
 - OTP consume is the single decision point for burning passcodes:
   `RocketsValidateOtpHandler` dispatches `ConsumeOtpCommand` when
   `deleteIfValid` is true (no prior `ValidateOtpQuery`), and recovery
-  `updatePassword` consumes before mutating the password. A failed password
-  write after consume still leaves the proof burned (user must restart
-  recovery). DB-level single-winner under concurrent consumes still needs
-  upstream nestjs-otp locking; this closes the application validate-then-
-  consume TOCTOU only.
+  `updatePassword` consumes before mutating the password, inside ONE
+  transaction scope with the password write and the sibling-OTP cleanup —
+  a failed write rolls the consume back with it (RFC #104, stage 4: the
+  scope must be the outermost one, because once an inner outermost scope
+  commits, the request context keeps the finished transaction and every
+  later repository call on it fails). DB-level single-winner under
+  concurrent consumes still needs upstream nestjs-otp locking; this closes
+  the application validate-then-consume TOCTOU only. New e2e:
+  `domains/otp/__tests__/otp-login.e2e-spec.ts` (send → confirm → tokens →
+  passcode burned).
 
 ### Release preparation
 
@@ -54,6 +82,93 @@ and this project adheres to
 
 ### Changed
 
+- **The `@nestjs/config` devDependency is gone.** Nothing in the package
+  injects `ConfigService`; the only reference was an e2e mock module no
+  test consumed — dead since the RFC #104 stage that removed the runtime
+  dependency. Found by the realtystack consumer run (its runtime is CJS
+  and `@nestjs/config@12` is ESM-only, which is what prompted the audit).
+- **One deliberate behavioural DIVERGENCE from `@nestjs/throttler`:**
+  every dimension counts every attempt. Throttler's guard threw on the
+  first exceeded throttler and never incremented the rest, so an attacker
+  who saturated the coarse per-IP ceiling kept the fine
+  per-`(ip, account)` counters clean. Core's guard consumes all
+  dimensions before deciding. Everything else below is preserved.
+- **Auth throttling runs on core's rate-limit port; `@nestjs/throttler`
+  is gone.** The latest throttler (6.5.0) caps peers at Nest 11, which
+  made `npm install @concepta/rockets-auth` unresolvable on default npm.
+  Behaviour is preserved: per-IP ceiling (1000/min) that no route
+  overrides plus per-`(ip, account)` fine limits per route, `trust proxy`
+  respected, `throttling: false` still disables. **Breaking**:
+  `extras.throttling` is now `false | { ip?: { limit, windowMs },
+  default?: { limit, windowMs }, store? }` — the old
+  `@nestjs/throttler`-shaped pass-through (arrays, `ttl`, `getTracker`,
+  `storage`) is no longer accepted; a custom counter store implements
+  core's `RateLimitStoreInterface` and is passed as `throttling.store`.
+
+- **`ConceptaRepositoryCompatModule` removed.** It was a self-declared
+  no-op still imported and registered by the module definition;
+  `RepositoryModule.forRoot(...)` already provides `TransactionScope`
+  globally.
+- **Auth handlers resolve the app context through upstream
+  `AppContextHost.from()`.** The local `resolveConceptadevAppContext`
+  helper minted a fresh host for any non-host value and discarded what
+  the caller passed, which could drop a live transaction context inside
+  the password, OTP and user handlers. `AppContextHost.from()` throws on
+  a non-empty non-host value.
+
+- **Hand-written auth request bodies keep their OpenAPI component names.**
+  `POST /token/password`, `POST /token/refresh` and the four `/recovery`
+  bodies are documented as `LocalLoginDto`, `RefreshDto` and
+  `Recovery*Dto` again (upstream ships those schemas without an id, which
+  inlined them into every route after the schema-engine change).
+- **Migration — renamed and removed OpenAPI components (RFC #104).**
+  Generated clients pick up new type names: `AuthenticationResponseDto` →
+  `AuthenticationResponse` (upstream's id); the user and role resources are
+  `RocketsAuthUserDto` / `RocketsAuthRoleDto` (were `UserDto` / `RoleDto`);
+  the admin list envelopes are `AdminUsersPaginatedDto` /
+  `AdminRolesPaginatedDto` and every other list envelope is
+  `<Resource>PaginatedDto` (the shared `CrudResponsePaginatedDto` is gone);
+  `CrudInvalidResponseDto` is gone — validation errors are the Rockets
+  error envelope with `details[]`. Generated CRUD request bodies keep their
+  ids (`UserCreateDto`, `RoleCreateDto`, …). Regenerate the client and
+  rename the imports; no wire field changed shape.
+- **Last class DTOs retired (RFC #104, stage 6).** `RocketsAuthChangePasswordDto`
+  → `rocketsAuthChangePasswordSchema`, `RocketsAuthOtpSendDto` →
+  `rocketsAuthOtpSendSchema`, `RocketsAuthOtpConfirmDto` →
+  `rocketsAuthOtpConfirmSchema`, `RocketsAuthInvitationRevokeDto` →
+  `rocketsAuthInvitationRevokeSchema`, the inline admin role-assignment body
+  → `rocketsAuthAdminAssignUserRoleSchema`; the invitation-acceptance
+  `payload` is validated by `rocketsAuthInvitationAcceptancePayloadSchema`
+  (was accepted unvalidated). Every hand-written route validates with its
+  own Standard Schema pipe; `class-validator` / `class-transformer` are no
+  longer peers. They remain plain **dependencies** of this package only
+  because `@concepta/nestjs-email` / `nestjs-event` (still `7.0.0-alpha.10`)
+  pull `@concepta/nestjs-common@7`, which requires both at import time —
+  the packed-consumer check fails without them. Drop them when those two
+  modules move to the alpha.9 line.
+- **Schemas instead of DTO classes (RFC #104, stage 4; upstream
+  `8.0.0-alpha.9`).** The user / role / invitation DTO classes that extended
+  upstream classes (`RocketsAuthUserDto`, `RocketsAuthUserCreateDto`,
+  `RocketsAuthUserUpdateDto`, `RocketsAuthRoleDto` + create/update,
+  `RocketsAuthInvitationDto` + accept/create/response,
+  `RocketsAuthUserMetadataDto`) are named zod schemas composed from the
+  upstream schemas; the admin user / role CRUD and signup modules pass
+  schemas to upstream CRUD with `rocketsSchemaValidation`; the token,
+  recovery and invitation controllers validate with `@Body({ schema })` +
+  the per-route Standard Schema pipe and document with `standardSchema`.
+  `UserCrudOptionsExtrasInterface.model` / `dto.createOne` / `dto.updateOne`
+  and the role equivalents are `z.ZodType`; `UserMetadataConfigInterface` is
+  `{ entity, updateSchema, responseSchema }`; the invitation-acceptance
+  listener validates with `validateWithSchema`. `@concepta/nestjs-common` is
+  no longer a dependency (`EmailSendInterface` is package-owned; password
+  interfaces come from `@concepta/nestjs-user` / `@concepta/nestjs-authentication`).
+- `@nestjs/config` dropped (RFC #104, stage 1). `RocketsAuthModule` registers
+  its default settings (roles, e-mail templates, OTP) as a plain provider
+  (`ROCKETS_AUTH_SETTINGS_DEFAULTS_TOKEN`) instead of `registerAs` +
+  `ConfigModule.forFeature`; `rocketsAuthOptionsDefaultConfig` is now that
+  provider object (`{ provide, useFactory }`), not a `registerAs` function.
+  `ConfigModule` is no longer re-exported. The package keeps `@nestjs/config`
+  only as a devDependency for the e2e `ConfigService` stub.
 - Auth `CrudModule` root registration no longer replaces upstream's
   `CrudContextOverlay` with `SafeCrudContextInterceptor` (removed from core);
   uses `CrudModule.forRootAsync` as published.
@@ -74,7 +189,23 @@ and this project adheres to
   option or an unused handler-override alias.
 - Recovery password rotation preserves history, strength validation,
   transactions, and credential lifecycle events.
-- Node.js 20 is the minimum supported runtime.
+- Node.js 20.19 is the minimum supported runtime: the build is CommonJS and
+  loads the ESM Nest 12 / `@concepta/nestjs-*` 8 line through `require(esm)`
+  (Node 20.18 fails with `ERR_REQUIRE_ESM`; `engines` says `>=20.19.0`).
+
+### Fixed
+
+- **Admin user / role update bodies are validated again.** Both admin CRUD
+  modules declared the update body at controller level; upstream stamps the
+  validation pipe from the OPERATION-level body only, so `PATCH /admin/users/:id`
+  and `PATCH /admin/roles/:id` were documented and validated by nothing. The
+  body now lives on the Update operation (and is `$ref`'d in the document as
+  `RocketsAuthUserUpdateDto` / `RocketsAuthRoleUpdateDto`).
+- **`PATCH /admin/users/:id` no longer answers 500.** `UpdateUserHandler` ran
+  upstream's update (which opens and commits its own scope) and then queried
+  the metadata on the same context, which still carried the finished
+  transaction (conceptadev/nestjs-modules#468). The handler now runs the
+  whole update in one outermost `TransactionScope`, like signup and recovery.
 
 ### Removed
 

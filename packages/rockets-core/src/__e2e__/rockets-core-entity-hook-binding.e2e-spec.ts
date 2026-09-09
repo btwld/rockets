@@ -29,14 +29,13 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
+import { withOpenApi } from '@concepta/nestjs-core';
 import {
   type RepositoryInterface,
   getDynamicRepositoryToken,
 } from '@concepta/nestjs-repository';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
+import { z } from 'zod';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
@@ -88,25 +87,27 @@ class WidgetLogEntity {
   @Column({ type: 'varchar' }) widgetId!: string;
 }
 
-// ── DTOs ──
+// ── Schemas ──
 
-class WidgetCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-}
+const widgetCreateSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'WidgetCreateDto',
+);
 
-class WidgetResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-}
+const widgetResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string() }),
+  'WidgetResponseDto',
+);
 
-class GadgetCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-}
+const gadgetCreateSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'GadgetCreateDto',
+);
 
-class GadgetResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-}
+const gadgetResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string() }),
+  'GadgetResponseDto',
+);
 
 // ── Hooks — entity-bound at runtime ──
 
@@ -205,8 +206,8 @@ const widgetResource = defineResource<WidgetEntity>({
   tags: ['Widgets'],
   hooks: [WidgetLoggerHook],
   operations: {
-    create: { input: WidgetCreateDto, output: WidgetResponseDto },
-    list: { output: WidgetResponseDto },
+    create: { input: widgetCreateSchema, output: widgetResponseSchema },
+    list: { output: widgetResponseSchema },
   },
 });
 
@@ -217,8 +218,8 @@ const gadgetResource = defineResource<GadgetEntity>({
   tags: ['Gadgets'],
   hooks: [GadgetCounterHook],
   operations: {
-    create: { input: GadgetCreateDto, output: GadgetResponseDto },
-    list: { output: GadgetResponseDto },
+    create: { input: gadgetCreateSchema, output: gadgetResponseSchema },
+    list: { output: gadgetResponseSchema },
   },
 });
 

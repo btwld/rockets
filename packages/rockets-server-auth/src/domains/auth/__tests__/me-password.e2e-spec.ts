@@ -94,6 +94,23 @@ describe('MePassword (e2e) — Phase 1 (auth) — change-password flow', () => {
       .expect(401);
   });
 
+  // No global pipe is registered: the 400 proves the controller's own
+  // Standard Schema pipe enforces the 8-character minimum before the
+  // command runs (the current password is correct, so it would otherwise
+  // be changed).
+  it('PATCH /me/password — rejects a new password shorter than 8 characters with 400', async () => {
+    const token = await login(credentials.password);
+    const res = await request(app.getHttpServer())
+      .patch('/me/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: credentials.password, newPassword: 'short' })
+      .expect(400);
+    expect(res.body.errorCode).toBe('HTTP_BAD_REQUEST');
+
+    // The password is unchanged.
+    await login(credentials.password);
+  });
+
   it('PATCH /me/password — requires authentication', async () => {
     await request(app.getHttpServer())
       .patch('/me/password')

@@ -9,7 +9,26 @@ import {
   hasSingleTypeOrmInstance,
 } from './assert-single-typeorm';
 
+/**
+ * `@nestjs/typeorm` 12 is ESM, and an ESM module namespace is not
+ * configurable — `vi.spyOn(ns, 'getDataSourceToken')` throws. Mocking the
+ * module gives the same seam: `getDataSourceToken` delegates to the real
+ * export unless a test overrides `dataSourceTokenOverride`.
+ */
+vi.mock('@nestjs/typeorm', async (importOriginal) => {
+  const actual = await importOriginal<typeof nestTypeOrm>();
+  return {
+    ...actual,
+    getDataSourceToken: (
+      ...args: Parameters<typeof actual.getDataSourceToken>
+    ) => dataSourceTokenOverride ?? actual.getDataSourceToken(...args),
+  };
+});
+
+let dataSourceTokenOverride: unknown;
+
 afterEach(() => {
+  dataSourceTokenOverride = undefined;
   vi.restoreAllMocks();
 });
 
@@ -23,11 +42,7 @@ describe('hasSingleTypeOrmInstance', () => {
     // distinct `DataSource` class — which is exactly what makes the DI
     // token stop matching.
     class DataSourceFromAnotherCopy {}
-    vi.spyOn(nestTypeOrm, 'getDataSourceToken').mockReturnValue(
-      DataSourceFromAnotherCopy as unknown as ReturnType<
-        typeof nestTypeOrm.getDataSourceToken
-      >,
-    );
+    dataSourceTokenOverride = DataSourceFromAnotherCopy;
 
     expect(hasSingleTypeOrmInstance()).toBe(false);
   });
@@ -40,11 +55,7 @@ describe('assertSingleTypeOrmInstance', () => {
 
   it('explains the cause and the fix on a mismatch', () => {
     class DataSourceFromAnotherCopy {}
-    vi.spyOn(nestTypeOrm, 'getDataSourceToken').mockReturnValue(
-      DataSourceFromAnotherCopy as unknown as ReturnType<
-        typeof nestTypeOrm.getDataSourceToken
-      >,
-    );
+    dataSourceTokenOverride = DataSourceFromAnotherCopy;
 
     expect(() => assertSingleTypeOrmInstance()).toThrow(
       /Two copies of `typeorm` are loaded/,

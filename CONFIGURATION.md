@@ -36,7 +36,8 @@ flowchart LR
 ```
 
 **Two layers, one surface.** `@concepta/rockets` (server) is a thin presentation
-layer over `@concepta/rockets-core`. Server adds the `MeController`, the global
+layer over `@concepta/rockets-core`. Server adds the `/me` routes (built by
+`buildMeController` from the `userMetadata` config), the global
 guard opt-in, and the `auth` chain; core does the actual resource→module
 conversion. `createServer` is the canonical definition-first facade;
 `RocketsModule.forRoot` is the lower-level composition surface. Core's
@@ -70,7 +71,7 @@ buckets with very different lifecycles:
 | `settings` | `RocketsSettingsInterface` (empty today) | optional | — | Reserved; no fields yet. |
 | `handlers` | `{ upsertUserMetadata?, getUserMetadata? }` | optional | built-ins | Override the user-metadata CQRS handlers. |
 | `enableGlobalGuard` | `boolean` | optional | **on‡** | Register `AuthServerGuard` as `APP_GUARD` unless `=== false`. |
-| `disableController` | `{ me?: boolean }` | optional | `{}` | Disable built-in `MeController`. |
+| `disableController` | `{ me?: boolean }` | optional | `{}` | Skip the built-in `/me` controller (`buildMeController`). |
 | `controllers` | `DynamicModule['controllers']` | optional | — | Replace the auto controller set. |
 | `global` | `boolean` | optional | **forced `true`** | `forRoot` always makes the module global. |
 
@@ -109,12 +110,12 @@ flowchart TB
   sv_auth --> co_auth
   sv_h --> co_h
   sv_sw --> co_sw
-  sv_guard -. "stays in server:\nMeController + APP_GUARD" .-> SERVER
+  sv_guard -. "stays in server:\nbuildMeController + APP_GUARD" .-> SERVER
 ```
 
 **Server-only** (never reach core): `enableGlobalGuard`, `disableController`,
-`controllers`, `settings`. These drive presentation: the `MeController` and the
-`APP_GUARD` opt-in.
+`controllers`, `settings`. These drive presentation: the `/me` controller
+(`buildMeController`) and the `APP_GUARD` opt-in.
 
 ---
 
@@ -243,7 +244,9 @@ export const petResource = defineResource({
   // path  → 'pets'                 (pluralized kebab of key)
   // tags  → ['Pets']
   // operations → [List, Read, Create, Update, Delete]
-  // DTOs default to the entity shape
+  // no `dto` → no response schema → every route 500s at serialization:
+  // upstream refuses to serialize without one. Pass `dto.response`
+  // (or use `zodResource`, which derives every schema from one source).
 });
 ```
 
@@ -257,11 +260,13 @@ export const petResource = defineResource({
     relation(PetTagEntity, 'petTags'),
   ],
   hooks: [PetOwnerStamp, PetOwnerOrSharedHook, PetUniqueRefHook, PetAuditLogHook],
+  // Every schema is a NAMED zod schema: `withOpenApi(z.object({...}), 'PetResponseDto')`
+  // as the LAST call. The id is the OpenAPI component name.
   operations: {
-    list:   { output: PetResponseDto },
-    read:   { output: PetResponseDto },
-    create: { input: PetCreateDto, output: PetResponseDto },
-    update: { input: PetUpdateDto, output: PetResponseDto },
+    list:   { output: petResponseSchema },
+    read:   { output: petResponseSchema },
+    create: { input: petCreateSchema, output: petResponseSchema },
+    update: { input: petUpdateSchema, output: petResponseSchema },
     delete: { soft: true, returnDeleted: true },
     restore:{ returnRestored: true },
   },
@@ -280,7 +285,7 @@ export const petResource = defineResource({
 | | `key` | `string` | `deriveEntityKey(entity)` |
 | | `path` | `string \| string[]` | pluralized kebab of key |
 | | `tags` | `string[]` | `[humanize(key)]` |
-| **DTOs** | `dto` | `{ response?, paginated?, create?, update?, replace? }` | `{}` (resource-level fallback; prefer per-op `input`/`output`) |
+| **Schemas** | `dto` | `{ response?, paginated?, create?, update?, replace? }` — named zod schemas (`withOpenApi(schema, id)` last) | `{}` (resource-level fallback; prefer per-op `input`/`output`; `paginated` derives as `${responseId}PaginatedDto`) |
 | **Operations** | `operations` | `OperationName[] \| OperationsObject` | `[List, Read, Create, Update, Delete]` |
 | | `operations.X` | `{ input?, output?, paginated?, handler?, hooks?, decorators?, path?, transactional?, requestOverride?, responseOverride? }` (`input`→`request.body`, `output`→`response.resource`) | — |
 | | `operations.delete` | `+ { soft?, returnDeleted? }` | `soft=false` |
@@ -334,8 +339,8 @@ petTags: defineSubResource({          // key 'petTags' must be a PetEntity relat
   entity: PetTagEntity,
   segment: 'tags',                    // → /pets/:petId/tags (default would be 'pet-tags')
   tags: ['Pet Tags'],
-  owner: 'userId',                    // ownership column (default 'userId'; `false` = public)
-  // scope: false,                    // would disable FK filter+stamp+guard entirely
+  owner: 'userId',                    // ownership column (default 'userId'; `false` drops the ownership CHECK, not the guard)
+  // scope: false,                    // drops PathScopeHook + ownership; the guard still verifies the chain (see below)
   // parentKey: 'animalId',           // FK + URL param override (default <parent>Id)
   // parentPk: 'companyId',           // parent PK column for the guard (default 'id')
   reloadAfterCreate: true,            // opt-in AfterCreateReloadHook (eager relations on create)
@@ -362,10 +367,16 @@ petTags: defineSubResource({          // key 'petTags' must be a PetEntity relat
 | `parentPk` | `string` | no | `'id'` — parent PK column the guard looks up |
 | `parentSelect` | `readonly string[]` | no | projection for the guard's parent lookup (default: pk only, or the full row when the parent has hooks) |
 | `segment` | `string` | no | `kebab-case(mapKey)` — URL segment |
-| `owner` | `string \| false` | no | `'userId'` — ownership column; `false` drops the guard (public) |
-| `scope` | `boolean` | no | `true` — master switch (FK filter/stamp + guard); `false` = unscoped |
+| `owner` | `string \| false` | no | `'userId'` — ownership column; `false` drops the ownership CHECK (the guard still verifies the parent) |
+| `scope` | `boolean` | no | `true` — drops the `PathScopeHook` + ownership check when `false`; the route stays **FK-scoped and chain-verified either way** (see below) |
 | `reloadAfterCreate` | `boolean` | no | `false` |
 | *(inherited)* | `dto`, `operations`, `relations`, `hooks`, `handlers`, `providers`, `subResources`… | no | — |
+
+An all-server-stamped sub-resource — FK from the path, owner from the
+actor, ids and timestamps from a hook — is created with `POST {}`. The
+create input schema is the contract: a body that validates to `{}` is a
+valid create (upstream stopped answering a bare `400` to an empty
+validated payload in `8.0.0-alpha.10`, nestjs-modules#466).
 
 ### Which parent-side hooks run during path scoping
 
@@ -409,18 +420,65 @@ Other constraints worth knowing:
   hooks bound to a different entity never fire on this lookup.
 - **A parent hook that throws now surfaces on nested routes.** It did not
   fire here before. A `Before*` hook that throws an `HttpException` is
-  wrapped by the upstream membrane and reaches the client as a `500` —
-  throw a `RepositoryQueryException` with an `httpStatus` instead when the
-  status matters.
+  wrapped by the upstream membrane, and `RocketsCoreExceptionsFilter`
+  walks the chain back to the thrown status — so a hook's `409` reaches
+  the client as a `409`, provided that filter is registered.
 - **Projection cost.** With no parent hooks the lookup reads the primary
   key only. With hooks it reads the FULL parent row — including eager
   relations — because an `afterFindOne` hook may inspect a column a
   narrow projection would omit, and nothing declares which columns a hook
   reads. Set `parentSelect: ['id', 'expiresAt']` on the sub-resource when
   you know what your hooks need.
-- **`owner: false` drops the guard entirely**, and with it the parent-hook
-  replay. A sub-resource that opts out of the ownership check also opts
-  out of parent-side visibility.
+- **`scope: false` does not mean "unscoped".** It drops the
+  `PathScopeHook` and the ownership CHECK — it does not drop
+  `PathScopeGuard`. The immediate parent's `:param` stays declared as a
+  CRUD route param whose `field` is the FK column, and upstream uses it
+  on **every** operation: `buildWhere` turns each route param into a
+  `Where.eq`, and `getOneOrFail` resolves through it, so a `read` /
+  `update` / `replace` / `delete` addressed through the WRONG parent is a
+  `404`, not an unfiltered write. The adapter also merges route params
+  over the body on `create` / `createBatch` / `update` / `replace`, so a
+  write lands the URL's FK and a body naming a different parent is
+  overwritten.
+
+  **What `scope: false` / `owner: false` remove is ownership, and only
+  ownership.** The guard still runs, without its owner clause, so:
+  - the parent must exist — a missing one is a `404`, not an empty list;
+  - the parent must be visible to its **own** entity hooks, so a
+    parent hidden by a `beforeFindOne` / `afterFindOne` hook stays
+    hidden through the sub-resource;
+  - at **depth 3+** the ancestor chain is verified — *as far as the
+    intermediate levels kept their scope hooks*. Ancestor params are
+    declared `disabled: true` (only the immediate parent is a column on
+    this entity), so they never enter `buildWhere`; the guard's parent
+    lookup, replaying the middle resource's own `PathScopeHook`, is the
+    only thing that can reject `/parents/A/children/CHILD_OF_B/notes`.
+    With the middle level scoped it answers `404`, the same as the
+    scoped route.
+
+  > **Which is why the middle level may not opt out.** The check above
+  > replays the MIDDLE resource's hooks. With `scope: false` there it
+  > composes no `PathScopeHook`, nothing ties the middle row to
+  > `:parentId`, and a leaf addressed through the wrong ancestor is
+  > served — while the middle's OWN route still answers `404`, so the two
+  > disagree. A `scope: false` sub-resource that declares `subResources`
+  > is therefore **refused at definition time**: scope that level, or
+  > move its children up.
+
+  Verifying the addressed chain was never an opt-in: a request naming a
+  row through a parent that does not contain it is malformed whoever
+  sends it. Use `scope: false` when the parent is not an access-control
+  boundary — not to unscope the FK. All of the above is pinned by
+  `rockets-core-sub-resource.e2e-spec.ts`.
+- **`owner: false` drops the ownership clause, not the guard.** The
+  parent-hook replay still runs, so parent-side visibility and the
+  ancestor chain are still enforced. An actor-less request is allowed
+  (the route is not owner-scoped), but the parent's own hooks still see
+  the actor when there is one. Note what that means on a PUBLIC nested
+  route: the guard runs for unauthenticated callers too, so a missing
+  parent answers `404` where an existing one serves normally — the route
+  reports whether a parent id exists. Gate it with your own auth guard if
+  that distinction is sensitive.
 - Sub-resource hooks (`PathScopeHook`, the child's own `hooks`) are
   unaffected — they still attach normally to the child's controller.
 
@@ -430,8 +488,9 @@ Other constraints worth knowing:
 
 Use when you need **RPC-style** routes beside CRUD — health checks, actions,
 reports — without hand-rolling a Nest controller. Zod `input` / `output`
-compile to DTO classes (OpenAPI + Standard Schema whitelist). Wire the bundle
-into `resources[]` like any other resource.
+become named OpenAPI components validated by the same per-route Standard
+Schema pipe generated CRUD uses. Wire the bundle into `resources[]` like any
+other resource.
 
 ```ts
 import { operationResource } from '@concepta/rockets-core/zod';
@@ -458,7 +517,7 @@ export const ops = operationResource({
       output: z.array(z.object({ id: z.string() })),
       handler: () => [{ id: '1' }],
     }),
-    // output: false opts out of response whitelist (explicit)
+    // output: false opts out of response validation (explicit)
     purge: op.delete({
       status: 204,
       output: false,
@@ -492,10 +551,11 @@ export const petTransfer = operationResource({
 `:params` type `ctx.params`. Operation path defaults to the **key verbatim**
 (not kebab-cased); use `path: ''` for a root-mounted route. Input sourcing
 follows HTTP method (`GET`/`DELETE` → query; body otherwise). **`output` is
-required** — pass a schema (whitelist + OpenAPI) or `output: false` (explicit
-opt-out). Optional resource-level `params: z.object({...})` validates named path
-params at request time (400). Keys must be `:params` on the resource `path`;
-extra Nest params from an operation path (not in the schema) are preserved.
+required** — pass a schema (validated + documented) or `output: false`
+(explicit opt-out). Optional resource-level `params: z.object({...})`
+validates named path params at request time (400). Keys must be `:params`
+on the resource `path`; extra Nest params from an operation path (not in
+the schema) are preserved.
 Structured cross-resource route collisions with CRUD/Sub fail in
 `buildAppRegistrationPlan` (not silently at runtime). This planner check is
 limited to Rockets-owned resource declarations; use
@@ -518,11 +578,77 @@ authenticated user, because upstream's check-access handler returns `true`
 when no grant metadata exists. Omitting `input` means the raw body/query
 reaches the handler unvalidated.
 
-**Validation.** Responses are whitelisted against `output` when present;
-handler/`output` mismatches return **500** (server bug), not 400. Query-string
-inputs are strings — use `z.coerce.number()` / `z.coerce.boolean()` when needed.
-`output` accepts `z.object(...)` or `z.array(...)`. Duplicate `method`+`path`
-pairs inside one resource fail at boot.
+**Validation.** The generated controller carries a class-level
+`StandardSchemaValidationPipe(rocketsSchemaValidation)`: the body is
+`@Body({ schema })`, the query `@Query({ schema })`, the params
+`@Param({ schema })` — a `400` carries `details[]` like every other Rockets
+route. Responses are validated against `output` when present (undeclared
+keys stripped); handler/`output` mismatches and a `null` / `undefined`
+result return **500** (server bug), not 400. Query-string inputs are strings
+— use `z.coerce.number()` / `z.coerce.boolean()` when needed. `output`
+accepts `z.object(...)` or `z.array(...)`, and must strip (no
+`.passthrough()`). Duplicate `method`+`path` pairs inside one resource fail
+at boot.
+
+**Hand-written routes carry the same pipe — and the boot checks it.** Nest
+installs no pipe for `@Body/@Query/@Param({ schema })`: without a
+`StandardSchemaValidationPipe` on the parameter, the handler or the class,
+the schema is documented in OpenAPI and validated by nothing. The route
+audit (`RouteAuditService`, always registered) fails the boot with
+`requireSchemaPipe` naming the controller, handler and parameter. A route
+validated by a pipe of its own that the audit cannot recognise is exempted
+through `routePolicy.allowUnvalidatedSchema` (route ids) — its own list,
+so an `allow` entry written for `requireAuth` never switches this check
+off as a side effect. The same audit runs the fail-closed check on a
+hand-written route's `@SerializeOptions({ schema })`: an open object
+(`.passthrough()` / `.catchall()`) anywhere in that schema fails the boot
+as `requireClosedResponse`, exactly like a generated resource's response
+schema fails at definition time. Two more things the audit sees: a
+generated CRUD body with NO schema (a `request.body` declared at controller
+level instead of on the operation — upstream wires the pipe from the
+operation only) fails the boot under `requireSchemaPipe`; and a route that
+documents a response with `@ApiResponse({ standardSchema })` but serializes
+through no `@SerializeOptions({ schema })` is listed in
+`audit().routes[].unserializedResponseSchemas` — reported, not enforced,
+because a documentation-only contract is a legitimate (if visible) choice.
+
+**What "fail closed" covers in a response schema.** An object with
+`.passthrough()` / `.catchall()` anywhere in the tree is rejected. So is a
+ROOT that is a pass-through — `z.unknown()` / `z.any()` / `z.custom()`, or
+a `record` / `map` whose value is one of those: undeclared keys plus
+unconstrained values, applied to the whole response, hands the entire row
+to the serializer. The rule stops at the root on purpose: inside a
+declared property (`z.object({ profile: z.record(z.string(),
+z.unknown()) })` — the shape of a JSON column) you named the key and chose
+what its value may be. `operations.*.responseOverride.resource` /
+`.paginated` clear the same three checks as `output` (named component,
+fail-closed, no hidden column); the escape hatch is stamped as the
+serializer, so it reaches the wire the same way.
+
+**Hidden columns and hand-written response schemas.** `dto: { response:
+false }` is honoured on every PROJECTED response path — computed fields,
+JSON columns, exposed relations and `operationResource` outputs strip the
+column (the projection rebuilds the schema). A HAND-WRITTEN response
+schema (`defineResource` `dto.response` / `operations.*.output` /
+`dto.paginated`, `userMetadata.responseSchema`, `rockets-auth`'s
+`userCrud.model` / `roleCrud.model`) keeps the component id you gave it
+and is not rebuilt, so a hidden column inside it is rejected at definition
+time — drop it with `.omit({ column: true })` before wrapping. The two
+behaviours differ on purpose: the same entity schema handed to
+`operationResource({ output })` strips, handed to
+`defineResource({ operations: { read: { output } } })` throws. An
+`op.sse()` operation declares no `output` at all (§6c), so nothing is
+serialized — or stripped — there by design. The marker is read on every
+node, not just on direct properties: `f.string({ dto: { response: false }
+}).readonly()`, `.nonoptional()`, `.prefault()`, `.catch()` and
+`z.array(...)` of one are all seen (a `.transform()` over a hidden field
+is refused, like `.default()` / `.catch()` — its output cannot be rebuilt
+without the hidden input). One deliberate over-flag in the
+fail-closed check: a
+pipe whose OUT side holds `any` / `unknown` / `custom` / a transform anywhere
+(`z.pipe(open, z.object({ a: z.any() }))`) is rejected even when the OUT
+object would strip top-level extras — failing closed is cheaper than
+reasoning about which keys survive.
 
 When an operation declares `input`, the request payload must be a plain JSON
 object. An array, a scalar, or a non-plain object (a `Buffer` from a raw body
@@ -531,12 +657,16 @@ substituting a valid value for an invalid one is not something a validation
 boundary should do quietly. A MISSING body is still `{}`, so a `POST` with no
 payload against an all-optional `input` stays legal.
 
-Two generated DTOs that would claim the same OpenAPI component name fail at
-boot. The name is derived from the resource path, the method, the operation key
-and the operation's own path, and that transform folds punctuation and
-casing together — `foo-bar` and
-`fooBar` both yield `FooBar`. One compiled DTO reused across several
-operations is fine: the check compares class identity, not names.
+**OpenAPI.** A body input is a named component
+(`<Resource>_<Method>_<Key>Input`,
+`$ref`'d from the request body); a query input and the resource `params`
+schema are documented one parameter per property; the response `$ref`s
+`<Resource>_<Method>_<Key>Output`. Two schemas that would claim the same
+component id fail at boot. The id is derived from the resource path, the
+method, the operation key and the operation's own path, and that transform
+folds punctuation and casing together — `foo-bar` and `fooBar` both yield
+`FooBar`. One schema instance reused across several operations is fine: the
+check compares instances, not names.
 
 Cursor, binary, raw JSON, and idempotency are follow-ups on issue #43.
 SSE now has a first-class builder (§6c below); Range/partial content is
@@ -577,9 +707,10 @@ if (process.env.CONTRACT_UPDATE === '1') {
 
 That helper is the important part. A document rebuilt from a bare
 `SwaggerModule.createDocument(app, builder.build())` is **not** what a real
-app serves: `examples/sample-server` also passes `extraModels`, patches the
-PATCH `/me` request body, and runs the nestjs-zod `cleanupOpenApiDoc` pass.
-Pinning the simplified document would pin a contract nobody is served.
+app serves: only `SwaggerUiService.createDocument` installs the Rockets
+schema converter that turns every named schema into a
+`components/schemas/<id>` `$ref`. Pinning the bare document would pin a
+contract nobody is served.
 
 So each app owns one `src/swagger/create-openapi-document.ts` that `main.ts`
 and its contract spec both call, and rockets-core exposes the shared seam
@@ -587,7 +718,7 @@ underneath it:
 
 ```ts
 // packages/rockets-core — builds the document `setup()` serves, no UI mount
-swaggerUiService.createDocument(app, { extraModels: [UserMetadataUpdateDto] });
+swaggerUiService.createDocument(app);
 ```
 
 `SwaggerUiService.setup()` now routes through `createDocument()` too, so
@@ -719,7 +850,7 @@ like a normal JSON error response; only a request that gets past all of
 that opens the stream.
 
 Two things `op.sse()` does not expose, deliberately: `output` (the
-response body IS the event stream, never a whitelisted JSON value) and
+response body IS the event stream, never a validated JSON value) and
 `transactional` (holding a database transaction open across a
 connection that may run indefinitely is not something to make one flag
 away).
@@ -752,8 +883,8 @@ On top of that, SSE-specific rules:
 | Situation | Why it is rejected |
 |---|---|
 | an SSE op *declares* a non-`GET` method | `@Sse()` always registers GET, so route audits would file the route under the wrong method (reachable via `defineOperationResource`) |
-| a non-SSE op carries `@Sse()` | core would still run the JSON output-DTO step over the Observable |
-| an SSE op declares an `output` DTO | there is no JSON body to whitelist; the DTO would be silently ignored |
+| a non-SSE op carries `@Sse()` | core would still run the JSON output-schema step over the Observable |
+| an SSE op declares an `output` schema | there is no JSON body to validate; the schema would be silently ignored |
 | an SSE op carries `Transactional()`, on the operation **or on the resource** | see below |
 
 An SSE route is therefore always `GET` — the only method a browser's
@@ -927,8 +1058,9 @@ It does **not** cover:
 
 - `defineModuleResource({ module: { controllers } })` controllers
 - hand-built `RocketsResourceConfig` entries
-- controllers owned by other packages — `MeController` in
-  `rockets-server`, every `rockets-server-auth` controller
+- controllers owned by other packages — the `/me` controller
+  (`buildMeController`) in `rockets-server`, every `rockets-server-auth`
+  controller
 
 Those routes never reach the planner, so a passing boot says nothing
 about them. Treat `enforceGrants` as "the generated surface is covered",
@@ -1277,8 +1409,11 @@ class instance with no `toJSON()`, a function, `NaN`, a cycle, or
 nesting past 200 deep — makes it THROW rather than hash a placeholder:
 two different requests collapsing to the same hash means one replays the
 other's stored response. On the `operationResource` path `ctx.input` is
-always plain (validation returns `instanceToPlain`), so those throws are
-unreachable from HTTP input; a handler that hashes something else owns
+what the input schema produced — plain JSON values plus whatever a field
+coerces to (`f.date()` yields a `Date`, which the hasher represents
+faithfully), so those throws are unreachable from HTTP input unless a
+schema transform deliberately produces one of the unrepresentable values
+above; a handler that hashes something else owns
 the decision of whether the failure is a `400` (the client sent it) or a
 `500` (the handler built it), and should catch accordingly.
 
@@ -1541,7 +1676,7 @@ export function defineSampleAuth(): AuthBootstrap<SampleAuthAdapter> {
 
 RocketsModule.forRoot({
   auth: defineSampleAuth(),
-  userMetadata: { entity: UserMetadataEntity, createDto: UserMetadataCreateDto, updateDto: UserMetadataUpdateDto },
+  userMetadata: userMetadataConfig, // defineUserMetadata(userMetadataSchema) → { entity, updateSchema, responseSchema }
   repository: defineTypeOrmRepository({ type: 'sqlite', database: ':memory:', synchronize: true }),
   resources: [ sampleAuthUserResource, petResource, /* … */ ],
 });
@@ -1561,7 +1696,7 @@ an `AuthBootstrap` (adapter defaults to `RocketsJwtAuthAdapter`).
 type DefineRocketsAuthInput = RocketsAuthAsyncOptions & {
   persistence: { module: RepositoryModuleInterface; entities: { user, userCredentials, userOtp, role, userRole, federatedIdentity } };
   userMetadata: RocketsUserMetadataConfig;
-  userCrud: { model; dto: { createOne; updateOne } };   // signup/admin CRUD
+  userCrud: { model?; dto?: { createOne?; updateOne? }; handlers? };   // signup/admin CRUD — named zod schemas, derived from userMetadata when omitted
   invitationEntity?: Type;
   rocketsDefaults?: { enableGlobalGuard?: boolean };
   authAdapter?: Type<AuthAdapterInterface>;
@@ -1588,14 +1723,17 @@ const rocketsAuthInput: DefineRocketsAuthInput = {
   persistence: { module: repo, entities: { user: UserEntity, userCredentials: UserCredentialEntity,
                  userOtp: UserOtpEntity, role: RoleEntity, userRole: UserRoleEntity, federatedIdentity: FederatedEntity } },
   invitationEntity: InvitationEntity,
-  userMetadata: { entity: UserMetadataEntity, createDto: UserMetadataCreateDto, updateDto: UserMetadataUpdateDto },
+  userMetadata: userMetadataConfig, // defineUserMetadata(userMetadataSchema) → { entity, updateSchema, responseSchema }
   useFactory: () => ({
     services: { mailerService: buildSampleMailerService() },          // mailerService REQUIRED
     authentication: { ports: rocketsAuthNotificationPorts },          // recovery + verify ports
     settings: rocketsAuthRuntimeSettings,                             // role names, templates, otp
   }),
-  userCrud: { model: UserDto, dto: { createOne: UserCreateDto, updateOne: SampleUserUpdateDto } },
-  roleCrud: { model: RoleDto, dto: { createOne: RoleCreateDto, updateOne: RoleUpdateDto } },
+  // `model` / `dto` omitted: derived from `userMetadata` (`RocketsAuthUserDto`,
+  // `RocketsAuthUserCreateDto`, `RocketsAuthUserUpdateDto`). Override form:
+  // `{ model: rocketsAuthUserSchema(responseSchema), dto: { createOne: rocketsAuthUserCreateSchema(updateSchema), … } }`
+  userCrud: {},
+  roleCrud: { model: rocketsAuthRoleSchema }, // request schemas default to rocketsAuthRole{Create,Update}Schema
 };
 
 const rocketsAuth = defineRocketsAuth(rocketsAuthInput);
@@ -1615,6 +1753,53 @@ global guard; mixed-auth hosts can set `rocketsDefaults.enableGlobalGuard: true`
 to make the ordered Rockets adapter chain the owner. In that mode, an
 unspecified upstream `auth.appGuard` is normalized to `false`; an explicit
 competing app guard is rejected because Nest global guards are cumulative.
+
+Auth throttling counts two dimensions at once: a coarse per-IP ceiling no
+route overrides, and a fine limit each route tightens. The fine dimension
+is keyed **per IP by default**; a route that authenticates an account
+narrows it to `(ip, account)` by naming the body fields it authenticates
+with:
+
+```ts
+// `POST /token/password` authenticates `username`.
+@RateLimit({
+  default: {
+    limit: 10,
+    windowMs: 60_000,
+    key: authAccountRateLimitKey(['username']),
+  },
+})
+```
+
+The field list is per route because guards run before pipes: the body
+still carries keys the route's schema strips, so a global list let a decoy
+`email` on a `{ username, password }` login body mint a fresh counter per
+request — the per-account limit never saw two attempts against the same
+username, and only the ceiling stood between a guessing loop and one
+account. With the list declared per route, an undeclared field keys
+nothing, several declared fields each get their own counter (§7d, `key`),
+and a route that names none — `/token/refresh`, the passcode-only recovery
+steps, invitation acceptance — keeps the IP key. The mistake a new route
+can make is being limited too coarsely, never not at all.
+`PATCH /me/password` sits behind `JwtGuard`, so it keys on the
+authenticated user (`authUserRateLimitKey`) rather than the IP. Swap the
+store with `throttling.store`: the auth registration provides
+`RATE_LIMIT_STORE_TOKEN` itself, and a module resolves its own imports
+before the global registry, so an app that registers that token elsewhere
+gets it for its own routes while the auth routes keep this one.
+
+One route escapes that, and it is upstream's shape rather than a choice
+here: `/signup`'s controller is generated by `CrudModule.forFeature`,
+which declares it in a module of its own and accepts neither `imports`
+nor `providers`. Its guard can therefore only resolve the token from the
+global registry, where the FIRST global registration wins — so an app
+that provides `RATE_LIMIT_STORE_TOKEN` in a `@Global()` module imported
+before Rockets Auth takes that one route's counters with it, while every
+other auth route keeps the auth store. **Use `throttling.store`; do not
+register the token globally alongside Rockets Auth.** The guarantee for
+every other auth route is pinned by
+`packages/rockets-server-auth/src/__e2e__/rockets-auth-rate-limit-store.e2e-spec.ts`,
+in both import orders.
 
 Auth throttling uses Express's resolved `request.ip`. A host behind a reverse
 proxy must configure `app.set('trust proxy', ...)` for its actual topology.
@@ -1641,13 +1826,11 @@ are marked, alongside the existing `authentication` state.
 
 Declaring `AuthPublic` and `AuthSession` on the same handler throws — a
 public route has no session to protect — but read the scope exactly:
-that throw lives inside `collectRouteAudit`, and `RouteAuditService`
-only runs the audit at bootstrap **when a `routePolicy` is declared**.
-An app that declares no `routePolicy` never collects the audit, so the
-contradiction is not detected. It is an opt-in check, not an always-on
-guarantee. The same is true of `requireCsrf` below. To get either, give
-the app a `routePolicy` — a recognition-only `routePolicy: {}` is enough
-to run the collection and its contradiction check.
+that throw lives inside `collectRouteAudit`, which `RouteAuditService`
+runs at every bootstrap (the service is always registered for its
+schema-pipe check, §6a), so the contradiction is detected with or without
+a `routePolicy`. The policy RULES — `requireCsrf` below included — are
+opt-in: declare a `routePolicy` to turn them on.
 
 **2. `CsrfGuard` — the CSRF half.** Register it ALONGSIDE
 `AuthServerGuard`, not instead of it:
@@ -1739,7 +1922,9 @@ fail-open-shaped:
   rule, `requireCsrf` included. An `allow` list originally written for
   `requireAuth` or `requireAcl` silently waives CSRF for those same
   routes the moment you turn `requireCsrf` on. Re-read the list when you
-  add the rule.
+  add the rule. The two always-on checks (`requireSchemaPipe`,
+  `requireClosedResponse`) are NOT covered by `allow`: the first has its
+  own `allowUnvalidatedSchema` list, the second has no exemption.
 - Like every rule here, it runs only when the app declares a
   `routePolicy` at all (see the note above).
 
@@ -1807,7 +1992,7 @@ territory.
 
 ---
 
-## 7c. `RateLimitGuard` — per-route request limits (issue #56)
+### 7d. `RateLimitGuard` — per-route request limits (issue #56)
 
 A route-scoped rate limiter, separate from auth's own login throttling
 (§7b above). `@RateLimit()` is a plain method decorator; a route without
@@ -1846,6 +2031,15 @@ class AppModule {}
 On an allowed request the guard sets `X-RateLimit-Limit` and
 `X-RateLimit-Remaining`. Once the limit is hit it rejects with `429` and
 a `Retry-After` header instead of letting the request through.
+
+`@RateLimit({})` — an EMPTY policy — opts a route (or, on a class, every
+route on it) into the guard while overriding nothing: it inherits the
+app-wide dimensions as configured. It is how the auth controllers opt in.
+Read what it means when there are none: a route whose only `@RateLimit`
+is an empty policy, in an app that registers no
+`RATE_LIMIT_DEFAULTS_TOKEN`, has **no dimensions and therefore no
+limit** — the guard allows it. The decorator opts in; the defaults are
+what make it enforce anything.
 
 ### Guard order decides what the limiter can even see
 
@@ -1910,9 +2104,49 @@ avoids the question altogether.
 
 | Field       | Required | Meaning                                                             |
 | ----------- | -------- | -------------------------------------------------------------------- |
-| `limit`     | yes      | Max requests allowed inside one window.                              |
-| `windowMs`  | yes      | Window length in milliseconds (fixed window, not sliding).           |
-| `key`       | no       | `(context) => string` to key by tenant/user/API key instead of the default `ip:METHOD:route`. |
+| `limit`     | yes\*    | Max requests allowed inside one window.                              |
+| `windowMs`  | yes\*    | Window length in milliseconds (fixed window, not sliding).           |
+| `key`       | no       | `(context) => string \| readonly string[]` to key by tenant/user/API key instead of the default `ip:METHOD:route`. |
+
+Returning SEVERAL keys counts the attempt against each of them
+independently, under this dimension's own limit (duplicates are counted
+once); returning NONE falls back to the default key, because a dimension
+with no counter cannot reject and "no key" must never mean "no limit".
+That is what a key built from a **client-chosen field** needs.
+Guards run before pipes, so the body a key function reads still carries
+keys the route's schema strips: a single key reading `email ?? username`
+on a `{ username, password }` login body lets a rotating decoy `email`
+mint a fresh counter per request, and the fine limit never sees two
+attempts against the same account. One key per field the request could
+have meant keeps the counter for the field the route authenticates with.
+Auth's own account key (§7b) is built exactly this way, from the fields
+each route declares — a key built from client-chosen fields the route does
+not authenticate with is a key an attacker can rotate. Returning no key at
+all falls back to the route's default key rather than skipping the limit.
+\* A route override is EITHER a whole dimension OR a `key` on its own —
+`@RateLimit({ default: { key: myKey } })` keeps the app-wide `limit` and
+`windowMs` and swaps what the counter is keyed on. `{ limit }`,
+`{ windowMs }` and `{}` do not compile: each describes a dimension the
+author cannot complete, and nothing in the type system can see whether an
+app-wide default supplies the other half. App-wide dimensions
+(`RATE_LIMIT_DEFAULTS_TOKEN`) are always complete — they are the base a
+route merges onto.
+
+One case the type cannot catch, and the guard therefore throws for on the
+first request to that route: a key-only override naming a dimension **no
+app-wide default registers**. Dimension names are author-chosen strings
+with no closed set, so `@RateLimit({ tenant: { key } })` in an app whose
+defaults declare `ip` and `default` type-checks, boots, and then answers
+`500` with `Rate limit dimension "tenant" has no limit` in the log. Match
+the name, or declare the dimension in full.
+
+A boot-time check for that case was considered and rejected:
+`RouteAuditService` is provided by `RocketsCoreModule` and would resolve
+ONE app-wide `RATE_LIMIT_DEFAULTS_TOKEN`, while the guard resolves the
+one visible to the module that declares each controller (§7b). The audit
+would therefore report violations for correct apps that register defaults
+in a feature module — the same false-positive class the ACL query check
+already had to fix.
 
 ### Store: in-memory vs a real backend
 
@@ -1920,6 +2154,23 @@ avoids the question altogether.
 for tests and samples. It is **not** correct behind more than one
 instance — each process tracks its own count, so N instances behind a
 load balancer effectively multiply the configured limit by N.
+
+It is bounded: a hard key cap (100k by default, overridable through
+`RATE_LIMIT_MAX_KEYS_TOKEN`, or `throttling.maxKeys` on the auth
+registration — a value below 1, or a non-finite one, fails the boot
+rather than evicting every window as it is written) with
+least-recently-used eviction. The cap matters because
+part of the key is attacker-supplied on the routes this store protects,
+so a store that never frees an entry turns correctly rate-limited
+requests into permanent memory. LRU is what keeps a coarse ceiling key —
+touched by every request — from being the first thing evicted under the
+very flood it exists to stop. Dropping a live window restarts its
+counter, so it is reported (coalesced to one warning a minute); a
+deployment that must never lose a count under abuse wants a shared,
+persistent store. Budget for the keys a request actually creates: a
+dimension whose key function returns several — auth's account dimension
+returns one per account field present — inserts one entry per key, so a
+body naming both `email` and `username` costs two.
 
 A production, multi-instance deployment needs a shared backend behind
 the same `RateLimitStoreInterface` port (one method: `consume(key,
@@ -2211,9 +2462,8 @@ does.
 
 `transactional: true` exists on **CRUD operations only**
 (`operations.X.transactional`) and on `operationResource` operations. It
-wraps the handler in `TransactionScope.run` with `SUPPORTS` propagation.
-Everything else — a custom service, a guard, a background job — has to
-open its own scope:
+wraps the handler in `TransactionScope.run`. Everything else — a custom
+service, a guard, a background job — has to open its own scope:
 
 ```ts
 import { type PlainLiteralObject } from '@nestjs/common';
@@ -2236,39 +2486,36 @@ export class TransferService {
     to: string,
     amount: number,
   ) {
-    // Money movement should fail closed, so `MANDATORY` rather than the
-    // fail-open default. Read its real (narrow) guarantee below — it
-    // asserts that *some* transaction factory is registered, not that one
-    // exists for `AccountEntity`'s store.
-    // On Firestore, a contended debit/credit belongs in
+    // `run()` fails OPEN — read the guarantee it does and does not give
+    // below. On Firestore, a contended debit/credit belongs in
     // `FirestoreRepository.transaction()` instead — see the trap on
     // adapter differences below.
-    return this.trx.run(
-      ctx,
-      async (txCtx) => {
-        const debit = await this.accounts.findOne({ where: …, ctx: txCtx });
-        // …every call inside gets `txCtx`, or it escapes the transaction.
-        await this.accounts.update(debit, { balance: … }, { ctx: txCtx });
-      },
-      { propagation: 'MANDATORY' },
-    );
+    return this.trx.run(ctx, async (txCtx) => {
+      const debit = await this.accounts.findOne({ where: …, ctx: txCtx });
+      // …every call inside gets `txCtx`, or it escapes the transaction.
+      await this.accounts.update(debit, { balance: … }, { ctx: txCtx });
+    });
   }
 }
 ```
 
-#### What `run()` and `propagation` actually do
+#### What `run()` actually does
 
-The installed `PropagationBehavior` is `'SUPPORTS' | 'MANDATORY'` — there
-is no `'REQUIRED'`. **Neither value starts a transaction.**
+**`run()` starts no transaction.** Its only options are `readOnly` and
+`timeout`; upstream `8.0.0-alpha.10` removed `propagation` (and with it
+`TransactionRequiredException`), so there is no fail-closed mode to ask
+for — see the fail-open trap below, which is now the only behaviour.
 
 The **outermost** `run()` installs a `TransactionManager` on `txCtx.trx`
 and owns the boundary: after the callback it commits — or, with
 `readOnly`, rolls back — whatever that manager ended up holding. A
 **nested** `run()`, meaning one whose `ctx` already carries the overlay,
-*joins* the outer manager and returns the callback's result directly. It
-commits nothing and rolls back nothing, and its own `readOnly` and
-`timeout` are ignored; the outer scope decides both. `propagation` is
-still checked when nested.
+*joins* the outer manager. It commits nothing and rolls back nothing, and
+its own `timeout` is ignored; the outer scope decides. A nested
+`readOnly` that CONTRADICTS the scope it joined (`runReadOnly` inside a
+writing scope, or the reverse) throws
+`TransactionReadOnlyConflictException` instead of being ignored, which
+aborts the outer scope too.
 
 Either way the transaction itself is started by the **concrete adapter**,
 lazily — on the first repository call that forwards `txCtx`, and only when
@@ -2279,20 +2526,21 @@ empty set (though any `trx.onCommit(...)` callbacks still fire). So
 manager that may be holding zero.
 
 `trx.isSupported` is just `registry.count > 0`: "at least one transaction
-factory is registered **somewhere** in this app." That is the whole of
-what `MANDATORY` asserts. When it is `false`, `MANDATORY` throws
-`TransactionRequiredException` before the callback runs and the default
-`SUPPORTS` runs the callback unprotected.
+factory is registered **somewhere** in this app." Nothing consults it
+before running your callback — when it is `false`, `run()` proceeds
+unprotected.
 
 Traps worth naming:
 
 - **A nested scope does not own the boundary.** Any scope opened
-  underneath `transactional: true` (or inside another `run()`) is nested.
-  The sharpest edge: `runReadOnly` nested inside a writing operation does
-  **not** roll back — it joins the outer manager, and the outer scope
-  commits its writes. A nested `timeout` is likewise ignored.
-- **`SUPPORTS` fails open, and nothing warns.** With no transaction
-  factory registered, a `SUPPORTS` scope still runs its callback,
+  underneath `transactional: true` (or inside another `run()`) is nested;
+  its `timeout` is ignored and the outer scope decides commit/rollback.
+  `runReadOnly` nested inside a writing operation used to silently write
+  through; since `8.0.0-alpha.10` it throws
+  `TransactionReadOnlyConflictException` and takes the outer scope down
+  with it — a loud failure where the old one was a silent write.
+- **`run()` fails open, and nothing warns.** With no transaction
+  factory registered, a scope still runs its callback,
   `isSupported` is `false`, and repository calls quietly take their
   non-transactional path — `TypeOrmRepository.getRepo` returns the plain
   untransacted repository; `FirestoreRepository` resolves a `null`
@@ -2303,20 +2551,16 @@ Traps worth naming:
   adapters register a transaction factory from `forFeature`, so any app
   with a registered entity has `isSupported === true`. It bites with a
   custom adapter that contributes no factories.
-- **`MANDATORY` is not a per-store guarantee.** Because `isSupported` is a
-  global count, `MANDATORY` passes as soon as *any* factory exists — even
-  if none is registered for the store you are about to write. In a
-  multi-datasource app (or with a per-entity `repository` override, §8)
-  the scope is admitted and the first repository call then throws a raw
-  `Error: No transaction factory registered for key "…"` — not
-  `TransactionRequiredException`, and not an HTTP-shaped failure.
-- **`noRollbackFor` is accepted and silently dropped.** It exists on
-  `TransactionalOptions` — the bag `@Transactional()` and
-  `transactional: true` take — and the decorator dutifully stores it in
-  metadata. But `TransactionalRunner` forwards only `propagation`,
-  `readOnly` and `timeout` to `TransactionScope.run`, whose own
-  `TransactionRunOptions` does not declare `noRollbackFor` at all. It is
-  read by nothing: **any** throw rolls the scope back.
+- **`isSupported` is not a per-store guarantee.** It is a global count,
+  so it is `true` as soon as *any* factory exists — even if none is
+  registered for the store you are about to write. In a multi-datasource
+  app (or with a per-entity `repository` override, §8) the scope runs and
+  the first repository call then throws a raw `Error: No transaction
+  factory registered for key "…"` — not an HTTP-shaped failure.
+- **Any throw rolls the scope back.** There is no `noRollbackFor`
+  (upstream removed the option that earlier versions accepted and
+  silently ignored); catch inside the scope if a failure must not abort
+  it.
 - **Adapters differ on contention.** `TransactionScope.run` is fine for
   uncontended multi-write units, but on Firestore it uses an imperative
   bridge that **refuses** an SDK retry
@@ -2349,22 +2593,46 @@ request (a startup task, a job with its own scope) or it is a defect.
 ```ts
 interface RocketsUserMetadataConfig {
   entity: Type;                       // dynamic-repo row (key 'userMetadata') + /me route
-  createDto: Type;                    // must extend UserMetadataCreatableInterface
-  updateDto: Type;                    // must extend UserMetadataModelUpdatableInterface
-  responseDto?: Type;                 // optional /me response
+  updateSchema: z.ZodType;            // named schema of `PATCH /me` `userMetadata` (`UserMetadataUpdateDto`)
+  responseSchema: z.ZodType;          // named response projection — hidden columns never leave
   repository?: RepositoryModuleInterface; // per-entity adapter override
 }
 ```
 
-Enable the optional `/me` surface by supplying:
+Enable the optional `/me` surface by supplying the config
+`defineZodUserMetadata` (or the bound `defineUserMetadata`) compiles from
+one schema:
 
 ```ts
-userMetadata: {
-  entity: UserMetadataEntity,
-  createDto: UserMetadataCreateDto,
-  updateDto: UserMetadataUpdateDto,
-}
+export const userMetadataSchema = auditableEntity({
+  userId: f.owner(),
+  firstName: f.string({ max: 100 }),
+  bio: f.string({ max: 500, dto: { response: false } }), // stored, never on the wire
+});
+export const userMetadataConfig = defineUserMetadata(userMetadataSchema, {
+  name: 'UserMetadata',
+  table: 'userMetadata',
+});
+
+userMetadata: userMetadataConfig,
 ```
+
+A hand-written `updateSchema` is the documented alternative to
+`defineZodUserMetadata`, and it may not declare a server-managed column —
+`id`, `userId`, `dateCreated`, `dateUpdated`, `dateDeleted`, `version`
+(`USER_METADATA_MANAGED_FIELDS`, exported from core). `PATCH /me` never
+writes them, and an accepted `id` would hand the store another row's
+primary key, so a schema declaring one fails the boot. Drop them with
+`.omit({ ... })` before wrapping, or let `defineZodUserMetadata` omit them
+for you. The write path strips them regardless — the boot check can only
+read a plain object shape, so a union or a pipe passes it.
+
+`/me` is built from that config: `PATCH /me` validates
+`{ userMetadata?: UserMetadataUpdateDto }` through the per-route Standard
+Schema pipe (`400` with `details[].path = ['userMetadata', '<field>']`),
+and both routes serialize through `UserResponseDto` — `id`, `sub`,
+`email?`, `userRoles?`, `claims?` plus `userMetadata` (the response
+projection, `null` before the first `PATCH`).
 
 ---
 

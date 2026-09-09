@@ -3,34 +3,15 @@ import { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { IsOptional, IsString } from 'class-validator';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
   AuthRequest,
 } from '@concepta/rockets-core';
 import { defineAuthAdapter, extractBearerToken } from '@concepta/rockets-core';
-import type {
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '@concepta/rockets-core';
 import { RocketsModule } from '../rockets.module';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
-
-// ────────────────────────────────────────────────────────────────────
-// DTO Fixtures
-// ────────────────────────────────────────────────────────────────────
-
-class UserMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsString() userId!: string;
-  @IsOptional() @IsString() firstName?: string;
-}
-
-class UserMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsString() id!: string;
-  @IsOptional() @IsString() firstName?: string;
-}
 
 // ────────────────────────────────────────────────────────────────────
 // Auth Provider Fixtures
@@ -148,11 +129,7 @@ function buildApp(adapter: Type<AuthAdapterInterface>) {
     imports: [
       RocketsModule.forRoot({
         auth: defineAuthAdapter(adapter),
-        userMetadata: {
-          entity: StubUserMetadataEntity,
-          createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto,
-        },
+        userMetadata: userMetadataConfigFixture,
         repository: E2eFakeRepositoryModule,
       }),
     ],
@@ -164,11 +141,7 @@ function buildChainApp(adapters: ReadonlyArray<Type<AuthAdapterInterface>>) {
     imports: [
       RocketsModule.forRoot({
         auth: adapters.map((entry) => defineAuthAdapter(entry)),
-        userMetadata: {
-          entity: StubUserMetadataEntity,
-          createDto: UserMetadataCreateDto,
-          updateDto: UserMetadataUpdateDto,
-        },
+        userMetadata: userMetadataConfigFixture,
         repository: E2eFakeRepositoryModule,
       }),
     ],

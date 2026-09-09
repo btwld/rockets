@@ -21,13 +21,14 @@ import { stableContractJson } from './helpers/stable-contract-json';
  * - `zodSubResource` (`/pets/{petId}/tags`),
  * - `operationResource` non-CRUD ops (`/pets/{petId}/transfer`,
  *   `/pets/{petId}/share`),
- * - alongside class-based `defineResource` (`/appointments`) in the same doc.
+ * - alongside a schema-based `defineResource` (`/appointments`) and the
+ *   hand-written `/auth` controller in the same doc.
  *
  * The document is built by the app's own `createSampleServerOpenApiDocument`
- * helper — the one `main.ts` serves through, `extraModels` + PATCH `/me` patch
- * + nestjs-zod `cleanupOpenApiDoc` included. Rebuilding it here from a plain
- * `SwaggerModule.createDocument` call would pin a document this app never
- * serves.
+ * helper — the one `main.ts` serves through, Rockets Standard Schema
+ * converter included (named zod schemas → `$ref`'d components). Rebuilding
+ * it here from a plain `SwaggerModule.createDocument` call would pin a
+ * document this app never serves.
  */
 const contractPath = resolve(
   dirname(fileURLToPath(import.meta.url)),

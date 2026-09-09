@@ -6,7 +6,9 @@ import {
   Param,
   Post,
   Req,
+  StandardSchemaValidationPipe,
   UseGuards,
+  UsePipes,
 } from '@nestjs/common';
 import type { Type } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
@@ -17,40 +19,31 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
-  ApiProperty,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
-import { IsString, IsNotEmpty } from 'class-validator';
 import {
   AssignRoleCommand,
   GetAssignedRolesQuery,
 } from '@concepta/nestjs-role';
-import { getAppContext } from '@concepta/rockets-core';
+import { getAppContext, rocketsSchemaValidation } from '@concepta/rockets-core';
 import type { Request } from 'express';
+import type { z } from 'zod';
 
 import { AdminGuard } from '../../../../../guards/admin.guard';
 import { USER_ROLE_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
+import { rocketsAuthAdminAssignUserRoleSchema } from '../../../infrastructure/schemas/rockets-auth-admin-assign-user-role.schema';
 import type { AdminUserRolesControllerExtras } from '../../../interfaces/role-controller-extras.interface';
 import { applyControllerExtras } from '../../../../../shared/utils/apply-controller-extras.helper';
 
-class AdminAssignUserRoleDto {
-  @ApiProperty({
-    description: 'Role ID to assign to the user',
-    example: '08a82592-714e-4da0-ace5-45ed3b4eb795',
-  })
-  @Expose()
-  @IsString()
-  @IsNotEmpty()
-  roleId!: string;
-}
+type AssignUserRoleBody = z.output<typeof rocketsAuthAdminAssignUserRoleSchema>;
 
 /** Build the admin user-role controller and apply consumer decorators. */
 export function buildAdminUserRolesController(
   extras: AdminUserRolesControllerExtras = {},
 ): Type<unknown> {
   @UseGuards(AdminGuard)
+  @UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
   @ApiBearerAuth()
   @ApiTags('admin')
   @Controller('admin/users/:userId/roles')
@@ -82,14 +75,15 @@ export function buildAdminUserRolesController(
     @Post()
     async assign(
       @Param('userId') userId: string,
-      @Body() dto: AdminAssignUserRoleDto,
+      @Body({ schema: rocketsAuthAdminAssignUserRoleSchema })
+      body: AssignUserRoleBody,
       @Req() req: Request,
     ) {
       const ctx = getAppContext(req);
       await this.commandBus.execute(
-        new AssignRoleCommand(ctx, USER_ROLE_ENTITY_KEY, dto.roleId, userId),
+        new AssignRoleCommand(ctx, USER_ROLE_ENTITY_KEY, body.roleId, userId),
       );
-      this.logger.log(`Role ${dto.roleId} assigned to user ${userId}`);
+      this.logger.log(`Role ${body.roleId} assigned to user ${userId}`);
     }
   }
 

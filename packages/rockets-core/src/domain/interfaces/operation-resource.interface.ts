@@ -1,4 +1,5 @@
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
+import type { z } from 'zod';
 
 import type { AuthorizedUser } from './auth-user.interface';
 import type { ResourceKind } from './resource-kind.enum';
@@ -89,11 +90,11 @@ export type OperationHandlerRef<
   | OperationHandlerClassRef<I, O, P>;
 
 /**
- * Compiled operation descriptor — DTO classes already resolved.
- * HTTP method is the source of truth for input sourcing (GET/DELETE → query,
- * POST/PUT/PATCH → body). There is no separate `kind` field.
+ * Compiled operation descriptor — schemas already named. HTTP method is
+ * the source of truth for input sourcing (GET/DELETE → query, POST/PUT/PATCH
+ * → body). There is no separate `kind` field.
  *
- * Response contract: `output` is either the DTO to whitelist and
+ * Response contract: `output` is either the schema to validate and
  * document against, or `false` to opt out explicitly. It is required, so
  * a response cannot silently leak by omission.
  */
@@ -115,19 +116,26 @@ export interface CompiledOperationDescriptor {
    */
   readonly acl?: OperationAclConfig;
   readonly transactional?: boolean;
-  readonly inputDto?: Type<object>;
   /**
-   * Response contract: the DTO to whitelist and document against, or
-   * `false` to opt out explicitly.
+   * Request input schema. For a body operation (POST/PUT/PATCH) it is a
+   * NAMED component (`withOpenApi(schema, '<Base>Input')`) validated by
+   * `@Body({ schema })`; for a query operation (GET/DELETE) it is bridged
+   * but unnamed, so the document expands it into one query parameter per
+   * property. `operationResource` produces both forms.
+   */
+  readonly inputSchema?: z.ZodType;
+  /**
+   * Response contract: the named schema to validate and document against,
+   * or `false` to opt out explicitly.
    *
    * One field, because it is one decision. Modelling it as an optional
-   * DTO plus an optional `disabled` flag permits two states that mean
+   * schema plus an optional `disabled` flag permits two states that mean
    * nothing — both set, and neither set — which then have to be rejected
    * at definition time. Required and closed, those states cannot be
    * written, so there is nothing to reject. Mirrors the authoring layer,
    * where `output` has always been `schema | false`.
    */
-  readonly output: Type<object> | false;
+  readonly output: z.ZodType | false;
   readonly handler: OperationHandlerRef;
   readonly decorators?: readonly MethodDecorator[];
   /**
@@ -138,7 +146,7 @@ export interface CompiledOperationDescriptor {
    * and the handler returns an `Observable<MessageEvent>` that core
    * hands straight to Nest's own streaming response controller —
    * `output` is always `false` for these operations, so the normal
-   * output-DTO whitelist step never runs. Only `op.sse()` produces this;
+   * output-schema validation step never runs. Only `op.sse()` produces this;
    * `output`/`transactional` are not exposed on that builder because
    * neither makes sense against a long-lived, never-completing response.
    */
@@ -156,10 +164,11 @@ export interface OperationResourceDefinition {
    */
   readonly acl?: ResourceAclConfig;
   /**
-   * Optional compiled DTO for path params (from zod `params` on
-   * `operationResource`). Validated at request time → 400 on failure.
+   * Optional path-params schema (from zod `params` on `operationResource`),
+   * bridged but unnamed: validated at request time by `@Param({ schema })`
+   * (400 on failure) and documented as one path parameter per property.
    */
-  readonly paramsDto?: Type<object>;
+  readonly paramsSchema?: z.ZodObject;
   readonly operations: Readonly<Record<string, CompiledOperationDescriptor>>;
   readonly imports?: NonNullable<DynamicModule['imports']>;
   readonly providers?: ReadonlyArray<Provider>;

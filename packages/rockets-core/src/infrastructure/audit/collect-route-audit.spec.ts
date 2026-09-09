@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  StandardSchemaValidationPipe,
+  UsePipes,
+  type Type,
+} from '@nestjs/common';
 import { AuthPublic } from '@concepta/nestjs-authentication';
+import { z } from 'zod';
 import { collectRouteAudit } from './collect-route-audit';
 import { AuthSession } from '../../decorators/auth-session.decorator';
 
@@ -80,5 +91,103 @@ describe('collectRouteAudit — sessionAuth (issue #58)', () => {
         authGuards: ['AuthServerGuard'],
       }),
     ).toThrow(/declares both @AuthPublic and @AuthSession/);
+  });
+});
+
+// ── requireSchemaPipe: a `schema` parameter must be reached by a pipe ──
+
+const bodySchema = z.object({ name: z.string() });
+
+@Controller('unpiped')
+class UnpipedController {
+  @Post()
+  create(@Body({ schema: bodySchema }) _body: unknown) {}
+
+  @Get()
+  list(
+    @Query({ schema: bodySchema }) _query: unknown,
+    @Param({ schema: bodySchema }) _params: unknown,
+  ) {}
+
+  @Get('plain')
+  plain(@Body() _body: unknown) {}
+}
+
+@Controller('class-piped')
+@UsePipes(new StandardSchemaValidationPipe())
+class ClassPipedController {
+  @Post()
+  create(@Body({ schema: bodySchema }) _body: unknown) {}
+}
+
+@Controller('handler-piped')
+class HandlerPipedController {
+  @Post()
+  @UsePipes(StandardSchemaValidationPipe)
+  create(@Body({ schema: bodySchema }) _body: unknown) {}
+}
+
+@Controller('param-piped')
+class ParamPipedController {
+  @Post()
+  create(
+    @Body({ schema: bodySchema, pipes: [new StandardSchemaValidationPipe()] })
+    _body: unknown,
+  ) {}
+}
+
+class OtherPipe {
+  transform(value: unknown): unknown {
+    return value;
+  }
+}
+
+@Controller('other-piped')
+@UsePipes(new OtherPipe())
+class OtherPipedController {
+  @Post()
+  create(@Body({ schema: bodySchema }) _body: unknown) {}
+}
+
+function scan(...controllers: Type<unknown>[]) {
+  return collectRouteAudit({
+    controllers: controllers.map((controller) => ({
+      controller,
+      methodNames: Object.getOwnPropertyNames(controller.prototype).filter(
+        (name) => name !== 'constructor',
+      ),
+    })),
+    globalGuards: [],
+    authGuards: [],
+  });
+}
+
+describe('collectRouteAudit — unvalidatedSchemaParams', () => {
+  it('names every schema parameter that no pipe reaches, in slot order', () => {
+    const report = scan(UnpipedController);
+    const byHandler = new Map(report.routes.map((r) => [r.handler, r]));
+    expect(byHandler.get('create')?.unvalidatedSchemaParams).toEqual(['body']);
+    expect(byHandler.get('list')?.unvalidatedSchemaParams).toEqual([
+      'query',
+      'param',
+    ]);
+    // No schema declared → nothing to validate against; not reported.
+    expect(byHandler.get('plain')?.unvalidatedSchemaParams).toEqual([]);
+  });
+
+  it('accepts the pipe at class, handler or parameter level, instance or class', () => {
+    for (const controller of [
+      ClassPipedController,
+      HandlerPipedController,
+      ParamPipedController,
+    ]) {
+      const [route] = scan(controller).routes;
+      expect(route.unvalidatedSchemaParams).toEqual([]);
+    }
+  });
+
+  it('does not count an unrelated pipe', () => {
+    const [route] = scan(OtherPipedController).routes;
+    expect(route.unvalidatedSchemaParams).toEqual(['body']);
   });
 });

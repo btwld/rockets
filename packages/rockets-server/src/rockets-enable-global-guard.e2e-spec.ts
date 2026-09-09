@@ -4,29 +4,12 @@ import { Test } from '@nestjs/testing';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { AUTH_ADAPTERS_TOKEN } from '@concepta/rockets-core';
 import request from 'supertest';
-import { IsNotEmpty, IsString } from 'class-validator';
 import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
 import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
 import type { RocketsOptions } from './rockets.module-definition';
-import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
-import {
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
-} from './domain/interfaces/user-metadata.interface';
+import { userMetadataConfigFixture } from './__fixtures__/schemas/user-metadata.schema.fixture';
 import { RocketsModule } from './rockets.module';
 import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
-
-class GuardE2eMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  userId!: string;
-}
-
-class GuardE2eMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-}
 
 @ApiTags('guard-e2e-open')
 @Controller('guard-e2e-open')
@@ -49,11 +32,7 @@ describe('RocketsModule enableGlobalGuard (e2e)', () => {
   const baseOptions: RocketsOptions = {
     settings: {},
     auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-    userMetadata: {
-      entity: StubUserMetadataEntity,
-      createDto: GuardE2eMetadataCreateDto,
-      updateDto: GuardE2eMetadataUpdateDto,
-    },
+    userMetadata: userMetadataConfigFixture,
     repository: E2eFakeRepositoryModule,
   };
 

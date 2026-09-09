@@ -64,7 +64,7 @@ export interface RocketsErrorContext {
   readonly originalException: unknown;
   /**
    * Structured findings behind a validation `400`, when the failure has
-   * them — zod issues, class-validator constraints, unrecognized strict
+   * them — Standard Schema issues, unrecognized strict
    * keys (one entry per key). Absent on non-validation errors. The
    * human-readable `message` above stays untouched; this is the field a
    * client branches on instead of parsing strings.

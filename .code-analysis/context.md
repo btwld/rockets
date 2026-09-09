@@ -249,11 +249,14 @@ depends on `rockets-server` or `rockets-server-auth`**. Core's only link to
 TypeORM is a **devDependency** (for testing), which is what keeps rule 13 true in
 practice — do not report it as a production ORM coupling.
 
-*Zod is an optional peer.* `zod` and `nestjs-zod` are declared as
-`peerDependencies` with `peerDependenciesMeta.optional: true`, so the main entry
-stays zod-free and non-zod consumers pay nothing; the schema layer lives behind
-the `/zod` subpath. An auditor will see zod imported in `src/zod/**` without a
-regular `dependencies` entry — **that is correct**, not a missing dependency.
+*Zod is the schema engine.* `zod` is a regular `dependency` of
+`@concepta/rockets-core` (the upstream `@concepta/nestjs-*` stack depends on it
+the same way); every request and response contract is a named zod schema
+(`withOpenApi(schema, id)`). `nestjs-zod`, `class-validator` and
+`class-transformer` are gone from the Rockets manifests — an import of any of
+them in `packages/*/src` is a finding, except `@concepta/rockets-auth`, which
+keeps the two class libraries as plain dependencies while `nestjs-email` /
+`nestjs-event` (7.x) require them at import.
 
 *Resource config is flat.* `RocketsResourceConfig` extends
 `CrudModuleForFeatureOptionsInterface` directly. No `crud.crud` nesting.
@@ -277,10 +280,14 @@ the minimum: cross-boundary providers only. Two distinct classes sharing a
 `imports: [...defImports, ...]`, or `forRootAsync` wiring (RAW_OPTIONS_TOKEN)
 silently breaks.
 
-*Swagger is manual.* The `@nestjs/swagger` CLI plugin is **not** enabled, so
-every DTO field needing a schema requires explicit `@ApiProperty()` /
-`@ApiPropertyOptional()`. Missing decorators are real findings; type inference
-will not cover them. `@Expose()` from class-transformer is unrelated.
+*Swagger comes from the schema.* There are no DTO classes and no
+`@ApiProperty()`. A request or response is documented because its zod schema
+is named (`withOpenApi(schema, 'XDto')`, applied LAST) and `$ref`'d by the
+Rockets document converter; hand-written routes declare
+`@Body/@Query/@Param({ schema })`, `@ApiResponse({ standardSchema })`, and
+carry `@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))`.
+A schema wrapped before its last `.extend()` / `.strict()` (id lost), or an
+unnamed schema on a route, is a real finding.
 
 *Type safety is absolute.* No `any`, no `as unknown as Type`, no
 non-null-assertion workarounds. No bridge modules, lazy placeholders, fake

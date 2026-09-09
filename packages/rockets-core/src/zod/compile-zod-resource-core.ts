@@ -1,4 +1,5 @@
 import type { PlainLiteralObject, Type } from '@nestjs/common';
+import { withOpenApi } from '@concepta/nestjs-core';
 import { z } from 'zod';
 import type {
   ResourceOperationsObject,
@@ -6,8 +7,11 @@ import type {
   RocketsResourceDefinition,
   SchemaEntityCompiler,
 } from '../index';
+import {
+  assertFailClosedResponse,
+  buildPaginatedSchema,
+} from '../common/utils/open-api-schema.util';
 import { compileZodEntity } from './compile-zod-entity';
-import { compileDtoClass } from './zod-dto';
 import {
   normalizeOperations,
   opConfig,
@@ -17,8 +21,12 @@ import {
   type ZodResourceOperations,
 } from './zod-operations';
 import { hasDeletedAtField, projectSchema } from './zod-projections';
+import { buildResponseSchema } from './zod-response-schema';
 import { resolveOwnerColumns } from './zod-resource-composition';
-import type { ZodOwnerConfig, ZodResourceDtos } from './zod-resource-contracts';
+import type {
+  ZodOwnerConfig,
+  ZodResourceSchemas,
+} from './zod-resource-contracts';
 
 export interface ZodCoreInput {
   readonly name: string;
@@ -35,8 +43,13 @@ export interface CompiledZodCore {
   readonly entity: Type<PlainLiteralObject>;
   readonly operations: ResourceOperationsObject;
   readonly relations: ReadonlyArray<ResourceRelationEntry<PlainLiteralObject>>;
-  readonly dtos: ZodResourceDtos;
+  readonly schemas: ZodResourceSchemas;
   readonly ownerColumns: string[];
+}
+
+interface OperationOutput {
+  readonly resource: z.ZodType;
+  readonly paginated?: z.ZodType;
 }
 
 export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
@@ -50,12 +63,6 @@ export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
   // Declaring an override on an operation left out of `operations` is
   // not reachable: any config object enables its operation.
   const overrides = resolveOperationOverrides(name, ops);
-  const overrideDto = (op: ZodCrudOperation): Type<object> | undefined => {
-    const schema = overrides[op]?.output;
-    return schema === undefined
-      ? undefined
-      : compileDtoClass(schema, `${name}${pascal(op)}OutputDto`);
-  };
 
   const ownerColumns = resolveOwnerColumns(schema, name, input.owner);
   const projections = projectSchema(
@@ -103,59 +110,80 @@ export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
     );
   }
 
-  const responseNested = Object.fromEntries(
-    Object.entries(projections.responseNested).map(([property, shape]) => [
-      property,
-      compileDtoClass(shape, `${name}${pascal(property)}ResponseDto`),
-    ]),
-  );
-  const response = compileDtoClass(
-    z.object(projections.response),
-    `${name}ResponseDto`,
-    responseNested,
-  );
-  // One path for every request-body DTO: pick the schema (override wins
-  // over the derived projection), then apply `strictInput` to WHICHEVER
-  // won — a flag that only worked on one of the two sources would be
-  // the half-fix this repo keeps re-learning to avoid.
-  const inputDto = (
+  const response = buildResponseSchema(name, projections);
+  const paginated = buildPaginatedSchema(response, `[zodResource] "${name}"`);
+
+  // One path for every request-body schema: pick the schema (override
+  // wins over the derived projection), apply `strictInput` to WHICHEVER
+  // won, then name it — the wrap is the LAST call, always.
+  const inputSchema = (
     op: 'create' | 'update' | 'replace',
     fallback: Record<string, z.ZodType>,
     derivedName: string,
-  ): Type<object> | undefined => {
+  ): z.ZodType | undefined => {
     if (!enabled(op)) return undefined;
     const override = overrides[op]?.input;
-    const schema = override ?? z.object(fallback);
+    const chosen = override ?? z.object(fallback);
     const effective =
-      overrides[op]?.strictInput === true ? schema.strict() : schema;
-    return compileDtoClass(
+      overrides[op]?.strictInput === true ? chosen.strict() : chosen;
+    return withOpenApi(
       effective,
       override !== undefined ? `${name}${pascal(op)}InputDto` : derivedName,
     );
   };
 
-  const create = inputDto('create', projections.create, `${name}CreateDto`);
-  const update = inputDto('update', projections.update, `${name}UpdateDto`);
-  const replace = inputDto('replace', projections.create, `${name}ReplaceDto`);
+  const create = inputSchema('create', projections.create, `${name}CreateDto`);
+  const update = inputSchema('update', projections.update, `${name}UpdateDto`);
+  const replace = inputSchema(
+    'replace',
+    projections.create,
+    `${name}ReplaceDto`,
+  );
 
   // Per-operation response override; falls back to the single projected
-  // response DTO the whole resource shares.
-  const responseFor = (op: ZodCrudOperation): Type<object> =>
-    overrideDto(op) ?? response;
+  // response schema the whole resource shares. A list override gets its
+  // own paginated envelope, named after the override.
+  const outputFor = (op: ZodCrudOperation): OperationOutput => {
+    const override = overrides[op]?.output;
+    if (override === undefined) {
+      return { resource: response, paginated };
+    }
+    const context = `[zodResource] "${name}" operations.${op}.output`;
+    const named = withOpenApi(override, `${name}${pascal(op)}OutputDto`);
+    assertFailClosedResponse(named, context);
+    return {
+      resource: named,
+      ...(op === 'list'
+        ? { paginated: buildPaginatedSchema(named, context) }
+        : {}),
+    };
+  };
 
+  const list = outputFor('list');
   const operations: ResourceOperationsObject = {
     ...(enabled('list')
-      ? { list: { ...zodOpConfig(ops.list), output: responseFor('list') } }
+      ? {
+          list: {
+            ...zodOpConfig(ops.list),
+            output: list.resource,
+            paginated: list.paginated,
+          },
+        }
       : {}),
     ...(enabled('read')
-      ? { read: { ...zodOpConfig(ops.read), output: responseFor('read') } }
+      ? {
+          read: {
+            ...zodOpConfig(ops.read),
+            output: outputFor('read').resource,
+          },
+        }
       : {}),
     ...(enabled('create') && create !== undefined
       ? {
           create: {
             ...zodOpConfig(ops.create),
             input: create,
-            output: responseFor('create'),
+            output: outputFor('create').resource,
           },
         }
       : {}),
@@ -164,7 +192,7 @@ export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
           update: {
             ...zodOpConfig(ops.update),
             input: update,
-            output: responseFor('update'),
+            output: outputFor('update').resource,
           },
         }
       : {}),
@@ -173,7 +201,7 @@ export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
           replace: {
             ...zodOpConfig(ops.replace),
             input: replace,
-            output: responseFor('replace'),
+            output: outputFor('replace').resource,
           },
         }
       : {}),
@@ -182,7 +210,7 @@ export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
           delete: {
             ...zodOpConfig(ops.delete),
             ...(overrides.delete?.output
-              ? { output: responseFor('delete') }
+              ? { output: outputFor('delete').resource }
               : {}),
           },
         }
@@ -192,7 +220,7 @@ export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
           restore: {
             ...zodOpConfig(ops.restore),
             ...(overrides.restore?.output
-              ? { output: responseFor('restore') }
+              ? { output: outputFor('restore').resource }
               : {}),
           },
         }
@@ -203,7 +231,10 @@ export function compileZodCore(input: ZodCoreInput): CompiledZodCore {
     entity,
     operations,
     relations: projections.relations,
-    dtos: { response, create, update, replace },
+    schemas: {
+      request: { create, update, replace },
+      response: { resource: response, paginated },
+    },
     ownerColumns,
   };
 }

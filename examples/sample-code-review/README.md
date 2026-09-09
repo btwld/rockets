@@ -63,7 +63,7 @@ token. The Rockets server validates that token on every request.
 |---|---|
 | Firebase (client) | Web login; `user.getIdToken()` |
 | `@concepta/rockets-adapter-firebase` | Verifies ID token via Firebase Admin SDK |
-| `@concepta/rockets` | Global `AuthServerGuard` + `MeController` + protected routes |
+| `@concepta/rockets` | Global `AuthServerGuard` + the `/me` routes + protected routes |
 | Your controllers | `@AuthUser()`, `@Ctx()` — user already authenticated |
 
 A second adapter, `defineApiKeyAuth()`, runs after Firebase in the
@@ -158,7 +158,7 @@ TOKEN=$(firebase login:ci)  # or get a real ID token from your client
 curl http://localhost:3001/me -H "Authorization: Bearer $TOKEN"
 ```
 
-`FirebaseAuthAdapter` validates the token; `MeController` returns the user.
+`FirebaseAuthAdapter` validates the token; `GET /me` returns the user.
 
 ### Call the API with an API key (server-to-server)
 
@@ -230,7 +230,7 @@ examples/sample-code-review
 │   │       ├── repository/                      Firestore persistence helper
 │   │       ├── config/                          GithubConfig / OpenaiConfig (env-var readers)
 │   │       ├── zod-bindings.ts                   bindZodResources(typeOrmZodEntityCompiler)
-│   │       ├── user-metadata.schema.ts           zod schema -> { entity, createDto, updateDto, responseDto }
+│   │       ├── user-metadata.schema.ts           zod schema -> { entity, updateSchema, responseSchema }
 │   │       └── main.ts                          Bootstrap (helmet, validation, swagger)
 │   └── web/
 │       └── src/

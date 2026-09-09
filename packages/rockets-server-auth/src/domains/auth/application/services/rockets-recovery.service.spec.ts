@@ -22,6 +22,13 @@ function createSubject() {
   const userPort = { getByEmail: vi.fn(), getById: vi.fn() };
   const passwordPort = { setPassword: vi.fn() };
   const commandBus = { execute: vi.fn() };
+  // Outermost scope only — the operation runs with the same context.
+  const txScope = {
+    run: vi.fn(
+      (ctx: unknown, operation: (txCtx: unknown) => Promise<unknown>) =>
+        operation(ctx),
+    ),
+  };
   const notifications = {
     sendRecoverLoginNotificationCommand: class {},
     sendRecoverPasswordNotificationCommand: class {},
@@ -34,8 +41,9 @@ function createSubject() {
     passwordPort as never,
     notifications as never,
     commandBus as never,
+    txScope as never,
   );
-  return { subject, otpPort, userPort, passwordPort, commandBus };
+  return { subject, otpPort, userPort, passwordPort, commandBus, txScope };
 }
 
 describe('RocketsRecoveryService', () => {

@@ -23,7 +23,6 @@ export class FirestoreTransaction implements TransactionInterface {
   private static warnedAboutRetryLimit = false;
 
   private handle: FirestoreTransactionHandle | null = null;
-  private _isDirty = false;
   private attemptCount = 0;
   private runPromise: Promise<void> | null = null;
   private resolveCompletion: (() => void) | null = null;
@@ -33,10 +32,6 @@ export class FirestoreTransaction implements TransactionInterface {
 
   get isActive(): boolean {
     return this.handle !== null;
-  }
-
-  get isDirty(): boolean {
-    return this._isDirty;
   }
 
   async start(): Promise<void> {
@@ -100,10 +95,6 @@ export class FirestoreTransaction implements TransactionInterface {
     ]);
   }
 
-  markDirty(): void {
-    this._isDirty = true;
-  }
-
   async commit(): Promise<void> {
     if (!this.resolveCompletion || !this.runPromise) {
       throw new FirestoreTransactionRetryUnsupportedException(
@@ -147,7 +138,6 @@ export class FirestoreTransaction implements TransactionInterface {
 
   private cleanup(): void {
     this.handle = null;
-    this._isDirty = false;
     this.attemptCount = 0;
     this.runPromise = null;
     this.resolveCompletion = null;

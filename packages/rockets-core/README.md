@@ -66,8 +66,7 @@ facade. Depend on core directly when you use one of those lower-level seams.
 
 ```bash
 yarn add @concepta/rockets-core@alpha \
-  @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger \
-  class-transformer class-validator
+  @nestjs/common @nestjs/core @nestjs/cqrs @nestjs/swagger zod
 ```
 
 ### Minimal working example
@@ -177,7 +176,7 @@ Export the minimum to avoid name collisions across bundles.
 
 For RPC-style routes without a hand-written controller, use
 `operationResource` from `@concepta/rockets-core/zod` (or
-`defineOperationResource` on the main entry with precompiled DTOs):
+`defineOperationResource` on the main entry with named schemas):
 
 ```typescript
 import { operationResource } from '@concepta/rockets-core/zod';
@@ -421,8 +420,8 @@ Take the context from wherever you are: a hook's second argument (typed
 repository's `ctx?: PlainLiteralObject`. Never spread it into a new
 object — it is an `AppContextHost` Proxy and spreading strips the overlay
 accessors. `CONFIGURATION.md` §8a has the full seam, including what
-`propagation` does and does not control, the nested-scope boundary, and
-an audit `grep`.
+`run()` does and does not guarantee, the nested-scope boundary, and an
+audit `grep`.
 
 ### Read the authenticated user inside a handler
 
@@ -506,38 +505,26 @@ Full pattern (cookie minting, token generation, the double-submit
 design, `requireCsrf`):
 [CONFIGURATION.md §7c](../../CONFIGURATION.md#7c-session-cookie-auth-csrf-and-the-ternary-route-policy-issue-58).
 
-### Free-form JSON columns on class DTOs
+### Free-form JSON columns
 
 A settings blob, a flexible profile or a widget config has no fixed
-shape, so no per-key `@Expose` is possible. The request-body
-`ValidationPipe` transforms with `strategy: 'excludeAll'`, which is
-recursive — it walks into the property, finds no `@Expose` metadata for
-its keys, and yields `{}` **before the row is written**. Mark the
-property on the **input** DTO:
+shape. Declare it as what it is — a record — and tell the entity
+compiler which column type stores it:
 
 ```typescript
-import { FreeFormJson } from '@concepta/rockets-core';
-
-class PetCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-
-  @Expose()
-  @FreeFormJson()
-  @IsOptional()
-  @IsObject()
-  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
-  profile?: Record<string, unknown>;
-}
+const petSchema = baseEntity({
+  name: f.string({ max: 100 }),
+  profile: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .register(rocketsFieldMeta, { db: { column: { type: 'json' } }, dto: { response: true } }),
+});
 ```
 
-Only the input DTO needs it — once the value is stored, the outbound
-options carry it through. Arrays are unaffected.
-
-The zod path needs no equivalent: it compiles DTOs from the schema and
-applies the same passthrough for `z.record()` / `z.unknown()` / `z.any()`
-itself. Such a field is still absent from zod **responses** until it opts
-in (`dto: { response: true }`) — that is the deliberate response
-whitelist, not this bug.
+The request schema accepts any keys under `profile`, the row stores
+them verbatim, and the response schema emits them because the field
+opted in (`dto: { response: true }`). Nothing strips the blob on the
+way in or out — the schema is the whole contract.
 
 ### Customise the error envelope
 
@@ -584,11 +571,11 @@ for correlation IDs and structured logs. Need more than the body? The
 unwrap helpers are `protected`, so a subclass can reuse them.
 
 Validation `400`s produced by Rockets carry structured `details` on the
-serializer context — `path` as an ARRAY of segments, `message` verbatim,
-one entry per unrecognized strict key. Numeric segments (array index
-`0`) are emitted by the zod producer; the class-validator producers
-report array children as string keys (`"0"`), because that is what
-class-validator itself exposes. Details ride the exception under a
+serializer context — `path` as an ARRAY of segments (numeric for array
+indexes), `message` verbatim, one entry per unrecognized strict key.
+Every route produces them the same way: the per-route Standard Schema
+pipe runs with `rocketsSchemaValidation`, whose exception factory
+attaches the issues. Details ride the exception under a
 symbol, never inside the response payload, so an app without the
 Rockets filter sees the exact Nest body it always did. The default
 envelope is unchanged; opt in with the exported
@@ -606,8 +593,7 @@ composition. Every app registers the filter itself, whether by
 from `@concepta/rockets-core` or as `ExceptionsFilter` from
 `@concepta/rockets`. Do that and the seam is yours, on core, server and
 `@concepta/rockets-auth` alike; skip it and no Rockets package supplies
-one for you. A `400` minted by the upstream class-validator pipe
-carries messages only.
+one for you.
 
 Three helpers are exported for app code. `attachErrorDetails(exception,
 details)` puts findings on YOUR exception (a hook rejecting a write, a
@@ -615,150 +601,71 @@ guard) so they flow to the serializer like Rockets' own — it no-ops on
 an empty list and on a frozen exception, and never touches the response
 payload. `readErrorDetails(exception)` is the validated read — a carried list
 with ANY malformed entry is dropped as a whole, not partially laundered
-into the typed contract. `classValidatorErrorsToDetails(errors)`
-converts a class-validator error tree, children included, into detail
-entries, and `standardSchemaIssuesToDetails(issues)` does the same for
-Standard Schema issues — the pair to reach for when supplying your own
-`exceptionFactory`. Opting the default body
+into the typed contract. `standardSchemaIssuesToDetails(issues)`
+converts Standard Schema issues into detail entries — the one to reach
+for when supplying your own `exceptionFactory`. Opting the default body
 in is one provider:
 
 ```typescript
 { provide: ROCKETS_ERROR_SERIALIZER_TOKEN, useValue: detailedErrorSerializer }
 ```
 
-### Standard Schema DTOs (`@concepta/rockets-core/standard-schema`)
+### Hand-written routes
 
-The Standard Schema subpath turns any
-[Standard Schema V1](https://standardschema.dev/) implementation into Nest
-request and response DTO classes. It uses Nest 12's native Standard Schema
-validation and serialization, while keeping the main core entry point free of
-schema-library runtime dependencies.
-
-Register the integration explicitly in the module that owns your hand-written
-controllers:
+Hand-written controllers run on the same engine as generated CRUD: Nest
+12's native Standard Schema pipe per route, a named zod schema per body,
+schema serialization for the response.
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { StandardSchemaModule } from '@concepta/rockets-core/standard-schema';
-
-@Module({
-  imports: [StandardSchemaModule.forRoot()],
-})
-export class ApiModule {}
-```
-
-Create concrete DTO classes so Nest can discover the request schema from its
-runtime parameter metadata. Request DTO instances use the schema's parsed
-output type; response DTO instances use the value accepted by the schema
-before it is serialized:
-
-```typescript
-import { Body, Controller, Post } from '@nestjs/common';
 import {
-  allowStandardSchemaKeys,
-  createStandardSchemaDto,
-  createStandardSchemaResponseDto,
-} from '@concepta/rockets-core/standard-schema';
-import { ApiStandardSchemaResponse } from '@concepta/rockets-core/standard-schema/swagger';
+  Body, Controller, Post, SerializeOptions, StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe, UseInterceptors, UsePipes,
+} from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
+import { rocketsSchemaValidation, withOpenApi } from '@concepta/rockets-core';
 import { z } from 'zod';
 
-const createPetSchema = z.object({ name: z.string().trim().min(1) });
-const petResponseSchema = z.object({ id: z.string(), name: z.string() });
+const signupSchema = withOpenApi(
+  z.object({ email: z.email(), password: z.string().min(8) }),
+  'SignupDto',
+);
+const signupResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), email: z.email() }),
+  'SignupResponseDto',
+);
 
-class CreatePetDto extends createStandardSchemaDto(createPetSchema) {}
-allowStandardSchemaKeys(CreatePetDto);
-
-class PetResponseDto extends createStandardSchemaResponseDto(
-  petResponseSchema,
-) {}
-
-@Controller('pets')
-export class PetController {
-  @Post()
-  @ApiStandardSchemaResponse(PetResponseDto, { status: 201 })
-  create(@Body() body: CreatePetDto): PetResponseDto {
-    return { id: 'pet-1', name: body.name };
+@Controller('auth')
+@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
+@UseInterceptors(StandardSchemaSerializerInterceptor)
+export class AuthController {
+  @Post('signup')
+  @SerializeOptions({ schema: signupResponseSchema })
+  @ApiResponse({ status: 201, standardSchema: signupResponseSchema })
+  signup(@Body({ schema: signupSchema }) body: z.output<typeof signupSchema>) {
+    // ...
   }
 }
 ```
 
-`ApiStandardSchemaResponse` combines runtime response serialization with
-Swagger response metadata. Schemas must expose the Standard JSON Schema
-capability, or the Swagger document factory must receive a compatible custom
-converter. Wrap custom converters with `withStandardSchemaResponseArrays`
-when an `isArray: true` response must retain its array shape on the current
-Swagger alpha.
-
-Prefer `operationResource` for a hand-written JSON endpoint — the
-generated path validates internally and none of the pipe hazards below
-apply to it. This subpath exists for surfaces the generators cannot
-produce yet (streaming, SSE, file routes — #52, #86).
-
-**The whitelist trap (issue #83).** A schema-carrying DTO has no
-class-validator metadata, so a global
-`ValidationPipe({ whitelist: true })` — yours or any library's — strips
-every property AFTER the schema already validated the body: the handler
-receives `{}` with a success status. Two escapes, pick per situation:
-
-- **Escape 0 — no DTO metatype at all.** `@Body({ schema: MyDto.schema })
-  dto: MyBodyType` with a TYPE alias: the alias emits `Object` into the
-  reflected param types, which every whitelist pipe skips, and the route
-  metadata carries the schema explicitly. `examples/sample-server` uses
-  this idiom today. Safe, but easy to break by switching the annotation
-  to a class.
-- `allowStandardSchemaKeys(MyDto)` stamps `@Allow()` on each declared
-  key, so the DTO survives ANYONE's whitelist pipe. The stamp is
-  SURVIVAL, not validation: the body is only checked where a schema
-  pipe is registered — without one, the raw body reaches the handler. Rockets'
-  `compileDtoClass` output ships stamped. Limits, stated: only closed
-  object schemas can be stamped — unions, intersections, non-object
-  schemas have no introspectable key set (pass `keys` explicitly if the
-  top-level keys really are fixed), and an OPEN object
-  (`catchall`/`passthrough`) is refused outright, because a stamp would
-  let the whitelist strip keys the schema itself declares valid.
-- `StandardSchemaAwareValidationPipe` is Nest's `ValidationPipe` that
-  VALIDATES schema-carrying metatypes with their schema — standalone
-  use is safe and unknown keys are stripped by the schema itself.
-  Register EXACTLY ONE schema validator per route: pairing it with
-  `StandardSchemaModule` parses twice, and a transforming schema
-  (`z.coerce`, `.transform()`) is not idempotent — the second parse
-  corrupts or rejects the first's output. `transform` and
-  `errorHttpStatusCode` apply to both DTO kinds; `whitelist` /
-  `forbidNonWhitelisted` / `exceptionFactory` affect class-validator
-  DTOs only. It rejects, loudly, a DTO carrying BOTH a schema and
-  class-validator constraints — two validators with no defined winner.
-  It protects only apps that use it; the stamp protects against pipes
-  you do not control. Generated DTOs from OPEN schemas carry declared
-  keys only — reused under a foreign whitelist pipe, catchall keys are
-  stripped there.
-- Two lookups with opposite contracts, on purpose:
-  `getCarriedStandardSchema` answers "does this class carry a schema?"
-  (`undefined` when not); `getStandardSchema` serves the branded DTO
-  factories and THROWS on anything else.
-
-The DTO pipe recognises any class whose static `schema` is a Standard
-Schema — bare `nestjs-zod` `createZodDto` classes included, not only
-Rockets-branded ones.
-
-The DTO-aware pipe can infer request validation from `@Body()`, `@Query()`, and
-whole-object `@Param()` types. To include that request schema in generated
-OpenAPI today, also attach it explicitly (for example,
-`@Body({ schema: CreatePetDto.schema })`).
-
-This first-class adapter complements the existing generated CRUD path; it does
-not replace `zodResource` request validation or class-transformer response
-projection. Generated resources carry different runtime metadata and preserve
-computed fields, persistence codecs, and fail-closed field exposure.
+The body parameter is typed with `z.output<typeof schema>` — never a
+class — and `@Body({ schema })` is what both validates and documents it.
+`rocketsSchemaValidation` makes the `400` carry structured `details`
+like every other Rockets route. Never register a **global**
+`StandardSchemaValidationPipe`: Rockets routes carry their own, a global
+one would validate every body twice, and core refuses to boot with one.
+Prefer `operationResource` for a JSON endpoint the generators can
+express; hand-written routes are for surfaces they cannot produce yet
+(streaming, file routes — #52, #86).
 
 ### Zod-first resources (`@concepta/rockets-core/zod`)
 
 The zod-first resource layer ships as the subpath export
 `@concepta/rockets-core/zod` (`zodResource`, `zodSubResource`,
 `operationResource`, `bindZodResources`, the `f.*` field helpers,
-`defineZodUserMetadata`, `rocketsFieldMeta`, `rocketsEntityMeta`). `zod` and
-`nestjs-zod` are **optional peerDependencies** of core — the main
-`@concepta/rockets-core` entry stays zod-free, so apps that skip the subpath
-never install them.
+`defineZodUserMetadata`, `rocketsFieldMeta`, `rocketsEntityMeta`). `zod` is a
+dependency of core: every resource contract — `defineResource` DTOs
+included — is a named zod schema, and the subpath is where the schema is
+also the source of the entity.
 
 Entity generation is delegated to a `SchemaEntityCompiler`. The TypeORM
 implementation lives at `@concepta/rockets-repository-typeorm/zod`; bind it
@@ -775,10 +682,11 @@ See `examples/sample-server/src/zod-bindings.ts` for the canonical wiring.
 
 #### Wire vs persistence typing
 
-- **`WireRow<S>`** — OpenAPI / request / response shape
-  (`z.output<S>`). Use in controllers and client contracts.
-- **`SchemaPersistenceRow<S>`** — in-memory row after load
-  (`Date` for ISO datetime columns). Use in hooks, handlers,
+- **`WireRow<S>`** — what a client receives: the schema output after
+  JSON encoding (`JsonEncoded<z.output<S>>`, so `Date` → ISO string).
+  Use in client contracts and response assertions.
+- **`SchemaPersistenceRow<S>`** — the row itself (`z.output<S>`:
+  `Date` for `f.date()` / audit columns). Use in hooks, handlers,
   `@InjectDynamicRepository`.
 - Generated entity classes are typed as
   `Type<SchemaPersistenceRow<S>>`, not the wire shape.
@@ -788,7 +696,8 @@ See `examples/sample-server/src/zod-bindings.ts` for the canonical wiring.
 | Helper | Use for |
 |--------|---------|
 | `f.pk()` | UUID primary key |
-| `f.createdAt()` / `f.updatedAt()` / `f.deletedAt()` | Audit columns |
+| `f.createdAt()` / `f.updatedAt()` / `f.deletedAt()` | Audit columns (`z.date()`) |
+| `f.date()` | Writable datetime — ISO string in, `Date` in the row, `string/date-time` in OpenAPI. Also accepts a numeric timestamp or a `Date` (documented trade-off); `null`, booleans and anything else are a `400`, never the epoch |
 | `f.version()` | Optimistic lock |
 | `f.owner()` | Owner stamp column |
 | `f.fk(target, opts)` | FK + `manyToOne` / `oneToOne` |
@@ -843,14 +752,8 @@ Rules worth knowing:
   excludes (`id`, timestamps, `version`, owner columns) are _rejected_
   under strict, so a client cannot echo a fetched row back into
   `replace` — an owner-column spoof gets named instead of silently
-  overwritten. The OpenAPI schema gains `additionalProperties: false`
-  once the document passes through `nestjs-zod`'s `cleanupOpenApiDoc`
-  (see `examples/sample-server/src/main.ts`); a raw document does not
-  show it. Core's own `SwaggerUiModule` does **not** run that cleanup —
-  the main entry stays zod-free — so the app's bootstrap must call it,
-  or generated clients will not learn the strict contract and only find
-  out via `400` at runtime. The runtime rejection itself needs no
-  cleanup; only the documented schema does. On an override,
+  overwritten. The request-body component gains
+  `additionalProperties: false` natively. On an override,
   `input: z.object({...}).strict()` is the equivalent spelling. Opt-in
   per operation — stripping stays the default. Only valid on
   `create` / `update` / `replace`.
@@ -864,10 +767,10 @@ Rules worth knowing:
 | `db.unique` / `db.index` | column / class decorators | — | pet `uniqueRef` |
 | `db.column` | raw TypeORM override | — | `zod-full-coverage` decimal/json |
 | `rocketsEntityMeta.unique` / `indexes` | composite constraints | — | pet-tag, full-coverage |
-| `relation.manyToOne` | FK + `@JoinColumn` | expose nested | zod-parity author/book |
+| `relation.manyToOne` | FK + `@JoinColumn` | expose nested | zod-library author/book |
 | `relation.hasMany` | `@OneToMany`, no column | expose array | full-coverage, pet |
 | `relation.shape` | — | classic entity expose | pet vaccinations |
-| `dto.create/update/response` | — | projection | zod-parity |
+| `dto.create/update/response` | — | projection | zod-library |
 | `compute` | skipped (no column) | response only | pet `tags` |
 | `owner` | — | OwnerStampHook | pet |
 
@@ -981,7 +884,8 @@ Declare what must be true of every HTTP route the application ends up
 with. The check runs at bootstrap, so it covers **every** discovered
 controller — generated CRUD, operation resources, module resources,
 hand-built configs, and controllers owned by other packages such as
-`MeController` or the `rockets-server-auth` routes.
+the `/me` controller (`buildMeController` in `@concepta/rockets`) or the
+`rockets-server-auth` routes.
 
 ```typescript
 RocketsCoreModule.forRoot({
@@ -1035,9 +939,16 @@ it generates and it runs before controllers are built, so a hand-written
 `AccessControlGrant` inside a bundle's `decorators: []` is invisible to
 it. This closes that gap, and its own documentation says so.
 
-**Reporting without enforcing.** Omit `routePolicy` and nothing is
-registered. Declare one and `RouteAuditService` becomes injectable, so
-`audit()` gives you the full table for a CI artifact:
+**Reporting without enforcing.** `RouteAuditService` is always registered
+and injectable — omit `routePolicy` and no policy rule is enforced, but
+`audit()` still gives you the full table for a CI artifact, and the
+always-on checks still run: a `@Body/@Query/@Param({ schema })` parameter
+that no `StandardSchemaValidationPipe` reaches fails the boot as
+`requireSchemaPipe` (Nest installs no pipe for `schema`; the parameter
+would be documented and unvalidated — exempt a route validated some other
+way through `allowUnvalidatedSchema`, not `allow`), and a hand-written
+`@SerializeOptions({ schema })` with an open object anywhere in it fails
+as `requireClosedResponse`.
 
 ```typescript
 const { routes, globalGuards, authGuards } = app.get(RouteAuditService).audit();
@@ -1076,17 +987,15 @@ const document = app.get(SwaggerUiService).createDocument(app);
 
 // Per-call document options (e.g. `extraModels`) override the configured
 // `settings.documentOptions`:
-const withExtras = app
-  .get(SwaggerUiService)
-  .createDocument(app, { extraModels: [UserMetadataUpdateDto] });
+const document = app.get(SwaggerUiService).createDocument(app);
 ```
 
-Do not rebuild the document from `builder().build()` by hand. An app that
-post-processes its document — `examples/sample-server` adds `extraModels`, a
-PATCH `/me` request-body patch and the nestjs-zod `cleanupOpenApiDoc` pass —
-would pin something it never serves. Wrap the real steps once in a
-`createOpenApiDocument(app)` helper and call it from both `main.ts` and the
-contract spec.
+Do not rebuild the document from `builder().build()` by hand: only
+`createDocument` installs the Rockets schema converter that turns every
+named schema into a `$ref` (`components/schemas/<id>`). An app that
+post-processes its document would pin something it never serves. Wrap
+the real steps once in a `createOpenApiDocument(app)` helper and call it
+from both `main.ts` and the contract spec.
 
 Both example apps ship the reference version — an e2e spec that regenerates
 or diffs `contract.json` against that document on every CI samples run.

@@ -28,15 +28,14 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
+import { withOpenApi } from '@concepta/nestjs-core';
 import {
   getDynamicRepositoryToken,
   type RepositoryInterface,
   Where,
 } from '@concepta/nestjs-repository';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
+import { z } from 'zod';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
@@ -79,25 +78,29 @@ class OtherEntity {
   @Column({ type: 'varchar' }) name!: string;
 }
 
-// ── DTOs ──
+// ── Schemas ──
 
-class ThingCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose() @IsString() @ApiProperty() ref!: string;
-}
-class ThingResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty() ref!: string;
-  @Expose() @ApiProperty() ownerId!: string | null;
-}
-class OtherCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-}
-class OtherResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-}
+const thingCreateSchema = withOpenApi(
+  z.object({ name: z.string(), ref: z.string() }),
+  'ThingCreateDto',
+);
+const thingResponseSchema = withOpenApi(
+  z.object({
+    id: z.uuid(),
+    name: z.string(),
+    ref: z.string(),
+    ownerId: z.string().nullable(),
+  }),
+  'ThingResponseDto',
+);
+const otherCreateSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'OtherCreateDto',
+);
+const otherResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string() }),
+  'OtherResponseDto',
+);
 
 // ── Fire counters (closed over by the functional hook) ──
 
@@ -169,8 +172,8 @@ const thingResource = defineResource<ThingEntity>({
   tags: ['Things'],
   hooks: [ThingHook],
   operations: {
-    create: { input: ThingCreateDto, output: ThingResponseDto },
-    list: { output: ThingResponseDto },
+    create: { input: thingCreateSchema, output: thingResponseSchema },
+    list: { output: thingResponseSchema },
   },
 });
 
@@ -180,8 +183,8 @@ const otherResource = defineResource<OtherEntity>({
   path: 'others',
   tags: ['Others'],
   operations: {
-    create: { input: OtherCreateDto, output: OtherResponseDto },
-    list: { output: OtherResponseDto },
+    create: { input: otherCreateSchema, output: otherResponseSchema },
+    list: { output: otherResponseSchema },
   },
 });
 

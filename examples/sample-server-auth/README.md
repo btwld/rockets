@@ -120,8 +120,9 @@ the `user` `deleteOwn` would otherwise leak through).
 
 1. Add the resource string to `AppResource` in `src/app.acl.ts` so the
    grant table covers it.
-2. Implement the entity, DTOs, and `createXxxResource()` like
-   `src/modules/pet/`.
+2. Implement the entity, the named zod request/response schemas
+   (`*.schemas.ts`, `withOpenApi(schema, 'XxxDto')` as the last call), and
+   `createXxxResource()` like `src/modules/pet/`.
 3. Append the resource to the `resources: [...]` list in
    `src/app.module.ts`.
 
@@ -169,11 +170,11 @@ examples/sample-server-auth
 │   ├── app.module.ts                Single composition root
 │   ├── app.acl.ts                   Role + resource enums + accesscontrol grants
 │   ├── access-control.service.ts    AccessControlServiceInterface impl
-│   ├── main.ts                      Bootstrap (helmet, validation, swagger)
+│   ├── main.ts                      Bootstrap (helmet, swagger, admin seed)
 │   ├── shared/persistence/          AuditedSqliteEntity (app-owned audit columns)
 │   ├── modules/
-│   │   ├── user/                    UserEntity + credential / otp / role-link entities + DTOs
-│   │   ├── role/                    RoleEntity + DTOs
+│   │   ├── user/                    UserEntity + credential / otp / role-link entities + userMetadata schemas
+│   │   ├── role/                    RoleEntity
 │   │   └── pet/                     Pet, PetVaccination, PetAppointment resources + access query service
 │   └── notification/                Sample recovery / verify notification command handlers
 └── package.json

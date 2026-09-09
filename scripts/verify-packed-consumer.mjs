@@ -1,5 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,18 +18,15 @@ const temporaryPrefix = join(tmpdir(), 'rockets-packed-consumer-');
 const temporaryRoot = mkdtempSync(temporaryPrefix);
 const tarballsRoot = join(temporaryRoot, 'tarballs');
 const consumerRoot = join(temporaryRoot, 'consumer');
-const noZodConsumerRoot = join(temporaryRoot, 'consumer-no-zod');
+const coreOnlyConsumerRoot = join(temporaryRoot, 'consumer-core-only');
 
 const consumerDependencies = [
-  '@nestjs/common@12.0.0-alpha.5',
-  '@nestjs/core@12.0.0-alpha.5',
-  '@nestjs/platform-express@12.0.0-alpha.5',
-  '@nestjs/typeorm@11.0.3',
+  '@nestjs/common@12.0.1',
+  '@nestjs/core@12.0.1',
+  '@nestjs/platform-express@12.0.1',
+  '@nestjs/typeorm@12.0.1',
   '@types/node@20.19.43',
-  'class-transformer@0.5.1',
-  'class-validator@0.14.3',
   'firebase-admin@13.10.0',
-  'nestjs-zod@5.4.0',
   'reflect-metadata@0.1.14',
   'rxjs@7.8.2',
   'typeorm@0.3.31',
@@ -47,6 +51,95 @@ function run(command, args, cwd, options = {}) {
   }
 }
 
+
+/**
+ * Every resolved version of `name` under `root`, keyed by version.
+ *
+ * Nest resolves DI tokens by CLASS IDENTITY, so a second copy of
+ * `@nestjs/core` is not a size problem — `ModuleRef` from one copy is not
+ * the token the other provides, and the app fails to boot with
+ * "Nest can't resolve dependencies of X (?, Reflector)". `@nestjs/cqrs`
+ * fails earlier and louder: `RESULT_TYPE_SYMBOL` is a `unique symbol`, so
+ * two copies make `Query<T>` two incompatible types (TS2420).
+ *
+ * The workspace cannot see either: the root `resolutions` block flattens
+ * the tree. Only this consumer install has the shape a published package
+ * actually gets, which is why the assertion lives here.
+ */
+function resolvedVersions(root, name) {
+  const found = new Map();
+  const walk = (dir, depth) => {
+    if (depth > 6) return;
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const child = join(dir, entry.name);
+      if (entry.name === 'node_modules') {
+        walk(child, depth + 1);
+        continue;
+      }
+      if (entry.name.startsWith('@') || entry.isDirectory()) {
+        const manifest = join(child, 'package.json');
+        try {
+          const parsed = JSON.parse(readFileSync(manifest, 'utf8'));
+          if (parsed.name === name && typeof parsed.version === 'string') {
+            const at = found.get(parsed.version) ?? [];
+            at.push(child.slice(root.length + 1));
+            found.set(parsed.version, at);
+          }
+        } catch {
+          // not a package directory; keep walking
+        }
+        walk(child, depth);
+      }
+    }
+  };
+  walk(join(root, 'node_modules'), 0);
+  return found;
+}
+
+/**
+ * `@concepta/nestjs-{email,event,common}` are still on the v7 line and
+ * declare Nest 11 as a HARD dependency, so npm must nest a copy under
+ * each. Tolerated by PATH, not by version: keyed on the version alone, a
+ * NEW package that starts nesting the same Nest 11 build for an
+ * unrelated reason would slip through the gate silently.
+ */
+const TOLERATED_NEST_DUPLICATE_PATHS = [
+  '@concepta/nestjs-email/node_modules/',
+  '@concepta/nestjs-event/node_modules/',
+  '@concepta/nestjs-common/node_modules/',
+];
+
+function assertSingleNestInstance(root, name) {
+  const found = resolvedVersions(root, name);
+  const offending = [...found.entries()]
+    .filter(([, paths]) =>
+      paths.some(
+        (path) =>
+          !TOLERATED_NEST_DUPLICATE_PATHS.some((tolerated) =>
+            path.includes(tolerated),
+          ),
+      ),
+    )
+    .map(([version]) => version);
+  if (offending.length <= 1) return;
+  const detail = offending
+    .map((v) => `  ${v}\n${found.get(v).map((p) => `    ${p}`).join('\n')}`)
+    .join('\n');
+  throw new Error(
+    `${name} resolved to ${offending.length} different versions in the ` +
+      `packed consumer. Nest resolves DI tokens by class identity, so two ` +
+      `copies break \`ModuleRef\`/\`Reflector\` injection at boot and make ` +
+      `\`unique symbol\` types incompatible.\n${detail}`,
+  );
+}
+
 function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
@@ -54,7 +147,7 @@ function writeJson(path, value) {
 try {
   mkdirSync(tarballsRoot);
   mkdirSync(consumerRoot);
-  mkdirSync(noZodConsumerRoot);
+  mkdirSync(coreOnlyConsumerRoot);
 
   const workspaces = readPublicPackageManifests(repositoryRoot, {
     namePrefix: '@concepta/',
@@ -96,18 +189,18 @@ try {
     private: true,
   });
 
-  // Nest 12.0.0-alpha.5 still advertises Nest 11 peers internally, so npm's
-  // strict resolver rejects the otherwise intentional alpha stack. Install
-  // every required peer explicitly, then bypass only that upstream metadata
-  // conflict; runtime imports, type checking, and app bootstrap remain gated.
-  // Remove --legacy-peer-deps when @nestjs/core@12 advertises ^12 peers
-  // (verify: npm view @nestjs/core@<ver> peerDependencies).
+  // Deliberately NO `--legacy-peer-deps`: this install IS the check that a
+  // consumer's default `npm install` resolves. The flag used to hide two
+  // real defects in a row — Nest 12 alpha pins that nested 13 copies of
+  // `@nestjs/core`, then `@nestjs/throttler`'s Nest 11 peer cap — and both
+  // were found by CI or by hand instead of here. If this step answers
+  // ERESOLVE, a published package is uninstallable; fix the dependency,
+  // never the flag.
   run(
     'npm',
     [
       'install',
       '--save-exact',
-      '--legacy-peer-deps',
       '--no-audit',
       '--no-fund',
       '--loglevel=error',
@@ -117,19 +210,21 @@ try {
     consumerRoot,
   );
 
+  for (const nestPackage of [
+    '@nestjs/core',
+    '@nestjs/common',
+    '@nestjs/cqrs',
+  ]) {
+    assertSingleNestInstance(consumerRoot, nestPackage);
+  }
+
   const entrypointChecks = [
     ['@concepta/rockets', 'RocketsModule'],
     ['@concepta/rockets-adapter-firebase', 'FirebaseAuthModule'],
     ['@concepta/rockets-auth', 'RocketsAuthModule'],
     ['@concepta/rockets-core', 'RocketsCoreModule'],
-    ['@concepta/rockets-core/standard-schema', 'StandardSchemaModule'],
-    ['@concepta/rockets-core/standard-schema', 'createStandardSchemaDto'],
-    [
-      '@concepta/rockets-core/standard-schema/swagger',
-      'ApiStandardSchemaResponse',
-    ],
-    ['@concepta/rockets-core/zod', 'compileDtoClass'],
-    ['@concepta/rockets-core/zod', 'namedZodDto'],
+    ['@concepta/rockets-core/zod', 'zodResource'],
+    ['@concepta/rockets-core/zod', 'f'],
     ['@concepta/rockets-repository-firestore', 'FirestoreRepositoryModule'],
     ['@concepta/rockets-repository-typeorm', 'TypeOrmRepositoryModule'],
     ['@concepta/rockets-repository-typeorm/zod', 'typeOrmZodEntityCompiler'],
@@ -182,14 +277,8 @@ import {
   RocketsAuthTokenController,
   type RocketsAuthOptionsExtrasInterface,
 } from '@concepta/rockets-auth';
-import { RocketsCoreModule } from '@concepta/rockets-core';
-import {
-  StandardSchemaModule,
-  createStandardSchemaDto,
-  createStandardSchemaResponseDto,
-} from '@concepta/rockets-core/standard-schema';
-import { ApiStandardSchemaResponse } from '@concepta/rockets-core/standard-schema/swagger';
-import { compileDtoClass, namedZodDto } from '@concepta/rockets-core/zod';
+import { RocketsCoreModule, withOpenApi } from '@concepta/rockets-core';
+import { f, zodResource } from '@concepta/rockets-core/zod';
 import { FirestoreRepositoryModule } from '@concepta/rockets-repository-firestore';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import { typeOrmZodEntityCompiler } from '@concepta/rockets-repository-typeorm/zod';
@@ -202,35 +291,20 @@ export const publicPackageSymbols = [
   RocketsAuthRecoveryController,
   RocketsAuthTokenController,
   RocketsCoreModule,
-  StandardSchemaModule,
-  ApiStandardSchemaResponse,
   TypeOrmRepositoryModule,
   typeOrmZodEntityCompiler,
 ];
 
-export const throttlingConfig: RocketsAuthOptionsExtrasInterface['throttling'] = [
-  {
-    name: 'default',
-    limit: 100,
-    ttl: 60_000,
-    getTracker: (request) => request.ip,
-  },
-];
+export const throttlingConfig: RocketsAuthOptionsExtrasInterface['throttling'] = {
+  ip: { limit: 1000, windowMs: 60_000 },
+  default: { limit: 100, windowMs: 60_000 },
+};
 
-export const ConsumerDto = compileDtoClass(
+export const consumerSchema = withOpenApi(
   z.object({ id: z.string() }),
   'ConsumerDto',
 );
-export const NamedConsumerDto = namedZodDto<{ id: string }>(
-  z.object({ id: z.string() }),
-  'NamedConsumerDto',
-);
-export class StandardConsumerDto extends createStandardSchemaDto(
-  z.object({ id: z.string() }),
-) {}
-export class StandardConsumerResponseDto extends createStandardSchemaResponseDto(
-  z.object({ id: z.string() }),
-) {}
+export const consumerZodSurface = { f, zodResource };
 
 @Injectable()
 class ConsumerAuthAdapter implements AuthAdapterInterface {
@@ -241,7 +315,6 @@ class ConsumerAuthAdapter implements AuthAdapterInterface {
 
 @Module({
   imports: [
-    StandardSchemaModule.forRoot(),
     RocketsModule.forRoot({
       settings: {},
       auth: defineAuthAdapter(ConsumerAuthAdapter),
@@ -277,8 +350,8 @@ void main().catch((error: unknown) => {
   );
   run(process.execPath, [join('dist', 'consumer.js')], consumerRoot);
 
-  writeJson(join(noZodConsumerRoot, 'package.json'), {
-    name: 'rockets-core-no-zod-consumer-smoke',
+  writeJson(join(coreOnlyConsumerRoot, 'package.json'), {
+    name: 'rockets-core-only-consumer-smoke',
     version: '0.0.0',
     private: true,
   });
@@ -287,25 +360,22 @@ void main().catch((error: unknown) => {
     [
       'install',
       '--save-exact',
-      '--legacy-peer-deps',
       '--no-audit',
       '--no-fund',
       '--loglevel=error',
       coreTarball,
-      '@nestjs/common@12.0.0-alpha.5',
-      '@nestjs/core@12.0.0-alpha.5',
-      'class-transformer@0.5.1',
-      'class-validator@0.14.3',
+      '@nestjs/common@12.0.1',
+      '@nestjs/core@12.0.1',
       'reflect-metadata@0.1.14',
       'rxjs@7.8.2',
     ],
-    noZodConsumerRoot,
+    coreOnlyConsumerRoot,
   );
   writeFileSync(
-    join(noZodConsumerRoot, 'verify-core-no-zod.cjs'),
+    join(coreOnlyConsumerRoot, 'verify-core-only.cjs'),
     `'use strict';\nrequire('reflect-metadata');\nconst loaded = require('@concepta/rockets-core');\nif (!('RocketsCoreModule' in loaded)) throw new Error('Missing RocketsCoreModule from @concepta/rockets-core');\n`,
   );
-  run(process.execPath, ['verify-core-no-zod.cjs'], noZodConsumerRoot);
+  run(process.execPath, ['verify-core-only.cjs'], coreOnlyConsumerRoot);
 
   console.log(
     `Verified ${workspaces.length} packed public packages in a clean CJS, ESM, TypeScript, and Nest consumer.`,

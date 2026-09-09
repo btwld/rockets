@@ -6,6 +6,7 @@
           "roleId": {
             "description": "Role ID to assign to the user",
             "example": "08a82592-714e-4da0-ace5-45ed3b4eb795",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -15,32 +16,27 @@
         "type": "object"
       },
       "AdminRolesPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "Array of Roles",
             "items": {
-              "$ref": "#/components/schemas/RoleDto"
+              "$ref": "#/components/schemas/RocketsAuthRoleDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -55,32 +51,27 @@
         "type": "object"
       },
       "AdminUsersPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "Array of Users",
             "items": {
-              "$ref": "#/components/schemas/UserDto"
+              "$ref": "#/components/schemas/RocketsAuthUserDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -94,7 +85,8 @@
         ],
         "type": "object"
       },
-      "AuthenticationResponseDto": {
+      "AuthenticationResponse": {
+        "additionalProperties": false,
         "properties": {
           "accessToken": {
             "description": "JWT access token to use for request authorization.",
@@ -111,58 +103,16 @@
         ],
         "type": "object"
       },
-      "CrudInvalidResponseDto": {
-        "properties": {},
-        "type": "object"
-      },
-      "CrudResponsePaginatedDto": {
-        "properties": {
-          "count": {
-            "description": "Count of all records",
-            "type": "number"
-          },
-          "data": {
-            "description": "The list of records for current page",
-            "items": {
-              "$ref": "#/components/schemas/CrudInvalidResponseDto"
-            },
-            "type": "array"
-          },
-          "limit": {
-            "description": "Limit number of items",
-            "type": "number"
-          },
-          "page": {
-            "description": "Current page number",
-            "type": "number"
-          },
-          "pageCount": {
-            "description": "Total number of pages",
-            "type": "number"
-          },
-          "total": {
-            "description": "Count of records on current page",
-            "type": "number"
-          }
-        },
-        "required": [
-          "data",
-          "limit",
-          "count",
-          "total",
-          "page",
-          "pageCount"
-        ],
-        "type": "object"
-      },
       "LocalLoginDto": {
         "properties": {
           "password": {
             "description": "Password",
+            "maxLength": 72,
             "type": "string"
           },
           "username": {
             "description": "Username",
+            "maxLength": 255,
             "type": "string"
           }
         },
@@ -183,6 +133,8 @@
           "appointmentType": {
             "description": "Type of appointment",
             "example": "checkup",
+            "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           },
           "diagnosis": {
@@ -196,11 +148,13 @@
           "petId": {
             "description": "Pet ID",
             "example": "pet-123",
+            "minLength": 1,
             "type": "string"
           },
           "reason": {
             "description": "Reason for appointment",
             "example": "Annual checkup",
+            "minLength": 1,
             "type": "string"
           },
           "status": {
@@ -221,6 +175,8 @@
           "veterinarian": {
             "description": "Veterinarian name",
             "example": "Dr. Smith",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -234,6 +190,7 @@
         "type": "object"
       },
       "PetAppointmentDto": {
+        "additionalProperties": false,
         "properties": {
           "appointmentDate": {
             "description": "Appointment date and time",
@@ -244,6 +201,8 @@
           "appointmentType": {
             "description": "Type of appointment",
             "example": "checkup",
+            "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           },
           "dateCreated": {
@@ -264,6 +223,7 @@
           },
           "diagnosis": {
             "description": "Diagnosis from the appointment",
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -273,16 +233,19 @@
           },
           "notes": {
             "description": "Additional notes",
+            "nullable": true,
             "type": "string"
           },
           "petId": {
             "description": "Pet ID",
             "example": "pet-123",
+            "minLength": 1,
             "type": "string"
           },
           "reason": {
             "description": "Reason for appointment",
             "example": "Annual checkup",
+            "minLength": 1,
             "type": "string"
           },
           "status": {
@@ -298,16 +261,21 @@
           },
           "treatment": {
             "description": "Treatment provided",
+            "nullable": true,
             "type": "string"
           },
           "version": {
             "description": "Version for optimistic locking",
             "example": 1,
-            "type": "number"
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
           },
           "veterinarian": {
             "description": "Veterinarian name",
             "example": "Dr. Smith",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -326,32 +294,27 @@
         "type": "object"
       },
       "PetAppointmentDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/PetAppointmentDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -376,6 +339,8 @@
           "appointmentType": {
             "description": "Type of appointment",
             "example": "checkup",
+            "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           },
           "diagnosis": {
@@ -385,6 +350,7 @@
           "id": {
             "description": "Appointment ID",
             "example": "appt-123",
+            "minLength": 1,
             "type": "string"
           },
           "notes": {
@@ -394,6 +360,7 @@
           "reason": {
             "description": "Reason for appointment",
             "example": "Annual checkup",
+            "minLength": 1,
             "type": "string"
           },
           "status": {
@@ -414,6 +381,8 @@
           "veterinarian": {
             "description": "Veterinarian name",
             "example": "Dr. Smith",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -429,7 +398,7 @@
             "example": 3,
             "maximum": 50,
             "minimum": 0,
-            "type": "number"
+            "type": "integer"
           },
           "breed": {
             "description": "Pet breed",
@@ -445,7 +414,7 @@
           },
           "description": {
             "description": "Pet description",
-            "example": "A friendly dog",
+            "example": "A friendly and energetic dog",
             "type": "string"
           },
           "name": {
@@ -459,6 +428,7 @@
             "description": "Pet species",
             "example": "dog",
             "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           },
           "status": {
@@ -471,7 +441,8 @@
             "type": "string"
           },
           "userId": {
-            "description": "Owner user id (PetCreateHandler may override from auth)",
+            "description": "Owner user id (PetCreateHandler pins it to the caller)",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -485,11 +456,14 @@
         "type": "object"
       },
       "PetResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "age": {
-            "description": "Pet age",
+            "description": "Pet age in years",
             "example": 3,
-            "type": "number"
+            "maximum": 50,
+            "minimum": 0,
+            "type": "integer"
           },
           "appointments": {
             "description": "Pet appointments",
@@ -501,11 +475,15 @@
           "breed": {
             "description": "Pet breed",
             "example": "Golden Retriever",
+            "maxLength": 255,
+            "nullable": true,
             "type": "string"
           },
           "color": {
             "description": "Pet color",
             "example": "golden",
+            "maxLength": 100,
+            "nullable": true,
             "type": "string"
           },
           "dateCreated": {
@@ -515,7 +493,9 @@
           },
           "dateDeleted": {
             "description": "Deletion date",
-            "type": "object"
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
           },
           "dateUpdated": {
             "description": "Update date",
@@ -524,6 +504,8 @@
           },
           "description": {
             "description": "Pet description",
+            "example": "A friendly and energetic dog",
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -534,11 +516,15 @@
           "name": {
             "description": "Pet name",
             "example": "Buddy",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           },
           "species": {
             "description": "Pet species",
             "example": "dog",
+            "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           },
           "status": {
@@ -547,10 +533,11 @@
               "active",
               "inactive"
             ],
+            "example": "active",
             "type": "string"
           },
           "userId": {
-            "description": "User ID",
+            "description": "User ID who owns this pet",
             "example": "user-123",
             "type": "string"
           },
@@ -563,7 +550,10 @@
           },
           "version": {
             "description": "Version number",
-            "type": "number"
+            "example": 1,
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
           }
         },
         "required": [
@@ -580,32 +570,27 @@
         "type": "object"
       },
       "PetResponseDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/PetResponseDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -622,11 +607,11 @@
       "PetUpdateDto": {
         "properties": {
           "age": {
-            "description": "Pet age",
+            "description": "Pet age in years",
             "example": 3,
             "maximum": 50,
             "minimum": 0,
-            "type": "number"
+            "type": "integer"
           },
           "breed": {
             "description": "Pet breed",
@@ -642,23 +627,27 @@
           },
           "description": {
             "description": "Pet description",
+            "example": "A friendly and energetic dog",
             "type": "string"
           },
           "id": {
             "description": "Pet ID",
             "example": "pet-123",
+            "minLength": 1,
             "type": "string"
           },
           "name": {
             "description": "Pet name",
             "example": "Buddy",
             "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           },
           "species": {
             "description": "Pet species",
             "example": "dog",
             "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           },
           "status": {
@@ -667,6 +656,7 @@
               "active",
               "inactive"
             ],
+            "example": "active",
             "type": "string"
           }
         },
@@ -686,6 +676,7 @@
           "batchNumber": {
             "description": "Vaccine batch number",
             "example": "BATCH-2023-001",
+            "maxLength": 100,
             "type": "string"
           },
           "nextDueDate": {
@@ -701,16 +692,21 @@
           "petId": {
             "description": "Pet ID",
             "example": "pet-123",
+            "minLength": 1,
             "type": "string"
           },
           "vaccineName": {
             "description": "Vaccine name",
             "example": "Rabies",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           },
           "veterinarian": {
             "description": "Veterinarian who administered the vaccine",
             "example": "Dr. Smith",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -723,6 +719,7 @@
         "type": "object"
       },
       "PetVaccinationDto": {
+        "additionalProperties": false,
         "properties": {
           "administeredDate": {
             "description": "Date vaccine was administered",
@@ -733,6 +730,8 @@
           "batchNumber": {
             "description": "Vaccine batch number",
             "example": "BATCH-2023-001",
+            "maxLength": 100,
+            "nullable": true,
             "type": "string"
           },
           "dateCreated": {
@@ -760,30 +759,39 @@
             "description": "Next due date for this vaccine",
             "example": "2024-01-15T10:00:00.000Z",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "notes": {
             "description": "Additional notes",
+            "nullable": true,
             "type": "string"
           },
           "petId": {
             "description": "Pet ID",
             "example": "pet-123",
+            "minLength": 1,
             "type": "string"
           },
           "vaccineName": {
             "description": "Vaccine name",
             "example": "Rabies",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           },
           "version": {
             "description": "Version for optimistic locking",
             "example": 1,
-            "type": "number"
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
           },
           "veterinarian": {
             "description": "Veterinarian who administered the vaccine",
             "example": "Dr. Smith",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -800,32 +808,27 @@
         "type": "object"
       },
       "PetVaccinationDtoPaginatedDto": {
+        "additionalProperties": false,
         "properties": {
           "count": {
-            "description": "Count of all records",
             "type": "number"
           },
           "data": {
-            "description": "The list of records for current page",
             "items": {
               "$ref": "#/components/schemas/PetVaccinationDto"
             },
             "type": "array"
           },
           "limit": {
-            "description": "Limit number of items",
             "type": "number"
           },
           "page": {
-            "description": "Current page number",
             "type": "number"
           },
           "pageCount": {
-            "description": "Total number of pages",
             "type": "number"
           },
           "total": {
-            "description": "Count of records on current page",
             "type": "number"
           }
         },
@@ -850,11 +853,13 @@
           "batchNumber": {
             "description": "Vaccine batch number",
             "example": "BATCH-2023-001",
+            "maxLength": 100,
             "type": "string"
           },
           "id": {
             "description": "Vaccination ID",
             "example": "vacc-123",
+            "minLength": 1,
             "type": "string"
           },
           "nextDueDate": {
@@ -870,11 +875,15 @@
           "vaccineName": {
             "description": "Vaccine name",
             "example": "Rabies",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           },
           "veterinarian": {
             "description": "Veterinarian who administered the vaccine",
             "example": "Dr. Smith",
+            "maxLength": 255,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -887,7 +896,8 @@
         "properties": {
           "email": {
             "description": "Recover email login by providing an email that will receive an username",
-            "title": "user email",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           }
         },
@@ -900,7 +910,8 @@
         "properties": {
           "email": {
             "description": "Recover email password by providing an email that will receive a password reset link",
-            "title": "user email",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           }
         },
@@ -913,12 +924,12 @@
         "properties": {
           "newPassword": {
             "description": "New password account",
-            "title": "account new password",
+            "maxLength": 72,
             "type": "string"
           },
           "passcode": {
             "description": "Passcode used to reset account password",
-            "title": "account reset passcode",
+            "maxLength": 36,
             "type": "string"
           }
         },
@@ -932,7 +943,7 @@
         "properties": {
           "passcode": {
             "description": "User passcode used to verify if it valid or not.",
-            "title": "User passcode",
+            "maxLength": 36,
             "type": "string"
           }
         },
@@ -944,7 +955,8 @@
       "RefreshDto": {
         "properties": {
           "refreshToken": {
-            "description": "JWT access token to use for request authorization.",
+            "description": "JWT refresh token to use for obtaining a new pair of tokens.",
+            "format": "jwt",
             "type": "string"
           }
         },
@@ -958,6 +970,7 @@
           "currentPassword": {
             "description": "The user current password for verification",
             "example": "CurrentP@ssw0rd",
+            "minLength": 1,
             "title": "Current Password",
             "type": "string"
           },
@@ -978,15 +991,15 @@
       "RocketsAuthInvitationAcceptDto": {
         "properties": {
           "passcode": {
-            "description": "Passcode used to activate account",
-            "title": "Passcode",
+            "description": "Passcode",
             "type": "string"
           },
           "payload": {
-            "additionalProperties": true,
-            "description": "Optional payload passed to the accepting module to complete activation (e.g. new password). Intentionally untyped to support varying module requirements.",
-            "title": "Payload",
-            "type": "object"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RocketsAuthInvitationAcceptancePayloadDto"
+              }
+            ]
           }
         },
         "required": [
@@ -994,19 +1007,38 @@
         ],
         "type": "object"
       },
+      "RocketsAuthInvitationAcceptancePayloadDto": {
+        "additionalProperties": {},
+        "properties": {
+          "password": {
+            "description": "Password to set on the invited user account",
+            "minLength": 8,
+            "type": "string"
+          },
+          "userMetadata": {
+            "additionalProperties": {},
+            "description": "Optional profile metadata applied on acceptance",
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
       "RocketsAuthInvitationCreateDto": {
         "properties": {
           "category": {
-            "description": "Category of invitation",
+            "description": "Category of the invitation",
             "type": "string"
           },
           "constraints": {
-            "additionalProperties": true,
-            "description": "Constraints payload for the invitation",
+            "additionalProperties": {},
+            "description": "Constraints for the invitation",
+            "nullable": true,
             "type": "object"
           },
           "email": {
             "description": "Email that the invitation will be sent to",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           }
         },
@@ -1017,22 +1049,25 @@
         "type": "object"
       },
       "RocketsAuthInvitationResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "active": {
-            "description": "True if Invitation is active",
+            "default": true,
+            "description": "Whether the invitation is still active",
             "type": "boolean"
           },
           "category": {
-            "description": "Category of invitation",
+            "description": "Category of the invitation",
             "type": "string"
           },
           "code": {
-            "description": "Code claim invitation",
+            "description": "Invitation code",
             "type": "string"
           },
           "constraints": {
-            "additionalProperties": true,
-            "description": "Constraints payload for the invitation",
+            "additionalProperties": {},
+            "description": "Constraints for the invitation",
+            "nullable": true,
             "type": "object"
           },
           "dateAccepted": {
@@ -1042,12 +1077,10 @@
             "type": "string"
           },
           "dateCreated": {
-            "description": "Date created",
             "format": "date-time",
             "type": "string"
           },
           "dateDeleted": {
-            "description": "Date deleted",
             "format": "date-time",
             "nullable": true,
             "type": "string"
@@ -1059,7 +1092,6 @@
             "type": "string"
           },
           "dateUpdated": {
-            "description": "Date updated",
             "format": "date-time",
             "type": "string"
           },
@@ -1074,15 +1106,13 @@
             "type": "boolean"
           },
           "id": {
-            "description": "Unique identifier",
             "type": "string"
           },
           "userId": {
-            "description": "The invited user ID.",
+            "description": "User the invitation is for",
             "type": "string"
           },
           "version": {
-            "description": "Version",
             "type": "number"
           }
         },
@@ -1095,7 +1125,6 @@
           "active",
           "code",
           "category",
-          "constraints",
           "userId",
           "dateAccepted",
           "dateRevoked",
@@ -1108,11 +1137,14 @@
           "category": {
             "description": "Category of invitations to revoke (implementation-specific, e.g., \"user\", \"admin\")",
             "example": "user",
+            "minLength": 1,
             "type": "string"
           },
           "email": {
             "description": "Email address to revoke invitations for",
             "example": "user@example.com",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           }
         },
@@ -1127,11 +1159,14 @@
           "email": {
             "description": "Email associated with the OTP",
             "example": "user@example.com",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           },
           "passcode": {
             "description": "OTP passcode to verify",
             "example": "123456",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -1146,6 +1181,8 @@
           "email": {
             "description": "Email to send OTP to",
             "example": "user@example.com",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           }
         },
@@ -1154,7 +1191,7 @@
         ],
         "type": "object"
       },
-      "RoleCreateDto": {
+      "RocketsAuthRoleCreateDto": {
         "properties": {
           "description": {
             "description": "Description of the role",
@@ -1171,21 +1208,19 @@
         ],
         "type": "object"
       },
-      "RoleDto": {
+      "RocketsAuthRoleDto": {
+        "additionalProperties": false,
         "properties": {
           "dateCreated": {
-            "description": "Date created",
             "format": "date-time",
             "type": "string"
           },
           "dateDeleted": {
-            "description": "Date deleted",
             "format": "date-time",
             "nullable": true,
             "type": "string"
           },
           "dateUpdated": {
-            "description": "Date updated",
             "format": "date-time",
             "type": "string"
           },
@@ -1194,7 +1229,6 @@
             "type": "string"
           },
           "id": {
-            "description": "Unique identifier",
             "type": "string"
           },
           "name": {
@@ -1202,7 +1236,6 @@
             "type": "string"
           },
           "version": {
-            "description": "Version",
             "type": "number"
           }
         },
@@ -1217,20 +1250,7 @@
         ],
         "type": "object"
       },
-      "RoleNameDto": {
-        "properties": {
-          "name": {
-            "description": "Role name",
-            "example": "admin",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "type": "object"
-      },
-      "RoleUpdateDto": {
+      "RocketsAuthRoleUpdateDto": {
         "properties": {
           "description": {
             "description": "Description of the role",
@@ -1243,7 +1263,7 @@
         },
         "type": "object"
       },
-      "SampleUserUpdateDto": {
+      "RocketsAuthUserCreateDto": {
         "properties": {
           "active": {
             "description": "Active",
@@ -1251,44 +1271,22 @@
           },
           "email": {
             "description": "Email",
-            "type": "string"
-          },
-          "userMetadata": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/UserMetadataDto"
-              }
-            ],
-            "description": "User metadata"
-          },
-          "username": {
-            "description": "Username",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "UserCreateDto": {
-        "properties": {
-          "active": {
-            "description": "Active",
-            "type": "boolean"
-          },
-          "email": {
-            "description": "Email",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
             "type": "string"
           },
           "password": {
             "description": "Plain text password to set",
+            "minLength": 8,
             "type": "string"
           },
           "userMetadata": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/UserMetadataDto"
+                "$ref": "#/components/schemas/UserMetadataUpdateDto"
               }
             ],
-            "description": "User metadata"
+            "description": "User metadata containing additional profile information"
           },
           "username": {
             "description": "Username",
@@ -1298,30 +1296,27 @@
         "required": [
           "email",
           "username",
-          "active",
           "password"
         ],
         "type": "object"
       },
-      "UserDto": {
+      "RocketsAuthUserDto": {
+        "additionalProperties": false,
         "properties": {
           "active": {
             "description": "Active",
             "type": "boolean"
           },
           "dateCreated": {
-            "description": "Date created",
             "format": "date-time",
             "type": "string"
           },
           "dateDeleted": {
-            "description": "Date deleted",
             "format": "date-time",
             "nullable": true,
             "type": "string"
           },
           "dateUpdated": {
-            "description": "Date updated",
             "format": "date-time",
             "type": "string"
           },
@@ -1330,7 +1325,6 @@
             "type": "string"
           },
           "id": {
-            "description": "Unique identifier",
             "type": "string"
           },
           "userMetadata": {
@@ -1339,14 +1333,14 @@
                 "$ref": "#/components/schemas/UserMetadataDto"
               }
             ],
-            "description": "User metadata"
+            "description": "User metadata containing additional profile information",
+            "nullable": true
           },
           "username": {
             "description": "Username",
             "type": "string"
           },
           "version": {
-            "description": "Version",
             "type": "number"
           }
         },
@@ -1362,11 +1356,41 @@
         ],
         "type": "object"
       },
+      "RocketsAuthUserUpdateDto": {
+        "properties": {
+          "active": {
+            "description": "Active",
+            "type": "boolean"
+          },
+          "email": {
+            "description": "Email",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "type": "string"
+          },
+          "userMetadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserMetadataUpdateDto"
+              }
+            ],
+            "description": "User metadata containing additional profile information"
+          },
+          "username": {
+            "description": "Username",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UserMetadataDto": {
+        "additionalProperties": false,
         "properties": {
           "bio": {
             "description": "User bio",
             "example": "Software developer passionate about clean code",
+            "maxLength": 500,
+            "nullable": true,
             "type": "string"
           },
           "dateCreated": {
@@ -1376,7 +1400,9 @@
           },
           "dateDeleted": {
             "description": "Date deleted",
-            "type": "object"
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
           },
           "dateUpdated": {
             "description": "Date updated",
@@ -1387,6 +1413,8 @@
             "description": "User first name",
             "example": "John",
             "maxLength": 100,
+            "minLength": 1,
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -1397,6 +1425,8 @@
             "description": "User last name",
             "example": "Doe",
             "maxLength": 100,
+            "minLength": 1,
+            "nullable": true,
             "type": "string"
           },
           "userId": {
@@ -1407,6 +1437,8 @@
             "description": "Username",
             "example": "johndoe",
             "maxLength": 50,
+            "minLength": 3,
+            "nullable": true,
             "type": "string"
           },
           "version": {
@@ -1419,86 +1451,112 @@
           "userId",
           "dateCreated",
           "dateUpdated",
+          "dateDeleted",
           "version"
         ],
         "type": "object"
       },
+      "UserMetadataUpdateDto": {
+        "properties": {
+          "bio": {
+            "description": "User bio",
+            "example": "Software developer passionate about clean code",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "firstName": {
+            "description": "User first name",
+            "example": "John",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "lastName": {
+            "description": "User last name",
+            "example": "Doe",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "username": {
+            "description": "Username",
+            "example": "johndoe",
+            "maxLength": 50,
+            "minLength": 3,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UserResponseDto": {
+        "additionalProperties": false,
         "properties": {
           "claims": {
-            "description": "User claims from auth provider",
-            "example": {
-              "aud": "app",
-              "iss": "auth-provider"
-            },
+            "additionalProperties": {},
+            "description": "User claims from the auth provider, verbatim — not validated",
             "type": "object"
           },
           "email": {
             "description": "User email from auth provider",
-            "example": "user@example.com",
             "type": "string"
           },
           "id": {
             "description": "User ID from auth provider",
-            "example": "user-123",
             "type": "string"
           },
           "sub": {
             "description": "User subject from auth provider",
-            "example": "user-123",
             "type": "string"
           },
           "userMetadata": {
-            "description": "UserMetadata data - structure is defined dynamically",
-            "type": "object"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserMetadataDto"
+              }
+            ],
+            "nullable": true
           },
           "userRoles": {
             "description": "User roles from auth provider",
-            "example": [
-              {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
                 "role": {
-                  "name": "user"
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
                 }
               },
-              {
-                "role": {
-                  "name": "admin"
-                }
-              }
-            ],
-            "items": {
-              "$ref": "#/components/schemas/UserRoleItemDto"
+              "required": [
+                "role"
+              ],
+              "type": "object"
             },
             "type": "array"
           }
         },
         "required": [
           "id",
-          "sub"
-        ],
-        "type": "object"
-      },
-      "UserRoleItemDto": {
-        "properties": {
-          "role": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RoleNameDto"
-              }
-            ],
-            "description": "Role object"
-          }
-        },
-        "required": [
-          "role"
+          "sub",
+          "userMetadata"
         ],
         "type": "object"
       },
       "UserUpdateDto": {
         "properties": {
           "userMetadata": {
-            "description": "UserMetadata data to update - structure is defined dynamically",
-            "type": "object"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserMetadataUpdateDto"
+              }
+            ]
           }
         },
         "type": "object"
@@ -1756,7 +1814,7 @@
                 }
               }
             },
-            "description": "list RoleDto as paginated response."
+            "description": "list AdminRolesPaginatedDto"
           }
         },
         "security": [
@@ -1776,7 +1834,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleCreateDto"
+                "$ref": "#/components/schemas/RocketsAuthRoleCreateDto"
               }
             }
           },
@@ -1787,11 +1845,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleDto"
+                  "$ref": "#/components/schemas/RocketsAuthRoleDto"
                 }
               }
             },
-            "description": "create RoleDto"
+            "description": "create RocketsAuthRoleDto"
           }
         },
         "security": [
@@ -1820,7 +1878,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete RoleDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -1886,11 +1944,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleDto"
+                  "$ref": "#/components/schemas/RocketsAuthRoleDto"
                 }
               }
             },
-            "description": "read RoleDto"
+            "description": "read RocketsAuthRoleDto"
           }
         },
         "security": [
@@ -1921,11 +1979,10 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleUpdateDto"
+                "$ref": "#/components/schemas/RocketsAuthRoleUpdateDto"
               }
             }
           },
-          "description": "Role information to update",
           "required": true
         },
         "responses": {
@@ -1933,7 +1990,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleDto"
+                  "$ref": "#/components/schemas/RocketsAuthRoleDto"
                 }
               }
             },
@@ -2079,7 +2136,7 @@
                 }
               }
             },
-            "description": "list UserDto as paginated response."
+            "description": "list AdminUsersPaginatedDto"
           }
         },
         "security": [
@@ -2109,7 +2166,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete UserDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -2175,11 +2232,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserDto"
+                  "$ref": "#/components/schemas/RocketsAuthUserDto"
                 }
               }
             },
-            "description": "read UserDto"
+            "description": "read RocketsAuthUserDto"
           }
         },
         "security": [
@@ -2209,7 +2266,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SampleUserUpdateDto"
+                "$ref": "#/components/schemas/RocketsAuthUserUpdateDto"
               }
             }
           },
@@ -2220,11 +2277,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserDto"
+                  "$ref": "#/components/schemas/RocketsAuthUserDto"
                 }
               }
             },
-            "description": "update UserDto"
+            "description": "update RocketsAuthUserDto"
           }
         },
         "security": [
@@ -2430,21 +2487,11 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "examples": {
-                "standard": {
-                  "summary": "Standard password change",
-                  "value": {
-                    "currentPassword": "CurrentP@ssw0rd",
-                    "newPassword": "NewSecureP@ssw0rd"
-                  }
-                }
-              },
               "schema": {
                 "$ref": "#/components/schemas/RocketsAuthChangePasswordDto"
               }
             }
           },
-          "description": "Current and new password",
           "required": true
         },
         "responses": {
@@ -2477,21 +2524,11 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "examples": {
-                "standard": {
-                  "summary": "Standard OTP confirmation",
-                  "value": {
-                    "email": "user@example.com",
-                    "passcode": "123456"
-                  }
-                }
-              },
               "schema": {
                 "$ref": "#/components/schemas/RocketsAuthOtpConfirmDto"
               }
             }
           },
-          "description": "Email and passcode for OTP verification",
           "required": true
         },
         "responses": {
@@ -2499,7 +2536,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthenticationResponseDto"
+                  "$ref": "#/components/schemas/AuthenticationResponse"
                 }
               }
             },
@@ -2524,20 +2561,11 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "examples": {
-                "standard": {
-                  "summary": "Standard OTP request",
-                  "value": {
-                    "email": "user@example.com"
-                  }
-                }
-              },
               "schema": {
                 "$ref": "#/components/schemas/RocketsAuthOtpSendDto"
               }
             }
           },
-          "description": "Email to receive the OTP",
           "required": true
         },
         "responses": {
@@ -2682,7 +2710,7 @@
                 }
               }
             },
-            "description": "list PetAppointmentDto as paginated response."
+            "description": "list PetAppointmentDtoPaginatedDto"
           }
         },
         "security": [
@@ -2746,7 +2774,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete PetAppointmentDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -3002,7 +3030,7 @@
                 }
               }
             },
-            "description": "list PetVaccinationDto as paginated response."
+            "description": "list PetVaccinationDtoPaginatedDto"
           }
         },
         "security": [
@@ -3066,7 +3094,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete PetVaccinationDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -3322,7 +3350,7 @@
                 }
               }
             },
-            "description": "list PetResponseDto as paginated response."
+            "description": "list PetResponseDtoPaginatedDto"
           }
         },
         "security": [
@@ -3394,7 +3422,7 @@
         ],
         "responses": {
           "200": {
-            "description": "delete PetResponseDto"
+            "description": "delete Resource"
           }
         },
         "security": [
@@ -3656,37 +3684,11 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "examples": {
-                "standard": {
-                  "summary": "Standard user registration",
-                  "value": {
-                    "active": true,
-                    "email": "user@example.com",
-                    "password": "StrongP@ssw0rd",
-                    "username": "user@example.com"
-                  }
-                },
-                "withMetadata": {
-                  "summary": "User registration with metadata",
-                  "value": {
-                    "active": true,
-                    "email": "user@example.com",
-                    "password": "StrongP@ssw0rd",
-                    "userMetadata": {
-                      "firstName": "John",
-                      "lastName": "Doe",
-                      "phone": "+1234567890"
-                    },
-                    "username": "user@example.com"
-                  }
-                }
-              },
               "schema": {
-                "$ref": "#/components/schemas/UserCreateDto"
+                "$ref": "#/components/schemas/RocketsAuthUserCreateDto"
               }
             }
           },
-          "description": "User registration information",
           "required": true
         },
         "responses": {
@@ -3694,7 +3696,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserDto"
+                  "$ref": "#/components/schemas/RocketsAuthUserDto"
                 }
               }
             },
@@ -3715,15 +3717,6 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "examples": {
-                "standard": {
-                  "summary": "Username + password",
-                  "value": {
-                    "password": "StrongP@ssw0rd",
-                    "username": "user@example.com"
-                  }
-                }
-              },
               "schema": {
                 "$ref": "#/components/schemas/LocalLoginDto"
               }
@@ -3736,7 +3729,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthenticationResponseDto"
+                  "$ref": "#/components/schemas/AuthenticationResponse"
                 }
               }
             },
@@ -3760,14 +3753,6 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "examples": {
-                "standard": {
-                  "summary": "Refresh JWT from prior login",
-                  "value": {
-                    "refreshToken": "<jwt>"
-                  }
-                }
-              },
               "schema": {
                 "$ref": "#/components/schemas/RefreshDto"
               }
@@ -3780,7 +3765,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthenticationResponseDto"
+                  "$ref": "#/components/schemas/AuthenticationResponse"
                 }
               }
             },

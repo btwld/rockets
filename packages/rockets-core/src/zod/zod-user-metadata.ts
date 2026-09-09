@@ -1,19 +1,16 @@
+import { withOpenApi } from '@concepta/nestjs-core';
 import { z } from 'zod';
-import type {
-  RocketsUserMetadataConfig,
-  SchemaEntityCompiler,
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../index';
+import type { RocketsUserMetadataConfig, SchemaEntityCompiler } from '../index';
 import { compileZodEntity } from './compile-zod-entity';
 import { projectSchema } from './zod-projections';
-import { compileDtoClass, namedZodDto } from './zod-dto';
+import { buildResponseSchema } from './zod-response-schema';
+import { USER_METADATA_MANAGED_FIELDS } from '../rockets-core.constants';
 
 /**
  * Persistence fields every userMetadata schema must declare — the zod
  * mirror of `BaseUserMetadataEntityInterface`. Presence is checked at
- * boot ({@link assertUserMetadataShape}); the create / update DTO
- * projections omit the server-managed subset of these.
+ * boot ({@link assertUserMetadataShape}); the update projection omits the
+ * server-managed subset of these.
  */
 const USER_METADATA_BASE_FIELDS = [
   'id',
@@ -24,22 +21,6 @@ const USER_METADATA_BASE_FIELDS = [
   'version',
 ] as const;
 
-/**
- * Server-managed columns, never writable through the API — enforced on top
- * of the projection so the guarantee holds even for a schema that declares
- * these fields as plain zod without `db` metadata.
- */
-const CREATE_MANAGED_FIELDS = [
-  'id',
-  'dateCreated',
-  'dateUpdated',
-  'dateDeleted',
-  'version',
-] as const;
-
-/** Update additionally freezes ownership. */
-const UPDATE_MANAGED_FIELDS = [...CREATE_MANAGED_FIELDS, 'userId'] as const;
-
 function omitKeys(
   shape: Record<string, z.ZodType>,
   keys: readonly string[],
@@ -49,12 +30,8 @@ function omitKeys(
   );
 }
 
-function pascalCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 export interface ZodUserMetadataOptions {
-  /** PascalCase base for generated class names. Default `'UserMetadata'`. */
+  /** PascalCase base for generated names. Default `'UserMetadata'`. */
   readonly name?: string;
   /** Physical table name. Default `'userMetadata'`. */
   readonly table?: string;
@@ -80,9 +57,10 @@ function assertUserMetadataShape(schema: z.ZodObject, name: string): void {
 
 /**
  * `zodResource` counterpart for the `userMetadata` config slot: a single
- * zod schema compiles into the entity + create / update / response DTO
- * quad that `RocketsModule` / `RocketsCoreModule` expect — no handwritten
- * entity or DTO classes.
+ * zod schema compiles into the entity + the update / response schemas
+ * `RocketsModule` / `RocketsCoreModule` expect — no handwritten entity or
+ * DTO classes. The update schema is named `${Name}UpdateDto`, the response
+ * `${Name}ResponseDto`.
  */
 export function defineZodUserMetadata(
   schema: z.ZodObject,
@@ -104,42 +82,21 @@ export function defineZodUserMetadata(
     'defineZodUserMetadata',
   );
 
-  // Same projection pass `zodResource` uses. Before, this helper hand-rolled
-  // its DTOs (`schema.omit(...)` + `compileDtoClass(schema)`), which made the
-  // response DTO the ENTIRE schema — `dto: { response: false }` was silently
-  // ignored and every userMetadata column reached the wire (CWE-200). Sharing
-  // `projectSchema` means there is one projection path, not two to keep in
-  // sync.
+  // Same projection pass `zodResource` uses, so `dto: { response: false }`
+  // is honoured here exactly as on a resource — one projection path, not
+  // two to keep in sync.
   const projections = projectSchema(name, schema, entity, new Set());
 
-  const responseNested = Object.fromEntries(
-    Object.entries(projections.responseNested).map(([property, shape]) => [
-      property,
-      compileDtoClass(shape, `${name}${pascalCase(property)}ResponseDto`),
-    ]),
-  );
-
-  const createDto = namedZodDto<UserMetadataCreatableInterface>(
-    z.object(omitKeys(projections.create, CREATE_MANAGED_FIELDS)),
-    `${name}CreateDto`,
-  );
-
-  const updateDto = namedZodDto<UserMetadataModelUpdatableInterface>(
-    z.object(omitKeys(projections.update, UPDATE_MANAGED_FIELDS)),
+  const updateSchema = withOpenApi(
+    z.object(omitKeys(projections.update, USER_METADATA_MANAGED_FIELDS)),
     `${name}UpdateDto`,
   );
-
-  const responseDto = compileDtoClass(
-    z.object(projections.response),
-    `${name}ResponseDto`,
-    responseNested,
-  );
+  const responseSchema = buildResponseSchema(name, projections);
 
   return {
     entity,
-    createDto,
-    updateDto,
-    responseDto,
+    updateSchema,
+    responseSchema,
     repository: options.repository,
   };
 }

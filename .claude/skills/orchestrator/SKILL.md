@@ -23,7 +23,7 @@ classify the request and hand off to the most specific skill, then get out of th
 | Bumping `@concepta/*` or `@nestjs/*` versions; switching local↔npm deps; "alpha.X", exports-map / `moduleResolution` / `common→core` / exception-identity breakage; ESM readiness | **upstream-migrator** |
 | Failing/flaky `*.e2e-spec.ts`, fixtures, barrel-last sequencing, teardown/open-handle leaks, `jest-extended` setup, per-file isolation | **e2e-fixer** |
 | `@InjectRepository`, `TypeOrmModule.forFeature` in a feature, ORM leaking into core, "is this persistence swappable" | **persistence-agnostic-linter** |
-| Missing Swagger fields, `@ApiProperty`/`@ApiPropertyOptional`, wrong `@Expose` import, empty schema in `/api` | **swagger-dto-auditor** |
+| Missing/unnamed OpenAPI components, `withOpenApi` not applied last, `@Body({ schema })` without a pipe, open response schemas, empty schema in `/api` | **swagger-dto-auditor** |
 | Refactor a module (auth/oauth/role/otp/invitation) to DDD / v8 / 7-seam / template-method handlers | **rockets-ddd-refactor** |
 | Generate a new CRUD module / entity / junction table | **rockets-sdk-config:rockets-crud-generator** (or **rockets-module**) |
 | Multi-entity project generation, waves, topological order | **rockets-sdk-config:rockets-orchestrator** |

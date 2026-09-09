@@ -69,7 +69,7 @@ export const { zodResource, zodSubResource } =
 `zod` and `nestjs-zod` are **optional peers** — you only pay for them if you
 import the `/zod` subpath.
 
-Requires Node.js 20 or newer.
+Requires Node.js 20.19 or newer (`require(esm)`).
 
 ## License
 

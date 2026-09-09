@@ -73,7 +73,7 @@ export function defineOperationResource(
     if (operation.status === 204 && operation.output !== false) {
       throw new Error(
         `defineOperationResource("${definition.path}"): operation "${key}" ` +
-          `sets status 204 with an output DTO — 204 responses have no body`,
+          `sets status 204 with an output schema — 204 responses have no body`,
       );
     }
   }

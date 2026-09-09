@@ -84,7 +84,7 @@ const firebaseApp = initializeApp({ credential: applicationDefault() });
         firebaseApp,
       }),
       userMetadata: {
-        /* entity, createDto, updateDto */
+        /* entity, updateSchema, responseSchema — from defineUserMetadata(schema) */
       },
       repository,
       resources: [defineModuleResource({ entities: [UserEntity] })],

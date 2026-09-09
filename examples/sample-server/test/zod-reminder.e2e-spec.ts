@@ -1,15 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import {
-  DocumentBuilder,
-  OpenAPIObject,
-  SwaggerModule,
-} from '@nestjs/swagger';
-import { cleanupOpenApiDoc } from 'nestjs-zod';
+import type { OpenAPIObject } from '@nestjs/swagger';
 import request from 'supertest';
 import { ExceptionsFilter } from '@concepta/rockets';
 import { AppModule } from '../src/app.module';
+import { createSampleServerOpenApiDocument } from '../src/swagger/create-openapi-document';
 
 /**
  * Contract of the zod-driven reminder resource (`reminderZodResource`,
@@ -23,9 +19,9 @@ import { AppModule } from '../src/app.module';
  * - `appointmentId` relation meta with an ENTITY-CLASS target: the
  *   generated entity carries the FK column + `@ManyToOne(Appointment)`,
  *   and the appointment side still eager-loads `reminders` through it.
- * - Generated `ReminderResponseDto` serves BOTH `/reminders` routes and
- *   the nested array inside `AppointmentResponseDto` ($ref, single
- *   component).
+ * - The generated `ReminderResponseDto` schema serves BOTH `/reminders`
+ *   routes and the nested array inside `AppointmentResponseDto` ($ref,
+ *   single component).
  * - `ReminderOwnerScopeHook` passes through `zodResource` untouched —
  *   reminders stay scoped to the owner's appointments.
  * - Read-only surface: only list/read are exposed.
@@ -42,20 +38,11 @@ describe('zod reminder resource (e2e)', () => {
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: ['error'] });
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
     app.useGlobalFilters(new ExceptionsFilter(app.get(HttpAdapterHost)));
     await app.init();
 
-    doc = cleanupOpenApiDoc(
-      SwaggerModule.createDocument(
-        app,
-        new DocumentBuilder()
-          .setTitle('zod-reminder')
-          .setVersion('1.0')
-          .addBearerAuth()
-          .build(),
-      ),
-    );
+    // The document main.ts serves (Rockets converter → `$ref` components).
+    doc = createSampleServerOpenApiDocument(app);
 
     const owner = await request(app.getHttpServer())
       .post('/auth/signup')
@@ -121,12 +108,16 @@ describe('zod reminder resource (e2e)', () => {
           dateCreated: { type: 'string', format: 'date-time' },
         },
       });
+      // Output schema: the `sent` column default is applied, so the
+      // response always carries it.
       expect(schema.required).toEqual([
         'id',
         'appointmentId',
         'sendAt',
+        'sent',
         'dateCreated',
       ]);
+      expect(schema.additionalProperties).toBe(false);
     });
 
     it('AppointmentResponseDto nests the SAME generated component via $ref', () => {

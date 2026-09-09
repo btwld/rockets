@@ -7,13 +7,8 @@ import {
 } from '@nestjs/common';
 import { APP_INTERCEPTOR, DiscoveryModule, Reflector } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
-import { ConfigModule } from '@nestjs/config';
 import { RepositoryModule } from '@concepta/nestjs-repository';
 import { CrudModule } from '@concepta/nestjs-crud';
-import {
-  ROCKETS_TO_INSTANCE_OPTIONS,
-  ROCKETS_TO_PLAIN_OPTIONS,
-} from './infrastructure/crud-serialization';
 import { AuthUserContextOverlay } from '@concepta/nestjs-authentication';
 import type { RocketsResourceConfig } from './domain/interfaces/rockets-resource.interface';
 import { collectBootstrapForRootImports } from './infrastructure/repository/collect-bootstrap-for-root-imports';
@@ -31,14 +26,17 @@ import { RAW_OPTIONS_TOKEN } from './rockets-core.tokens';
 import { RocketsCoreOptionsInterface } from './infrastructure/config/interfaces/rockets-core-options.interface';
 import { RocketsCoreOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-core-options-extras.interface';
 import { RocketsCoreSettingsInterface } from './infrastructure/config/interfaces/rockets-core-settings.interface';
-import { rocketsCoreDefaultConfig } from './infrastructure/config/rockets-core-options-default.config';
+import {
+  ROCKETS_CORE_SETTINGS_DEFAULTS_TOKEN,
+  rocketsCoreDefaultConfig,
+} from './infrastructure/config/rockets-core-options-default.config';
 import { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
 import {
   RouteAuditService,
   ROCKETS_ROUTE_POLICY_TOKEN,
 } from './infrastructure/audit';
 import { ActorOverlay } from './infrastructure/interceptors/actor.overlay';
-import { ZodBodyValidationInterceptor } from './infrastructure/interceptors/zod-body-validation.interceptor';
+import { SchemaValidatorConflictCheck } from './infrastructure/validation/schema-validator-conflict.check';
 import { UpsertUserMetadataHandler } from './application/commands/handlers/upsert-user-metadata.handler';
 import { GetUserMetadataHandler } from './application/queries/handlers/get-user-metadata.handler';
 import { SwaggerUiModule } from './common';
@@ -118,7 +116,6 @@ function createCoreImports(
 ): NonNullable<DynamicModule['imports']> {
   const imports: NonNullable<DynamicModule['imports']> = [
     CqrsModule.forRoot(),
-    ConfigModule.forFeature(rocketsCoreDefaultConfig),
     // Register hooks *before* repositories, otherwise repository-level hooks
     // won’t be wired and will quietly do nothing. RocketsAppModule provides
     // the hook feature (HookResolverService) globally.
@@ -154,14 +151,7 @@ function createCoreImports(
   if (plan.crudResources.length) {
     imports.push(
       CrudModule.forRoot({
-        // Outbound only; `toInstanceOptions` keeps the upstream whitelist.
-        // See `crud-serialization.ts`.
-        settings: {
-          serialization: {
-            toInstanceOptions: ROCKETS_TO_INSTANCE_OPTIONS,
-            toPlainOptions: ROCKETS_TO_PLAIN_OPTIONS,
-          },
-        },
+        settings: {},
       }),
     );
     for (const resource of plan.crudResources) {
@@ -203,10 +193,9 @@ function createCoreImports(
   }
 
   // `RouteAuditService` injects DiscoveryService/MetadataScanner, which
-  // only exist once DiscoveryModule is imported.
-  if (extras.routePolicy) {
-    imports.push(DiscoveryModule);
-  }
+  // only exist once DiscoveryModule is imported. The service is always
+  // registered (its schema-pipe check needs no policy).
+  imports.push(DiscoveryModule);
 
   return imports;
 }
@@ -218,7 +207,7 @@ function createCoreSettingsProvider(): Provider {
   >({
     settingsToken: ROCKETS_CORE_SETTINGS_TOKEN,
     optionsToken: RAW_OPTIONS_TOKEN,
-    settingsKey: rocketsCoreDefaultConfig.KEY,
+    settingsKey: ROCKETS_CORE_SETTINGS_DEFAULTS_TOKEN,
   });
 }
 
@@ -229,6 +218,7 @@ function createCoreProviders(options: {
 }): Provider[] {
   const providers: Provider[] = [
     ...(options.providers ?? []),
+    rocketsCoreDefaultConfig,
     createCoreSettingsProvider(),
     Reflector,
   ];
@@ -257,19 +247,20 @@ function createCoreProviders(options: {
     userMetadataProviders.push(getUserMetadata);
   }
 
-  // Route policy is opt-in. Declaring one registers the bootstrap audit;
-  // omitting it registers nothing, so an app that never asked for the
-  // check pays no discovery cost at boot. Contribution-carrying
-  // bootstraps never reach here (core rejects them above), so guard
-  // classes contributed by `providesAppGuard` integrations are merged
-  // into the policy by the SERVER composition before forwarding.
+  // The bootstrap audit always runs: its schema-pipe check (a parameter
+  // declaring `schema` that no StandardSchemaValidationPipe reaches) is a
+  // defect in any app. The route POLICY is opt-in — declaring one turns
+  // the policy rules on. Contribution-carrying bootstraps never reach
+  // here (core rejects them above), so guard classes contributed by
+  // `providesAppGuard` integrations are merged into the policy by the
+  // SERVER composition before forwarding.
   const routePolicy = options.extras?.routePolicy;
-  const routeAuditProviders: Provider[] = routePolicy
-    ? [
-        RouteAuditService,
-        { provide: ROCKETS_ROUTE_POLICY_TOKEN, useValue: routePolicy },
-      ]
-    : [];
+  const routeAuditProviders: Provider[] = [
+    RouteAuditService,
+    ...(routePolicy
+      ? [{ provide: ROCKETS_ROUTE_POLICY_TOKEN, useValue: routePolicy }]
+      : []),
+  ];
 
   return [
     ...providers,
@@ -280,10 +271,10 @@ function createCoreProviders(options: {
     { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay },
     // Adds a simple “who did this?” id for repository hooks/audit (not the full user profile).
     { provide: APP_INTERCEPTOR, useClass: ActorOverlay },
-    // Validates request bodies against the zod schema when the CRUD route's DTO
-    // is a nestjs-zod DTO. NestJS ValidationPipe uses class-validator and misses
-    // zod constraints — this interceptor fills the gap without importing nestjs-zod.
-    { provide: APP_INTERCEPTOR, useClass: ZodBodyValidationInterceptor },
+    // Rejects a global StandardSchemaValidationPipe at boot: every Rockets
+    // route validates with its own per-route pipe, a global one would run
+    // each body through the schema twice.
+    SchemaValidatorConflictCheck,
     // Built-in user-metadata CQRS (override in `extras.handlers` if you need to customize storage)
     ...userMetadataProviders,
     ...(options.extras?.providers ?? []),
@@ -298,20 +289,17 @@ function createCoreExports(options: {
 }): DynamicModule['exports'] {
   const exports: NonNullable<DynamicModule['exports']> = [
     ...(options.exports ?? []),
-    ConfigModule,
     RAW_OPTIONS_TOKEN,
     AUTH_ADAPTERS_TOKEN,
     ROCKETS_CORE_SETTINGS_TOKEN,
     AuthServerGuard,
   ];
 
-  // Same condition as the provider registration: the docs promise the
-  // service is INJECTABLE when a policy is declared, and a registered
-  // but unexported provider only satisfies `app.get()` — a consumer
-  // module's `inject: [RouteAuditService]` failed DI (review round 4).
-  if (options.extras?.routePolicy) {
-    exports.push(RouteAuditService);
-  }
+  // The service is always registered, so it is always exported: a
+  // registered but unexported provider only satisfies `app.get()` — a
+  // consumer module's `inject: [RouteAuditService]` failed DI (review
+  // round 4).
+  exports.push(RouteAuditService);
 
   // Re-export per-resource providers (custom handlers, hooks) so the rest of the
   // app can inject them without importing every feature module twice.

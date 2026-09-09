@@ -14,6 +14,7 @@ import type {
   ReferenceIdInterface,
 } from '@concepta/nestjs-core';
 import { ConsumeOtpCommand } from '@concepta/nestjs-otp';
+import { TransactionScope } from '@concepta/nestjs-repository';
 
 /**
  * This class is registered under the upstream `RecoveryService` DI token, so it
@@ -35,6 +36,7 @@ export class RocketsRecoveryService implements RecoveryServiceContract {
     private readonly passwordPort: PasswordPort,
     private readonly notifications: RecoveryNotificationPortSettings,
     private readonly commandBus: CommandBus,
+    private readonly txScope: TransactionScope,
   ) {}
 
   async recoverLogin(ctx: AppContextLike, email: string): Promise<void> {
@@ -100,22 +102,31 @@ export class RocketsRecoveryService implements RecoveryServiceContract {
     newPassword: string,
   ): Promise<ReferenceIdInterface | null> {
     const appCtx = ctx ?? {};
-    // Consume first — single application decision point (no validate-then-
-    // mutate). Passcode is burned before password mutation; a failed write
-    // still leaves the proof consumed. DB-level single-winner under concurrent
-    // consumes still needs upstream nestjs-otp locking.
-    const otp = await this.consumePasscode(appCtx, passcode);
-    if (!otp) return null;
-    const user = await this.userPort.getById(appCtx, otp.assigneeId);
-    if (!user) return null;
+    // One transaction for the whole rotation. Consume is still the single
+    // application decision point (no validate-then-mutate): it runs first,
+    // inside the scope, so a failed password write rolls the consume back
+    // with it and nothing half-happens. The outermost scope must be THIS
+    // one: the consume handler opens its own scope, and once an outermost
+    // scope commits, the request context keeps the finished transaction —
+    // every later repository call on that context would find it closed.
+    // DB-level single-winner under concurrent consumes still needs
+    // upstream nestjs-otp locking.
+    const user = await this.txScope.run(appCtx, async (txCtx) => {
+      const otp = await this.consumePasscode(txCtx, passcode);
+      if (!otp) return null;
+      const found = await this.userPort.getById(txCtx, otp.assigneeId);
+      if (!found) return null;
 
-    await this.passwordPort.setPassword(appCtx, newPassword, user.id);
-    // Clear any other active recovery OTPs for this user (defense in depth
-    // when duplicateStrategy ALLOW left siblings).
-    await this.otpPort.clear(appCtx, this.policy.otpNamespace, {
-      category: this.policy.otpCategory,
-      assigneeId: user.id,
+      await this.passwordPort.setPassword(txCtx, newPassword, found.id);
+      // Clear any other active recovery OTPs for this user (defense in
+      // depth when duplicateStrategy ALLOW left siblings).
+      await this.otpPort.clear(txCtx, this.policy.otpNamespace, {
+        category: this.policy.otpCategory,
+        assigneeId: found.id,
+      });
+      return found;
     });
+    if (!user) return null;
 
     const Command = this.notifications.sendPasswordUpdatedNotificationCommand;
     try {

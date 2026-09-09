@@ -3,26 +3,62 @@ import type { CanActivate } from '@nestjs/common';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import { createServer } from '@concepta/rockets';
 import { JwtGuard } from '@concepta/nestjs-authentication';
+import { withOpenApi } from '@concepta/rockets-core';
+import { z } from 'zod';
 
 import {
   defineRocketsAuth,
   type DefineRocketsAuthInput,
 } from './define-rockets-auth';
 import { RocketsAuthModule } from './rockets-auth.module';
+import type { RocketsAuthOptionsInterface } from './shared/interfaces/rockets-auth-options.interface';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from './shared/constants/rockets-auth.constants';
+import { UserFixture } from './__fixtures__/user/user.entity.fixture';
+import { UserCredentialEntityFixture } from './__fixtures__/user/user-credential.entity.fixture';
 
-class UserEntity {}
 class UserMetadataEntity {}
-class UserMetadataCreateDto {
-  userId!: string;
-}
-class UserMetadataUpdateDto {
-  id!: string;
-}
+const userMetadataUpdateSchema = withOpenApi(
+  z.object({}),
+  'SpecUserMetadataUpdateDto',
+);
+const userMetadataResponseSchema = withOpenApi(
+  z.object({ id: z.string() }),
+  'SpecUserMetadataResponseDto',
+);
 
 const repository = {
   name: 'test-repository',
   forFeature: vi.fn(),
 } as unknown as RepositoryModuleInterface;
+
+/** Minimal but complete options: the module is never booted here. */
+function minimalOptions(): RocketsAuthOptionsInterface {
+  return {
+    services: { mailerService: { sendMail: async () => undefined } },
+    settings: {
+      role: { adminRoleName: 'admin' },
+      email: {
+        from: 'test@test.com',
+        baseUrl: 'http://localhost',
+        templates: {
+          sendOtp: { fileName: 'otp.hbs', subject: 'OTP' },
+          invitation: { logo: '', fileName: 'inv.hbs', subject: 'Invitation' },
+          invitationAccepted: {
+            logo: '',
+            fileName: 'inv-acc.hbs',
+            subject: 'Accepted',
+          },
+        },
+      },
+      otp: {
+        assignment: ROCKETS_AUTH_OTP_ASSIGNMENT,
+        category: 'test',
+        type: 'uuid',
+        expiresIn: '1h',
+      },
+    },
+  };
+}
 
 function input(
   rocketsDefaults?: DefineRocketsAuthInput['rocketsDefaults'],
@@ -30,17 +66,20 @@ function input(
   return {
     persistence: {
       module: repository,
-      entities: { user: UserEntity },
+      entities: {
+        user: UserFixture,
+        userCredentials: UserCredentialEntityFixture,
+      },
     },
     userMetadata: {
       entity: UserMetadataEntity,
-      createDto: UserMetadataCreateDto,
-      updateDto: UserMetadataUpdateDto,
+      updateSchema: userMetadataUpdateSchema,
+      responseSchema: userMetadataResponseSchema,
     },
-    userCrud: { model: UserEntity },
-    useFactory: () => ({}),
+    userCrud: {},
+    useFactory: minimalOptions,
     rocketsDefaults,
-  } as DefineRocketsAuthInput;
+  };
 }
 
 describe('defineRocketsAuth', () => {

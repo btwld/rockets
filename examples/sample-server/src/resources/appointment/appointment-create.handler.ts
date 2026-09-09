@@ -15,14 +15,8 @@ import type { Pet } from '../pet/pet.schema';
 import { AppointmentEntity, type AppointmentRow } from './appointment.entity';
 import { ReminderEntity } from './reminder.schema';
 import type { ReminderRow } from './reminder.schema';
+import type { AppointmentCreate } from './appointment.schemas';
 import { InjectCrudAdapter, InjectDynamicRepository } from '@concepta/rockets-core';
-
-type AppointmentCreatePayload = PlainLiteralObject & {
-  petId: string;
-  date: string | Date;
-  reminderSendAt: string | Date;
-  notes?: string;
-};
 
 /**
  * Creates an `Appointment` and its paired `Reminder` atomically.
@@ -47,8 +41,13 @@ export class AppointmentCreateHandler extends CrudCommandHandlerBase<PlainLitera
     super(crudAdapter);
   }
 
+  /**
+   * `dto` is the validated `appointmentCreateSchema` output: `date` and
+   * `reminderSendAt` already arrive as `Date` (`f.date()` coerces the
+   * ISO strings on the wire).
+   */
   async execute(
-    command: CrudCreateCommand<PlainLiteralObject, AppointmentCreatePayload>,
+    command: CrudCreateCommand<PlainLiteralObject, AppointmentCreate>,
   ): Promise<PlainLiteralObject> {
     const { context, dto } = command;
 
@@ -59,8 +58,8 @@ export class AppointmentCreateHandler extends CrudCommandHandlerBase<PlainLitera
       );
     }
 
-    const appointmentDate = new Date(dto.date);
-    const reminderDate = new Date(dto.reminderSendAt);
+    const appointmentDate = dto.date;
+    const reminderDate = dto.reminderSendAt;
 
     try {
       return await this.txScope.run(context, async () => {
@@ -96,9 +95,7 @@ export class AppointmentCreateHandler extends CrudCommandHandlerBase<PlainLitera
         const reminder = await this.reminderRepo.create(
           {
             appointmentId: appointment.id,
-            // `Reminder` is the wire type — ISO string. The datetime
-            // column stores it as a real date either way.
-            sendAt: reminderDate.toISOString(),
+            sendAt: reminderDate,
           },
           { ctx: context },
         );

@@ -13,15 +13,21 @@ import { baseEntity, f, rocketsFieldMeta } from '@concepta/rockets-core/zod';
  * OpenAPI document. API extras (`example`) use native `.meta()` on
  * purpose: zod's own JSON Schema generation carries them into Swagger.
  *
- * Timestamps are `z.iso.datetime()` — the honest wire format (JSON has
- * no Date) and the only one zod's JSON Schema generation can represent;
- * the generated entity still maps them to real date columns via
- * `db.createdAt` / `db.updatedAt`.
+ * Timestamps come from `baseEntity` as `z.date()` (`f.createdAt()` /
+ * `f.updatedAt()`): rows carry real `Date` objects, the response schema
+ * serializes them, and the OpenAPI bridge documents them as
+ * `string` / `date-time`. Use `WireRow<typeof tagSchema>` for the JSON
+ * shape a client sees.
+ *
+ * `.optional()` means "may be omitted on write" and compiles to a
+ * nullable column; a row written without it reads back as `null`, and
+ * responses are validated fail-closed against this same schema — so a
+ * response-exposed optional column is declared `.nullable().optional()`.
  */
 export const tagSchema = baseEntity({
   name: f.string({ min: 1, max: 100, example: 'vaccinated', unique: true }),
-  // zod-only rule (no class-validator equivalent): enforced at runtime by
-  // the Standard Schema pipe in rockets-crud — this is the fidelity the
+  // zod-only rule: enforced at runtime by the Standard Schema pipe in
+  // rockets-crud — this is the fidelity the
   // layer buys. Custom `.refine()` keeps the field as raw zod.
   color: z
     .string()
@@ -29,6 +35,7 @@ export const tagSchema = baseEntity({
     .refine((value) => value.startsWith('#'), 'color must start with "#"')
     .meta({ example: '#ff0000' })
     .register(rocketsFieldMeta, { dto: { response: true } })
+    .nullable()
     .optional(),
 });
 

@@ -110,8 +110,8 @@ export function compileEntity<S extends z.ZodObject>(
   registerSchemaEntity(schema, cls);
   // Sanctioned boundary assertion: decorators apply the persistence shape at
   // runtime — TS cannot observe them structurally. {@link SchemaPersistenceRow}
-  // types loaded rows (ISO datetimes → Date); {@link WireRow} stays the API
-  // contract.
+  // is the schema output (`Date` columns included); {@link WireRow} stays the
+  // JSON-encoded API contract.
   return cls as Type<SchemaPersistenceRow<S>>;
 }
 
@@ -273,11 +273,6 @@ function columnTypeFor(
 ): ColumnOptions {
   if (base instanceof z.ZodUUID) {
     return { type: 'uuid' };
-  }
-  // ISO datetime strings are the WIRE format; the column is a real
-  // datetime (rows carry Date objects), matching the handwritten idiom.
-  if (base instanceof z.ZodISODateTime) {
-    return { type: 'datetime' };
   }
   if (base instanceof z.ZodString || base instanceof z.ZodStringFormat) {
     const maxLength =

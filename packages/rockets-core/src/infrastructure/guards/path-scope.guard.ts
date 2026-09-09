@@ -31,16 +31,29 @@ interface RequestWithUserAndParams {
 /**
  * Generic guard that scopes a sub-resource by the parent's URL param.
  *
- * Auto-injected by `defineSubResource` (via `defineResource`) so every
- * nested route enforces:
+ * Auto-injected by `defineSubResource` (via `defineResource`) on EVERY
+ * nested route, and it enforces two separable things:
  *
- * 1. Authenticated actor (`401` otherwise).
- * 2. Parent entity exists with `ownerColumn === actor.id` (`404` otherwise
- *    — same response for "missing" and "not yours" so a stranger cannot
- *    probe parent existence).
- * 3. The parent is visible to the parent resource's own entity hooks —
+ * **Always — the addressed chain is real.**
+ * 1. The parent entity exists (`404` otherwise).
+ * 2. The parent is visible to the parent resource's own entity hooks —
  *    a parent hidden by a `beforeFindOne` / `afterFindOne` hook (soft
- *    expiry, tenant scope, retention) is a `404` here too.
+ *    expiry, tenant scope, retention) is a `404` here too. At three
+ *    levels or more this is what verifies the ANCESTOR chain: the
+ *    middle resource's own `PathScopeHook` is replayed on this lookup
+ *    and rejects a middle row that does not belong to the addressed
+ *    ancestor. Route params only ever filter by the IMMEDIATE parent, so
+ *    without this a mismatched ancestor is served.
+ *
+ * **Only when `ownerColumn` is set — the actor owns the parent.**
+ * 3. Authenticated actor (`401` otherwise).
+ * 4. `ownerColumn === actor.id` (`404` — the same response as "missing"
+ *    so a stranger cannot probe parent existence).
+ *
+ * `owner: false` / `scope: false` drop the OWNERSHIP half only. Dropping
+ * the existence/chain half was never an opt-in: a request addressing a
+ * row through a parent that does not contain it is malformed whoever
+ * sends it.
  *
  * Sub-resources that need extra checks (e.g. body validation against a
  * lookup table) declare their own guard via `decorators: [UseGuards(X)]`.
@@ -80,7 +93,14 @@ interface RequestWithUserAndParams {
 export abstract class PathScopeGuard implements CanActivate {
   protected parentParam = '';
   protected parentEntityKey = '';
-  protected ownerColumn = '';
+  /**
+   * Owner column on the parent, or `undefined` when ownership is off.
+   *
+   * `abstract` on purpose: `undefined` means "no ownership check", so a
+   * defaulted field would let a hand-written subclass that forgets it
+   * silently serve an unguarded route. Declaring it forces the choice.
+   */
+  protected abstract ownerColumn: string | undefined;
   /** Primary-key column on the parent entity. Defaults to `'id'`. */
   protected parentPk = 'id';
   /** Parent resource's entity hooks, replayed for the parent lookup. */
@@ -95,7 +115,11 @@ export abstract class PathScopeGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<RequestWithUserAndParams>();
 
     const actorId = req?.user?.id;
-    if (!actorId) {
+    // Only the ownership half needs an actor. With `owner: false` /
+    // `scope: false` the route is deliberately not owner-scoped, so an
+    // actor-less request still gets its chain verified rather than a 401
+    // the resource never asked for.
+    if (this.ownerColumn !== undefined && !actorId) {
       throw new UnauthorizedException(
         `Authenticated actor required to access ${this.parentEntityKey} sub-resource`,
       );
@@ -120,11 +144,15 @@ export abstract class PathScopeGuard implements CanActivate {
       this.parentSelect ??
       (this.parentHooks.length ? undefined : [this.parentPk]);
 
+    const ownerColumn = this.ownerColumn;
     const parent = await this.parentRepo.findOne({
-      where: Where.and(
-        Where.eq<Record<string, unknown>>(this.parentPk, parentId),
-        Where.eq<Record<string, unknown>>(this.ownerColumn, actorId),
-      ),
+      where:
+        ownerColumn === undefined
+          ? Where.eq<Record<string, unknown>>(this.parentPk, parentId)
+          : Where.and(
+              Where.eq<Record<string, unknown>>(this.parentPk, parentId),
+              Where.eq<Record<string, unknown>>(ownerColumn, actorId),
+            ),
       // Copied because the upstream option is a mutable `string[]` and
       // the bundle-level `parentSelect` is `readonly`.
       ...(select ? { select: [...select] } : {}),
@@ -149,7 +177,7 @@ export abstract class PathScopeGuard implements CanActivate {
   static for(
     parentParam: string,
     parentEntityKey: string,
-    ownerColumn: string,
+    ownerColumn: string | undefined,
     parentPk: string = 'id',
     parentHooks: readonly Type[] = [],
     parentSelect?: readonly string[],
@@ -173,7 +201,7 @@ export abstract class PathScopeGuard implements CanActivate {
    * hook-free path keeps its previous (context-less) behaviour.
    */
   private parentReadContext(
-    actorId: string,
+    actorId: string | undefined,
     routeParams: Record<string, unknown>,
     parentId: string,
   ): PlainLiteralObject | undefined {
@@ -183,7 +211,16 @@ export abstract class PathScopeGuard implements CanActivate {
     host.defineOverlay(HooksCtx, {
       hooks: this.parentHooks.map((hook) => ({ hook, type: RepoHook.KEY })),
     });
-    host.defineOverlay(ActorCtx, { id: actorId, type: 'user' });
+    // Declared whenever the request HAS an actor, independent of
+    // `ownerColumn`: that flag decides whether the GUARD filters by
+    // owner, not whether the parent's own hooks get to see who is
+    // asking. Omitting it on an owner-less route would silently blind
+    // every actor-scoped parent hook. Only a genuinely actor-less
+    // request leaves it undeclared, which is the honest "no actor" —
+    // `getActor()` would otherwise report a user with no id.
+    if (actorId !== undefined) {
+      host.defineOverlay(ActorCtx, { id: actorId, type: 'user' });
+    }
 
     // The parent's own primary param is overwritten rather than merged:
     // on a nested route the raw `id` is the CHILD's, and a parent hook
@@ -226,7 +263,7 @@ const pathScopeGuardCache = new Map<string, Type<PathScopeGuard>>();
 function getPathScopeGuardSubclass(
   parentParam: string,
   parentEntityKey: string,
-  ownerColumn: string,
+  ownerColumn: string | undefined,
   parentPk: string,
   parentHooks: readonly Type[],
   parentSelect: readonly string[] | undefined,
@@ -240,7 +277,7 @@ function getPathScopeGuardSubclass(
   const cacheKey = JSON.stringify([
     parentParam,
     parentEntityKey,
-    ownerColumn,
+    ownerColumn ?? null,
     parentPk,
     parentHooks.map(hookCacheId),
     parentSelect ?? null,
@@ -249,8 +286,12 @@ function getPathScopeGuardSubclass(
   const existing = pathScopeGuardCache.get(cacheKey);
   if (existing) return existing;
 
-  const className = `PathScopeGuard_${parentParam}_${parentEntityKey}_${ownerColumn}`;
+  const className = `PathScopeGuard_${parentParam}_${parentEntityKey}_${
+    ownerColumn ?? 'chainOnly'
+  }`;
   const Subclass: Type<PathScopeGuard> = class extends PathScopeGuard {
+    protected override ownerColumn: string | undefined;
+
     constructor(parentRepo: RepositoryInterface<Record<string, unknown>>) {
       super();
       this.parentParam = parentParam;

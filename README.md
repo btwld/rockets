@@ -264,7 +264,9 @@ access-control rules. Rockets does not pretend to write those for you.
 
 ### Prerequisites
 
-- Node 20+ (required by NestJS 12).
+- Node 20.19+ — the published packages are CommonJS and `require()` the ESM
+  `@nestjs/*` 12 / `@concepta/nestjs-*` 8 line, which needs Node's
+  `require(esm)` (20.19+ / 22.12+).
 - A package manager (yarn 4 / npm / pnpm — examples below use yarn).
 - A database adapter — TypeORM with any supported driver is the most common.
   Firestore works via `@concepta/rockets-repository-firestore`.
@@ -307,7 +309,7 @@ instructions above):
 ```bash
 yarn add @concepta/rockets@alpha \
   @concepta/rockets-repository-typeorm@alpha typeorm @nestjs/typeorm sqlite3 \
-  class-transformer class-validator reflect-metadata rxjs
+  reflect-metadata rxjs
 ```
 
 **What installs automatically** when you add `@concepta/rockets@alpha`
@@ -317,13 +319,13 @@ yarn add @concepta/rockets@alpha \
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Other `@concepta/*`     | `rockets-core`                                                                                                        |
 | Upstream motor         | `@concepta/nestjs-{core,repository,crud,authentication,access-control}` (via `@concepta/rockets-core` re-exports)      |
-| Nest (Rockets runtime) | `@nestjs/common`, `@nestjs/core`, `@nestjs/cqrs`, `@nestjs/swagger`, `@nestjs/config`                                 |
+| Nest (Rockets runtime) | `@nestjs/common`, `@nestjs/core`, `@nestjs/cqrs`, `@nestjs/swagger`                                                   |
+| Schema engine          | `zod` — a dependency of `@concepta/rockets-core`; the `@concepta/rockets-core/zod` subpath needs nothing extra        |
 
 Optional add-ons (install when you need them):
 
 | Package                                                                             | When                                   |
 | ----------------------------------------------------------------------------------- | -------------------------------------- |
-| `zod` + `nestjs-zod` (schema-first layer at `@concepta/rockets-core/zod`)            | Schema-first resources (`zodResource`) |
 | `@concepta/rockets-adapter-firebase`                                                 | Firebase ID tokens                     |
 | `@concepta/rockets-repository-firestore`                                             | Firestore persistence                  |
 | `@concepta/rockets-auth@alpha`                                                       | Built-in signup/login (Path B)         |
@@ -333,7 +335,7 @@ Optional add-ons (install when you need them):
 | Package                                                                                        | Why not transitive                                                                                                                          |
 | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@concepta/rockets-repository-typeorm`, `typeorm`, `@nestjs/typeorm`, driver (`sqlite3`, `pg`, …) | Persistence adapter is an **app choice** — `typeorm` and the driver are peers/app deps; Firestore-only apps use the Firestore adapter instead |
-| `class-transformer`, `class-validator`, `rxjs`, `reflect-metadata`                             | **peerDependencies** — npm/yarn expect the host Nest app to provide them (install peers or enable your package manager’s peer auto-install)   |
+| `rxjs`, `reflect-metadata`                                                                     | **peerDependencies** of Rockets / Nest — npm/yarn expect the host Nest app to provide them (install peers or enable your package manager’s peer auto-install). `class-validator` / `class-transformer` are no longer required: every wire shape is a zod schema |
 
 Add `@concepta/rockets-core` **only** if you import symbols from that package
 path in app code (e.g. `OwnerStampHook` from `@concepta/rockets-core`). If
@@ -425,8 +427,9 @@ import { defineTypeOrmRepository } from '@concepta/rockets-repository-typeorm';
 import { OwnerStampHook, OwnerScopeHook } from '@concepta/rockets-core';
 import { jwtAuth } from './auth/jwt.adapter';
 import { PetEntity } from './pet/pet.entity';
-import { UserMetadataEntity } from './user/user-metadata.entity';
-import { UserMetadataCreateDto, UserMetadataUpdateDto } from './user/dto';
+// defineUserMetadata(userMetadataSchema) → { entity, updateSchema, responseSchema }
+// (see CONFIGURATION.md §9)
+import { userMetadataConfig } from './user/user-metadata.schema';
 
 const repository = defineTypeOrmRepository({
   type: 'sqlite',
@@ -437,11 +440,7 @@ const repository = defineTypeOrmRepository({
 
 export const server = createServer({
   auth: jwtAuth,
-  userMetadata: {
-    entity: UserMetadataEntity,
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
-  },
+  userMetadata: userMetadataConfig,
   repository,
   resources: [
     defineResource({
@@ -459,8 +458,8 @@ Run it:
 
 ```bash
 yarn nest start
-# GET    /me              (from MeController, returns user + userMetadata)
-# PATCH  /me              (updates userMetadata)
+# GET    /me              (built from userMetadata config, returns user + userMetadata)
+# PATCH  /me              (validates body.userMetadata against updateSchema, upserts)
 # GET    /pets            (owner-scoped list)
 # POST   /pets            (auto-stamps userId)
 # GET    /pets/:id        (owner-scoped read)
@@ -485,7 +484,7 @@ guard preference to the surrounding server:
 
 ```typescript
 import { Module } from '@nestjs/common';
-import { defineRocketsAuth } from '@concepta/rockets-auth';
+import { defineRocketsAuth, rocketsAuthRoleSchema } from '@concepta/rockets-auth';
 import { RocketsModule } from '@concepta/rockets';
 import { defineTypeOrmRepository } from '@concepta/rockets-repository-typeorm';
 
@@ -509,9 +508,9 @@ const rocketsAuthInput = {
     },
   },
   invitationEntity: InvitationEntity,
-  userMetadata: { entity: UserMetadataEntity, createDto, updateDto },
-  userCrud: { model: UserDto, dto: { createOne, updateOne } },
-  roleCrud: { model: RoleDto, dto: { createOne, updateOne } },
+  userMetadata: { entity: UserMetadataEntity, updateSchema, responseSchema },
+  userCrud: {}, // model / dto derived from the userMetadata schemas
+  roleCrud: { model: rocketsAuthRoleSchema },
   useFactory: () => ({
     services: { mailerService },
     authentication: {
@@ -583,7 +582,7 @@ RocketsModule.forRoot({
     }),
     defineApiKeyAuth(),
   ],
-  userMetadata: { entity, createDto, updateDto },
+  userMetadata: { entity, updateSchema, responseSchema },
   repository,
   resources: [
     defineModuleResource({ entities: [UserEntity] }),
@@ -716,7 +715,7 @@ const repository = defineTypeOrmRepository({
   imports: [
     RocketsModule.forRoot({
       repository, // connection only — no entities: [...] here
-      userMetadata: { entity: UserMetadataEntity, createDto, updateDto },
+      userMetadata: { entity: UserMetadataEntity, updateSchema, responseSchema },
       resources: [
         defineResource({ entity: PetEntity }),
         defineModuleResource({
@@ -941,7 +940,7 @@ Subclass to add side effects, audit logs, or alternative storage.
 | ------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Routes return 401 with no `auth` configured | The default global guard has an empty adapter chain | Configure an adapter, or set `enableGlobalGuard: false` only when the application is intentionally public.                                                                                                          |
 | Routes 401 even with a valid token         | Adapter returns `matched: false`                | Read the token: `extractBearerToken(request)` must not be `null`. Check `Authorization: Bearer <token>` header on the request.                                                                                      |
-| DTO fields missing from swagger            | `@nestjs/swagger` CLI plugin is NOT enabled     | Add `@ApiProperty()` / `@ApiPropertyOptional()` to every public field — type inference alone won't populate the schema.                                                                                             |
+| A request/response is missing from swagger | The schema is not named, or was wrapped before its last `.extend()` / `.strict()` | Wrap LAST with `withOpenApi(schema, 'SomethingDto')`; the document `$ref`s named schemas only. Generated resources name theirs automatically.                                                                   |
 | `OwnerScopeHook` doesn't filter            | `HookModule` not registered in DI               | Don't remove `HookModule.forRoot({})` from core's `createCoreImports`; without it, the hook resolver is `undefined` and decorators become silent no-ops.                                                            |
 | `definitionTransform` async wiring broken  | Missed merging `defImports`                     | Always `imports: [...defImports, ...createCoreImports(extras)]`. Losing `defImports` silently breaks `RAW_OPTIONS_TOKEN` injection.                                                                                 |
 | Two `Logger` / `AuditService` collide      | Two bundles export classes with the same name   | `RocketsCoreModule` is global; everything in a `defineModuleResource` `exports` array is reachable everywhere. Prefix the name (`BillingPriceFormatter`) or use an injection token.                                 |
@@ -978,7 +977,7 @@ it: one `RocketsModule.forRoot({ ... })` object is split by
 | Rockets layer               | Role                                                                                                                               |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `@concepta/rockets-core`     | **Planner and contracts**: `defineResource`, `buildAppRegistrationPlan`, `AuthServerGuard`, owner/path hooks, swagger registration |
-| `@concepta/rockets` (server) | **External-auth presentation**: `MeController`, default `APP_GUARD`, `auth` chain merge                                            |
+| `@concepta/rockets` (server) | **External-auth presentation**: the `/me` routes (`buildMeController`), default `APP_GUARD`, `auth` chain merge                    |
 | `@concepta/rockets-auth`     | **Built-in identity bundle**: `defineRocketsAuth()` with owned composition contributions                                          |
 
 **Path B uses both** `@concepta/rockets` and `@concepta/rockets-auth`:
@@ -1052,17 +1051,27 @@ rockets/
   registry publication is pending. After publication, install the line with
   `yarn add @concepta/rockets@alpha` or pin `1.0.0-alpha.8`. Monorepo packages
   keep `workspace:^` for local development.
-- **Upstream Concepta packages**: v8 modules are pinned to `8.0.0-alpha.8`;
+- **Upstream Concepta packages**: v8 modules are pinned to `8.0.0-alpha.10`;
   `@concepta/nestjs-common` remains at its latest published v8 build,
   `8.0.0-alpha.6`. Two modules remain on v7
   (`@concepta/nestjs-email`, `@concepta/nestjs-event`) pending the v8 port.
   Swagger UI ships from `@concepta/rockets-core`. Auth persistence entities are
   app-owned TypeORM classes — do not use `@concepta/nestjs-typeorm-ext`.
-- **NestJS**: `12.0.0-alpha.5` core (`common`, `core`, `platform-express`,
-  `testing`); satellite packages (`cqrs`, `typeorm`, `jwt`, `passport`,
-  `config`, `throttler`) remain on their current stable majors until a Nest 12
-  line is published.
-- **Node**: `>=20.0.0` (the minimum supported by NestJS 12).
+- **NestJS**: stable `12.0.1` core (`common`, `core`, `platform-express`,
+  `testing`, `swagger`) with the satellites on their Nest 12 stable lines
+  (`cqrs`, `typeorm`, `jwt`, `passport`, `config`). `@nestjs/throttler` is no
+  longer a dependency — its latest release caps peers at Nest 11, and auth
+  throttling runs on `@concepta/rockets-core`'s own rate-limit port.
+- **Node**: `>=20.19.0` — CommonJS build loading ESM dependencies through
+  `require(esm)`; Node 20.18 fails with `ERR_REQUIRE_ESM`. CI runs the unit
+  and package e2e suites on the floor (20.19) and on 22; the example apps
+  and the packed-consumer contract run on the floor in release-readiness. One
+  caveat for consumers on 20.19
+  whose test runner externalises ESM (Vitest, Jest ESM): `@nestjs/cqrs` is
+  CommonJS and requires the ESM `@nestjs/core`; a require landing while the
+  runner is still importing it throws `ERR_REQUIRE_CYCLE_MODULE` — preload
+  `@nestjs/core` in a setup file (this repo does:
+  `vitest.setup.preload-nest-core.mts`). Plain Node loads are unaffected.
 
 ### Common scripts (from the monorepo root)
 

@@ -6,17 +6,13 @@ import {
   Inject,
   Logger,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import type { AuthPublicMetadata } from '@concepta/nestjs-authentication';
+import { isAuthPublic } from '@concepta/nestjs-authentication';
 import type {
   AuthAdapterInterface,
   AuthRequest,
 } from '../../domain/interfaces/auth-adapter.interface';
 import type { AuthorizedUser } from '../../domain/interfaces/auth-user.interface';
-import {
-  AUTH_ADAPTERS_TOKEN,
-  ROCKETS_DISABLE_GUARDS_TOKEN,
-} from '../../rockets-core.constants';
+import { AUTH_ADAPTERS_TOKEN } from '../../rockets-core.constants';
 
 /**
  * Shape of the native HTTP request as seen by the guard.
@@ -36,19 +32,13 @@ export class AuthServerGuard implements CanActivate {
   constructor(
     @Inject(AUTH_ADAPTERS_TOKEN)
     private readonly adapters: ReadonlyArray<AuthAdapterInterface>,
-    private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const isDisabled = this.reflector.getAllAndOverride<AuthPublicMetadata>(
-      ROCKETS_DISABLE_GUARDS_TOKEN,
-      [context.getHandler(), context.getClass()],
-    );
-
-    // Upstream AuthPublic({ classLevel: true }) deliberately stores the
-    // sentinel `classLevel` instead of `true` so its own guard can distinguish
-    // an explicit class-wide choice from an accidental one.
-    if (isDisabled === true || isDisabled === 'classLevel') {
+    // Upstream owns both the metadata key and the `true | 'classLevel'`
+    // sentinel `AuthPublic` writes; reading it through their helper is
+    // what keeps this guard from drifting when either one changes.
+    if (isAuthPublic(context.getHandler(), context.getClass())) {
       return true;
     }
 

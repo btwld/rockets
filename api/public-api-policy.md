@@ -39,6 +39,20 @@ consumer-migration obligations below apply from 1.0 onward.
 - Source-only re-export shims are not public subpaths. Keep one while live code
   or fixtures use it as an internal boundary; delete it when nothing consumes
   it. Pre-1.0 status alone is not a reason to remove a shim.
+- RFC #104 (schema engine, pre-1.0): every request/response contract is a
+  named zod schema; the class-DTO surface (`createPaginatedDto`, `FreeFormJson`,
+  `whitelistedFromDto`, `compileDtoClass` / `namedZodDto`, `MeController`, the
+  `UserUpdateDto` / `UserResponseDto` and `RocketsAuth*Dto` classes, the
+  `standard-schema` subpaths) is removed rather than deprecated, and
+  `class-validator` / `class-transformer` / `nestjs-zod` are no longer peers.
+  Migration notes live in the root `CHANGELOG.md` (stages 1–6).
+- RFC #104 also renames OpenAPI components that generated clients depend
+  on: `AuthenticationResponseDto` → `AuthenticationResponse`, `UserDto` /
+  `RoleDto` → `RocketsAuthUserDto` / `RocketsAuthRoleDto`, one
+  `<Resource>PaginatedDto` per list instead of the shared
+  `CrudResponsePaginatedDto`, and `CrudInvalidResponseDto` removed. Wire
+  shapes are unchanged; the note for consumers is in
+  `packages/rockets-server-auth/CHANGELOG.md`.
 
 ## Updating the report
 

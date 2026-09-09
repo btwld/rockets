@@ -1,13 +1,15 @@
 import {
   AuthPublic,
   AuthenticatedResponseInterface,
-  AuthenticationResponseDto,
   IssueAuthenticatedResponseCommand,
   LocalGuard,
-  LocalLoginDto,
-  RefreshDto,
   RefreshGuard,
+  authenticationResponseSchema,
 } from '@concepta/nestjs-authentication';
+import {
+  rocketsAuthLocalLoginSchema,
+  rocketsAuthRefreshSchema,
+} from '../../../infrastructure/schemas/rockets-auth-token.schema';
 import { ReferenceIdInterface } from '@concepta/nestjs-core';
 import {
   Body,
@@ -15,26 +17,30 @@ import {
   HttpCode,
   Post,
   Req,
+  StandardSchemaValidationPipe,
   UnauthorizedException,
   UseGuards,
+  UsePipes,
 } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { Throttle } from '@nestjs/throttler';
+import { RateLimit, RateLimitGuard } from '@concepta/rockets-core';
 import {
-  ApiBody,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { getAppContext } from '@concepta/rockets-core';
-
-import { AuthAccountThrottlerGuard } from '../guards/auth-account-throttler.guard';
+import type { z } from 'zod';
+import { getAppContext, rocketsSchemaValidation } from '@concepta/rockets-core';
+import { authAccountRateLimitKey } from '../../../../../shared/throttling/auth-rate-limit-keys';
 
 type RequestWithPassportUser = Request & {
   readonly user?: ReferenceIdInterface;
 };
+
+type LocalLoginBody = z.output<typeof rocketsAuthLocalLoginSchema>;
+type RefreshBody = z.output<typeof rocketsAuthRefreshSchema>;
 
 /**
  * Password and refresh-token HTTP endpoints. Concepta v8 registers strategies
@@ -43,10 +49,15 @@ type RequestWithPassportUser = Request & {
  *
  * Uses `req.user` after passport guards (not `@AuthUser()`, which resolves
  * before `AuthUserContextOverlay` runs on some Nest versions).
+ *
+ * The passport guards consume the body before the handler runs; the body
+ * params stay declared so the schema still validates and documents them.
  */
 @Controller('token')
 @AuthPublic({ classLevel: true })
-@UseGuards(AuthAccountThrottlerGuard)
+@UseGuards(RateLimitGuard)
+@RateLimit({})
+@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
 @ApiTags('Authentication')
 export class RocketsAuthTokenController {
   constructor(private readonly commandBus: CommandBus) {}
@@ -54,28 +65,27 @@ export class RocketsAuthTokenController {
   @Post('password')
   @HttpCode(200)
   @UseGuards(LocalGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  // `username` is the field this route authenticates with; an `email` the
+  // client adds is not one of them and keys nothing.
+  @RateLimit({
+    default: {
+      limit: 10,
+      windowMs: 60000,
+      key: authAccountRateLimitKey(['username']),
+    },
+  })
   @ApiOperation({
     summary: 'Issue tokens with username and password',
     description:
       'Validates credentials with the local strategy and returns access and refresh JWTs.',
   })
-  @ApiBody({
-    type: LocalLoginDto,
-    examples: {
-      standard: {
-        value: { username: 'user@example.com', password: 'StrongP@ssw0rd' },
-        summary: 'Username + password',
-      },
-    },
-  })
   @ApiOkResponse({
     description: 'Tokens issued',
-    type: AuthenticationResponseDto,
+    standardSchema: authenticationResponseSchema,
   })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   async loginWithPassword(
-    @Body() _loginBody: LocalLoginDto,
+    @Body({ schema: rocketsAuthLocalLoginSchema }) _loginBody: LocalLoginBody,
     @Req() req: RequestWithPassportUser,
   ): Promise<AuthenticatedResponseInterface> {
     const user = req.user;
@@ -91,28 +101,21 @@ export class RocketsAuthTokenController {
   @Post('refresh')
   @HttpCode(200)
   @UseGuards(RefreshGuard)
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  // Body is `{ refreshToken }` — no account field, so the fine dimension
+  // keeps its per-IP default.
+  @RateLimit({ default: { limit: 20, windowMs: 60000 } })
   @ApiOperation({
     summary: 'Refresh access token',
     description:
       'Accepts a refresh token (body.refreshToken), validates it, and returns a new token pair.',
   })
-  @ApiBody({
-    type: RefreshDto,
-    examples: {
-      standard: {
-        value: { refreshToken: '<jwt>' },
-        summary: 'Refresh JWT from prior login',
-      },
-    },
-  })
   @ApiOkResponse({
     description: 'Tokens issued',
-    type: AuthenticationResponseDto,
+    standardSchema: authenticationResponseSchema,
   })
   @ApiUnauthorizedResponse({ description: 'Invalid or expired refresh token' })
   async refreshTokens(
-    @Body() _dto: RefreshDto,
+    @Body({ schema: rocketsAuthRefreshSchema }) _refreshBody: RefreshBody,
     @Req() req: RequestWithPassportUser,
   ): Promise<AuthenticatedResponseInterface> {
     const user = req.user;

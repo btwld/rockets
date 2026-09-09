@@ -12,11 +12,10 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
+import { withOpenApi } from '@concepta/nestjs-core';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { Expose, Type } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty, ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { z } from 'zod';
 import request from 'supertest';
 import type {
   AuthAdapterInterface,
@@ -53,24 +52,21 @@ class WidgetEntity {
   @Column({ type: 'varchar' }) label!: string;
 }
 
-class WidgetCreateDto {
-  @Expose()
-  @IsString()
-  @ApiProperty()
-  label!: string;
-}
+const widgetCreateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'WidgetCreateDto',
+);
+// Every body operation declares its schema: an unvalidated body fails the
+// boot (`requireSchemaPipe`).
+const widgetUpdateSchema = withOpenApi(
+  z.object({ label: z.string() }).partial(),
+  'WidgetUpdateDto',
+);
 
-class WidgetResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() label!: string;
-}
-
-class WidgetPaginatedDto extends CrudResponsePaginatedDto<WidgetResponseDto> {
-  @Expose()
-  @Type(() => WidgetResponseDto)
-  @ApiProperty({ type: [WidgetResponseDto], isArray: true })
-  declare data: WidgetResponseDto[];
-}
+const widgetResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), label: z.string() }),
+  'WidgetResponseDto',
+);
 
 // A hand-written, non-CRUD controller mounted next to the CRUD resource below.
 // Because a `defineResource` CRUD resource is present, core imports
@@ -138,9 +134,9 @@ describe('RocketsCoreModule — resources + resourcePersistence (e2e)', () => {
               path: 'widgets',
               tags: ['Widgets'],
               dto: {
-                response: WidgetResponseDto,
-                create: WidgetCreateDto,
-                paginated: WidgetPaginatedDto,
+                response: widgetResponseSchema,
+                create: widgetCreateSchema,
+                update: widgetUpdateSchema,
               },
               providers: [SimpleAuthProvider],
             }),

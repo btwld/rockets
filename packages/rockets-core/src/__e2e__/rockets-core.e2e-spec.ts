@@ -270,7 +270,7 @@ describe('RocketsCoreModule (e2e)', () => {
     it('UpsertUserMetadataCommand creates metadata', async () => {
       const commandBus = app.get(CommandBus);
       const result = await commandBus.execute(
-        new UpsertUserMetadataCommand('user-99', { firstName: 'Test' }),
+        new UpsertUserMetadataCommand({}, 'user-99', { firstName: 'Test' }),
       );
       expect(result).toHaveProperty('id');
       expect(result).toHaveProperty('userId', 'user-99');
@@ -279,7 +279,7 @@ describe('RocketsCoreModule (e2e)', () => {
     it('GetUserMetadataQuery returns null for unknown user', async () => {
       const queryBus = app.get(QueryBus);
       const result = await queryBus.execute(
-        new GetUserMetadataQuery('nonexistent'),
+        new GetUserMetadataQuery({}, 'nonexistent'),
       );
       expect(result).toBeNull();
     });
@@ -289,11 +289,11 @@ describe('RocketsCoreModule (e2e)', () => {
       const queryBus = app.get(QueryBus);
 
       await commandBus.execute(
-        new UpsertUserMetadataCommand('user-100', { bio: 'hello' }),
+        new UpsertUserMetadataCommand({}, 'user-100', { bio: 'hello' }),
       );
 
       const result = await queryBus.execute(
-        new GetUserMetadataQuery('user-100'),
+        new GetUserMetadataQuery({}, 'user-100'),
       );
       expect(result).toHaveProperty('userId', 'user-100');
     });
@@ -302,10 +302,10 @@ describe('RocketsCoreModule (e2e)', () => {
       const commandBus = app.get(CommandBus);
 
       await commandBus.execute(
-        new UpsertUserMetadataCommand('user-101', { firstName: 'Old' }),
+        new UpsertUserMetadataCommand({}, 'user-101', { firstName: 'Old' }),
       );
       const updated = await commandBus.execute(
-        new UpsertUserMetadataCommand('user-101', { firstName: 'New' }),
+        new UpsertUserMetadataCommand({}, 'user-101', { firstName: 'New' }),
       );
       expect(updated).toHaveProperty('userId', 'user-101');
     });

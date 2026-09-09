@@ -15,7 +15,8 @@ jobs:
       - name: Process Test Results
         uses: dorny/test-reporter@v1
         with:
-          artifact: test-results
+          # The Node 22 leg's results: both matrix legs upload, one report.
+          artifact: test-results-22.x
           name: Tests
           path: 'junit.xml'
           reporter: java-junit
@@ -29,7 +30,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: test-results
+          name: test-results-22.x
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Get PR Number

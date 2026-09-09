@@ -36,7 +36,7 @@
     "directory": "packages/rockets-repository-typeorm"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   },
   "files": [
     "dist/**/!(*.spec|*.e2e-spec|*.fixture).{js,d.ts}",
@@ -52,30 +52,26 @@
     "test": "cd ../.. && ./node_modules/.bin/vitest run --project unit packages/rockets-repository-typeorm"
   },
   "dependencies": {
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.8",
+    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.10",
     "@concepta/rockets-core": "workspace:^"
   },
   "devDependencies": {
-    "@nestjs/common": "12.0.0-alpha.5",
-    "@nestjs/testing": "12.0.0-alpha.5",
-    "@nestjs/typeorm": "11.0.3",
+    "@nestjs/common": "12.0.1",
+    "@nestjs/testing": "12.0.1",
+    "@nestjs/typeorm": "12.0.1",
     "typeorm": "^0.3.31",
     "typescript": "^5.4.0",
     "vitest": "^4.1.10",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@nestjs/common": "^12.0.0-alpha.0",
-    "@nestjs/typeorm": "^11.0.0",
-    "nestjs-zod": "^5.0.0",
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/typeorm": "^12.0.1",
     "reflect-metadata": "^0.1.13 || ^0.2.0",
     "typeorm": "^0.3.0",
     "zod": "^4.0.0"
   },
   "peerDependenciesMeta": {
-    "nestjs-zod": {
-      "optional": true
-    },
     "zod": {
       "optional": true
     }
