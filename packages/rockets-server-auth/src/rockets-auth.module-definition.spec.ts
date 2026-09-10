@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DynamicModule, Type } from '@nestjs/common';
+import { Module, type DynamicModule, type Type } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { CrudModule } from '@concepta/nestjs-crud';
 import { RepositoryModule } from '@concepta/nestjs-repository';
@@ -18,11 +18,21 @@ function moduleClassOf(entry: unknown): Type<unknown> | undefined {
   return undefined;
 }
 
+/**
+ * Stand-in for the single `RocketsAuthRateLimitModule` registration the
+ * real definition receives — the assertion here is about which modules
+ * are ABSENT, so any dynamic module satisfies the parameter.
+ */
+@Module({})
+class StubRateLimitModule {}
+
+const rateLimitModule: DynamicModule = { module: StubRateLimitModule };
+
 describe('RocketsAuthModule composition', () => {
   it('registers none of the infrastructure RocketsCoreModule already owns', () => {
-    const imports = (createRocketsAuthImports({ imports: [] }) ?? []).map(
-      moduleClassOf,
-    );
+    const imports = (
+      createRocketsAuthImports({ imports: [], rateLimitModule }) ?? []
+    ).map(moduleClassOf);
 
     for (const owned of [
       CqrsModule,

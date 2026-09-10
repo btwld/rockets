@@ -2346,7 +2346,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RocketsAuthUserRoleDto"
+                  "items": {
+                    "$ref": "#/components/schemas/RocketsAuthUserRoleDto"
+                  },
+                  "type": "array"
                 }
               }
             },

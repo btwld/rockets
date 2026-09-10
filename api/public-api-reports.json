@@ -3136,6 +3136,12 @@
         "signature": "export declare abstract class TenantStampHook<E extends PlainLiteralObject> extends PassthroughEntityHookBase<E> {\n    protected abstract readonly tenantKey: keyof E & string;\n    protected abstract readonly resolveTenantIds: TenantScopeOptions<E>['resolve'];\n    beforeCreate(payload: E, ctx?: EntityHookContext): Promise<E>;\n    beforeUpdate(payload: E, ctx?: EntityHookContext): Promise<E>;\n    static for<E extends PlainLiteralObject>(entity: Type<E>, options: TenantScopeOptions<E>): Type<TenantStampHook<E>>;\n    private enforceTenant;\n}"
       },
       {
+        "name": "TransactionScope",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class TransactionScope {\n    private readonly registry;\n    private readonly defaultTimeout;\n    constructor(registry: TransactionFactoryRegistry, options?: RepositoryModuleOptionsInterface);\n    run<T>(ctx: PlainLiteralObject, operation: (txCtx: TransactionContextInterface) => Promise<T>, options?: TransactionRunOptions): Promise<T>;\n    private settle;\n    runReadOnly<T>(ctx: PlainLiteralObject, operation: (txCtx: TransactionContextInterface) => Promise<T>): Promise<T>;\n    private withTimeout;\n}"
+      },
+      {
         "name": "USER_METADATA_MANAGED_FIELDS",
         "kind": "value",
         "runtime": true,
