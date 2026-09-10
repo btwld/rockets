@@ -215,6 +215,12 @@ Planner collision checks only cover Rockets-owned structured routes. For a
 real adapter audit after global prefix/versioning/manual controllers are
 registered, call `validateRegisteredRoutes(app)` after `app.init()`.
 
+Every operation also carries `ctx.signal: AbortSignal` — pass it to
+whatever does the actual waiting (a `fetch`, a query) and it fires when
+`deadlineMs` elapses (`504 Gateway Timeout`) or the client disconnects.
+See
+[CONFIGURATION.md §6f](../../CONFIGURATION.md#6f-request-deadline-and-disconnect-signal-issue-78).
+
 ### Stream Server-Sent Events (`op.sse`)
 
 `op.sse()` is the same resource, same auth/`public`/`acl`, same query

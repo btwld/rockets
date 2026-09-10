@@ -56,6 +56,19 @@ export interface OperationContext<
   readonly request: OperationRequest;
   readonly response: OperationResponse;
   readonly user: AuthorizedUser | undefined;
+  /**
+   * Fires when the operation's `deadlineMs` elapses (issue #78) or the
+   * client disconnects. Pass it to whatever actually waits — a `fetch`,
+   * a driver call — so a request nobody is waiting for stops burning
+   * work. An operation with no `deadlineMs` still gets a signal that a
+   * disconnect can abort.
+   *
+   * Inert on an `op.sse()` operation: the guard is torn down when the
+   * handler returns its Observable, before any event is emitted, so
+   * nothing is left to abort it. Use the Observable's own unsubscription
+   * (`finalize` / `takeUntil`) to react to an SSE client going away.
+   */
+  readonly signal: AbortSignal;
 }
 
 export interface OperationHandler<
@@ -116,6 +129,20 @@ export interface CompiledOperationDescriptor {
    */
   readonly acl?: OperationAclConfig;
   readonly transactional?: boolean;
+  /**
+   * Milliseconds before this operation's `ctx.signal` aborts and the
+   * response resolves `504 Gateway Timeout` — the operation's own
+   * request/response cycle, not a per-downstream-call budget (issue
+   * #78). Absent means no deadline. A handler that ignores `ctx.signal`
+   * keeps running in the background after the timeout response is sent;
+   * the deadline stops the CLIENT from waiting, not the work itself.
+   *
+   * Never set for `responseMode: 'sse'`: `op.sse()` exposes no
+   * `deadlineMs`, because the handler returns its Observable immediately
+   * (a deadline would race the setup call, not the stream) and cutting a
+   * long-lived stream is the opposite of what SSE is for.
+   */
+  readonly deadlineMs?: number;
   /**
    * Request input schema. For a body operation (POST/PUT/PATCH) it is a
    * NAMED component (`withOpenApi(schema, '<Base>Input')`) validated by

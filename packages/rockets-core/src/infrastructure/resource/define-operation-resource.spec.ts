@@ -485,6 +485,30 @@ describe('operationResource (zod)', () => {
       ).toThrow(/declares method GET but registers as POST/);
     });
 
+    it('rejects `deadlineMs` on an SSE operation', () => {
+      // `op.sse()` omits the field, so a hand-built descriptor is the
+      // only way in — and the only way it reaches production. The guard
+      // is disposed the moment the Observable is returned, so the timer
+      // is cleared before a single event is emitted.
+      expect(() =>
+        defineOperationResource({
+          path: 'api/stream-deadline',
+          operations: {
+            ticks: {
+              key: 'ticks',
+              method: 'GET',
+              path: '',
+              status: 200,
+              responseMode: 'sse',
+              output: false,
+              deadlineMs: 30,
+              handler: () => EMPTY,
+            },
+          },
+        }),
+      ).toThrow(/can never fire/);
+    });
+
     it('rejects Transactional() on an SSE operation', () => {
       expect(() =>
         operationResource({
@@ -499,6 +523,69 @@ describe('operationResource (zod)', () => {
         }),
       ).toThrow(/silent no-op/);
     });
+
+    it('rejects `deadlineMs` combined with Transactional()', () => {
+      // The deadline settles the response while the handler runs on, and
+      // the interceptor settles the TRANSACTION with it — rolling back
+      // under a live handler and stripping the TrxCtx overlay, so every
+      // later repository call auto-commits outside any transaction.
+      expect(() =>
+        operationResource({
+          path: 'api/deadline-tx',
+          public: true,
+          operations: (op) => ({
+            thing: op.read({
+              deadlineMs: 30,
+              output: false,
+              transactional: true,
+              handler: () => undefined,
+            }),
+          }),
+        }),
+      ).toThrow(/combines `deadlineMs` with Transactional\(\)/);
+    });
+
+    it('rejects `deadlineMs` combined with a resource-level Transactional()', () => {
+      // Same defect through the other writer: a resource-level decorator
+      // applies to every route, so reading only the operation flag would
+      // miss it.
+      expect(() =>
+        operationResource({
+          path: 'api/deadline-tx-resource',
+          public: true,
+          decorators: [Transactional()],
+          operations: (op) => ({
+            thing: op.read({
+              deadlineMs: 30,
+              output: false,
+              handler: () => undefined,
+            }),
+          }),
+        }),
+      ).toThrow(/combines `deadlineMs` with Transactional\(\)/);
+    });
+
+    it.each([0, -5, Number.NaN, Number.POSITIVE_INFINITY])(
+      'rejects deadlineMs: %s',
+      (deadlineMs) => {
+        // `setTimeout` clamps anything below 1 to 1ms, so `0` — the
+        // natural way to write "no deadline" — would 504 every async
+        // handler instead of disabling the deadline.
+        expect(() =>
+          operationResource({
+            path: `api/deadline-bad-${String(deadlineMs)}`,
+            public: true,
+            operations: (op) => ({
+              thing: op.read({
+                deadlineMs,
+                output: false,
+                handler: () => undefined,
+              }),
+            }),
+          }),
+        ).toThrow(/greater than zero/);
+      },
+    );
 
     it('rejects a consumer decorator that overwrites the SSE route PATH', () => {
       // The method-hijack test below passes for the wrong reason if only
