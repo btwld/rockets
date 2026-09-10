@@ -180,7 +180,17 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
     // it is certainly not `NODE_ENV`'s: that variable is unset in plenty
     // of production containers, which is exactly when the old
     // `!== 'production'` check leaked stack traces to stdout.
-    if (statusCode >= 500) {
+    // 504 is the one 5xx with a defined, expected cause: an operation's
+    // configured `deadlineMs` elapsed (issue #78). Under the load a
+    // deadline exists for, logging each one at `error` with a stack
+    // raised from a timer callback floods the channel that is supposed
+    // to mean "something is broken" — and the stack points at the timer,
+    // never at the slow work. Recorded at `warn`, once, without it; the
+    // operation and its budget are already logged where the deadline
+    // fires. Every other 5xx keeps the full treatment.
+    if (statusCode === 504) {
+      this.logger.warn('Gateway timeout');
+    } else if (statusCode >= 500) {
       const e = exception as {
         stack?: string;
         context?: { originalError?: unknown };

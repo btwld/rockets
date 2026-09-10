@@ -26,7 +26,20 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
   `op.sse()` takes no `deadlineMs` and its `ctx.signal` is inert: the
   handler returns its Observable before the guard is torn down, so an SSE
   client going away is observed through the Observable's own
-  unsubscription instead.
+  unsubscription instead; a hand-built descriptor that sets both now
+  fails at definition time rather than silently never firing.
+  `deadlineMs` must be finite and greater than zero (`0` would time out
+  every async handler, since `setTimeout` clamps it to 1ms), and it
+  cannot be combined with `transactional: true`: the deadline settles the
+  response — and therefore the transaction — while the handler is still
+  writing, leaving its later repository calls outside any transaction.
+  For the same reason a client disconnect does not short-circuit a
+  transactional operation: `ctx.signal` fires, but the route runs to
+  completion instead of committing half a unit of work. The 504 body
+  names neither the controller nor the budget (it reaches anonymous
+  callers on a `public` operation), carries `errorCode:
+  HTTP_GATEWAY_TIMEOUT`, and is logged at `warn` rather than as an
+  unhandled 5xx with a stack.
 
 - **Background job dispatch port (issue #53).**
   `JobDispatchServiceInterface` (`enqueue` / `claim` / `heartbeat` /
