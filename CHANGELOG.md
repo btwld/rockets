@@ -50,6 +50,29 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
   an in-memory test driver, and reusable provider conformance cases. The
   package implements issue #106 and complements issue #86 without adding
   multipart parsing or provider SDK dependencies to `rockets-core`.
+  Signed downloads fail closed: `signDownload` rejects a requested
+  `expiresIn` with `NOT_SUPPORTED` unless the store advertises
+  `signedDownloadPolicy.expiresIn`, instead of minting a URL that ignores it.
+  Whether a signed URL honors the requested expiry is a per-provider detail
+  no capability can infer, so **only the S3 adapter advertises the guarantee
+  today** — every other provider (GCS, Azure, R2 and other S3-compatible
+  endpoints via the runtime provider entry point, the filesystem driver,
+  third-party drivers) now rejects `expiresIn` until its adapter declares it;
+  `signDownload` without `expiresIn` is unaffected. This closes the case
+  where an S3 store configured with `publicBaseUrl` reported
+  `expiresIn: false` and still returned a permanent public URL for a private
+  object. An expiry outside the positive-integer range, or above the
+  applicable ceiling — the lower of the provider-enforced
+  `signedDownload.maxExpiresIn` and the new adapter-declared
+  `signedDownloadPolicy.maxExpiresIn` (AWS SigV4's 7 days, which the provider
+  documents but does not enforce) — fails with `INVALID_ARGUMENT`. Omitting
+  `expiresIn` falls back to the provider default, which the package now
+  documents rather than sets.
+  `StorageError` raised by a driver now names its `store`, `operation`, and
+  `key` — drivers sanitize those fields out on purpose and the client fills
+  them back in. `sync()` refuses an implicit `compare: 'etag'` across two
+  different drivers, since ETags are opaque per-driver tokens that can never
+  match and would re-upload every object on every run.
 
 - **Background job dispatch port (issue #53).**
   `JobDispatchServiceInterface` (`enqueue` / `claim` / `heartbeat` /

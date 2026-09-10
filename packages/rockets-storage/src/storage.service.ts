@@ -62,6 +62,35 @@ function assertDifferentStores(from: string, to: string): void {
   }
 }
 
+/**
+ * ETags are opaque, per-driver tokens — the filesystem driver emits a
+ * truncated sha1, S3 an md5 — so comparing them across two different drivers
+ * can never match and an implicit `'etag'` sync would silently re-upload every
+ * object on every run. Make the caller choose. Driver name is a conservative
+ * discriminator: S3-compatible endpoints under different names do produce
+ * comparable ETags, and those callers pass `compare` explicitly.
+ */
+function resolveSyncCompare(
+  options: StorageSyncOptions,
+  source: StorageClient,
+  destination: StorageClient,
+): StorageSyncCompare {
+  if (options.compare !== undefined) {
+    return options.compare;
+  }
+  if (source.driverName !== destination.driverName) {
+    throw new StorageError(
+      `Syncing "${source.driverName}" to "${destination.driverName}" requires an explicit compare: ETags are not comparable across drivers.`,
+      {
+        code: StorageErrorCode.INVALID_ARGUMENT,
+        permanent: true,
+        store: destination.name,
+      },
+    );
+  }
+  return 'etag';
+}
+
 function unchanged(
   source: StorageObjectMetadata,
   destination: StorageObjectMetadata,
@@ -237,7 +266,7 @@ export class StorageService {
     const transformKey = options.transformKey ?? identity;
     const destinationKeyOf = (key: string): string =>
       joinStorageKey(options.destinationPrefix, transformKey(key));
-    const compare = options.compare ?? 'etag';
+    const compare = resolveSyncCompare(options, source, destination);
     const sourceObjects = await walk(source, options);
     const destinationObjects = await walk(destination, {
       ...(options.destinationPrefix !== undefined

@@ -394,6 +394,9 @@ async function waitForRetry(
   });
 }
 
+/** AWS SigV4 refuses to sign a presigned URL living longer than 7 days. */
+const SIGV4_MAX_EXPIRES_IN_SECONDS = 604_800;
+
 const S3_MIN_MULTIPART_PART_BYTES = 5 * 1024 * 1024;
 const S3_MAX_MULTIPART_PARTS = 10_000;
 
@@ -906,6 +909,7 @@ export function withS3Capabilities(
     signedUploadUrl,
     signedDownloadPolicy: Object.freeze({
       expiresIn: constructionMetadata !== undefined && !publicBaseUrlConfigured,
+      maxExpiresIn: SIGV4_MAX_EXPIRES_IN_SECONDS,
     }),
   } satisfies FilesSdkPhysicalKeyAdapter & FilesSdkSignedDownloadPolicyAdapter & FilesSdkSignedUploadPolicyAdapter & Pick<S3Adapter, 'signedUploadUrl'>) as S3StorageAdapter;
 

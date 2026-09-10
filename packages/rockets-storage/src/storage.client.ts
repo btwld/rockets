@@ -5,6 +5,7 @@ import {
   StorageErrorCode,
   normalizeStorageError,
 } from './storage.error.js';
+import type { StorageErrorOptions } from './storage.error.js';
 import type { StorageDriver } from './storage.driver.js';
 import type {
   StorageBody,
@@ -52,8 +53,17 @@ function assertKey(key: string, label = 'key'): void {
   }
 }
 
-function invalidArgument(message: string): never {
+type StorageErrorContext = Pick<
+  StorageErrorOptions,
+  'key' | 'operation' | 'store'
+>;
+
+function invalidArgument(
+  message: string,
+  context: StorageErrorContext = {},
+): never {
   throw new StorageError(message, {
+    ...context,
     code: StorageErrorCode.INVALID_ARGUMENT,
     permanent: true,
   });
@@ -62,9 +72,10 @@ function invalidArgument(message: string): never {
 function assertPositiveSafeInteger(
   value: number | undefined,
   label: string,
+  context?: StorageErrorContext,
 ): void {
   if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) {
-    invalidArgument(`${label} must be a positive safe integer.`);
+    invalidArgument(`${label} must be a positive safe integer.`, context);
   }
 }
 
@@ -98,21 +109,40 @@ function assertSearchOptions(options?: StorageSearchOptions): void {
   assertPositiveSafeInteger(options?.maxResults, 'maxResults');
 }
 
-function assertSignedUploadOptions(options: StorageSignedUploadOptions): void {
-  assertPositiveSafeInteger(options.expiresIn, 'expiresIn');
-  assertPositiveSafeInteger(options.maxSize, 'maxSize');
+function assertSignedDownloadOptions(
+  options: StorageSignedDownloadOptions | undefined,
+  context: StorageErrorContext,
+): void {
+  assertPositiveSafeInteger(options?.expiresIn, 'expiresIn', context);
+  if (
+    options?.responseContentDisposition !== undefined &&
+    options.responseContentDisposition.length === 0
+  ) {
+    invalidArgument(
+      'responseContentDisposition must be a non-empty string.',
+      context,
+    );
+  }
+}
+
+function assertSignedUploadOptions(
+  options: StorageSignedUploadOptions,
+  context: StorageErrorContext,
+): void {
+  assertPositiveSafeInteger(options.expiresIn, 'expiresIn', context);
+  assertPositiveSafeInteger(options.maxSize, 'maxSize', context);
   if (
     options.minSize !== undefined &&
     (!Number.isSafeInteger(options.minSize) || options.minSize < 0)
   ) {
-    invalidArgument('minSize must be a non-negative safe integer.');
+    invalidArgument('minSize must be a non-negative safe integer.', context);
   }
   if (
     options.minSize !== undefined &&
     options.maxSize !== undefined &&
     options.minSize > options.maxSize
   ) {
-    invalidArgument('minSize cannot be greater than maxSize.');
+    invalidArgument('minSize cannot be greater than maxSize.', context);
   }
 }
 
@@ -720,6 +750,54 @@ export class StorageClient {
     options?: StorageSignedDownloadOptions,
   ): Promise<string> {
     assertKey(key);
+    const context: StorageErrorContext = {
+      key,
+      operation: 'signDownload',
+      store: this.name,
+    };
+    assertSignedDownloadOptions(options, context);
+    // Signed-UPLOAD constraints are gated inside the S3 adapter, against a
+    // provider profile that says which guarantees it can enforce. There is no
+    // equivalent seam for downloads: `url()` is served by the files-sdk
+    // adapter, and upstream documents that whether a signed URL honors
+    // `expiresIn` is a per-provider detail no capability can infer. So the
+    // gate lives here, on the capability the adapter declares, and it is
+    // strict: an adapter that declares nothing cannot be asked for an expiry.
+    // Only the S3 adapter declares it today — see issue for extending the
+    // profile mechanism to the remaining verified providers.
+    if (options?.expiresIn !== undefined) {
+      const capabilities = this.#driver.capabilities;
+      if (capabilities.signedDownloadPolicy?.expiresIn !== true) {
+        throw new StorageError(
+          `Store "${this.name}" cannot enforce signed-download expiresIn.`,
+          {
+            code: StorageErrorCode.NOT_SUPPORTED,
+            key,
+            operation: 'signDownload',
+            permanent: true,
+            store: this.name,
+          },
+        );
+      }
+      // The provider may enforce a ceiling in code and the adapter may declare
+      // a documented one its signature format cannot exceed; the lower wins.
+      const ceiling = Math.min(
+        capabilities.signedDownload.maxExpiresIn ?? Infinity,
+        capabilities.signedDownloadPolicy.maxExpiresIn ?? Infinity,
+      );
+      if (options.expiresIn > ceiling) {
+        throw new StorageError(
+          `Store "${this.name}" cannot sign a download expiring in more than ${ceiling} seconds.`,
+          {
+            code: StorageErrorCode.INVALID_ARGUMENT,
+            key,
+            operation: 'signDownload',
+            permanent: true,
+            store: this.name,
+          },
+        );
+      }
+    }
     return this.#execute(
       { key, operation: 'signDownload', store: this.name },
       () => this.#driver.signDownload(key, options),
@@ -731,7 +809,11 @@ export class StorageClient {
     options: StorageSignedUploadOptions,
   ): Promise<StorageSignedUpload> {
     assertKey(key);
-    assertSignedUploadOptions(options);
+    assertSignedUploadOptions(options, {
+      key,
+      operation: 'signUpload',
+      store: this.name,
+    });
     return this.#execute(
       { key, operation: 'signUpload', store: this.name },
       () => this.#driver.signUpload(key, options),

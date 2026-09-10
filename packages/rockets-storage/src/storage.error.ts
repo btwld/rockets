@@ -107,6 +107,42 @@ export function isStorageError(error: unknown): error is StorageError {
   }
 }
 
+/**
+ * Drivers sanitize their errors and deliberately leave `store`, `operation`,
+ * and `key` unset so the calling client can fill in the context it owns.
+ * Fields the driver did set are authoritative and are never overwritten.
+ */
+function withStorageErrorContext(
+  error: StorageError,
+  context: Pick<StorageErrorOptions, 'key' | 'operation' | 'store'>,
+): StorageError {
+  const key = error.key ?? context.key;
+  const operation = error.operation ?? context.operation;
+  const store = error.store ?? context.store;
+  if (
+    key === error.key &&
+    operation === error.operation &&
+    store === error.store
+  ) {
+    return error;
+  }
+
+  const contextual = new StorageError(error.message, {
+    aborted: error.aborted,
+    cause: error.cause,
+    code: error.code,
+    permanent: error.permanent,
+    timedOut: error.timedOut,
+    ...(key !== undefined && { key }),
+    ...(operation !== undefined && { operation }),
+    ...(store !== undefined && { store }),
+  });
+  if (error.stack !== undefined) {
+    contextual.stack = error.stack;
+  }
+  return contextual;
+}
+
 export function normalizeStorageError(
   error: unknown,
   options: Omit<StorageErrorOptions, 'code' | 'cause'> & {
@@ -114,7 +150,7 @@ export function normalizeStorageError(
   } = {},
 ): StorageError {
   if (isStorageError(error)) {
-    return error;
+    return withStorageErrorContext(error, options);
   }
 
   const message = error instanceof Error ? error.message : String(error);

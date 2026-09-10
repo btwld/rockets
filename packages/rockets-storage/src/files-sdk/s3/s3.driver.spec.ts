@@ -348,12 +348,15 @@ describe('createS3StorageDriver', () => {
     try {
       expect(withS3Capabilities(publicAdapter).signedDownloadPolicy).toEqual({
         expiresIn: false,
+        maxExpiresIn: 604_800,
       });
       expect(withS3Capabilities(signedAdapter).signedDownloadPolicy).toEqual({
         expiresIn: true,
+        maxExpiresIn: 604_800,
       });
       expect(withS3Capabilities(unknownAdapter).signedDownloadPolicy).toEqual({
         expiresIn: false,
+        maxExpiresIn: 604_800,
       });
     } finally {
       publicAdapter.raw.destroy();
@@ -1292,6 +1295,7 @@ describe('createS3StorageDriver', () => {
 
     expect(driver.capabilities.signedDownloadPolicy).toEqual({
       expiresIn: false,
+      maxExpiresIn: 604_800,
     });
   });
 });

@@ -5,7 +5,43 @@ import { createMemoryStorageDriver } from './testing/index.js';
 import { StorageClient } from './storage.client.js';
 import { StorageErrorCode } from './storage.error.js';
 import { StorageUploadControl } from './storage-upload-control.js';
-import type { StorageObjectMetadata, StoragePlugin } from './storage.types.js';
+import type { StorageDriver } from './storage.driver.js';
+import type {
+  StorageObjectMetadata,
+  StoragePlugin,
+  StorageSignedDownloadPolicyCapability,
+} from './storage.types.js';
+
+function withSignedDownloadPolicy(
+  driver: StorageDriver,
+  signedDownloadPolicy: StorageSignedDownloadPolicyCapability,
+): StorageDriver {
+  return {
+    capabilities: {
+      ...driver.capabilities,
+      signedDownload: { supported: true },
+      signedDownloadPolicy,
+    },
+    close: () => driver.close?.(),
+    copy: (source, destination, options) =>
+      driver.copy(source, destination, options),
+    delete: (key, options) => driver.delete(key, options),
+    download: (key, options) => driver.download(key, options),
+    exists: (key, options) => driver.exists(key, options),
+    head: (key, options) => driver.head(key, options),
+    list: (options) => driver.list(options),
+    move: (source, destination, options) =>
+      driver.move(source, destination, options),
+    name: driver.name,
+    search: (pattern, options) => driver.search(pattern, options),
+    signDownload: async (key, options) =>
+      `https://signed.example/${key}?expiresIn=${
+        options?.expiresIn ?? 'default'
+      }`,
+    signUpload: (key, options) => driver.signUpload(key, options),
+    upload: (key, body, options) => driver.upload(key, body, options),
+  };
+}
 
 describe('StorageClient', () => {
   it('streams Node uploads and exposes safe buffered helpers', async () => {
@@ -345,6 +381,98 @@ describe('StorageClient', () => {
       'before:head',
       'error:head',
     ]);
+  });
+
+  it('refuses a signed-download expiry the store cannot enforce', () => {
+    const client = new StorageClient('media', createMemoryStorageDriver());
+
+    expect(() =>
+      client.signDownload('avatar.png', { expiresIn: 300 }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: StorageErrorCode.NOT_SUPPORTED,
+        key: 'avatar.png',
+        operation: 'signDownload',
+        store: 'media',
+      }),
+    );
+  });
+
+  it('validates the requested signed-download expiry', async () => {
+    const client = new StorageClient(
+      'media',
+      withSignedDownloadPolicy(createMemoryStorageDriver(), {
+        expiresIn: true,
+        maxExpiresIn: 604_800,
+      }),
+    );
+
+    for (const expiresIn of [0, -5, 1.5]) {
+      expect(() =>
+        client.signDownload('avatar.png', { expiresIn }),
+      ).toThrowError(
+        expect.objectContaining({
+          code: StorageErrorCode.INVALID_ARGUMENT,
+          key: 'avatar.png',
+          operation: 'signDownload',
+          store: 'media',
+        }),
+      );
+    }
+
+    expect(() =>
+      client.signDownload('avatar.png', { expiresIn: 604_801 }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: StorageErrorCode.INVALID_ARGUMENT,
+        key: 'avatar.png',
+        operation: 'signDownload',
+        store: 'media',
+      }),
+    );
+
+    await expect(
+      client.signDownload('avatar.png', { expiresIn: 604_800 }),
+    ).resolves.toContain('expiresIn=604800');
+  });
+
+  it('applies the lower of the provider and adapter expiry ceilings', () => {
+    const ceilings = (provider: number, adapter: number): StorageClient => {
+      const driver = withSignedDownloadPolicy(createMemoryStorageDriver(), {
+        expiresIn: true,
+        maxExpiresIn: adapter,
+      });
+      return new StorageClient('media', {
+        ...driver,
+        capabilities: {
+          ...driver.capabilities,
+          signedDownload: { maxExpiresIn: provider, supported: true },
+        },
+      });
+    };
+
+    expect(() =>
+      ceilings(14_400, 604_800).signDownload('avatar.png', {
+        expiresIn: 14_401,
+      }),
+    ).toThrowError(/more than 14400 seconds/u);
+
+    expect(() =>
+      ceilings(604_800, 14_400).signDownload('avatar.png', {
+        expiresIn: 14_401,
+      }),
+    ).toThrowError(/more than 14400 seconds/u);
+  });
+
+  it('names the store, operation, and key on driver errors', async () => {
+    const client = new StorageClient('media', createMemoryStorageDriver());
+
+    await expect(client.head('missing.txt')).rejects.toMatchObject({
+      code: StorageErrorCode.NOT_FOUND,
+      key: 'missing.txt',
+      operation: 'head',
+      store: 'media',
+    });
   });
 
   it('uses opaque resumable tokens and rejects invalid tokens', () => {

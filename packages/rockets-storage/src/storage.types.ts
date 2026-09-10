@@ -177,6 +177,14 @@ export interface StorageSearchOptions extends StorageOperationOptions {
 }
 
 export interface StorageSignedDownloadOptions extends StorageOperationOptions {
+  /**
+   * Expiry in seconds. Omitting it does NOT mean "never expires": the
+   * provider's own default applies, and this package neither sets nor
+   * verifies it. Pass an explicit value whenever the expiry matters.
+   * Requesting one on a store whose `signedDownloadPolicy.expiresIn` is not
+   * `true` fails with `NOT_SUPPORTED` instead of minting a URL that ignores
+   * it.
+   */
   expiresIn?: number;
   responseContentDisposition?: string;
 }
@@ -202,6 +210,11 @@ export type StorageSignedUpload =
 
 export interface StorageSignedUrlCapability {
   supported: boolean;
+  /**
+   * Hard ceiling on `expiresIn`, in seconds, that the provider enforces in
+   * code (Azure clamps user-delegation SAS to 7 days, Dropbox links are a
+   * fixed 4 hours). Absent when the provider enforces none.
+   */
   maxExpiresIn?: number;
 }
 
@@ -260,6 +273,14 @@ export interface StorageSignedUploadPolicyCapability {
 export interface StorageSignedDownloadPolicyCapability {
   /** Every generated URL honors the requested expiry. */
   expiresIn: boolean;
+  /**
+   * Largest expiry, in seconds, the adapter's signature format accepts, for
+   * ceilings the provider documents but does not enforce in code (AWS SigV4
+   * stops at 7 days). Complements
+   * {@link StorageSignedUrlCapability.maxExpiresIn}; the lower of the two
+   * applies.
+   */
+  maxExpiresIn?: number;
 }
 
 export interface StorageCapabilities {

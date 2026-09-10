@@ -266,6 +266,70 @@ Providers separately advertise whether their signed request actually enforces
 content type and size range. A requested guarantee that the selected provider
 cannot enforce fails with `NOT_SUPPORTED` before a URL is minted.
 
+## Signed downloads honor the requested expiry or fail
+
+`signDownload` applies the same rule. A store advertises
+`capabilities.signedDownloadPolicy.expiresIn` when every URL it mints honors
+the requested expiry. Whether a signed URL honors the requested expiry is a
+per-provider detail that no capability can infer — some providers pin the
+lifetime server-side and ignore the request — so a store that does not
+advertise the guarantee cannot be asked for one.
+
+```typescript
+await storage.use('media').signDownload('avatar.png', { expiresIn: 300 });
+```
+
+- Requesting `expiresIn` on a store that does not advertise `expiresIn: true`
+  fails with `NOT_SUPPORTED` rather than returning a URL that ignores it. An
+  S3 store configured with `publicBaseUrl` serves permanent public URLs and
+  reports `expiresIn: false`, so it rejects the request.
+- **Only the S3 adapter advertises this capability today.** Every other
+  provider — GCS, Azure, R2 and other S3-compatible endpoints reached through
+  the runtime provider entry point, the filesystem driver, third-party
+  drivers — leaves `signedDownloadPolicy` undeclared and therefore rejects
+  `expiresIn` until its adapter declares the guarantee. `signDownload` without
+  `expiresIn` keeps working everywhere.
+- `expiresIn` that is not a positive safe integer fails with
+  `INVALID_ARGUMENT`, and so does one above the applicable ceiling. Two
+  ceilings can apply and the lower wins:
+  `capabilities.signedDownload.maxExpiresIn` is a limit the provider enforces
+  in code (Dropbox pins temporary links to 4 hours), and
+  `capabilities.signedDownloadPolicy.maxExpiresIn` is a documented limit of
+  the adapter's signature format that the provider does not itself enforce
+  (AWS SigV4 stops at 7 days).
+- Omitting `expiresIn` does **not** mean "never expires": the provider's own
+  default applies, and this package neither sets nor verifies it. Pass an
+  explicit value whenever the expiry matters.
+
+## Cross-store transfer and sync
+
+`StorageService.transfer()` copies objects between two stores.
+`StorageService.sync()` makes a destination prefix match a source, and with
+`prune: true` it also **deletes** destination objects the source no longer has.
+Both take `prefix`, `transformKey`, and `onProgress`; `destinationPrefix`,
+`dryRun`, and `prune` belong to `sync()` alone, and `overwrite` to
+`transfer()`. On both, `limit` is the list page size used while walking, not a
+cap on the number of objects.
+
+`sync()` decides what is unchanged with `compare`, which is `'etag'`,
+`'size'`, or a predicate. ETags are opaque, per-driver tokens: the filesystem
+driver emits a truncated sha1, S3 an md5. Syncing across two stores whose
+drivers differ, without an explicit `compare`, fails with `INVALID_ARGUMENT`
+rather than silently re-uploading every object on every run. The check is on
+the driver name, so it is deliberately conservative — S3-compatible endpoints
+under different driver names (MinIO, Wasabi, Spaces) do produce comparable
+ETags, and those callers pass `compare: 'etag'` explicitly. Matching driver
+names are not a guarantee either: two S3 buckets with different multipart part
+sizes yield different ETags for identical content.
+
+```typescript
+await storage.sync({
+  compare: 'size',
+  from: 'staging',
+  to: 'archive',
+});
+```
+
 ## Exact conditional operations
 
 The capability contract distinguishes conditional create, replace, delete,

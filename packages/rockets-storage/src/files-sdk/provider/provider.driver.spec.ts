@@ -122,6 +122,7 @@ describe('createProviderStorageDriver', () => {
     });
     expect(driver.capabilities.signedDownloadPolicy).toEqual({
       expiresIn: true,
+      maxExpiresIn: 604_800,
     });
   });
 
@@ -184,6 +185,7 @@ describe('createProviderStorageDriver', () => {
     expect(driver.capabilities.signedUploadPolicy).toBeUndefined();
     expect(driver.capabilities.signedDownloadPolicy).toEqual({
       expiresIn: false,
+      maxExpiresIn: 604_800,
     });
     expect(driver.capabilities.nativeUploadProgress).toBe(false);
     const client = new StorageClient('unverified-provider', driver);
@@ -229,6 +231,7 @@ describe('createProviderStorageDriver', () => {
     expect(driver.capabilities.signedUpload).toBe(false);
     expect(driver.capabilities.signedDownloadPolicy).toEqual({
       expiresIn: false,
+      maxExpiresIn: 604_800,
     });
     const client = new StorageClient('unverified-minio', driver);
     try {
