@@ -2317,7 +2317,7 @@
         "name": "CompiledOperationDescriptor",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface CompiledOperationDescriptor {\n    readonly key: string;\n    readonly method: OperationHttpMethod;\n    readonly path: string;\n    readonly status: number;\n    readonly summary?: string;\n    readonly public?: boolean;\n    readonly acl?: OperationAclConfig;\n    readonly transactional?: boolean;\n    readonly inputSchema?: z.ZodType;\n    readonly output: z.ZodType | false;\n    readonly handler: OperationHandlerRef;\n    readonly decorators?: readonly MethodDecorator[];\n    readonly responseMode?: 'sse';\n}"
+        "signature": "export interface CompiledOperationDescriptor {\n    readonly key: string;\n    readonly method: OperationHttpMethod;\n    readonly path: string;\n    readonly status: number;\n    readonly summary?: string;\n    readonly public?: boolean;\n    readonly acl?: OperationAclConfig;\n    readonly transactional?: boolean;\n    readonly deadlineMs?: number;\n    readonly inputSchema?: z.ZodType;\n    readonly output: z.ZodType | false;\n    readonly handler: OperationHandlerRef;\n    readonly decorators?: readonly MethodDecorator[];\n    readonly responseMode?: 'sse';\n}"
       },
       {
         "name": "ControllerScan",
@@ -2581,7 +2581,7 @@
         "name": "OperationContext",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface OperationContext<I = unknown, P extends object = Record<string, string>> {\n    readonly input: I;\n    readonly params: Readonly<P>;\n    readonly query: Readonly<Record<string, unknown>>;\n    readonly request: OperationRequest;\n    readonly response: OperationResponse;\n    readonly user: AuthorizedUser | undefined;\n}"
+        "signature": "export interface OperationContext<I = unknown, P extends object = Record<string, string>> {\n    readonly input: I;\n    readonly params: Readonly<P>;\n    readonly query: Readonly<Record<string, unknown>>;\n    readonly request: OperationRequest;\n    readonly response: OperationResponse;\n    readonly user: AuthorizedUser | undefined;\n    readonly signal: AbortSignal;\n}"
       },
       {
         "name": "OperationHandler",
@@ -3615,7 +3615,7 @@
         "name": "OperationRecord",
         "kind": "type",
         "runtime": false,
-        "signature": "export type OperationRecord = {\n    readonly [key: string]: {\n        readonly builder: PendingBuilder;\n        readonly method: OperationHttpMethod;\n        readonly path: string | undefined;\n        readonly status: number | undefined;\n        readonly summary: string | undefined;\n        readonly public: boolean | undefined;\n        readonly acl: OperationAclConfig | undefined;\n        readonly transactional: boolean | undefined;\n        readonly input: z.ZodObject | undefined;\n        readonly output: OperationOutputConfig;\n        readonly handler: unknown;\n        readonly decorators: readonly MethodDecorator[] | undefined;\n    };\n};"
+        "signature": "export type OperationRecord = {\n    readonly [key: string]: {\n        readonly builder: PendingBuilder;\n        readonly method: OperationHttpMethod;\n        readonly path: string | undefined;\n        readonly status: number | undefined;\n        readonly summary: string | undefined;\n        readonly public: boolean | undefined;\n        readonly acl: OperationAclConfig | undefined;\n        readonly transactional: boolean | undefined;\n        readonly deadlineMs: number | undefined;\n        readonly input: z.ZodObject | undefined;\n        readonly output: OperationOutputConfig;\n        readonly handler: unknown;\n        readonly decorators: readonly MethodDecorator[] | undefined;\n    };\n};"
       },
       {
         "name": "OperationResourceInput",
@@ -3633,7 +3633,7 @@
         "name": "PendingOperation",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface PendingOperation<TInput = unknown, TOutput = unknown, TParams extends object = object> {\n    readonly builder: PendingBuilder;\n    readonly method: OperationHttpMethod;\n    readonly path: string | undefined;\n    readonly status: number | undefined;\n    readonly summary: string | undefined;\n    readonly public: boolean | undefined;\n    readonly acl: OperationAclConfig | undefined;\n    readonly transactional: boolean | undefined;\n    readonly input: z.ZodObject | undefined;\n    readonly output: OperationOutputConfig;\n    readonly handler: OperationHandlerRef<TInput, TOutput, TParams>;\n    readonly decorators: readonly MethodDecorator[] | undefined;\n}"
+        "signature": "export interface PendingOperation<TInput = unknown, TOutput = unknown, TParams extends object = object> {\n    readonly builder: PendingBuilder;\n    readonly method: OperationHttpMethod;\n    readonly path: string | undefined;\n    readonly status: number | undefined;\n    readonly summary: string | undefined;\n    readonly public: boolean | undefined;\n    readonly acl: OperationAclConfig | undefined;\n    readonly transactional: boolean | undefined;\n    readonly deadlineMs: number | undefined;\n    readonly input: z.ZodObject | undefined;\n    readonly output: OperationOutputConfig;\n    readonly handler: OperationHandlerRef<TInput, TOutput, TParams>;\n    readonly decorators: readonly MethodDecorator[] | undefined;\n}"
       },
       {
         "name": "ReadBuilderConfig",
@@ -4679,7 +4679,7 @@
       {
         "name": "CompiledOperationDescriptor",
         "kind": "interface",
-        "signature": "export interface CompiledOperationDescriptor {\n    readonly key: string;\n    readonly method: OperationHttpMethod;\n    readonly path: string;\n    readonly status: number;\n    readonly summary?: string;\n    readonly public?: boolean;\n    readonly acl?: OperationAclConfig;\n    readonly transactional?: boolean;\n    readonly inputSchema?: z.ZodType;\n    readonly output: z.ZodType | false;\n    readonly handler: OperationHandlerRef;\n    readonly decorators?: readonly MethodDecorator[];\n    readonly responseMode?: 'sse';\n}",
+        "signature": "export interface CompiledOperationDescriptor {\n    readonly key: string;\n    readonly method: OperationHttpMethod;\n    readonly path: string;\n    readonly status: number;\n    readonly summary?: string;\n    readonly public?: boolean;\n    readonly acl?: OperationAclConfig;\n    readonly transactional?: boolean;\n    readonly deadlineMs?: number;\n    readonly inputSchema?: z.ZodType;\n    readonly output: z.ZodType | false;\n    readonly handler: OperationHandlerRef;\n    readonly decorators?: readonly MethodDecorator[];\n    readonly responseMode?: 'sse';\n}",
         "referencedBy": [
           "OperationResourceInput",
           "ZodOperationResource"
@@ -4896,7 +4896,7 @@
       {
         "name": "OperationContext",
         "kind": "interface",
-        "signature": "export interface OperationContext<I = unknown, P extends object = Record<string, string>> {\n    readonly input: I;\n    readonly params: Readonly<P>;\n    readonly query: Readonly<Record<string, unknown>>;\n    readonly request: OperationRequest;\n    readonly response: OperationResponse;\n    readonly user: AuthorizedUser | undefined;\n}",
+        "signature": "export interface OperationContext<I = unknown, P extends object = Record<string, string>> {\n    readonly input: I;\n    readonly params: Readonly<P>;\n    readonly query: Readonly<Record<string, unknown>>;\n    readonly request: OperationRequest;\n    readonly response: OperationResponse;\n    readonly user: AuthorizedUser | undefined;\n    readonly signal: AbortSignal;\n}",
         "referencedBy": [
           "DeleteBuilderConfig",
           "OperationResourceInput",
@@ -5370,7 +5370,7 @@
       {
         "name": "SharedBuilderFields",
         "kind": "interface",
-        "signature": "interface SharedBuilderFields<TInput extends z.ZodObject | undefined, TOutput extends OperationOutputConfig, TParams extends object> {\n    readonly status?: number;\n    readonly summary?: string;\n    readonly public?: boolean;\n    readonly acl?: OperationAclConfig;\n    readonly transactional?: boolean;\n    readonly input?: TInput;\n    readonly output: TOutput;\n    readonly handler: OperationHandlerRef<InferIn<TInput>, InferOut<TOutput>, TParams>;\n    readonly decorators?: readonly MethodDecorator[];\n}",
+        "signature": "interface SharedBuilderFields<TInput extends z.ZodObject | undefined, TOutput extends OperationOutputConfig, TParams extends object> {\n    readonly status?: number;\n    readonly summary?: string;\n    readonly public?: boolean;\n    readonly acl?: OperationAclConfig;\n    readonly transactional?: boolean;\n    readonly deadlineMs?: number;\n    readonly input?: TInput;\n    readonly output: TOutput;\n    readonly handler: OperationHandlerRef<InferIn<TInput>, InferOut<TOutput>, TParams>;\n    readonly decorators?: readonly MethodDecorator[];\n}",
         "referencedBy": [
           "DeleteBuilderConfig",
           "ReadBuilderConfig",

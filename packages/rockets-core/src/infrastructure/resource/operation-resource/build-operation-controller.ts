@@ -18,6 +18,7 @@ import {
   Controller,
   Delete,
   Get,
+  GatewayTimeoutException,
   HttpCode,
   HttpException,
   InternalServerErrorException,
@@ -108,6 +109,158 @@ function outputValidationError(
     message: 'Operation handler returned a value that failed output validation',
     error: 'Internal Server Error',
   });
+}
+
+/**
+ * Structural view of the native request — Node's `IncomingMessage` is an
+ * `EventEmitter`, so `close` fires on client disconnect. Declared narrowly
+ * rather than importing `http.IncomingMessage` to keep this
+ * transport-agnostic, and every member is optional: an adapter whose
+ * request object is not an EventEmitter simply gets no disconnect
+ * detection, never a crash. (Only the Express adapter is exercised by
+ * this repository; no claim is made about others.)
+ */
+interface DisconnectableRequest {
+  readonly on?: (event: 'close', listener: () => void) => unknown;
+  readonly off?: (event: 'close', listener: () => void) => unknown;
+}
+
+interface DeadlineGuard {
+  readonly signal: AbortSignal;
+  /**
+   * Races `promise` against the deadline/disconnect abort — whichever
+   * settles first wins, exactly like `Promise.race`.
+   */
+  race<T>(promise: Promise<T> | T): Promise<T>;
+  dispose(): void;
+}
+
+/**
+ * Marks an abort caused by the CLIENT going away, as opposed to the
+ * deadline elapsing. `routeHandler` uses this to skip the normal
+ * response/exception-filter path entirely — the socket is already
+ * gone, so there is nothing useful to write back and no application
+ * error occurred. Not exported: an internal signal between
+ * `createDeadlineGuard` and `routeHandler` in this file only.
+ */
+class OperationClientDisconnectedError extends Error {}
+
+/**
+ * Issue #78: bounds one operation's own request/response cycle, not a
+ * per-downstream-call budget. `deadlineMs` elapsing aborts `signal` and
+ * resolves the request `504 Gateway Timeout`; a client disconnect aborts
+ * `signal` too, but nothing is written back — the socket is already gone,
+ * so the only point of aborting is to let a cooperative handler stop
+ * wasted work.
+ */
+function createDeadlineGuard(
+  deadlineMs: number | undefined,
+  request: unknown,
+  label: string,
+  settleOnAbort: boolean,
+): DeadlineGuard {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+
+  if (deadlineMs !== undefined) {
+    timer = setTimeout(() => {
+      timedOut = true;
+      // The client-facing message names neither the generated controller
+      // nor the configured budget: this body is authored by core, reaches
+      // anonymous callers on a `public: true` operation, and the filter
+      // passes an author-chosen 5xx body through unmasked. The operator
+      // detail goes to the log below instead.
+      logger.warn(`Operation "${label}" exceeded its ${deadlineMs}ms deadline`);
+      controller.abort(
+        new GatewayTimeoutException('Request exceeded its deadline'),
+      );
+      // Unref so a pending deadline never keeps the process alive on its
+      // own — same reasoning as any other background timer in a server.
+    }, deadlineMs);
+    (timer as unknown as { unref?: () => void }).unref?.();
+  }
+
+  const req = request as DisconnectableRequest;
+  const onClose = (): void => {
+    // A deadline that already fired owns the abort reason — a disconnect
+    // arriving after does not need to (and should not) overwrite it.
+    if (!timedOut) {
+      controller.abort(
+        new OperationClientDisconnectedError(
+          `Operation "${label}": client disconnected`,
+        ),
+      );
+    }
+  };
+  req.on?.('close', onClose);
+
+  const abortedPromise = new Promise<never>((_resolve, reject) => {
+    controller.signal.addEventListener('abort', () => {
+      reject(controller.signal.reason as unknown);
+    });
+  });
+  // `abortedPromise` can reject before `race()` is ever called — e.g.
+  // while `routeHandler` is still `await`ing DI resolution, well before
+  // it reaches `deadline.race(...)`. Without a handler attached from the
+  // moment it exists, that is an unhandled rejection, and Node's default
+  // `--unhandled-rejections=throw` (Node ≥15) kills the whole process on
+  // a single slow/cancelled request — confirmed by reproduction. A
+  // permanent no-op catch keeps this promise "handled" unconditionally;
+  // `race()` below still observes the SAME rejection through its own
+  // `Promise.race` call, so behavior for callers is unchanged.
+  abortedPromise.catch(() => undefined);
+
+  return {
+    signal: controller.signal,
+    race<T>(promise: Promise<T> | T): Promise<T> {
+      // A TRANSACTIONAL route never settles early. The abort still
+      // reaches `ctx.signal`, so a cooperative handler can stop its own
+      // work, but the response path must not resolve or reject while the
+      // handler is live: `Transactional()`'s interceptor settles the
+      // scope on whatever this returns, and it settles the transaction
+      // the handler is still writing into — commit on a disconnect
+      // (half a unit of work, durably), rollback on a deadline, and in
+      // both cases the `TrxCtx` overlay is removed, so every later
+      // repository call in that handler auto-commits outside any
+      // transaction. `deadlineMs` is rejected at definition time for
+      // these routes, so the only abort reaching here is a disconnect.
+      if (!settleOnAbort) {
+        return Promise.resolve(promise);
+      }
+      // If the deadline/disconnect already fired by the time `race()`
+      // is called (the same slow-DI window above), do not hand this to
+      // `Promise.race`: when BOTH inputs are already-settled promises,
+      // `Promise.race` resolves to whichever settles its `.then()`
+      // microtask FIRST, which for two already-settled promises is
+      // decided by ARRAY ORDER, not by which rejected/resolved first in
+      // wall-clock time. `promise` here is passed first, so an
+      // already-fulfilled handler result would silently beat an
+      // earlier-rejected deadline — confirmed by reproduction (a
+      // handler with a slow DI subtree returned 200 well past its
+      // configured `deadlineMs`, instead of 504). Rejecting immediately
+      // here removes the ambiguity entirely.
+      if (controller.signal.aborted) {
+        // `promise` is ALREADY RUNNING — the argument was evaluated
+        // before `race()` was entered — and returning without attaching
+        // a handler leaves its later rejection unobserved. That is the
+        // same crash the permanent catch on `abortedPromise` above
+        // prevents, on the sibling path: under Node's default
+        // `--unhandled-rejections=throw` a handler that rejects after
+        // its deadline fired takes the process down. Observed, then
+        // discarded — the caller already gets the abort reason below.
+        void Promise.resolve(promise).catch(() => undefined);
+        return Promise.reject(
+          controller.signal.reason as unknown,
+        ) as Promise<T>;
+      }
+      return Promise.race([promise, abortedPromise]);
+    },
+    dispose(): void {
+      if (timer !== undefined) clearTimeout(timer);
+      req.off?.('close', onClose);
+    },
+  };
 }
 
 /**
@@ -585,6 +738,21 @@ function assertRegisteredRouteShape(
     );
   }
 
+  // `deadlineMs` on an SSE descriptor is the fourth variant of the
+  // defect the three checks above close: `op.sse()` omits the field, but
+  // a hand-built descriptor can carry both, and `dispose()` in the route
+  // handler's `finally` clears the timer before a single event is
+  // emitted — the deadline would silently never fire.
+  if (declaredSse && operation.deadlineMs !== undefined) {
+    throw new Error(
+      `operationResource: SSE operation "${operation.key}" declares ` +
+        `\`deadlineMs\`. The handler returns its Observable immediately, so ` +
+        `the guard is disposed before the first event and the deadline can ` +
+        `never fire — a silent no-op. Bound the work inside the stream ` +
+        `instead. (${label})`,
+    );
+  }
+
   // Handler first, then the class: a resource-level
   // `decorators: [Transactional()]` applies to every route, and a
   // route-level `Transactional(false)` opts that one route back out.
@@ -598,6 +766,41 @@ function assertRegisteredRouteShape(
         `inside the stream (TransactionScope.run) if a specific emission ` +
         `needs one. (${label})`,
     );
+  }
+
+  if (operation.deadlineMs !== undefined) {
+    // `setTimeout` clamps anything below 1 to 1ms, so `0` — the natural
+    // way to write "no deadline" — would 504 every async handler
+    // instead. Fail here rather than in production traffic.
+    if (!Number.isFinite(operation.deadlineMs) || operation.deadlineMs <= 0) {
+      throw new Error(
+        `operationResource: operation "${operation.key}" declares ` +
+          `\`deadlineMs: ${String(operation.deadlineMs)}\`. A deadline must ` +
+          `be a finite number of milliseconds greater than zero; omit the ` +
+          `field for no deadline. (${label})`,
+      );
+    }
+
+    // A deadline and a transaction cannot both own the request. The
+    // deadline resolves the response while the handler keeps running,
+    // and `Transactional()`'s interceptor settles the scope on that
+    // response — rolling back a transaction whose handler is still
+    // writing, and removing the `TrxCtx` overlay, so every repository
+    // call after that point auto-commits outside ANY transaction. That
+    // is the fail-open repository rule 16 exists to prevent, reachable
+    // without a single missing `ctx`. Bound the work inside the handler
+    // (`ctx.signal`, or `TransactionScope.run`'s own `timeout`) instead.
+    if (isTransactional(handler, controllerClass)) {
+      throw new Error(
+        `operationResource: operation "${operation.key}" combines ` +
+          `\`deadlineMs\` with Transactional(). The deadline settles the ` +
+          `response — and therefore the transaction — while the handler is ` +
+          `still running, so its remaining writes would land outside any ` +
+          `transaction. Bound the work inside the handler via \`ctx.signal\` ` +
+          `or TransactionScope.run's \`timeout\`, or drop one of the two. ` +
+          `(${label})`,
+      );
+    }
   }
 }
 
@@ -637,6 +840,11 @@ function attachOperationMethod(
     : METHOD_DECORATOR[operation.method](operation.path);
 
   const label = `${controllerName}.${methodName}`;
+  // Written once, AFTER every decorator has been applied and read back
+  // (see `assertRegisteredRouteShape` below) and before any request can
+  // arrive. `false` until then so a transactional route can never be
+  // treated as an abortable one by accident.
+  let settleOnAbort = false;
   const readsQuery =
     operation.method === 'GET' || operation.method === 'DELETE';
 
@@ -664,6 +872,13 @@ function attachOperationMethod(
       raw: request,
     };
 
+    const deadline = createDeadlineGuard(
+      operation.deadlineMs,
+      request,
+      label,
+      settleOnAbort,
+    );
+
     const ctx: OperationContext<unknown, object> = {
       input,
       params:
@@ -672,42 +887,62 @@ function attachOperationMethod(
       request: operationRequest,
       response: { raw: response },
       user,
+      signal: deadline.signal,
     };
 
-    let result: unknown;
-    const handlerClass = getHandlerClass(operation.handler);
-    if (handlerClass !== undefined) {
-      const contextId = ContextIdFactory.getByRequest(request);
-      // Register the REQUEST under the context id before resolving:
-      // this controller is statically scoped, so the request carries no
-      // context id of its own and `getByRequest` mints a fresh one —
-      // without registration, a handler (or any dependency in its
-      // subtree) injecting `REQUEST` received `undefined` and 500'd on
-      // every call, though the same class works fine as an ordinary
-      // controller dependency.
-      this.moduleRef.registerRequestByContextId(request, contextId);
-      // Always strict: either the class is registered here, or a local
-      // alias for it is. Never a global scan.
-      const token: unknown = handlerAliases.get(handlerClass) ?? handlerClass;
-      const instance = await this.moduleRef.resolve<{
-        handle: (ctx: OperationContext<unknown, object>) => unknown;
-      }>(token as never, contextId, { strict: true });
-      result = await instance.handle(ctx);
-    } else if (isHandlerFunction(operation.handler)) {
-      const handler: OperationHandlerFn<unknown, unknown, object> =
-        operation.handler;
-      result = await handler(ctx);
-    } else {
-      throw new Error(`operationResource: invalid handler for "${label}"`);
-    }
+    try {
+      let result: unknown;
+      const handlerClass = getHandlerClass(operation.handler);
+      if (handlerClass !== undefined) {
+        const contextId = ContextIdFactory.getByRequest(request);
+        // Register the REQUEST under the context id before resolving:
+        // this controller is statically scoped, so the request carries no
+        // context id of its own and `getByRequest` mints a fresh one —
+        // without registration, a handler (or any dependency in its
+        // subtree) injecting `REQUEST` received `undefined` and 500'd on
+        // every call, though the same class works fine as an ordinary
+        // controller dependency.
+        this.moduleRef.registerRequestByContextId(request, contextId);
+        // Always strict: either the class is registered here, or a local
+        // alias for it is. Never a global scan.
+        const token: unknown = handlerAliases.get(handlerClass) ?? handlerClass;
+        const instance = await this.moduleRef.resolve<{
+          handle: (ctx: OperationContext<unknown, object>) => unknown;
+        }>(token as never, contextId, { strict: true });
+        result = await deadline.race(instance.handle(ctx));
+      } else if (isHandlerFunction(operation.handler)) {
+        const handler: OperationHandlerFn<unknown, unknown, object> =
+          operation.handler;
+        result = await deadline.race(handler(ctx));
+      } else {
+        throw new Error(`operationResource: invalid handler for "${label}"`);
+      }
 
-    if (isSse) {
-      return maskSseStreamErrors(result, label);
+      // An SSE handler returns its Observable immediately, so `finally`
+      // below disposes the guard before a single event is emitted. That is
+      // deliberate: `op.sse()` exposes no `deadlineMs`, and the only thing
+      // left to cancel would be the stream itself, which a request
+      // deadline has no business cutting.
+      if (isSse) {
+        return maskSseStreamErrors(result, label);
+      }
+      if (operation.output === false) {
+        return result;
+      }
+      return applyOutputSchema(operation.output, result, label);
+    } catch (error) {
+      // The socket is already gone — there is nothing to write back and
+      // no application error occurred, so this must not reach the
+      // exceptions filter as a logged 5xx. A handler that never checked
+      // `ctx.signal` simply loses whatever it was doing, same as if the
+      // process had been killed mid-request.
+      if (error instanceof OperationClientDisconnectedError) {
+        return undefined;
+      }
+      throw error;
+    } finally {
+      deadline.dispose();
     }
-    if (operation.output === false) {
-      return result;
-    }
-    return applyOutputSchema(operation.output, result, label);
   }
 
   Object.defineProperty(routeHandler, 'name', { value: methodName });
@@ -819,6 +1054,15 @@ function attachOperationMethod(
       controllerClass,
       descriptor.value as object,
       label,
+    );
+    // Read from the SAME metadata the assertions just validated, and
+    // only after every decorator has written: a resource-level
+    // `Transactional()` and a route-level `Transactional(false)` both
+    // land here. A transactional route never settles its response on an
+    // abort — see `race()` in `createDeadlineGuard`.
+    settleOnAbort = !isTransactional(
+      descriptor.value as object,
+      controllerClass,
     );
   }
   Object.defineProperty(proto, methodName, descriptor);
