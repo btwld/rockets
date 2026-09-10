@@ -42,10 +42,9 @@ import {
   type RepositoryFindOneOptions,
   type RepositoryFindOptions,
 } from '@concepta/nestjs-repository';
-import { Expose, Type } from 'class-transformer';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { withOpenApi } from '@concepta/nestjs-core';
 import request from 'supertest';
+import { z } from 'zod';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
@@ -53,6 +52,7 @@ import type {
 } from '../domain/interfaces/auth-adapter.interface';
 import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { RocketsCoreModule } from '../rockets-core.module';
+import { SwaggerUiService } from '../common/swagger-ui/swagger-ui.service';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../rockets-core.constants';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineResource } from '../infrastructure/resource/define-resource';
@@ -103,6 +103,55 @@ class ParentEntity {
   // must satisfy `keyof Parent`. The actual joins live on the child.
   children?: ChildEntity[];
   childrenNoReload?: ChildNoReloadEntity[];
+  stamps?: StampEntity[];
+  unscopedNotes?: UnscopedNoteEntity[];
+  looseMiddles?: LooseMiddleEntity[];
+}
+
+// Every column is server-stamped (pk, FK from the path, owner from the
+// actor): the create body is legitimately `{}`.
+@Entity('stamps')
+class StampEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'uuid' }) parentId!: string;
+  @Column({ type: 'varchar' }) userId!: string;
+  @Column({ type: 'varchar', nullable: true }) note?: string | null;
+}
+
+@Entity('unscoped_notes')
+class UnscopedNoteEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'uuid' }) parentId!: string;
+  @Column({ type: 'varchar' }) label!: string;
+}
+
+// Depth-3 probe under `scope: false`: ancestor params are `disabled`, so
+// they never reach `buildWhere`, and `scope: false` drops the guard that
+// verified the chain. Does a child of ANOTHER parent stay reachable?
+@Entity('unscoped_deep_notes')
+class UnscopedDeepNoteEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'uuid' }) childId!: string;
+  @Column({ type: 'varchar' }) label!: string;
+}
+
+// The variant the depth-3 fixture cannot see: the UNSCOPED level is the
+// MIDDLE one, so it composes no `PathScopeHook` for the deep guard to
+// replay. Probed below.
+@Entity('loose_middles')
+class LooseMiddleEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'uuid' }) parentId!: string;
+  @Column({ type: 'varchar' }) title!: string;
+  // Phantom relation property — sub-resource keys must satisfy `keyof E`.
+  looseLeaves?: LooseLeafEntity[];
+}
+
+@Entity('loose_leaves')
+class LooseLeafEntity {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'uuid' }) looseMiddleId!: string;
+  @Column({ type: 'varchar' }) label!: string;
 }
 
 @Entity('children')
@@ -119,6 +168,7 @@ class ChildEntity {
   category?: CategoryEntity;
   @DeleteDateColumn() dateDeleted?: Date;
   notes?: GrandchildEntity[];
+  unscopedDeepNotes?: UnscopedDeepNoteEntity[];
 }
 
 @Entity('grandchildren')
@@ -147,69 +197,126 @@ class PlainItemEntity {
   @DeleteDateColumn() dateDeleted?: Date;
 }
 
-// ── DTOs ──
+// ── Schemas ──
 
-class CategoryResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() label!: string;
-}
+const categoryResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), label: z.string() }),
+  'CategoryResponseDto',
+);
 
-class CategoryCreateDto {
-  @Expose() @IsString() @ApiProperty() label!: string;
-}
+const categoryCreateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'CategoryCreateDto',
+);
 
-class ParentCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose() @IsOptional() @IsUUID() @ApiPropertyOptional() categoryId?: string;
-}
+const parentCreateSchema = withOpenApi(
+  z.object({ name: z.string(), categoryId: z.uuid().optional() }),
+  'ParentCreateDto',
+);
 
-class ParentResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiPropertyOptional() categoryId?: string;
-  @Expose()
-  @Type(() => CategoryResponseDto)
-  @ApiPropertyOptional({ type: () => CategoryResponseDto })
-  category?: CategoryResponseDto;
-  @Expose() @ApiPropertyOptional() dateDeleted?: string;
-}
+const parentResponseSchema = withOpenApi(
+  z.object({
+    id: z.uuid(),
+    name: z.string(),
+    categoryId: z.uuid().nullable().optional(),
+    category: categoryResponseSchema.nullable().optional(),
+    dateDeleted: z.date().nullable().optional(),
+  }),
+  'ParentResponseDto',
+);
 
-class ChildCreateDto {
-  @Expose() @IsString() @ApiProperty() title!: string;
-  @Expose() @IsUUID() @ApiProperty() categoryId!: string;
-}
+const childCreateSchema = withOpenApi(
+  z.object({ title: z.string(), categoryId: z.uuid() }),
+  'ChildCreateDto',
+);
 
-class GrandchildCreateDto {
-  @Expose() @IsString() @ApiProperty() label!: string;
-}
+const grandchildCreateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'GrandchildCreateDto',
+);
 
-class GrandchildResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() label!: string;
-  @Expose() @ApiProperty() childId!: string;
-}
+const grandchildResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), label: z.string(), childId: z.uuid() }),
+  'GrandchildResponseDto',
+);
 
-class ChildResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() title!: string;
-  @Expose() @ApiProperty() parentId!: string;
-  @Expose() @ApiProperty() categoryId!: string;
-  @Expose()
-  @Type(() => CategoryResponseDto)
-  @ApiPropertyOptional({ type: () => CategoryResponseDto })
-  category?: CategoryResponseDto;
-  @Expose() @ApiPropertyOptional() dateDeleted?: string;
-}
+const stampCreateSchema = withOpenApi(
+  z.object({ note: z.string().optional() }),
+  'StampCreateDto',
+);
 
-class PlainItemCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-}
+const stampResponseSchema = withOpenApi(
+  z.object({
+    id: z.uuid(),
+    parentId: z.uuid(),
+    userId: z.string(),
+    note: z.string().nullable().optional(),
+  }),
+  'StampResponseDto',
+);
 
-class PlainItemResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiPropertyOptional() dateDeleted?: string;
-}
+const unscopedNoteCreateSchema = withOpenApi(
+  z.object({ label: z.string(), parentId: z.uuid().optional() }),
+  'UnscopedNoteCreateDto',
+);
+
+const unscopedNoteResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), parentId: z.uuid(), label: z.string() }),
+  'UnscopedNoteResponseDto',
+);
+
+const unscopedDeepNoteCreateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'UnscopedDeepNoteCreateDto',
+);
+
+const unscopedDeepNoteResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), childId: z.uuid(), label: z.string() }),
+  'UnscopedDeepNoteResponseDto',
+);
+
+const looseMiddleCreateSchema = withOpenApi(
+  z.object({ title: z.string() }),
+  'LooseMiddleCreateDto',
+);
+const looseMiddleResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), parentId: z.uuid(), title: z.string() }),
+  'LooseMiddleResponseDto',
+);
+const looseLeafCreateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'LooseLeafCreateDto',
+);
+const looseLeafResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), looseMiddleId: z.uuid(), label: z.string() }),
+  'LooseLeafResponseDto',
+);
+
+const childResponseSchema = withOpenApi(
+  z.object({
+    id: z.uuid(),
+    title: z.string(),
+    parentId: z.uuid(),
+    categoryId: z.uuid(),
+    category: categoryResponseSchema.nullable().optional(),
+    dateDeleted: z.date().nullable().optional(),
+  }),
+  'ChildResponseDto',
+);
+
+const plainItemCreateSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'PlainItemCreateDto',
+);
+
+const plainItemResponseSchema = withOpenApi(
+  z.object({
+    id: z.uuid(),
+    name: z.string(),
+    dateDeleted: z.date().nullable().optional(),
+  }),
+  'PlainItemResponseDto',
+);
 
 // ── User-metadata stub ──
 
@@ -336,14 +443,14 @@ const parentResource = defineResource<ParentEntity>({
   ],
   relations: (rel) => [rel(CategoryEntity, 'category')],
   operations: {
-    list: { output: ParentResponseDto },
-    read: { output: ParentResponseDto },
+    list: { output: parentResponseSchema },
+    read: { output: parentResponseSchema },
     // `transactional` is what exposes the reload hook's `ctx`: the row is
     // inserted inside the transaction, so a reload that does not join it
     // cannot see the row and the eager relation goes missing.
     create: {
-      input: ParentCreateDto,
-      output: ParentResponseDto,
+      input: parentCreateSchema,
+      output: parentResponseSchema,
       transactional: true,
     },
     delete: { soft: true, returnDeleted: true },
@@ -361,9 +468,9 @@ const parentResource = defineResource<ParentEntity>({
       hooks: [OwnerStampHook.for(ChildEntity)],
       relations: (rel) => [rel(CategoryEntity, 'category')],
       operations: {
-        list: { output: ChildResponseDto },
-        read: { output: ChildResponseDto },
-        create: { input: ChildCreateDto, output: ChildResponseDto },
+        list: { output: childResponseSchema },
+        read: { output: childResponseSchema },
+        create: { input: childCreateSchema, output: childResponseSchema },
         delete: { soft: true, returnDeleted: true },
       },
       // Third level. Its guard looks the CHILD up, replaying the child's
@@ -372,6 +479,21 @@ const parentResource = defineResource<ParentEntity>({
       // clause disappears and a child of a DIFFERENT parent (same owner)
       // becomes reachable through this path.
       subResources: {
+        unscopedDeepNotes: defineSubResource<UnscopedDeepNoteEntity>({
+          key: 'unscopedDeepNote',
+          entity: UnscopedDeepNoteEntity,
+          parentKey: 'childId',
+          segment: 'unscoped-deep-notes',
+          tags: ['Unscoped deep notes'],
+          scope: false,
+          operations: {
+            list: { output: unscopedDeepNoteResponseSchema },
+            create: {
+              input: unscopedDeepNoteCreateSchema,
+              output: unscopedDeepNoteResponseSchema,
+            },
+          },
+        }),
         notes: defineSubResource<GrandchildEntity>({
           key: 'grandchild',
           entity: GrandchildEntity,
@@ -380,10 +502,10 @@ const parentResource = defineResource<ParentEntity>({
           tags: ['Grandchildren'],
           owner: 'userId',
           operations: {
-            list: { output: GrandchildResponseDto },
+            list: { output: grandchildResponseSchema },
             create: {
-              input: GrandchildCreateDto,
-              output: GrandchildResponseDto,
+              input: grandchildCreateSchema,
+              output: grandchildResponseSchema,
             },
           },
         }),
@@ -399,8 +521,77 @@ const parentResource = defineResource<ParentEntity>({
       owner: 'userId',
       relations: (rel) => [rel(CategoryEntity, 'category')],
       operations: {
-        list: { output: ChildResponseDto },
-        create: { input: ChildCreateDto, output: ChildResponseDto },
+        list: { output: childResponseSchema },
+        create: { input: childCreateSchema, output: childResponseSchema },
+      },
+    }),
+    // All-server-stamped child: the create body is `{}` and the row is
+    // filled by PathScopeHook (parentId) + OwnerStampHook (userId).
+    stamps: defineSubResource<StampEntity>({
+      key: 'stamp',
+      entity: StampEntity,
+      tags: ['Stamps'],
+      owner: 'userId',
+      hooks: [OwnerStampHook.for(StampEntity)],
+      operations: {
+        list: { output: stampResponseSchema },
+        create: { input: stampCreateSchema, output: stampResponseSchema },
+      },
+    }),
+    // Three levels deep: the leaf's guard verifies its parent through the
+    // MIDDLE's own `PathScopeHook`, which is why the middle may not be
+    // `scope: false` (refused at definition time — pinned below).
+    looseMiddles: defineSubResource<LooseMiddleEntity>({
+      key: 'looseMiddle',
+      entity: LooseMiddleEntity,
+      segment: 'loose-middles',
+      tags: ['Loose middles'],
+      operations: {
+        list: { output: looseMiddleResponseSchema },
+        create: {
+          input: looseMiddleCreateSchema,
+          output: looseMiddleResponseSchema,
+        },
+      },
+      subResources: {
+        looseLeaves: defineSubResource<LooseLeafEntity>({
+          key: 'looseLeaf',
+          entity: LooseLeafEntity,
+          parentKey: 'looseMiddleId',
+          segment: 'loose-leaves',
+          tags: ['Loose leaves'],
+          owner: false,
+          operations: {
+            list: { output: looseLeafResponseSchema },
+            create: {
+              input: looseLeafCreateSchema,
+              output: looseLeafResponseSchema,
+            },
+          },
+        }),
+      },
+    }),
+    // `scope: false` drops the FK filter hook AND the ownership guard.
+    // It does NOT drop the parent's `:param` from the CRUD route params,
+    // so writes still take `parentId` from the URL — pinned below.
+    unscopedNotes: defineSubResource<UnscopedNoteEntity>({
+      key: 'unscopedNote',
+      entity: UnscopedNoteEntity,
+      segment: 'unscoped-notes',
+      tags: ['Unscoped notes'],
+      scope: false,
+      operations: {
+        list: { output: unscopedNoteResponseSchema },
+        read: { output: unscopedNoteResponseSchema },
+        create: {
+          input: unscopedNoteCreateSchema,
+          output: unscopedNoteResponseSchema,
+        },
+        update: {
+          input: unscopedNoteCreateSchema,
+          output: unscopedNoteResponseSchema,
+        },
+        delete: { returnDeleted: true },
       },
     }),
   },
@@ -415,9 +606,9 @@ const plainItemResource = defineResource<PlainItemEntity>({
   // No eager relation, no AfterCreateReloadHook — proves the path
   // works fine without it.
   operations: {
-    list: { output: PlainItemResponseDto },
-    read: { output: PlainItemResponseDto },
-    create: { input: PlainItemCreateDto, output: PlainItemResponseDto },
+    list: { output: plainItemResponseSchema },
+    read: { output: plainItemResponseSchema },
+    create: { input: plainItemCreateSchema, output: plainItemResponseSchema },
     delete: { soft: true, returnDeleted: true },
   },
 });
@@ -432,9 +623,9 @@ const categoryResource = defineResource<CategoryEntity>({
   tags: ['Categories'],
   public: true,
   operations: {
-    list: { output: CategoryResponseDto },
-    read: { output: CategoryResponseDto },
-    create: { input: CategoryCreateDto, output: CategoryResponseDto },
+    list: { output: categoryResponseSchema },
+    read: { output: categoryResponseSchema },
+    create: { input: categoryCreateSchema, output: categoryResponseSchema },
   },
 });
 
@@ -457,6 +648,11 @@ describe('RocketsCoreModule + defineSubResource + AfterCreateReloadHook (e2e)', 
             ChildEntity,
             ChildNoReloadEntity,
             GrandchildEntity,
+            StampEntity,
+            UnscopedNoteEntity,
+            UnscopedDeepNoteEntity,
+            LooseMiddleEntity,
+            LooseLeafEntity,
             PlainItemEntity,
           ],
           synchronize: true,
@@ -623,6 +819,225 @@ describe('RocketsCoreModule + defineSubResource + AfterCreateReloadHook (e2e)', 
         categoryId: categoryAId,
         category: { id: categoryAId, label: 'A' },
       });
+    });
+
+    it('documents the sub-resource create body as a $ref to its named component', () => {
+      const document = app.get(SwaggerUiService).createDocument(app);
+      const body =
+        document.paths['/parents/{parentId}/children']?.post?.requestBody;
+      const schema =
+        body !== undefined && 'content' in body
+          ? body.content['application/json']?.schema
+          : undefined;
+      expect(schema).toEqual({ $ref: '#/components/schemas/ChildCreateDto' });
+      expect(document.components?.schemas?.ChildCreateDto).toMatchObject({
+        type: 'object',
+        required: ['title', 'categoryId'],
+      });
+    });
+
+    // The validated body is the contract: a create that validates to `{}`
+    // is a valid create, and the hooks fill the row. Upstream answered it
+    // with a bare 400 until nestjs-modules#466.
+    it('create with an empty body on an all-server-stamped sub-resource is a 201', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/parents/${parentId}/stamps`)
+        .set('Authorization', 'Bearer u1')
+        .send({});
+      expect(res.status, JSON.stringify(res.body)).toBe(201);
+
+      expect(res.body).toMatchObject({ parentId, userId: 'u1' });
+      expect(typeof res.body.id).toBe('string');
+
+      const list = await request(app.getHttpServer())
+        .get(`/parents/${parentId}/stamps`)
+        .set('Authorization', 'Bearer u1')
+        .expect(200);
+      expect(list.body.data).toHaveLength(1);
+      expect(list.body.data[0].id).toBe(res.body.id);
+    });
+
+    // `scope: false` drops the `PathScopeHook` and the ownership guard —
+    // it does NOT make the route unscoped. The parent's `:param` stays a
+    // CRUD route param whose `field` is the FK column, and upstream uses
+    // it BOTH ways: `buildWhere` turns it into a `Where.eq` on every read,
+    // and the adapter merges it over the body on every write.
+    it('scope: false still stamps the FK from the URL on create', async () => {
+      const other = await request(app.getHttpServer())
+        .post('/parents')
+        .set('Authorization', 'Bearer u1')
+        .send({ name: 'other-parent' })
+        .expect(201);
+
+      // Body omits the FK entirely.
+      const bare = await request(app.getHttpServer())
+        .post(`/parents/${parentId}/unscoped-notes`)
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'from-url' });
+      expect(bare.status, JSON.stringify(bare.body)).toBe(201);
+      expect(bare.body.parentId).toBe(parentId);
+
+      // Body names a DIFFERENT parent — the URL still wins.
+      const conflicting = await request(app.getHttpServer())
+        .post(`/parents/${parentId}/unscoped-notes`)
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'url-wins', parentId: other.body.id })
+        .expect(201);
+      expect(conflicting.body.parentId).toBe(parentId);
+    });
+
+    // The other half, and the one the name `scope: false` gets wrong:
+    // reads stay FK-filtered too, because `buildWhere` turns every route
+    // param into a `Where.eq`. `scope: false` drops the ownership CLAUSE
+    // in the guard — it does not drop the guard, so the parent must
+    // still exist and must still be visible to its own hooks.
+    it('scope: false keeps reads FK-filtered and still requires a visible parent', async () => {
+      const other = await request(app.getHttpServer())
+        .post('/parents')
+        .set('Authorization', 'Bearer u1')
+        .send({ name: 'read-scope-parent' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(`/parents/${other.body.id}/unscoped-notes`)
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'under-other' })
+        .expect(201);
+
+      const mine = await request(app.getHttpServer())
+        .get(`/parents/${parentId}/unscoped-notes`)
+        .set('Authorization', 'Bearer u1')
+        .expect(200);
+
+      // The row created under `other` is NOT visible here.
+      for (const row of mine.body.data) {
+        expect(row.parentId).toBe(parentId);
+      }
+
+      // A parent that does not exist is a 404, not an empty list — the
+      // guard's existence check runs with no ownership clause.
+      await request(app.getHttpServer())
+        .get('/parents/00000000-0000-4000-8000-000000000000/unscoped-notes')
+        .set('Authorization', 'Bearer u1')
+        .expect(404);
+
+      // The parent's OWN visibility hooks still gate the route: this
+      // parent is actor-scoped, so u2 cannot reach its notes even though
+      // the sub-resource itself is not owner-guarded.
+      await request(app.getHttpServer())
+        .get(`/parents/${parentId}/unscoped-notes`)
+        .set('Authorization', 'Bearer u2')
+        .expect(404);
+    });
+
+    // Every write verb resolves its target through `getOneOrFail` →
+    // `buildWhere`, so the FK clause applies there too: addressing a row
+    // through the WRONG parent is a 404, not an unfiltered write.
+    it('scope: false makes a cross-parent update/delete a 404', async () => {
+      const other = await request(app.getHttpServer())
+        .post('/parents')
+        .set('Authorization', 'Bearer u1')
+        .send({ name: 'write-verb-parent' })
+        .expect(201);
+
+      const note = await request(app.getHttpServer())
+        .post(`/parents/${parentId}/unscoped-notes`)
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'mine' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .patch(`/parents/${other.body.id}/unscoped-notes/${note.body.id}`)
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'hijacked' })
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .delete(`/parents/${other.body.id}/unscoped-notes/${note.body.id}`)
+        .set('Authorization', 'Bearer u1')
+        .expect(404);
+
+      // Untouched through its own parent.
+      const still = await request(app.getHttpServer())
+        .get(`/parents/${parentId}/unscoped-notes/${note.body.id}`)
+        .set('Authorization', 'Bearer u1')
+        .expect(200);
+      expect(still.body.label).toBe('mine');
+    });
+
+    // The chain guarantee at depth three: route params only filter by the
+    // IMMEDIATE parent, so the leaf guard's parent lookup — replaying the
+    // middle's own `PathScopeHook` — is the only thing that rejects a
+    // middle row addressed through the wrong grandparent.
+    it('a leaf is not reachable through the wrong grandparent', async () => {
+      const other = await request(app.getHttpServer())
+        .post('/parents')
+        .set('Authorization', 'Bearer u1')
+        .send({ name: 'loose-other' })
+        .expect(201);
+
+      const middleOfOther = await request(app.getHttpServer())
+        .post(`/parents/${other.body.id}/loose-middles`)
+        .set('Authorization', 'Bearer u1')
+        .send({ title: 'under-other' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post(
+          `/parents/${other.body.id}/loose-middles/${middleOfOther.body.id}/loose-leaves`,
+        )
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'leaf' })
+        .expect(201);
+
+      // The MIDDLE's own route is still FK-filtered by the route param,
+      // so addressing it through the wrong parent is a 404.
+      await request(app.getHttpServer())
+        .get(`/parents/${parentId}/loose-middles/${middleOfOther.body.id}`)
+        .set('Authorization', 'Bearer u1')
+        .expect(404);
+
+      // The LEAF route through the wrong ancestor: the leaf guard looks
+      // the middle up with the middle's own FK filter replayed, so the
+      // middle is not found under this parent and the leaf is not served.
+      await request(app.getHttpServer())
+        .get(
+          `/parents/${parentId}/loose-middles/${middleOfOther.body.id}/loose-leaves`,
+        )
+        .set('Authorization', 'Bearer u1')
+        .expect(404);
+    });
+
+    // That guarantee is exactly what `scope: false` on the middle level
+    // removes, and nothing about the middle's own routes shows it. The
+    // definition is refused instead.
+    it('refuses subResources under a scope: false level', () => {
+      expect(() =>
+        defineResource<ParentEntity>({
+          key: 'refusingParent',
+          entity: ParentEntity,
+          path: 'refusing-parents',
+          operations: { list: { output: parentResponseSchema } },
+          subResources: {
+            looseMiddles: defineSubResource<LooseMiddleEntity>({
+              key: 'looseMiddle',
+              entity: LooseMiddleEntity,
+              segment: 'loose-middles',
+              scope: false,
+              operations: { list: { output: looseMiddleResponseSchema } },
+              subResources: {
+                looseLeaves: defineSubResource<LooseLeafEntity>({
+                  key: 'looseLeaf',
+                  entity: LooseLeafEntity,
+                  parentKey: 'looseMiddleId',
+                  segment: 'loose-leaves',
+                  operations: { list: { output: looseLeafResponseSchema } },
+                }),
+              },
+            }),
+          },
+        }),
+      ).toThrow(/`scope: false` and declares subResources/);
     });
 
     it('list /parents/:parentId/children scopes by :parentId', async () => {
@@ -863,6 +1278,45 @@ describe('RocketsCoreModule + defineSubResource + AfterCreateReloadHook (e2e)', 
     it('rejects a write through the wrong parent', async () => {
       await request(app.getHttpServer())
         .post(`/parents/${parentA}/children/${childOfB}/notes`)
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'should-not-exist' })
+        .expect(404);
+    });
+
+    // The same path with `scope: false` on the DEEP resource. Ancestor
+    // params are `disabled: true`, so `:parentId` never reaches
+    // `buildWhere` — the guard's parent lookup, replaying the child's own
+    // `PathScopeHook`, is the ONLY thing that can reject a middle row
+    // addressed through the wrong ancestor. `scope: false` used to drop
+    // that guard outright and serve the rows; it now drops only the
+    // ownership clause, so the chain is still verified.
+    it('scope: false still verifies the ancestor chain at depth 3', async () => {
+      const created = await request(app.getHttpServer())
+        .post(`/parents/${parentB}/children/${childOfB}/unscoped-deep-notes`)
+        .set('Authorization', 'Bearer u1')
+        .send({ label: 'deep' })
+        .expect(201);
+      expect(created.body.childId).toBe(childOfB);
+
+      // Reachable through its OWN ancestor.
+      const own = await request(app.getHttpServer())
+        .get(`/parents/${parentB}/children/${childOfB}/unscoped-deep-notes`)
+        .set('Authorization', 'Bearer u1')
+        .expect(200);
+      expect(own.body.data.map((row: { id: string }) => row.id)).toContain(
+        created.body.id,
+      );
+
+      // Addressed through parentA, which does NOT contain childOfB —
+      // the same 404 the scoped `notes` route answers.
+      await request(app.getHttpServer())
+        .get(`/parents/${parentA}/children/${childOfB}/unscoped-deep-notes`)
+        .set('Authorization', 'Bearer u1')
+        .expect(404);
+
+      // And a write through the wrong ancestor is refused too.
+      await request(app.getHttpServer())
+        .post(`/parents/${parentA}/children/${childOfB}/unscoped-deep-notes`)
         .set('Authorization', 'Bearer u1')
         .send({ label: 'should-not-exist' })
         .expect(404);

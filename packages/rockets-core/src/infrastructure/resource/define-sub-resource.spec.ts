@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { withOpenApi } from '@concepta/nestjs-core';
+import { z } from 'zod';
 import {
   defaultParentParam,
   defineSubResource,
@@ -19,9 +21,7 @@ class PetTagEntity {
   tagId!: string;
 }
 
-class PetTagDto {
-  id!: string;
-}
+const petTagSchema = withOpenApi(z.object({ id: z.uuid() }), 'PetTagDto');
 
 describe('defineSubResource', () => {
   describe('input validation', () => {
@@ -66,8 +66,8 @@ describe('defineSubResource', () => {
         key: 'petTag',
         entity: PetTagEntity,
         operations: {
-          list: { output: PetTagDto },
-          create: { input: PetTagDto, output: PetTagDto },
+          list: { output: petTagSchema },
+          create: { input: petTagSchema, output: petTagSchema },
         },
       });
       expect(sub.definition.key).toBe('petTag');

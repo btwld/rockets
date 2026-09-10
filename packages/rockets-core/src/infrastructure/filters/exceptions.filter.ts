@@ -1,10 +1,7 @@
 import { PlainLiteralObject } from '@nestjs/common';
 import { inspect } from 'node:util';
-import {
-  ExceptionInterface,
-  mapHttpStatus,
-  RuntimeException,
-} from '@concepta/nestjs-core';
+import { ExceptionInterface, RuntimeException } from '@concepta/nestjs-core';
+import { mapHttpStatus } from './map-http-status.util';
 import {
   Catch,
   ArgumentsHost,
@@ -17,10 +14,7 @@ import {
 import { isObject } from '@nestjs/common/utils/shared.utils';
 import { HttpAdapterHost } from '@nestjs/core';
 import type { OperationRequest } from '../../domain/interfaces/operation-resource.interface';
-import {
-  classValidatorErrorsToDetails,
-  readErrorDetails,
-} from '../../common/utils/validation-error-details.util';
+import { readErrorDetails } from '../../common/utils/validation-error-details.util';
 import {
   type RocketsErrorContext,
   type RocketsErrorDetail,
@@ -51,7 +45,15 @@ export function unwrapToHttpException(
   const seen = new Set<unknown>();
   while (current && !seen.has(current)) {
     seen.add(current);
-    if (current instanceof HttpException) {
+    // `RuntimeException` extends `HttpException` upstream, but in this
+    // chain it is the WRAPPER (`CrudQueryException` → `RepositoryQueryException`
+    // → the hook's `ConflictException`). Matching it here would stop the
+    // walk at the outermost 500 and never reach the 409 it carries; the
+    // 4xx domain carriers are the sibling walk's job.
+    if (
+      current instanceof HttpException &&
+      !(current instanceof RuntimeException)
+    ) {
       return current === exception ? undefined : current;
     }
     const next = (current as { context?: { originalError?: unknown } })?.context
@@ -92,57 +94,6 @@ export function unwrapToClientRuntimeException(
 }
 
 /**
- * Structural shape of a `class-validator` `ValidationError`. Declared
- * locally on purpose: the filter only reads these three fields, and
- * depending on `class-validator` types here would couple the core
- * package to a validation library it does not otherwise need.
- */
-interface ValidationErrorLike {
-  readonly property: string;
-  readonly constraints?: Readonly<Record<string, string>>;
-  readonly children?: readonly ValidationErrorLike[];
-}
-
-function isValidationErrorList(
-  value: unknown,
-): value is readonly ValidationErrorLike[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        isObject(item) &&
-        typeof (item as { property?: unknown }).property === 'string',
-    )
-  );
-}
-
-/**
- * Flatten nested validation errors into constraint messages, prefixing
- * child messages with the parent property (`address.street must be …`).
- *
- * Reimplemented rather than borrowed: the previous version reached into
- * `new ValidationPipe()['flattenValidationErrors']`, a PRIVATE Nest
- * method accessed by string index — invisible to the compiler and free
- * to disappear in any Nest patch release.
- */
-function flattenValidationErrors(
-  errors: readonly ValidationErrorLike[],
-): string[] {
-  const messages: string[] = [];
-  for (const error of errors) {
-    if (error.constraints) {
-      messages.push(...Object.values(error.constraints));
-    }
-    if (error.children && error.children.length > 0) {
-      for (const child of flattenValidationErrors(error.children)) {
-        messages.push(`${error.property}.${child}`);
-      }
-    }
-  }
-  return messages;
-}
-
-/**
  * Global exception filter: unwraps the repository/CRUD wrapping chain so
  * a hook's `409` stays a `409`, maps domain exceptions to their HTTP
  * status, and writes the response body.
@@ -179,10 +130,8 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
     // (raised by a hook or deeper layer to express an authorization or
     // validation failure), surface that exception directly so the client
     // sees the intended status (401/403/400) instead of an opaque 500.
-    //
-    // Upstream RuntimeException subclasses currently lose `originalError`
-    // while rebuilding their context. Guards and pipes avoid that wrapping for
-    // pre-handler validation that must preserve a 4xx response.
+    // Guards and pipes run before that wrapping, so pre-handler validation
+    // reaches here as its own 4xx already.
     const unwrapped =
       this.unwrapToHttpException(rawException) ??
       this.unwrapToClientRuntimeException(rawException);
@@ -192,21 +141,17 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
     let errorCode = 'ERROR_CODE_UNKNOWN';
     let statusCode = 500;
     let message: unknown = ERROR_MESSAGE_FALLBACK;
-    // Read for EVERY exception type, not only HttpException: the
-    // documented hook guidance is to throw RepositoryQueryException
-    // with an httpStatus, and a consumer following it would otherwise
-    // attach details this filter silently drops. Unwrapped first, raw
-    // second, so a wrapped hook 400 keeps its findings.
+    // Read for EVERY exception type, not only HttpException: a hook is
+    // free to throw a `RuntimeException` carrying its own httpStatus and
+    // details, which this filter would otherwise silently drop. Unwrapped
+    // first, raw second, so a wrapped hook 400 keeps its findings.
     let details: readonly RocketsErrorDetail[] | undefined =
       readErrorDetails(exception) ?? readErrorDetails(rawException);
 
-    if (exception instanceof HttpException) {
-      statusCode = exception.getStatus();
-      errorCode = mapHttpStatus(statusCode);
-
-      const res = exception.getResponse();
-      message = isObject(res) && 'message' in res ? res.message : res;
-    } else if (exception instanceof RuntimeException) {
+    // `RuntimeException` is checked FIRST: it extends `HttpException`
+    // upstream, and the generic branch would replace a domain `errorCode`
+    // with the status-derived one.
+    if (exception instanceof RuntimeException) {
       errorCode = exception.errorCode;
 
       if (exception.httpStatus) {
@@ -221,21 +166,12 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
         message =
           exception.message ?? exception.safeMessage ?? ERROR_MESSAGE_FALLBACK;
       }
-    }
+    } else if (exception instanceof HttpException) {
+      statusCode = exception.getStatus();
+      errorCode = mapHttpStatus(statusCode);
 
-    if (
-      !(exception instanceof HttpException) &&
-      isValidationErrorList(exception.context?.validationErrors)
-    ) {
-      message = flattenValidationErrors(exception.context.validationErrors);
-      // App-attached details win: an exception can carry BOTH a symbol
-      // payload (attachErrorDetails) and `context.validationErrors`, and
-      // deriving over the explicit attachment would silently discard the
-      // app's findings.
-      details ??= classValidatorErrorsToDetails(
-        exception.context.validationErrors,
-      );
-      statusCode = 400;
+      const res = exception.getResponse();
+      message = isObject(res) && 'message' in res ? res.message : res;
     }
 
     // Logged through Nest's Logger, not `console`, and at every 5xx —
@@ -311,14 +247,11 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
    * if the chain contains no `HttpException` (the original exception
    * already represents the right shape).
    *
-   * NOTE: upstream `RepositoryQueryException` loses `context.originalError`
-   * due to a constructor pattern bug (`Object.assign({}, super.context, …)`
-   * where `super.context` evaluates to undefined for instance properties).
-   * This is compensated by `defineHook` which pre-wraps `HttpException`s as
-   * `RepositoryQueryException` and grafts `originalError` onto context
-   * AFTER construction. Class-based hooks that cannot do this should throw
-   * a `RepositoryQueryException` directly with the appropriate `httpStatus`
-   * rather than throwing `HttpException` — those surface via
+   * A hook — functional or class-based — throws its own domain exception.
+   * The upstream membrane wraps it in `RepositoryQueryException` with the
+   * original on `context.originalError`, which is what this walk follows.
+   * A hook that prefers to carry its own status may still throw a
+   * `RuntimeException` with an `httpStatus`; those surface via
    * `unwrapToRuntimeException` below.
    */
   protected unwrapToHttpException(
@@ -329,9 +262,8 @@ export class RocketsCoreExceptionsFilter implements ExceptionFilter {
 
   /**
    * Walk the exception chain to find the innermost `RuntimeException` with
-   * a 4xx `httpStatus`. This surfaces domain exceptions thrown from
-   * repository hooks that cannot propagate `HttpException` through the
-   * membrane (upstream wrapping loses `originalError` — see above).
+   * a 4xx `httpStatus`. This surfaces a hook that carries its own status
+   * on a `RuntimeException` rather than throwing an `HttpException`.
    * Returns `undefined` if no 4xx `RuntimeException` is found.
    */
   protected unwrapToClientRuntimeException(

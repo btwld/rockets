@@ -11,14 +11,8 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { APP_FILTER, APP_GUARD, REQUEST } from '@nestjs/core';
-import {
-  ApiProperty,
-  ApiPropertyOptional,
-  DocumentBuilder,
-  SwaggerModule,
-} from '@nestjs/swagger';
-import { IsOptional, IsString, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import type { OpenAPIObject } from '@nestjs/swagger';
+import { withOpenApi } from '@concepta/nestjs-core';
 import { z } from 'zod';
 import request from 'supertest';
 
@@ -32,13 +26,16 @@ import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineAuthAdapter } from '../infrastructure/auth/define-auth-adapter';
 import { defineOperationResource } from '../infrastructure/resource/define-operation-resource';
+import { operationBodySchema } from '../infrastructure/resource/operation-resource/operation-body-schema';
 import { operationResource } from '../zod/zod-operation-resource';
+import { f } from '../zod/fields';
 import type { OperationContext } from '../domain/interfaces/operation-resource.interface';
 import { RocketsCoreExceptionsFilter } from '../infrastructure/filters/exceptions.filter';
 import {
   detailedErrorSerializer,
   ROCKETS_ERROR_SERIALIZER_TOKEN,
 } from '../infrastructure/filters/error-serializer';
+import { SwaggerUiService } from '../common/swagger-ui/swagger-ui.service';
 
 const OPS_MARK = 'ops:mark';
 const LOCAL_VALUE = 'operation-resource-local-value';
@@ -94,50 +91,53 @@ class ReplacedHandler {
   }
 }
 
-class LowerInputDto {
-  @ApiProperty()
-  @IsString()
-  name!: string;
-}
+/**
+ * Hand-built descriptors carry their schemas ALREADY compiled: a body is
+ * a named component behind the payload-shape guard (`operationBodySchema`
+ * is what makes `POST []` a 400 instead of an empty input), an output is
+ * a named component, and both are what the zod builders would have
+ * produced.
+ */
+const lowerInputSchema = withOpenApi(
+  operationBodySchema(z.object({ name: z.string() })),
+  'LowerInput',
+);
 
 /**
  * All-optional on purpose. A required field would 400 on its own, so it
  * could not show that a non-record body was being coerced to `{}` and
  * accepted.
  */
-class LowerOptionalInputDto {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  note?: string;
-}
+const lowerOptionalInputSchema = withOpenApi(
+  operationBodySchema(z.object({ note: z.string().optional() })),
+  'LowerOptionalInput',
+);
 
-class LowerChildDto {
-  @ApiProperty()
-  @IsString()
-  street!: string;
-}
+/** Nested shape: the failing issue's path has two segments. */
+const lowerNestedInputSchema = withOpenApi(
+  operationBodySchema(
+    z.object({ name: z.string(), child: z.object({ street: z.string() }) }),
+  ),
+  'LowerNestedInput',
+);
 
-/** Nested class-validator shape: constraints live in error.children. */
-class LowerNestedInputDto {
-  @ApiProperty()
-  @IsString()
-  name!: string;
-
-  @ApiProperty({ type: LowerChildDto })
-  @ValidateNested()
-  @Type(() => LowerChildDto)
-  child!: LowerChildDto;
-}
-
-class LowerOutputDto {
-  @ApiProperty()
-  @IsString()
-  name!: string;
-}
+const lowerOutputSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'LowerOutput',
+);
 
 const ItemSchema = z.object({ id: z.string() });
 type Item = z.infer<typeof ItemSchema>;
+
+/**
+ * A NAMED schema nested inside an operation body. The body component
+ * `$ref`s it, so the document must carry `OpsAddressInput` as its own
+ * component and no `#/definitions/` pointer may be left dangling.
+ */
+const addressSchema = withOpenApi(
+  z.object({ street: z.string(), city: z.string() }),
+  'OpsAddressInput',
+);
 
 const publicOps = operationResource({
   path: 'ops',
@@ -149,6 +149,16 @@ const publicOps = operationResource({
       summary: 'Health ping',
       output: z.object({ ok: z.boolean() }),
       handler: () => ({ ok: true, internal: true }),
+    }),
+    // `dto: { response: false }` holds on an operation output too — the
+    // fourth response path, beside computed fields, JSON columns and
+    // exposed relations.
+    secretive: op.read({
+      output: z.object({
+        id: z.string(),
+        secret: f.string({ dto: { response: false } }),
+      }),
+      handler: () => ({ id: 'a', secret: 'OP-LEAK' }),
     }),
     items: op.read({
       output: z.array(ItemSchema),
@@ -181,6 +191,12 @@ const publicOps = operationResource({
       input: z.object({ note: z.string().optional() }),
       output: z.object({ ok: z.boolean() }),
       handler: () => ({ ok: true }),
+    }),
+    relocate: op.write({
+      method: 'POST',
+      input: z.object({ address: addressSchema }),
+      output: z.object({ city: z.string() }),
+      handler: ({ input }) => ({ city: input.address.city }),
     }),
     accepted: op.write({
       status: 202,
@@ -349,8 +365,8 @@ const lowerLevelOps = defineOperationResource({
       method: 'POST',
       path: '',
       status: 200,
-      inputDto: LowerInputDto,
-      output: LowerOutputDto,
+      inputSchema: lowerInputSchema,
+      output: lowerOutputSchema,
       handler: ({ input }) => input,
     },
     nested: {
@@ -358,8 +374,8 @@ const lowerLevelOps = defineOperationResource({
       method: 'POST',
       path: 'nested',
       status: 200,
-      inputDto: LowerNestedInputDto,
-      output: LowerOutputDto,
+      inputSchema: lowerNestedInputSchema,
+      output: lowerOutputSchema,
       handler: () => ({ name: 'ok' }),
     },
     optional: {
@@ -367,8 +383,8 @@ const lowerLevelOps = defineOperationResource({
       method: 'POST',
       path: 'optional',
       status: 200,
-      inputDto: LowerOptionalInputDto,
-      output: LowerOutputDto,
+      inputSchema: lowerOptionalInputSchema,
+      output: lowerOutputSchema,
       handler: () => ({ name: 'ok' }),
     },
     primitive: {
@@ -376,11 +392,18 @@ const lowerLevelOps = defineOperationResource({
       method: 'GET',
       path: 'primitive',
       status: 200,
-      output: LowerOutputDto,
+      output: lowerOutputSchema,
       handler: () => 'not-an-object',
     },
   },
 });
+
+interface OpenApiJsonContent {
+  readonly content?: Record<
+    string,
+    { readonly schema?: { readonly $ref?: string } }
+  >;
+}
 
 interface OpenApiOperation {
   readonly operationId?: string;
@@ -388,18 +411,15 @@ interface OpenApiOperation {
     readonly name?: string;
     readonly in?: string;
     readonly required?: boolean;
+    readonly schema?: { readonly type?: string; readonly format?: string };
   }>;
-  readonly responses?: Record<
-    string,
-    {
-      readonly content?: Record<
-        string,
-        { readonly schema?: { readonly $ref?: string } }
-      >;
-    }
-  >;
+  readonly requestBody?: OpenApiJsonContent & { readonly required?: boolean };
+  readonly responses?: Record<string, OpenApiJsonContent>;
   readonly security?: ReadonlyArray<Record<string, readonly string[]>>;
 }
+
+const jsonRef = (content: OpenApiJsonContent | undefined) =>
+  content?.content?.['application/json']?.schema?.$ref;
 
 /** Owned by `InnerModule` and never exported — only its handler sees it. */
 const INNER_SECRET = Symbol('INNER_SECRET');
@@ -860,7 +880,9 @@ const reExportedOps = operationResource({
 
 describe('operationResource e2e (issue #43 v1)', () => {
   let app: INestApplication;
+  let document: OpenAPIObject;
   let openApiPaths: Record<string, Record<string, OpenApiOperation>>;
+  let components: Record<string, unknown>;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -894,9 +916,13 @@ describe('operationResource e2e (issue #43 v1)', () => {
 
     app = moduleRef.createNestApplication();
     await app.init();
-    const swagger = new DocumentBuilder().setTitle('ops').build();
-    const document = SwaggerModule.createDocument(app, swagger);
+    // The app's own document seam: the Rockets converter turns every
+    // named schema into a `$ref`, and the lifter clears nested
+    // `definitions`. A bare `SwaggerModule.createDocument` would pin a
+    // document no Rockets app serves.
+    document = app.get(SwaggerUiService).createDocument(app);
     openApiPaths = document.paths as typeof openApiPaths;
+    components = document.components?.schemas ?? {};
   });
 
   afterAll(async () => {
@@ -916,12 +942,38 @@ describe('operationResource e2e (issue #43 v1)', () => {
     expect(res.body).toEqual([{ id: 'a' }, { id: 'b' }]);
   });
 
-  it('returns 500 when the handler violates outputDto', async () => {
-    await request(app.getHttpServer()).get('/ops/broken').expect(500);
+  it('strips a dto.response=false field from an operation output on the wire', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/ops/secretive')
+      .expect(200);
+    expect(res.body).toEqual({ id: 'a' });
+    expect(JSON.stringify(res.body)).not.toContain('OP-LEAK');
+  });
+
+  // Output failures are server bugs, never a 400: the client did not
+  // send the response. The body stays generic; the issues are logged.
+  it('returns 500 when the handler violates the output schema', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/ops/broken')
+      .expect(500);
+    expect(res.body).not.toHaveProperty('ok');
   });
 
   it('returns 500 when the handler returns undefined under an output schema', async () => {
     await request(app.getHttpServer()).get('/ops/voidish').expect(500);
+  });
+
+  it('rejects invalid query input with the Rockets 400 shape', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/ops/search')
+      .query({ take: 'x' })
+      .expect(400);
+    expect(res.body.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: ['term'] }),
+        expect.objectContaining({ path: ['take'] }),
+      ]),
+    );
   });
 
   it('validates GET query input (with z.coerce)', async () => {
@@ -971,12 +1023,18 @@ describe('operationResource e2e (issue #43 v1)', () => {
     expect(res.body).not.toHaveProperty('secret');
   });
 
-  it('rejects invalid command body', async () => {
-    await request(app.getHttpServer())
+  it('rejects invalid command body with the Rockets 400 shape', async () => {
+    const res = await request(app.getHttpServer())
       .post('/secure-ops/shout')
       .set('Authorization', 'Bearer ok')
       .send({ text: '' })
       .expect(400);
+    // One issue → `message` is the single `field: message` string, and
+    // `details` carries the same issue addressed at the field.
+    expect(res.body.message).toMatch(/^text: /);
+    expect(res.body.details).toEqual([
+      expect.objectContaining({ path: ['text'] }),
+    ]);
   });
 
   it('runs a transactional command when authorized', async () => {
@@ -1046,8 +1104,14 @@ describe('operationResource e2e (issue #43 v1)', () => {
       .expect({ source: 'replacement' });
   });
 
-  it('validates lower-level class-validator input strictly', async () => {
-    await request(app.getHttpServer()).post('/lower').send({}).expect(400);
+  it('validates a hand-built body schema and strips undeclared keys', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/lower')
+      .send({})
+      .expect(400);
+    expect(res.body.details).toEqual([
+      expect.objectContaining({ path: ['name'] }),
+    ]);
     await request(app.getHttpServer())
       .post('/lower')
       .send({ name: 'ok', extra: 'drop-me' })
@@ -1056,10 +1120,10 @@ describe('operationResource e2e (issue #43 v1)', () => {
   });
 
   // Coercing a non-record body to `{}` let an array pass an all-optional
-  // DTO on both authoring paths: zod itself rejects the array, and the
-  // class path never saw one. Substituting a valid value for an invalid
-  // one on a validation boundary is the shape being removed here.
-  it('rejects a non-object body on the zod path', async () => {
+  // input. Substituting a valid value for an invalid one on a validation
+  // boundary is the shape being removed here; a MISSING body is the one
+  // legitimate `{}` (POST with no payload against an all-optional input).
+  it('rejects a non-object body on the zod path and accepts a missing one', async () => {
     // Asserted on OUR message, not just the status. A scalar body is
     // rejected by body-parser before reaching this code, so a bare
     // `.expect(400)` would pass with the fix reverted and prove nothing.
@@ -1067,8 +1131,15 @@ describe('operationResource e2e (issue #43 v1)', () => {
       .post('/ops/optional-body')
       .send([])
       .expect(400);
-    expect(rejected.body.message).toMatch(/Expected a JSON object body/);
-    // The legitimate shapes still pass.
+    expect(rejected.body.message).toBe(
+      'Expected a JSON object body, received an array',
+    );
+    // Addressed at the root: the whole body is what is wrong.
+    expect(rejected.body.details).toEqual([
+      { path: [], message: 'Expected a JSON object body, received an array' },
+    ]);
+    // The legitimate shapes still pass — including no body at all.
+    await request(app.getHttpServer()).post('/ops/optional-body').expect(200);
     await request(app.getHttpServer())
       .post('/ops/optional-body')
       .send({})
@@ -1079,34 +1150,52 @@ describe('operationResource e2e (issue #43 v1)', () => {
       .expect(200);
   });
 
-  it('rejects a non-object body on the lower-level class path', async () => {
+  it('rejects a non-object body on a hand-built descriptor', async () => {
     const rejected = await request(app.getHttpServer())
       .post('/lower/optional')
       .send([])
       .expect(400);
     expect(rejected.body.message).toMatch(/Expected a JSON object body/);
+    expect(rejected.body.details).toEqual([
+      expect.objectContaining({ path: [] }),
+    ]);
     await request(app.getHttpServer())
       .post('/lower/optional')
       .send({})
       .expect(200);
+    await request(app.getHttpServer()).post('/lower/optional').expect(200);
   });
 
-  // A @ValidateNested failure carries its constraints in children, not
-  // on the root error. Flattening only the top level answered 400 with
-  // `message: []` — a rejection that names nothing.
-  it('names the nested field in a class-validator 400', async () => {
+  // The failing issue lives two segments deep. Both channels must name
+  // the field: the flattened `message` and the structured `details`.
+  it('names the nested field in a 400', async () => {
     const res = await request(app.getHttpServer())
       .post('/lower/nested')
       .send({ name: 'ok', child: {} })
       .expect(400);
-    expect(JSON.stringify(res.body.message)).toMatch(/child\.street/);
+    expect(res.body.message).toMatch(/^child\.street: /);
     expect(res.body.details).toEqual([
-      { path: ['child', 'street'], message: 'street must be a string' },
+      expect.objectContaining({ path: ['child', 'street'] }),
     ]);
   });
 
-  it('rejects lower-level class-validator primitive output', async () => {
+  it('rejects a primitive output on a hand-built descriptor', async () => {
     await request(app.getHttpServer()).get('/lower/primitive').expect(500);
+  });
+
+  it('accepts a body nesting a named schema', async () => {
+    await request(app.getHttpServer())
+      .post('/ops/relocate')
+      .send({ address: { street: '1 Main', city: 'Lisbon' } })
+      .expect(200)
+      .expect({ city: 'Lisbon' });
+    const res = await request(app.getHttpServer())
+      .post('/ops/relocate')
+      .send({ address: { street: '1 Main' } })
+      .expect(400);
+    expect(res.body.details).toEqual([
+      expect.objectContaining({ path: ['address', 'city'] }),
+    ]);
   });
 
   it('emits deterministic Swagger operationIds and GET query parameters', () => {
@@ -1123,6 +1212,59 @@ describe('operationResource e2e (issue #43 v1)', () => {
     expect(queryParams.find((p) => p.name === 'take')?.required).toBe(false);
   });
 
+  it('documents request bodies as $refs to their named Input component', () => {
+    const shout = openApiPaths['/secure-ops/shout']?.post;
+    expect(jsonRef(shout?.requestBody)).toBe(
+      '#/components/schemas/SecureOps_Post_ShoutInput',
+    );
+    expect(components).toHaveProperty('SecureOps_Post_ShoutInput');
+    expect(jsonRef(shout?.responses?.['201'])).toBe(
+      '#/components/schemas/SecureOps_Post_ShoutOutput',
+    );
+    // A hand-built descriptor documents through the same seam.
+    expect(jsonRef(openApiPaths['/lower']?.post?.requestBody)).toBe(
+      '#/components/schemas/LowerInput',
+    );
+    expect(jsonRef(openApiPaths['/lower']?.post?.responses?.['200'])).toBe(
+      '#/components/schemas/LowerOutput',
+    );
+    // The body guard is a preprocess pipe; the bridge documents the
+    // author's object, not the pipe.
+    expect(components.LowerInput).toMatchObject({
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: ['name'],
+    });
+  });
+
+  it('documents resource params as one path parameter per schema property', () => {
+    const sync = openApiPaths['/orgs/{orgId}/repos/{repoId}/sync']?.post;
+    const pathParams = (sync?.parameters ?? []).filter((p) => p.in === 'path');
+    const orgId = pathParams.find((p) => p.name === 'orgId');
+    expect(orgId?.required).toBe(true);
+    expect(orgId?.schema).toMatchObject({ type: 'string', format: 'uuid' });
+    // No `$ref` on a path parameter: the params schema is unnamed, so the
+    // property expands inline rather than pointing at a component.
+    expect(components).not.toHaveProperty('OrgsOrgId_Post_SyncParams');
+  });
+
+  // A named schema nested inside a body arrives as `definitions` in the
+  // raw JSON Schema; the converter lifts it into `components`. Nothing in
+  // the served document may still point at `#/definitions/`.
+  it('lifts a named schema nested inside a body into components', () => {
+    expect(jsonRef(openApiPaths['/ops/relocate']?.post?.requestBody)).toBe(
+      '#/components/schemas/Ops_Post_RelocateInput',
+    );
+    expect(components).toHaveProperty('OpsAddressInput');
+    expect(components.Ops_Post_RelocateInput).toMatchObject({
+      properties: {
+        address: { $ref: '#/components/schemas/OpsAddressInput' },
+      },
+    });
+    expect(JSON.stringify(document)).not.toContain('#/definitions/');
+    expect(JSON.stringify(document)).not.toContain('#/$defs/');
+  });
+
   it('emits status-aware Swagger responses and public method security overrides', () => {
     expect(openApiPaths['/ops/accepted']?.post?.responses).toHaveProperty(
       '202',
@@ -1133,17 +1275,17 @@ describe('operationResource e2e (issue #43 v1)', () => {
     expect(openApiPaths['/secure-ops/version']?.get?.security).toEqual([{}]);
   });
 
-  it('uses method-discriminated Swagger operationIds and DTO component refs', () => {
+  it('uses method-discriminated Swagger operationIds and Output component refs', () => {
     const read = openApiPaths['/alias']?.get;
     const write = openApiPaths['/alias']?.post;
     expect(read?.operationId).toBe('OperationResource_alias_get_action');
     expect(write?.operationId).toBe('OperationResource_alias_post_action');
-    const readRef =
-      read?.responses?.['200']?.content?.['application/json']?.schema?.$ref;
-    const writeRef =
-      write?.responses?.['200']?.content?.['application/json']?.schema?.$ref;
-    expect(readRef).toContain('Alias_Get_ActionOutput');
-    expect(writeRef).toContain('Alias_Post_ActionOutput');
+    expect(jsonRef(read?.responses?.['200'])).toBe(
+      '#/components/schemas/Alias_Get_ActionOutput',
+    );
+    expect(jsonRef(write?.responses?.['200'])).toBe(
+      '#/components/schemas/Alias_Post_ActionOutput',
+    );
   });
 
   it('applies custom method decorators', () => {

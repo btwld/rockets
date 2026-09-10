@@ -98,49 +98,16 @@ class TestErrorController {
     );
   }
 
-  @Get('validation-errors')
+  @Get('details-attached-400')
   @ApiOkResponse({ description: 'Always throws — test route' })
-  validationErrors(): never {
-    const err = new TestRuntimeException(
-      { message: 'Validation failed' },
-      'VALIDATION_ERR',
+  detailsAttached400(): never {
+    throw attachErrorDetails(
+      new TestRuntimeException(
+        { message: 'Validation failed', httpStatus: 400 },
+        'VALIDATION_ERR',
+      ),
+      [{ path: ['name'], message: 'app-attached finding' }],
     );
-    err.context = {
-      ...err.context,
-      validationErrors: [
-        {
-          property: 'name',
-          constraints: { isNotEmpty: 'name should not be empty' },
-        },
-      ],
-    };
-    throw err;
-  }
-
-  @Get('validation-errors-attached')
-  @ApiOkResponse({ description: 'Always throws — test route' })
-  validationErrorsAttached(): never {
-    // Both channels on one exception: a symbol payload from
-    // attachErrorDetails AND context.validationErrors. The filter must
-    // keep the app's explicit attachment, not clobber it with the
-    // derived class-validator details.
-    const err = new TestRuntimeException(
-      { message: 'Validation failed' },
-      'VALIDATION_ERR',
-    );
-    err.context = {
-      ...err.context,
-      validationErrors: [
-        {
-          property: 'name',
-          constraints: { isNotEmpty: 'name should not be empty' },
-        },
-      ],
-    };
-    attachErrorDetails(err, [
-      { path: ['name'], message: 'app-attached finding' },
-    ]);
-    throw err;
   }
 
   @Get('unknown-error')
@@ -232,15 +199,14 @@ describe('ExceptionsFilter (e2e)', () => {
     expect(response.body.message).toBe('');
   });
 
-  it('should handle validationErrors in context and return 400', async () => {
+  it('never emits details with the default serializer', async () => {
     const response = await request(app.getHttpServer())
-      .get('/test-errors/validation-errors')
+      .get('/test-errors/details-attached-400')
       .expect(400);
 
     expect(response.body.statusCode).toBe(400);
-    expect(response.body.message).toEqual(
-      expect.arrayContaining(['name should not be empty']),
-    );
+    expect(response.body.message).toBe('Validation failed');
+    expect(response.body.details).toBeUndefined();
   });
 
   it('should handle unknown error objects with defaults', async () => {
@@ -276,32 +242,17 @@ describe('ExceptionsFilter with detailedErrorSerializer (e2e)', () => {
     await app.close();
   });
 
-  // The filter's context.validationErrors → details derivation has no
-  // other observer: the default serializer never emits details, so
-  // without this test the whole derivation could be deleted and the
-  // suite would stay green.
-  it('derives details from context.validationErrors', async () => {
+  // The default serializer never emits details, so this is the only
+  // observer of the attachErrorDetails → wire channel on a 4xx.
+  it('emits app-attached details on a 4xx', async () => {
     const response = await request(app.getHttpServer())
-      .get('/test-errors/validation-errors')
-      .expect(400);
-
-    expect(response.body.details).toEqual([
-      { path: ['name'], message: 'name should not be empty' },
-    ]);
-  });
-
-  it('keeps app-attached details over the derived ones', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/test-errors/validation-errors-attached')
+      .get('/test-errors/details-attached-400')
       .expect(400);
 
     expect(response.body.details).toEqual([
       { path: ['name'], message: 'app-attached finding' },
     ]);
-    // The message channel still flattens the validation errors.
-    expect(response.body.message).toEqual(
-      expect.arrayContaining(['name should not be empty']),
-    );
+    expect(response.body.message).toBe('Validation failed');
   });
 
   it('masks details on a 5xx', async () => {

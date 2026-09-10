@@ -1,4 +1,8 @@
 import 'reflect-metadata';
+import type {
+  RateLimitResult,
+  RateLimitStoreInterface,
+} from '@concepta/rockets-core';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
@@ -351,6 +355,78 @@ describe('Rockets Auth 1.0 readiness (e2e)', () => {
         .send({ username: 'other-account', password: 'wrong-password' })
         .expect(401);
     });
+
+    // Guards run BEFORE pipes, so the key function sees the body the
+    // client sent, unknown keys included. A key that preferred `email`
+    // over `username` therefore minted a fresh counter per request when a
+    // login body carried a decoy `email`, and only the 1000/min ceiling
+    // stood between a password-guessing loop and one account.
+    it('a decoy body field does not reset the per-account login limit', async () => {
+      for (let attempt = 1; attempt <= 10; attempt += 1) {
+        await request(app.getHttpServer())
+          .post('/token/password')
+          .send({
+            username: 'decoy-victim',
+            password: 'wrong-password',
+            email: `rotating-${attempt}@example.com`,
+          })
+          .expect(401);
+      }
+
+      await request(app.getHttpServer())
+        .post('/token/password')
+        .send({
+          username: 'decoy-victim',
+          password: 'wrong-password',
+          email: 'yet-another@example.com',
+        })
+        .expect(429);
+    });
+
+    // The same class on a route whose body names NO account. Those routes
+    // key the fine dimension on the IP explicitly, because the account key
+    // would otherwise be built entirely from fields the client chose —
+    // and rotating one would leave a 20/min limit counting one attempt
+    // per key.
+    it('a decoy body field does not lift the limit on an account-less route', async () => {
+      for (let attempt = 1; attempt <= 20; attempt += 1) {
+        await request(app.getHttpServer())
+          .post('/token/refresh')
+          .send({
+            refreshToken: 'not-a-token',
+            email: `rotating-${attempt}@example.com`,
+          })
+          .expect(401);
+      }
+
+      await request(app.getHttpServer())
+        .post('/token/refresh')
+        .send({
+          refreshToken: 'not-a-token',
+          email: 'yet-another@example.com',
+        })
+        .expect(429);
+    });
+
+    // Counters are PER ROUTE, like the engine this replaced (throttler
+    // derived its storage key from the handler). The first cut of the
+    // swap shared one counter across routes, and eleven failed logins
+    // silently consumed the OTP route's 3/min allowance — this pins the
+    // isolation explicitly instead of leaving it to the OTP suite to
+    // trip over.
+    it('an exhausted login bucket does not consume other routes', async () => {
+      // `victim-lockout` is 429 on /token/password from the test above…
+      await request(app.getHttpServer())
+        .post('/token/password')
+        .send({ username: 'victim-lockout', password: 'wrong-password' })
+        .expect(429);
+
+      // …yet the same (ip, account) pair still has its full OTP budget.
+      const res = await request(app.getHttpServer())
+        .post('/otp')
+        .send({ email: 'victim-lockout@example.com' });
+      expect(res.status).not.toBe(429);
+    });
   });
 
   describe('proxy-aware request throttling', () => {
@@ -360,10 +436,10 @@ describe('Rockets Auth 1.0 readiness (e2e)', () => {
       const module = await createRocketsAuthStandardE2eTestingModule({
         mockEmailService: { sendMail: vi.fn().mockResolvedValue(undefined) },
         rocketsAuthOverrides: {
-          throttling: [
-            { name: 'ip', limit: 1, ttl: 60_000 },
-            { name: 'default', limit: 100, ttl: 60_000 },
-          ],
+          throttling: {
+            ip: { limit: 1, windowMs: 60_000 },
+            default: { limit: 100, windowMs: 60_000 },
+          },
         },
       });
       app = module.createNestApplication();
@@ -389,6 +465,54 @@ describe('Rockets Auth 1.0 readiness (e2e)', () => {
       await login('203.0.113.10').expect(401);
       await login('203.0.113.10').expect(429);
       await login('203.0.113.11').expect(401);
+    });
+  });
+
+  describe('custom throttling store', () => {
+    let app: INestApplication;
+
+    // Always rejects: proves the option is honoured end to end — if the
+    // default in-memory store were still in play, the first request
+    // would pass.
+    class RejectEverythingStore implements RateLimitStoreInterface {
+      async consume(
+        _key: string,
+        limit: number,
+        _windowMs: number,
+      ): Promise<RateLimitResult> {
+        return {
+          allowed: false,
+          limit,
+          remaining: 0,
+          resetAt: Date.now() + 60_000,
+        };
+      }
+    }
+
+    beforeAll(async () => {
+      const module = await createRocketsAuthStandardE2eTestingModule({
+        mockEmailService: { sendMail: vi.fn().mockResolvedValue(undefined) },
+        rocketsAuthOverrides: {
+          throttling: {
+            default: { limit: 100, windowMs: 60_000 },
+            store: RejectEverythingStore,
+          },
+        },
+      });
+      app = module.createNestApplication();
+      applyRocketsAuthE2eAppGlobals(app);
+      await app.init();
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it('routes every counter through the supplied store', async () => {
+      await request(app.getHttpServer())
+        .post('/token/password')
+        .send({ username: 'whoever', password: 'wrong-password' })
+        .expect(429);
     });
   });
 

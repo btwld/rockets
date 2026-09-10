@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { APP_GUARD } from '@nestjs/core';
+import { z } from 'zod';
 import {
   RocketsCoreModule,
   ROCKETS_CORE_SETTINGS_TOKEN,
+  withOpenApi,
   type AuthAdapterInterface,
   type AuthAttemptResult,
   type AuthBootstrap,
@@ -10,10 +12,7 @@ import {
   type RepositoryModuleInterface,
   type ResourceInput,
   type RocketsUserMetadataConfig,
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
 } from '@concepta/rockets-core';
-import { MeController } from './gateways/http/me.controller';
 import {
   createRocketsControllers,
   createRocketsImports,
@@ -21,10 +20,7 @@ import {
   createRocketsExports,
   resolveRocketsComposition,
 } from './rockets.module-definition';
-import {
-  RAW_OPTIONS_TOKEN,
-  ROCKETS_USER_METADATA_DTO_TOKEN,
-} from './rockets.tokens';
+import { RAW_OPTIONS_TOKEN } from './rockets.tokens';
 
 class ContributedAuthAdapter implements AuthAdapterInterface {
   authenticate(_request: AuthRequest): Promise<AuthAttemptResult> {
@@ -32,14 +28,6 @@ class ContributedAuthAdapter implements AuthAdapterInterface {
   }
 }
 class ContributedMetadataEntity {}
-class ContributedMetadataCreateDto implements UserMetadataCreatableInterface {
-  userId!: string;
-}
-class ContributedMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  id!: string;
-}
 
 const contributedRepository = {
   forFeature: vi.fn(),
@@ -47,11 +35,17 @@ const contributedRepository = {
 const contributedResource = {
   key: 'auth-resource',
 } as unknown as ResourceInput;
-const contributedUserMetadata = {
+const contributedUserMetadata: RocketsUserMetadataConfig = {
   entity: ContributedMetadataEntity,
-  createDto: ContributedMetadataCreateDto,
-  updateDto: ContributedMetadataUpdateDto,
-} as RocketsUserMetadataConfig;
+  updateSchema: withOpenApi(
+    z.object({ firstName: z.string().optional() }),
+    'ContributedMetadataUpdateDto',
+  ),
+  responseSchema: withOpenApi(
+    z.object({ id: z.string(), userId: z.string() }),
+    'ContributedMetadataResponseDto',
+  ),
+};
 
 function contributedAuth(
   overrides: {
@@ -102,8 +96,11 @@ describe('RocketsModuleDefinition', () => {
         extras: { userMetadata: contributedUserMetadata },
       });
 
-      expect(result).toContain(MeController);
-      expect(result).toHaveLength(1);
+      // `buildMeController` returns a fresh class per config; the name is
+      // the stable handle (it is what the route audit reports).
+      expect(result?.map((controller) => controller.name)).toEqual([
+        'MeController',
+      ]);
     });
 
     it('should exclude MeController when disableController.me is true', () => {
@@ -114,7 +111,6 @@ describe('RocketsModuleDefinition', () => {
         },
       });
 
-      expect(result).not.toContain(MeController);
       expect(result).toEqual([]);
     });
 
@@ -123,11 +119,10 @@ describe('RocketsModuleDefinition', () => {
 
       const result = createRocketsControllers({
         controllers: [CustomController],
-        extras: {},
+        extras: { userMetadata: contributedUserMetadata },
       });
 
       expect(result).toEqual([CustomController]);
-      expect(result).not.toContain(MeController);
     });
 
     it('should return empty array when controllers is explicitly empty', () => {
@@ -191,16 +186,10 @@ describe('RocketsModuleDefinition', () => {
       expect(result).toContain(CustomProvider);
     });
 
-    it('uses auth-contributed metadata and guard defaults', () => {
+    it('uses auth-contributed guard defaults', () => {
       const result = createRocketsProviders({
         extras: { auth: contributedAuth() },
       });
-      const metadataProvider = result.find(
-        (provider) =>
-          typeof provider === 'object' &&
-          'provide' in provider &&
-          provider.provide === ROCKETS_USER_METADATA_DTO_TOKEN,
-      ) as { useValue: unknown };
       const guardProvider = result.find(
         (provider) =>
           typeof provider === 'object' &&
@@ -208,9 +197,6 @@ describe('RocketsModuleDefinition', () => {
           provider.provide === APP_GUARD,
       );
 
-      expect(metadataProvider.useValue).toEqual({
-        updateDto: ContributedMetadataUpdateDto,
-      });
       expect(guardProvider).toBeUndefined();
     });
 
@@ -439,9 +425,12 @@ describe('RocketsModuleDefinition', () => {
         forFeature: vi.fn(),
       } as unknown as RepositoryModuleInterface;
       const appResource = { key: 'app-resource' } as unknown as ResourceInput;
-      const appUserMetadata = {
+      const appUserMetadata: RocketsUserMetadataConfig = {
         ...contributedUserMetadata,
-        updateDto: class AppMetadataUpdateDto extends ContributedMetadataUpdateDto {},
+        updateSchema: withOpenApi(
+          z.object({ lastName: z.string().optional() }),
+          'AppMetadataUpdateDto',
+        ),
       };
       const forRootAsync = vi
         .spyOn(RocketsCoreModule, 'forRootAsync')

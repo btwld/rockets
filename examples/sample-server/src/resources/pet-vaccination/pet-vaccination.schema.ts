@@ -21,20 +21,19 @@ export const petVaccinationSchema = z.object({
   dateAdministered: f.string({ example: '2024-01-15', column: { type: 'date' } }),
   dateExpires: f
     .string({ example: '2025-01-15', column: { type: 'date' } })
+    .nullable()
     .optional(),
   petId: f.fk(() => PetEntity, { onDelete: 'CASCADE', include: 'default' }),
-  dateCreated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, {
-      db: { createdAt: true },
-      dto: { response: false },
-    }),
-  dateUpdated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, {
-      db: { updatedAt: true },
-      dto: { response: false },
-    }),
+  // Not `f.createdAt()`: a second `.register` on the same instance would
+  // replace its `db` meta, so both roles are declared in one call.
+  dateCreated: z.date().register(rocketsFieldMeta, {
+    db: { createdAt: true },
+    dto: { response: false },
+  }),
+  dateUpdated: z.date().register(rocketsFieldMeta, {
+    db: { updatedAt: true },
+    dto: { response: false },
+  }),
 });
 
 export type PetVaccination = z.infer<typeof petVaccinationSchema>;

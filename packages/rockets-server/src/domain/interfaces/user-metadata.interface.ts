@@ -8,9 +8,3 @@ export type {
   UserMetadataUpdatableInterface,
   UserMetadataModelUpdatableInterface,
 } from '@concepta/rockets-core';
-
-export {
-  BaseUserMetadataDto,
-  BaseUserMetadataCreateDto,
-  BaseUserMetadataUpdateDto,
-} from '@concepta/rockets-core';

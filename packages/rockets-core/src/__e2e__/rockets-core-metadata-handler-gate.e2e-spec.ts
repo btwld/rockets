@@ -97,7 +97,7 @@ describe('RocketsCoreModule — user-metadata handler gate (e2e)', () => {
 
     const result = await app
       .get(CommandBus)
-      .execute(new UpsertUserMetadataCommand('user-1', {}));
+      .execute(new UpsertUserMetadataCommand({}, 'user-1', {}));
 
     expect(result).toEqual(metadataFor('user-1'));
   });
@@ -107,7 +107,7 @@ describe('RocketsCoreModule — user-metadata handler gate (e2e)', () => {
 
     const result = await app
       .get(QueryBus)
-      .execute(new GetUserMetadataQuery('user-2'));
+      .execute(new GetUserMetadataQuery({}, 'user-2'));
 
     expect(result).toEqual(metadataFor('user-2'));
   });

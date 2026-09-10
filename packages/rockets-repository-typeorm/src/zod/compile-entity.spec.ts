@@ -158,6 +158,40 @@ describe('compileEntity', () => {
     );
   });
 
+  /**
+   * Date columns are `z.date()` (`f.date()` / `f.createdAt()`): the row
+   * carries a `Date`, the column is a real datetime. An ISO datetime
+   * STRING field (`z.iso.datetime()`) is just a string to persistence —
+   * it maps to varchar, never to datetime, because a datetime column
+   * would hand back a `Date` the string schema then rejects.
+   */
+  it('maps z.date() to datetime and an ISO datetime string to varchar', () => {
+    const schema = z.object({
+      id: f.pk(),
+      startsAt: f.date(),
+      dateCreated: f.createdAt(),
+      isoText: z.iso
+        .datetime()
+        .register(rocketsFieldMeta, { dto: { response: false } }),
+    });
+
+    const Entity = compileEntity(schema, {
+      name: 'CompileDateEntity',
+      table: 'compile_dates',
+    });
+
+    const cols = columnsFor(Entity);
+    expect(cols.find((c) => c.propertyName === 'startsAt')?.options?.type).toBe(
+      'datetime',
+    );
+    expect(cols.find((c) => c.propertyName === 'dateCreated')?.mode).toBe(
+      'createDate',
+    );
+    expect(cols.find((c) => c.propertyName === 'isoText')?.options?.type).toBe(
+      'varchar',
+    );
+  });
+
   it('throws for unsupported zod types without db.column override', () => {
     const schema = z.object({
       id: f.pk(),

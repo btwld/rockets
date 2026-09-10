@@ -19,8 +19,9 @@ jobs:
         run: corepack enable
       - uses: actions/setup-node@v4
         with:
-          # Minimum supported Node 20 runtime. Keep this pinned so the storage
-          # package's synchronous require(ESM) compatibility cannot drift.
+          # The published floor (`engines`), exactly — the example apps and the
+          # packed consumer prove the release on it. Keep it pinned so the
+          # synchronous require(ESM) compatibility cannot drift.
           node-version: 20.19.0
           cache: yarn
       - uses: actions/setup-java@v4

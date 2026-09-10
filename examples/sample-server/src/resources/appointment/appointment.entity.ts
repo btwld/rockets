@@ -7,7 +7,7 @@ import { ReminderEntity } from './reminder.schema';
 const reminderRelationElement = z.object({
   id: z.uuid(),
   appointmentId: z.uuid(),
-  sendAt: z.iso.datetime(),
+  sendAt: f.date(),
   sent: z.boolean(),
 });
 
@@ -20,10 +20,10 @@ export enum AppointmentStatus {
 /**
  * Zod source of truth for the appointment entity. The resource itself
  * stays a `defineResource` (appointment.resource.ts) with handwritten
- * DTOs + a custom create handler: the create input carries a non-column
- * `reminderSendAt` and the response projects `reminders` — shapes that
- * exceed a pure CRUD projection. Only the persistence entity is
- * zod-driven.
+ * request/response schemas (appointment.schemas.ts) + a custom create
+ * handler: the create input carries a non-column `reminderSendAt` and
+ * the response projects `reminders` — shapes that exceed a pure CRUD
+ * projection.
  *
  * Compiled via `compileZodEntity` (typed return) so the generated class
  * carries the schema's row type — `OwnerScopeHook.for(AppointmentEntity)`
@@ -43,7 +43,7 @@ export const appointmentSchema = z.object({
     default: AppointmentStatus.PENDING,
     length: 20,
   }),
-  notes: f.string({ text: true }).optional(),
+  notes: f.string({ text: true }).nullable().optional(),
   dateCreated: z.date().register(rocketsFieldMeta, { db: { createdAt: true } }),
   reminders: f.hasMany(reminderRelationElement, {
     target: (): unknown => ReminderEntity,

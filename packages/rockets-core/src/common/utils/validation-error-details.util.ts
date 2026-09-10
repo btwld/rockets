@@ -48,35 +48,6 @@ export function readErrorDetails(
   return isDetailList(value) && value.length > 0 ? value : undefined;
 }
 
-/**
- * Shared producer for class-validator error trees — nested children get
- * a real path array. One implementation on purpose: an earlier revision
- * had a third inline copy that did not recurse, emitting `details: []`
- * on a failed nested request — an affirmative "no findings" on an error.
- */
-export interface ValidationErrorLike {
-  readonly property: string;
-  readonly constraints?: Readonly<Record<string, string>>;
-  readonly children?: readonly ValidationErrorLike[];
-}
-
-export function classValidatorErrorsToDetails(
-  errors: readonly ValidationErrorLike[],
-  parents: readonly (string | number)[] = [],
-): RocketsErrorDetail[] {
-  const details: RocketsErrorDetail[] = [];
-  for (const error of errors) {
-    const path = [...parents, error.property];
-    for (const message of Object.values(error.constraints ?? {})) {
-      details.push({ path, message });
-    }
-    if (error.children && error.children.length > 0) {
-      details.push(...classValidatorErrorsToDetails(error.children, path));
-    }
-  }
-  return details;
-}
-
 /** Every entry a well-formed detail — segment types included. */
 function isDetailList(value: unknown): value is readonly RocketsErrorDetail[] {
   return (

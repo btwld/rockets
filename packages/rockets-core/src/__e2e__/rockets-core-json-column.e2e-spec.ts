@@ -1,14 +1,16 @@
 /**
  * Regression for issue #68 — free-form JSON columns emptied on the way out.
  *
- * The module default transform pair is `strategy: 'excludeAll'` +
- * `excludeExtraneousValues: true`. On the way OUT that makes
- * class-transformer walk into a plain object with no per-key `@Expose`
- * metadata and return `{}`: the row persists correctly and the response
- * body loses it, with nothing erroring.
+ * Under class-transformer the module's `excludeAll` strategy walked into a
+ * plain object with no per-key `@Expose` metadata and returned `{}`: the
+ * row persisted correctly and the response body lost it, silently. With
+ * schema serialization the contract is explicit: a response schema that
+ * declares the column as `z.record()` ships the blob intact, and one that
+ * does not declare it ships nothing — the key is absent, not `{}`.
  *
- * The zod path already sidesteps this (`ZOD_TO_PLAIN_OPTIONS` sets
- * `excludeExtraneousValues: false`); the class-DTO path did not.
+ * The request side is pinned independently: undeclared top-level keys and
+ * undeclared keys inside a declared nested object are stripped on the way
+ * in, so relaxing the outbound projection never opens mass assignment.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
@@ -24,9 +26,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import { getDynamicRepositoryToken, Where } from '@concepta/nestjs-repository';
-import { Expose, Type } from 'class-transformer';
-import { IsArray, IsObject, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { withOpenApi } from '@concepta/nestjs-core';
 import request from 'supertest';
 import type {
   AuthAdapterInterface,
@@ -38,10 +38,6 @@ import { RocketsCoreModule } from '../rockets-core.module';
 import { USER_METADATA_MODULE_ENTITY_KEY } from '../rockets-core.constants';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineResource } from '../infrastructure/resource/define-resource';
-// FreeFormJson via the ROOT barrel — the README example imports from
-// the package root, and round 4 caught the symbol missing there while
-// this spec reached it by deep import, hiding the drift.
-import { FreeFormJson } from '../index';
 import { f, rocketsFieldMeta, zodResource } from '../zod';
 import { z } from 'zod';
 import { defineAuthAdapter } from '../infrastructure/auth/define-auth-adapter';
@@ -75,69 +71,46 @@ class PetEntity {
   @Column({ type: 'simple-json', nullable: true })
   vet?: Record<string, unknown>;
   /**
-   * Server-owned column, deliberately absent from every input DTO.
+   * Server-owned column, deliberately absent from every input schema.
    * A vacuous whitelist test uses a key the entity does not have —
    * TypeORM drops that for free and proves nothing. This is a real
-   * column, so only the whitelist can keep a client from setting it.
+   * column, so only the schema strip can keep a client from setting it.
    */
   @Column({ type: 'varchar', nullable: true })
   internalRank?: string;
 }
 
 /**
- * Declared with `@Type()`, so a nested projection must still apply:
- * `clinic` survives, `internalNotes` does not. This is the half of the
- * contract that dropping `strategy: 'excludeAll'` could have silently
- * widened.
+ * A declared nested object: the projection must still apply inside it —
+ * `clinic` survives, `internalNotes` does not.
  */
-class VetDto {
-  @Expose() @IsString() @ApiProperty() clinic!: string;
-}
+const petCreateSchema = withOpenApi(
+  z.object({
+    name: z.string(),
+    profile: z.record(z.string(), z.unknown()).optional(),
+    tags: z.array(z.string()).optional(),
+    vet: z.object({ clinic: z.string() }).optional(),
+  }),
+  'PetCreateDto',
+);
 
-class PetCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose()
-  @FreeFormJson()
-  @IsOptional()
-  @IsObject()
-  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
-  profile?: Record<string, unknown>;
-  @Expose()
-  @IsOptional()
-  @IsArray()
-  @Type(() => String)
-  @ApiPropertyOptional({ type: [String], isArray: true })
-  tags?: unknown[];
-  @Expose()
-  @IsOptional()
-  @Type(() => VetDto)
-  @ApiPropertyOptional({ type: VetDto })
-  vet?: VetDto;
-}
+// Nullable columns come back as `null` from the row; the response schema
+// says so, or serialization rejects the row (a 500, not a silent drop).
+const petResponseSchema = withOpenApi(
+  z.object({
+    id: z.uuid(),
+    name: z.string(),
+    profile: z.record(z.string(), z.unknown()).nullable().optional(),
+    tags: z.array(z.string()).nullable().optional(),
+  }),
+  'PetResponseDto',
+);
 
-class PetResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose()
-  @FreeFormJson()
-  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
-  profile?: Record<string, unknown>;
-  // Arrays are not affected — class-transformer copies them through —
-  // so this one deliberately carries no marker.
-  @Expose()
-  @Type(() => String)
-  @ApiPropertyOptional({ type: [String], isArray: true })
-  tags?: unknown[];
-}
-
-/** Same shape without the marker: pins the documented default. */
-class PetUnmarkedResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose()
-  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
-  profile?: Record<string, unknown>;
-}
+/** Same row, `profile` NOT declared: pins that the column stays home. */
+const petNoProfileResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string() }),
+  'PetNoProfileResponseDto',
+);
 
 class StubMetadataRepo {
   async findOne() {
@@ -182,16 +155,16 @@ const petResource = defineResource<PetEntity>({
   entity: PetEntity,
   path: 'pets',
   tags: ['Pets'],
-  dto: { response: PetResponseDto },
+  dto: { response: petResponseSchema },
   operations: {
     list: {},
     read: {},
     create: {
-      input: PetCreateDto,
+      input: petCreateSchema,
       handler: ProbeCreateHandler,
     },
-    // Same row, response DTO without the marker.
-    update: { input: PetCreateDto, output: PetUnmarkedResponseDto },
+    // Same row, response schema that does not declare `profile`.
+    update: { input: petCreateSchema, output: petNoProfileResponseSchema },
   },
 });
 
@@ -231,7 +204,7 @@ const PROFILE = {
   nested: { level: { deep: true } },
 };
 
-describe('class-DTO responses keep free-form JSON columns (e2e)', () => {
+describe('schema responses keep free-form JSON columns (e2e)', () => {
   let app: INestApplication;
   let petId: string;
 
@@ -272,7 +245,7 @@ describe('class-DTO responses keep free-form JSON columns (e2e)', () => {
     if (app) await app.close();
   });
 
-  it('ZOD PATH: returns the blob intact (issue claims this already works)', async () => {
+  it('zodResource path: returns the blob intact', async () => {
     const created = await request(app.getHttpServer())
       .post('/zpets')
       .set('Authorization', 'Bearer u1')
@@ -292,13 +265,12 @@ describe('class-DTO responses keep free-form JSON columns (e2e)', () => {
     expect(row?.profile).toEqual(PROFILE);
   });
 
-  // ── The request side must NOT have been widened (#68) ──
+  // ── The request side must NOT be widened (#68) ──
   //
-  // The fix relaxes the module's outbound transform options. That is
-  // only safe if nothing on the way IN got looser with it. These pin
-  // the request side independently, so a future edit to the transform
-  // options cannot quietly open mass assignment: without them the
-  // change reads as "relaxed serialization until something leaks".
+  // Shipping the blob intact on the way OUT is only safe if nothing on
+  // the way IN got looser with it. These pin the request side
+  // independently, so a future edit to the request pipe cannot quietly
+  // open mass assignment.
 
   it('still drops an undeclared top-level key on the way in', async () => {
     const created = await request(app.getHttpServer())
@@ -320,7 +292,7 @@ describe('class-DTO responses keep free-form JSON columns (e2e)', () => {
     expect(row?.profile).toEqual(PROFILE);
   });
 
-  it('still projects a nested @Type() property to the child exposed fields', async () => {
+  it('still projects a declared nested object to its declared keys', async () => {
     const created = await request(app.getHttpServer())
       .post('/pets')
       .set('Authorization', 'Bearer u1')
@@ -370,24 +342,21 @@ describe('class-DTO responses keep free-form JSON columns (e2e)', () => {
     expect(rex?.profile).toEqual(PROFILE);
   });
 
-  it('an UNMARKED response property projects to empty — the marker is required on both sides', async () => {
-    // The first revision asserted the opposite ("only input needs the
-    // marker") — which required dropping `strategy: 'excludeAll'`
-    // globally, and THAT emitted every `@Expose`d nested relation
-    // without `@Type()` verbatim: `owner: { passwordHash }` where the
-    // projection previously yielded `{}`. Clean-room review caught the
-    // leak. The safe contract: free-form values need `@FreeFormJson` on
-    // the response DTO too; an unmarked object projects to `{}`.
+  it('a response schema that does not declare the column ships no key at all', async () => {
+    // Under class-transformer an unmarked object projected to `{}` — a
+    // key that lied about being empty. Schema serialization has no
+    // half-state: undeclared means absent.
     const res = await request(app.getHttpServer())
       .patch(`/pets/${petId}`)
       .set('Authorization', 'Bearer u1')
       .send({ name: 'Rex' })
       .expect(200);
 
-    expect(res.body.profile).toEqual({});
+    expect(res.body).not.toHaveProperty('profile');
+    expect(Object.keys(res.body).sort()).toEqual(['id', 'name']);
   });
 
-  it('still strips a column the response DTO does not declare', async () => {
+  it('still strips a column the response schema does not declare', async () => {
     const res = await request(app.getHttpServer())
       .get(`/pets/${petId}`)
       .set('Authorization', 'Bearer u1')

@@ -21,9 +21,11 @@ import {
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { APP_GUARD } from '@nestjs/core';
+import { withOpenApi } from '@concepta/nestjs-core';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import request from 'supertest';
+import { z } from 'zod';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineModuleResource } from '../infrastructure/resource/define-module-resource';
@@ -35,10 +37,6 @@ import type {
 import { extractBearerToken } from '../infrastructure/auth/extract-bearer-token';
 import { defineAuthAdapter } from '../infrastructure/auth/define-auth-adapter';
 import { InjectDynamicRepository } from '../common';
-import type {
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../domain/interfaces/user-metadata.interface';
 
 @Injectable()
 class FeatureE2eAuthAdapter implements AuthAdapterInterface {
@@ -142,18 +140,15 @@ class WidgetController {
   }
 }
 
-class FeatureMetadataCreateDto implements UserMetadataCreatableInterface {
-  userId!: string;
-}
-class FeatureMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  id!: string;
-}
 class FeatureUserMetadataEntity {}
 
 const featureUserMetadataConfig = {
   entity: FeatureUserMetadataEntity,
-  createDto: FeatureMetadataCreateDto,
-  updateDto: FeatureMetadataUpdateDto,
+  updateSchema: withOpenApi(z.object({}), 'FeatureMetadataUpdateDto'),
+  responseSchema: withOpenApi(
+    z.object({ id: z.uuid(), userId: z.string() }),
+    'FeatureMetadataResponseDto',
+  ),
 };
 
 describe('RocketsCoreModule + defineModuleResource (e2e)', () => {

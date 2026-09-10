@@ -14,10 +14,11 @@ import { clearSwaggerUiEnv } from './helpers/clear-swagger-ui-env';
 import { stableContractJson } from './helpers/stable-contract-json';
 
 /**
- * Committed OpenAPI contract artifact (issue #54) for the class-based half of
- * the matrix: this app registers `defineResource` / `defineRocketsAuth`
- * resources only — no zod. The zod + `operationResource` half is pinned by
- * `examples/sample-server/test/openapi-contract-export.e2e-spec.ts`.
+ * Committed OpenAPI contract artifact (issue #54) for the hand-written-entity
+ * half of the matrix: this app registers `defineResource` / `defineRocketsAuth`
+ * resources whose request/response schemas are named zod schemas over
+ * hand-written TypeORM entities. The `zodResource` + `operationResource` half
+ * is pinned by `examples/sample-server/test/openapi-contract-export.e2e-spec.ts`.
  *
  * The document is built by the app's own `createSampleServerAuthOpenApiDocument`
  * helper — the one `main.ts` serves through — so this pins what the app

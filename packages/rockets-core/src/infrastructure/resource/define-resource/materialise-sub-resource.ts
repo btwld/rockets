@@ -4,7 +4,7 @@ import { ApiParam } from '@nestjs/swagger';
 import type {
   CrudParamOptionInterface,
   CrudRequestConfig,
-} from '../../crud-compat';
+} from '@concepta/nestjs-crud';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import type {
   RocketsResourceDefinition,
@@ -119,12 +119,31 @@ export function materialiseSubResource(args: {
   );
 
   // Path-scoping master switch. `scope: false` → no FK filter/stamp hook
-  // and no ownership guard (fully unscoped nested route).
+  // and no ownership check.
   const applyScope = sub.scope !== false;
 
+  // The chain guarantee for a grandchild runs through THIS level's
+  // `PathScopeHook`: the leaf's guard looks its parent up and replays the
+  // parent's hooks, and that hook is the only thing that ties the parent
+  // row to `:parentId`. Without it the leaf is reachable through any
+  // ancestor id that exists — an access-control hole that opens from a
+  // switch two levels up, on a resource whose own routes look correct.
+  // Refused at definition time rather than documented: the trade is not
+  // one an author can make knowingly here.
+  if (!applyScope && Object.keys(def.subResources ?? {}).length > 0) {
+    throw new Error(
+      `defineResource(${parentKey}): sub-resource "${segment}" sets ` +
+        `\`scope: false\` and declares subResources. A nested resource ` +
+        `under an unscoped parent cannot verify its ancestor chain — the ` +
+        `parent lookup has no FK filter to replay, so a child is readable ` +
+        `through any existing grandparent id. Scope this level, or move ` +
+        `its children up.`,
+    );
+  }
+
   // Ownership guard column. Defaults to `'userId'` (secure by default).
-  // `owner: false` drops the guard while keeping the FK hook. `scope:
-  // false` drops both.
+  // `owner: false` and `scope: false` both drop it — but NOT the guard
+  // itself: existence and the ancestor chain are verified either way.
   const ownerColumn =
     !applyScope || sub.owner === false ? undefined : sub.owner ?? 'userId';
 
@@ -142,17 +161,21 @@ export function materialiseSubResource(args: {
     ...(def.hooks ?? []),
   ];
 
-  const ScopeGuard = ownerColumn
-    ? PathScopeGuard.for(
-        parentParam,
-        parentKey,
-        ownerColumn,
-        sub.parentPk ?? 'id',
-        parentHooks ?? [],
-        sub.parentSelect,
-        parentPrimaryParam,
-      )
-    : undefined;
+  // Always attached. Without `ownerColumn` it degrades to an
+  // existence + ancestor-chain check, which is correctness rather than
+  // an access-control opt-in: at three levels or more route params only
+  // filter by the IMMEDIATE parent, so the guard's parent lookup —
+  // replaying the parent's own `PathScopeHook` — is the only thing that
+  // rejects a middle row addressed through the wrong ancestor.
+  const ScopeGuard = PathScopeGuard.for(
+    parentParam,
+    parentKey,
+    ownerColumn,
+    sub.parentPk ?? 'id',
+    parentHooks ?? [],
+    sub.parentSelect,
+    parentPrimaryParam,
+  );
 
   const composedDecorators: readonly ClassDecorator[] = [
     ...(ScopeGuard ? [UseGuards(ScopeGuard) as ClassDecorator] : []),
@@ -179,10 +202,6 @@ export function materialiseSubResource(args: {
   };
 
   const bundle = defineResource(materialised);
-
-  if (!ScopeGuard && !ScopeHook) {
-    return bundle;
-  }
 
   // Both scoping classes are handed to `defineResource` as providers; a
   // regression in provider merging would silently unscope the nested

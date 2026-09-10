@@ -1,65 +1,36 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { INestApplication } from '@nestjs/common';
+import { HttpAdapterHost } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import {
-  Validate,
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
-} from 'class-validator';
-import { FailingAuthAdapterFixture } from './__fixtures__/providers/failing-auth.adapter.fixture';
-import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
-import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
-import type { RocketsOptions } from './rockets.module-definition';
-import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
-import {
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
-} from './domain/interfaces/user-metadata.interface';
-import { RocketsModule } from './rockets.module';
+import { z } from 'zod';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
   AuthRequest,
 } from '@concepta/rockets-core';
-import { extractBearerToken } from '@concepta/rockets-core';
+import {
+  RocketsCoreExceptionsFilter,
+  USER_METADATA_MODULE_ENTITY_KEY,
+  detailedErrorSerializer,
+  extractBearerToken,
+  getDynamicRepositoryToken,
+  withOpenApi,
+} from '@concepta/rockets-core';
+import { FailingAuthAdapterFixture } from './__fixtures__/providers/failing-auth.adapter.fixture';
+import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
+import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
+import type { RocketsOptions } from './rockets.module-definition';
+import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataResponseSchemaFixture } from './__fixtures__/schemas/user-metadata.schema.fixture';
+import { UserMetadataRepositoryFixture } from './__fixtures__/repositories/user-metadata.repository.fixture';
+import { RocketsModule } from './rockets.module';
 import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
-class MetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  userId!: string;
-}
-
-class MetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @IsEmail()
-  notifyEmail?: string;
-}
-
-@ValidatorConstraint({ name: 'alwaysFails', async: false })
-class AlwaysFailsConstraint implements ValidatorConstraintInterface {
-  validate(): boolean {
-    return false;
-  }
-}
-
-class MetadataUpdateNullConstraintsDto
-  implements UserMetadataModelUpdatableInterface
-{
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @Validate(AlwaysFailsConstraint)
-  badField?: string;
-}
+const metadataUpdateSchema = withOpenApi(
+  z.object({ notifyEmail: z.email().optional() }),
+  'MeValidationMetadataUpdateDto',
+);
 
 class NoMetadataAuthProvider implements AuthAdapterInterface {
   async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
@@ -91,11 +62,29 @@ const baseOptions: RocketsOptions = {
   auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
   userMetadata: {
     entity: StubUserMetadataEntity,
-    createDto: MetadataCreateDto,
-    updateDto: MetadataUpdateDto,
+    updateSchema: metadataUpdateSchema,
+    responseSchema: userMetadataResponseSchemaFixture,
   },
   repository: E2eFakeRepositoryModule,
 };
+
+async function bootApp(options: RocketsOptions): Promise<INestApplication> {
+  const moduleRef = await Test.createTestingModule({
+    imports: [RocketsModule.forRoot(options)],
+  }).compile();
+
+  const app = moduleRef.createNestApplication();
+  // The Rockets filter is what puts `details` on the wire — without it the
+  // body is Nest's default 400 envelope (statusCode/message/error only).
+  app.useGlobalFilters(
+    new RocketsCoreExceptionsFilter(
+      app.get(HttpAdapterHost),
+      detailedErrorSerializer,
+    ),
+  );
+  await app.init();
+  return app;
+}
 
 describe('MeController contract (e2e)', () => {
   let app: INestApplication;
@@ -106,42 +95,50 @@ describe('MeController contract (e2e)', () => {
     }
   });
 
-  it('PATCH /me returns 400 when dynamic userMetadata fails class-validator', async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [RocketsModule.forRoot(baseOptions)],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
+  it('PATCH /me returns 400 naming the nested path when userMetadata fails its schema', async () => {
+    app = await bootApp(baseOptions);
 
     const res = await request(app.getHttpServer())
       .patch('/me')
       .set('Authorization', 'Bearer valid-token')
-      .send({
-        userMetadata: {
-          notifyEmail: 'not-a-valid-email',
-        },
-      })
+      .send({ userMetadata: { notifyEmail: 'not-a-valid-email' } })
       .expect(400);
 
     expect(res.body.statusCode).toBe(400);
-    expect(
-      Array.isArray(res.body.message) || typeof res.body.message === 'string',
-    ).toBe(true);
+    expect(res.body.message).toMatch(/^userMetadata\.notifyEmail: /);
+    expect(res.body.details).toEqual([
+      { path: ['userMetadata', 'notifyEmail'], message: expect.any(String) },
+    ]);
+  });
+
+  it('PATCH /me forwards only the keys the update schema declares to the upsert', async () => {
+    app = await bootApp(baseOptions);
+    const repo = app.get<UserMetadataRepositoryFixture>(
+      getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
+    );
+    const update = vi.spyOn(repo, 'update');
+
+    await request(app.getHttpServer())
+      .patch('/me')
+      .set('Authorization', 'Bearer valid-token')
+      .send({
+        userMetadata: { notifyEmail: 'ok@example.com', role: 'admin' },
+      })
+      .expect(200);
+
+    // The per-route pipe strips `role` before the command is dispatched;
+    // the handler pins `userId` from the caller (never from the payload).
+    expect(update).toHaveBeenCalledTimes(1);
+    const [existing, data] = update.mock.calls[0];
+    const owner = typeof existing === 'string' ? existing : existing.userId;
+    expect(data).toEqual({ notifyEmail: 'ok@example.com', userId: owner });
   });
 
   it('GET /me returns 401 when auth provider rejects token', async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        RocketsModule.forRoot({
-          ...baseOptions,
-          auth: e2eAuthBootstrap(FailingAuthAdapterFixture),
-        }),
-      ],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
+    app = await bootApp({
+      ...baseOptions,
+      auth: e2eAuthBootstrap(FailingAuthAdapterFixture),
+    });
 
     await request(app.getHttpServer())
       .get('/me')
@@ -149,18 +146,11 @@ describe('MeController contract (e2e)', () => {
       .expect(401);
   });
 
-  it('GET /me returns empty userMetadata object when user has no metadata', async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        RocketsModule.forRoot({
-          ...baseOptions,
-          auth: e2eAuthBootstrap(NoMetadataAuthProvider),
-        }),
-      ],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
+  it('GET /me returns userMetadata: null when the user has no metadata row', async () => {
+    app = await bootApp({
+      ...baseOptions,
+      auth: e2eAuthBootstrap(NoMetadataAuthProvider),
+    });
 
     const res = await request(app.getHttpServer())
       .get('/me')
@@ -172,37 +162,6 @@ describe('MeController contract (e2e)', () => {
       sub: 'user-without-metadata',
       email: 'nometadata@example.com',
     });
-    expect(res.body.userMetadata).toEqual({});
-  });
-
-  it('PATCH /me returns 400 with empty messages array when validation error has null constraints', async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        RocketsModule.forRoot({
-          ...baseOptions,
-          userMetadata: {
-            entity: StubUserMetadataEntity,
-            createDto: MetadataCreateDto,
-            updateDto: MetadataUpdateNullConstraintsDto,
-          },
-        }),
-      ],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
-
-    const res = await request(app.getHttpServer())
-      .patch('/me')
-      .set('Authorization', 'Bearer valid-token')
-      .send({
-        userMetadata: {
-          badField: 'any-value',
-        },
-      })
-      .expect(400);
-
-    expect(res.body.statusCode).toBe(400);
-    expect(Array.isArray(res.body.message)).toBe(true);
+    expect(res.body).toHaveProperty('userMetadata', null);
   });
 });

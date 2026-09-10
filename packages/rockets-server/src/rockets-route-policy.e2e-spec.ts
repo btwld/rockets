@@ -1,7 +1,7 @@
 /**
  * `routePolicy` forwarded through `RocketsModule` — the composition path
  * the core README advertises coverage for, and the one where
- * package-owned controllers (`MeController`) actually exist.
+ * package-owned controllers (the `/me` controller) actually exist.
  *
  * `AuthServerGuard` is what this module registers as the global guard,
  * and the audit recognises it as authentication WITHOUT `authGuards` —
@@ -12,16 +12,12 @@ import { INestApplication, Injectable } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { RouteAuditService } from '@concepta/rockets-core';
-import { IsNotEmpty, IsString } from 'class-validator';
 
 import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
 import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
 import type { RocketsOptions } from './rockets.module-definition';
-import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
-import {
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
-} from './domain/interfaces/user-metadata.interface';
+import { userMetadataConfigFixture } from './__fixtures__/schemas/user-metadata.schema.fixture';
+import { buildMeController } from './gateways/http/build-me-controller';
 import { RocketsModule } from './rockets.module';
 import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
@@ -32,28 +28,10 @@ class JwtLikeGuard {
   }
 }
 
-class PolicyE2eMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  userId!: string;
-}
-
-class PolicyE2eMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-}
-
 const baseOptions: RocketsOptions = {
   settings: {},
   auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-  userMetadata: {
-    entity: StubUserMetadataEntity,
-    createDto: PolicyE2eMetadataCreateDto,
-    updateDto: PolicyE2eMetadataUpdateDto,
-  },
+  userMetadata: userMetadataConfigFixture,
   repository: E2eFakeRepositoryModule,
 };
 
@@ -105,7 +83,9 @@ describe('RocketsModule routePolicy (e2e)', () => {
   });
 
   it('allowControllers matches by identity, not by name', async () => {
-    const { MeController } = await import('./gateways/http/me.controller');
+    // `buildMeController` returns a fresh class per call, so the only way
+    // to hold the mounted reference is to mount it explicitly.
+    const meController = buildMeController(userMetadataConfigFixture);
 
     // A decoy sharing the NAME must not exempt the real controller —
     // name matching would pass here; identity matching must not.
@@ -117,6 +97,7 @@ describe('RocketsModule routePolicy (e2e)', () => {
         imports: [
           RocketsModule.forRoot({
             ...baseOptions,
+            controllers: [meController],
             routePolicy: {
               requireAcl: true,
               allowControllers: [FakeMeController],
@@ -133,9 +114,10 @@ describe('RocketsModule routePolicy (e2e)', () => {
       imports: [
         RocketsModule.forRoot({
           ...baseOptions,
+          controllers: [meController],
           routePolicy: {
             requireAcl: true,
-            allowControllers: [MeController],
+            allowControllers: [meController],
           },
         }),
       ],

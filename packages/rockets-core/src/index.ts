@@ -23,7 +23,6 @@ export {
 // Auth tokens & guard
 export {
   AUTH_ADAPTERS_TOKEN,
-  ROCKETS_DISABLE_GUARDS_TOKEN,
   CSRF_GUARD_OPTIONS_TOKEN,
 } from './rockets-core.constants';
 export { AuthServerGuard } from './infrastructure/guards/auth-server.guard';
@@ -45,14 +44,26 @@ export {
   MIN_CSRF_SECRET_LENGTH,
 } from './infrastructure/guards/csrf.guard';
 
-// CRUD serialization: free-form JSON opt-out (documented in the README's
-// JSON-column guide; was reachable only by deep import, which the packed
-// consumer cannot do — review round 4).
+// Schema engine: the one validation-options object every Rockets route
+// uses, the OpenAPI naming helpers consumer-authored schemas must go
+// through, and the document converter that turns named schemas into
+// `$ref`s.
+export { rocketsSchemaValidation } from './common/utils/standard-schema.util';
+// A hand-written response schema is not projected: a `dto: { response:
+// false }` field inside it is rejected at definition time (`.omit()` it).
+export { assertNoHiddenFields } from './zod/zod-projections';
 export {
-  FreeFormJson,
-  ROCKETS_TO_INSTANCE_OPTIONS,
-  ROCKETS_TO_PLAIN_OPTIONS,
-} from './infrastructure/crud-serialization';
+  assertFailClosedResponse,
+  assertNamedSchema,
+  buildPaginatedSchema,
+  isOpenApiBridged,
+  readSchemaId,
+} from './common/utils/open-api-schema.util';
+export { createRocketsStandardSchemaConverter } from './common/swagger-ui/rockets-standard-schema.converter';
+export { SchemaValidatorConflictCheck } from './infrastructure/validation/schema-validator-conflict.check';
+export { withOpenApi } from '@concepta/nestjs-core';
+export { paginatedSchema, createBatchSchema } from '@concepta/nestjs-crud';
+export type { CrudSchema } from '@concepta/nestjs-crud';
 
 // Route policy audit — reports what is actually enforced on every
 // discovered route, and fails the boot when the declared policy is not
@@ -157,7 +168,6 @@ export {
 export {
   attachErrorDetails,
   readErrorDetails,
-  classValidatorErrorsToDetails,
 } from './common/utils/validation-error-details.util';
 export { standardSchemaIssuesToDetails } from './common/utils/standard-schema.util';
 export type {
@@ -256,7 +266,6 @@ export {
 export type { RocketsSubResourceInput } from './infrastructure/resource/define-sub-resource';
 export { PathScopeHook } from './infrastructure/hooks/path-scope.hook';
 export type { RocketsUserMetadataConfig } from './domain/interfaces/rockets-user-metadata-config.interface';
-export { createPaginatedDto } from './infrastructure/resource/paginated-dto.factory';
 export {
   relation,
   createBoundRelation,
@@ -306,11 +315,6 @@ export type {
   UserUpdatableInterface,
   UserModelUpdatableInterface,
 } from './domain/interfaces/user.interface';
-export {
-  BaseUserDto,
-  BaseUserCreateDto,
-  BaseUserUpdateDto,
-} from './domain/interfaces/user.interface';
 
 // User metadata contracts
 export type {
@@ -320,19 +324,6 @@ export type {
   UserMetadataUpdatableInterface,
   UserMetadataModelUpdatableInterface,
 } from './domain/interfaces/user-metadata.interface';
-export {
-  BaseUserMetadataDto,
-  BaseUserMetadataCreateDto,
-  BaseUserMetadataUpdateDto,
-} from './domain/interfaces/user-metadata.interface';
-
-// DTOs
-export {
-  UserUpdateDto,
-  UserResponseDto,
-  RoleNameDto,
-  UserRoleItemDto,
-} from './infrastructure/dtos/user.dto';
 
 // CQRS commands
 export { UpsertUserMetadataCommand } from './application/commands/impl/upsert-user-metadata.command';
@@ -362,7 +353,7 @@ export {
   deriveEntityKey,
   resolveEntityKey,
   stripUndefined,
-  whitelistedFromDto,
+  validateWithSchema,
 } from './common';
 export type {
   CrudCommandInterface,
@@ -377,6 +368,7 @@ export type {
 
 // Constants
 export {
+  USER_METADATA_MANAGED_FIELDS,
   USER_METADATA_MODULE_ENTITY_KEY,
   USER_MODULE_USER_ENTITY_KEY,
   ROCKETS_CORE_SETTINGS_TOKEN,
@@ -386,7 +378,12 @@ export {
 export {
   RateLimit,
   ROCKETS_RATE_LIMIT_TOKEN,
+  RATE_LIMIT_DEFAULTS_TOKEN,
+  DEFAULT_RATE_LIMIT_DIMENSION,
+  type RateLimitDimensionOverride,
   type RateLimitOptions,
+  type RateLimitPolicy,
+  type RateLimitDefaults,
 } from './decorators/rate-limit.decorator';
 export {
   RATE_LIMIT_STORE_TOKEN,
@@ -394,7 +391,10 @@ export {
   type RateLimitStoreInterface,
 } from './domain/interfaces/rate-limit.interface';
 export { RateLimitGuard } from './infrastructure/guards/rate-limit.guard';
-export { InMemoryRateLimitStore } from './infrastructure/rate-limit/in-memory-rate-limit-store.service';
+export {
+  InMemoryRateLimitStore,
+  RATE_LIMIT_MAX_KEYS_TOKEN,
+} from './infrastructure/rate-limit/in-memory-rate-limit-store.service';
 
 // Job dispatch port — dedupe, lease, at-least-once (issue #53)
 export {

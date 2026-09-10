@@ -21,7 +21,10 @@ import {
   createRocketsAuthStandardE2eTestingModule,
   type CreateRocketsAuthStandardE2eModuleOptions,
 } from './helpers/rockets-auth-e2e-app.factory';
-import { UserMetadataValidatedDtoFixture } from '../__fixtures__/user/user-metadata-validated.dto.fixture';
+import {
+  userMetadataValidatedResponseSchemaFixture,
+  userMetadataValidatedUpdateSchemaFixture,
+} from '../__fixtures__/user/user-metadata-validated.schema.fixture';
 import { UserMetadataEntityFixture } from '../__fixtures__/user/user-metadata.entity.fixture';
 
 /**
@@ -156,23 +159,22 @@ describe('RocketsAuth error details (e2e) — #87 compat filter parity', () => {
  * auth-composed app. It does not prove any Rockets code actually MINTS
  * details on a route a real consumer calls — the seal's point.
  *
- * `PATCH /me` is that route: `MeController.updateUser` calls
- * `whitelistedFromDto(userMetadataConfig.updateDto, body.userMetadata)`
- * synchronously in the request, and that helper is the one production
- * site that raises a `BadRequestException` carrying
- * `classValidatorErrorsToDetails` findings via `attachErrorDetails`.
- * The controller is registered
- * in this exact app: `defineRocketsAuth` sets `identity.userMetadata`,
- * which is what makes `RocketsModule` mount `MeController`.
+ * `PATCH /me` is that route: its body is `@Body({ schema })`-validated by
+ * Nest's Standard Schema pipe with the Rockets exception factory, which
+ * raises the `BadRequestException` carrying
+ * `standardSchemaIssuesToDetails` findings via `attachErrorDetails`.
+ * The controller is registered in this exact app: `defineRocketsAuth`
+ * sets `identity.userMetadata`, which is what makes `RocketsModule`
+ * mount the `/me` controller.
  *
- * (The other production minter — the invitation-acceptance listener —
- * is NOT reachable over HTTP: its event is published from an
- * `onCommit` callback flushed with `Promise.allSettled`, `commit()` is
- * a synchronous `void`, `EventBus.bind` swallows handler errors, and
- * the listener itself catches to honour the event-listener contract.
- * That endpoint returns 200 whatever the metadata payload does. Three
- * of those four barriers are upstream. Documented rather than worked
- * around.)
+ * (The other production minter — the invitation-acceptance listener's
+ * `validateWithSchema` — is NOT reachable over HTTP: its event is
+ * published from an `onCommit` callback flushed with
+ * `Promise.allSettled`, `commit()` is a synchronous `void`,
+ * `EventBus.bind` swallows handler errors, and the listener itself
+ * catches to honour the event-listener contract. That endpoint returns
+ * 200 whatever the metadata payload does. Three of those four barriers
+ * are upstream. Documented rather than worked around.)
  */
 describe('RocketsAuth error details (e2e) — real production minter: PATCH /me', () => {
   const apps: INestApplication[] = [];
@@ -193,8 +195,8 @@ describe('RocketsAuth error details (e2e) — real production minter: PATCH /me'
     const { app } = await bootAuthApp(serializer, {
       userMetadata: {
         entity: UserMetadataEntityFixture,
-        createDto: UserMetadataValidatedDtoFixture,
-        updateDto: UserMetadataValidatedDtoFixture,
+        updateSchema: userMetadataValidatedUpdateSchemaFixture,
+        responseSchema: userMetadataValidatedResponseSchemaFixture,
       },
     });
     apps.push(app);
@@ -212,7 +214,7 @@ describe('RocketsAuth error details (e2e) — real production minter: PATCH /me'
     return { app, token: login.body.accessToken as string };
   }
 
-  it('detailedErrorSerializer: whitelistedFromDto findings reach the response', async () => {
+  it('detailedErrorSerializer: schema issues reach the response with their nested path', async () => {
     const { app, token } = await bootWithValidatingMetadata(
       detailedErrorSerializer,
     );
@@ -220,18 +222,22 @@ describe('RocketsAuth error details (e2e) — real production minter: PATCH /me'
     const res = await request(app.getHttpServer())
       .patch('/me')
       .set('Authorization', `Bearer ${token}`)
-      // Both violations survive `enableImplicitConversion`: a 12-char
-      // string is still over `@MaxLength(5)`, and 999 is still over
-      // `@Max(150)`. A `@IsString()` violation would be laundered.
+      // Well-typed values that still violate a range: a 12-char string is
+      // over `.max(5)`, and 999 is over `.max(150)`.
       .send({ userMetadata: { firstName: 'far-too-long', age: 999 } })
       .expect(400);
 
+    // Each detail names the FULL path from the body root — the nested
+    // `userMetadata` segment is what lets a client highlight the field.
     expect(res.body.details).toEqual([
       {
-        path: ['firstName'],
-        message: 'firstName must be shorter than or equal to 5 characters',
+        path: ['userMetadata', 'firstName'],
+        message: 'Too big: expected string to have <=5 characters',
       },
-      { path: ['age'], message: 'age must not be greater than 150' },
+      {
+        path: ['userMetadata', 'age'],
+        message: 'Too big: expected number to be <=150',
+      },
     ]);
     expect(res.body.statusCode).toBe(400);
     expect(res.body.errorCode).toBe('HTTP_BAD_REQUEST');
@@ -270,34 +276,15 @@ describe('RocketsAuth error details (e2e) — real production minter: PATCH /me'
   });
 
   /**
-   * DEFECT PINNED, NOT ENDORSED — issue #103.
-   *
-   * The three tests above supply `UserMetadataValidatedDtoFixture`. That
-   * is not decoration of a passing case: with the DEFAULT metadata DTO
-   * this route is broken, and writing those tests is what surfaced it.
-   *
-   * `RocketsAuthUserMetadataDto` carries `@Expose()` / `@ApiProperty()`
-   * but no class-validator metadata, and `whitelistedFromDto` validates
-   * with `forbidUnknownValues: true`. class-validator rejects a
-   * metadata-less target outright, so `MeController.updateUser` 400s on
-   * EVERY payload — `{}` included, since its own `?? {}` fallback hits
-   * the same wall — and leaks an internal validator string to the
-   * client. It is the auth e2e helper's default and the documented base
-   * extension point, so an auth app that never subclasses has no
-   * working `PATCH /me` at all.
-   *
-   * Every existing `/me` spec in `rockets-server` supplies a decorated
-   * DTO, and `rockets-server-auth` had no `PATCH /me` coverage before
-   * this file — which is why a green suite hid it.
-   *
-   * Pinned the way the #83 whitelist trap is pinned: asserting the
-   * CURRENT broken behaviour so the claim above stays honest. Fixing
-   * #103 SHOULD fail this test; update it then, deliberately. Not fixed
-   * here because the fix is a semantic change to a shared core util
-   * (`whitelistedFromDto`) with real options to weigh, and this is a
-   * changelog-accuracy PR.
+   * Issue #103, closed by the schema engine: the class-DTO default
+   * (`RocketsAuthUserMetadataDto`) carried no validator metadata, so the
+   * old whitelist helper rejected EVERY payload — `{}` included — and an
+   * auth app that never subclassed had no working `PATCH /me`. The
+   * default is now `rocketsAuthUserMetadataUpdateSchema`, an empty
+   * object schema: every payload validates, and keys the app never
+   * declared are stripped rather than persisted.
    */
-  it('DEFECT #103: PATCH /me 400s on every payload with the default metadata DTO', async () => {
+  it('#103 closed: PATCH /me accepts every payload with the default metadata schema', async () => {
     const { app } = await bootAuthApp();
     apps.push(app);
 
@@ -314,8 +301,6 @@ describe('RocketsAuth error details (e2e) — real production minter: PATCH /me'
       .expect(200);
     const token = login.body.accessToken as string;
 
-    // An EMPTY body too: this is not "invalid input rejected", it is the
-    // endpoint being unusable.
     for (const body of [
       {},
       { userMetadata: {} },
@@ -325,11 +310,12 @@ describe('RocketsAuth error details (e2e) — real production minter: PATCH /me'
         .patch('/me')
         .set('Authorization', `Bearer ${token}`)
         .send(body)
-        .expect(400);
+        .expect(200);
 
-      expect(res.body.message).toEqual([
-        'an unknown value was passed to the validate function',
-      ]);
+      // Undeclared keys never reach the row, and the response projects
+      // only the base metadata columns.
+      expect(res.body.userMetadata).not.toHaveProperty('firstName');
+      expect(res.body.userMetadata.userId).toBe(res.body.id);
     }
   });
 });

@@ -17,7 +17,7 @@ export interface RateLimitResult {
  * Core ships one adapter, `InMemoryRateLimitStore`, for tests and
  * samples — in-memory, single-process. A production, multi-instance
  * deployment needs a shared backend (a dynamic-repository table, Redis)
- * behind the same interface; `CONFIGURATION.md` §7c documents one, with
+ * behind the same interface; `CONFIGURATION.md` §7d documents one, with
  * an e2e that fires 10 concurrent requests at a real database and
  * asserts the admitted/rejected split and the persisted attempt count
  * exactly.
@@ -40,7 +40,7 @@ export interface RateLimitStoreInterface {
    * NOT satisfy this, because two overlapping calls read the same
    * pre-increment value and one of the two increments disappears — the
    * attacker's requests are then invisible to the limiter rather than
-   * merely rejected. `CONFIGURATION.md` §7c shows a store that meets it
+   * merely rejected. `CONFIGURATION.md` §7d shows a store that meets it
    * by appending one row per attempt instead of mutating a counter.
    *
    * What the port deliberately does NOT promise is a globally

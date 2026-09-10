@@ -1,19 +1,24 @@
-import { registerAs } from '@nestjs/config';
+import type { FactoryProvider } from '@nestjs/common';
 
 import { RocketsAuthSettingsInterface } from '../interfaces/rockets-auth-settings.interface';
-import {
-  ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-  ROCKETS_AUTH_OTP_ASSIGNMENT,
-} from '../constants/rockets-auth.constants';
+import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../constants/rockets-auth.constants';
+
+/**
+ * Token of the provider holding the auth module's default settings —
+ * distinct from `ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN`, which
+ * is the resolved settings the rest of the module injects.
+ */
+export const ROCKETS_AUTH_SETTINGS_DEFAULTS_TOKEN =
+  'ROCKETS_AUTH_SETTINGS_DEFAULTS_TOKEN';
 
 /**
  * Authentication combined configuration
  *
  * This combines all authentication-related configurations into a single namespace.
  */
-export const rocketsAuthOptionsDefaultConfig = registerAs(
-  ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
-  (): RocketsAuthSettingsInterface => {
+export const rocketsAuthOptionsDefaultConfig = {
+  provide: ROCKETS_AUTH_SETTINGS_DEFAULTS_TOKEN,
+  useFactory: (): RocketsAuthSettingsInterface => {
     return {
       role: {
         adminRoleName: process.env?.ADMIN_ROLE_NAME ?? 'admin',
@@ -50,4 +55,4 @@ export const rocketsAuthOptionsDefaultConfig = registerAs(
       },
     };
   },
-);
+} satisfies FactoryProvider<RocketsAuthSettingsInterface>;

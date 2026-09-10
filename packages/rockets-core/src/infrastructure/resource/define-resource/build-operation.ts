@@ -14,8 +14,9 @@ import {
   CrudRestoreCommand,
   CrudJoin,
   type CrudOperationOptions,
+  type CrudRequestConfig,
+  type CrudResponseConfig,
 } from '@concepta/nestjs-crud';
-import type { CrudRequestConfig, CrudResponseConfig } from '../../crud-compat';
 import type { JoinClause } from '@concepta/nestjs-repository';
 import type {
   ResourceDtoConfig,

@@ -20,6 +20,7 @@ export class GetUserMetadataHandler extends AbstractGetUserMetadataHandler {
   ): Promise<UserMetadataEntityInterface | null> {
     return this.repo.findOne({
       where: Where.eq<UserMetadataEntityInterface>('userId', query.userId),
+      ctx: query.ctx,
     });
   }
 }

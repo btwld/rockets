@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ExceptionsFilter } from '@concepta/rockets';
 import request from 'supertest';
@@ -18,9 +18,6 @@ describe('operationResource pet-transfer sample (e2e)', () => {
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: ['error'] });
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     await app.init();

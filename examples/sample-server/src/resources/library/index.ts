@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { rocketsFieldMeta } from '@concepta/rockets-core/zod';
+import { f, rocketsFieldMeta } from '@concepta/rockets-core/zod';
 import { zodResource } from '../../zod-bindings';
 
 /**
@@ -15,9 +15,8 @@ import { zodResource } from '../../zod-bindings';
  * - keyed `operations` form with full defineResource parity:
  *   soft delete (`dateDeleted` via `db.deletedAt`), restore, replace.
  *
- * The handwritten control twin lives in
- * `test/__fixtures__/zod-parity/author-book.control.ts`; the parity e2e
- * keeps both styles behaviorally identical.
+ * `test/zod-library.e2e-spec.ts` asserts the document and the runtime
+ * behaviour.
  */
 export const authorSchema = z.object({
   id: z
@@ -29,12 +28,8 @@ export const authorSchema = z.object({
     .max(100)
     .meta({ example: 'Machado de Assis' })
     .register(rocketsFieldMeta, { dto: { response: true } }),
-  dateCreated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, { db: { createdAt: true } }),
-  dateUpdated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, { db: { updatedAt: true } }),
+  dateCreated: f.createdAt(),
+  dateUpdated: f.updatedAt(),
 });
 
 export const bookSchema = z.object({
@@ -66,17 +61,9 @@ export const bookSchema = z.object({
       onDelete: 'CASCADE',
     },
   }),
-  dateCreated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, { db: { createdAt: true } }),
-  dateUpdated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, { db: { updatedAt: true } }),
-  dateDeleted: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, { db: { deletedAt: true } })
-    .nullable()
-    .optional(),
+  dateCreated: f.createdAt(),
+  dateUpdated: f.updatedAt(),
+  dateDeleted: f.deletedAt(),
 });
 
 export type Author = z.infer<typeof authorSchema>;

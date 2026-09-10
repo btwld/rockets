@@ -2,42 +2,17 @@ import { describe, it, afterEach } from 'vitest';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
 import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
 import type { RocketsOptions } from './rockets.module-definition';
-import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
-import {
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
-} from './domain/interfaces/user-metadata.interface';
+import { userMetadataConfigFixture } from './__fixtures__/schemas/user-metadata.schema.fixture';
 import { RocketsModule } from './rockets.module';
 import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
-
-class MinimalMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  userId!: string;
-}
-
-class MinimalMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-}
 
 const baseOptions: RocketsOptions = {
   settings: {},
   auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-  userMetadata: {
-    entity: StubUserMetadataEntity,
-    createDto: MinimalMetadataCreateDto,
-    updateDto: MinimalMetadataUpdateDto,
-  },
+  userMetadata: userMetadataConfigFixture,
   repository: E2eFakeRepositoryModule,
 };
 

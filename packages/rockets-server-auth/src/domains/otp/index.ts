@@ -8,9 +8,9 @@
 // Gateway controller factory
 export { buildRocketsAuthOtpController } from './gateways/http/factories/build-rockets-auth-otp-controller';
 
-// DTOs
-export { RocketsAuthOtpConfirmDto } from './infrastructure/dto/rockets-auth-otp-confirm.dto';
-export { RocketsAuthOtpSendDto } from './infrastructure/dto/rockets-auth-otp-send.dto';
+// Schemas
+export { rocketsAuthOtpConfirmSchema } from './infrastructure/schemas/rockets-auth-otp-confirm.schema';
+export { rocketsAuthOtpSendSchema } from './infrastructure/schemas/rockets-auth-otp-send.schema';
 
 // Domain exceptions
 export { RocketsAuthOtpException } from './domain/exceptions/rockets-auth-otp.exception';

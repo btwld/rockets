@@ -8,65 +8,80 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  SerializeOptions,
+  StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe,
+  UseInterceptors,
+  UsePipes,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
   ApiOperation,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { Ctx, type AppContextInterface } from '@concepta/nestjs-core';
 import type { AuthorizedUser } from '@concepta/rockets';
-import { PetShareEntity } from './pet-share.entity';
-import { PetShareCreateDto, PetShareResponseDto } from './pet-share.dto';
+import { AuthUser, rocketsSchemaValidation } from '@concepta/rockets-core';
+import {
+  petShareCreateSchema,
+  petShareListResponseSchema,
+  petShareResponseSchema,
+  type PetShareCreateBody,
+  type PetShareResponse,
+} from './pet-share.schema';
 import { PetShareService } from './pet-share.service';
-import { AuthUser } from '@concepta/rockets-core';
 
 /**
  * Thin HTTP gateway. `@Ctx()` resolves the per-request `AppContextHost`
  * attached by the global overlay interceptor — the service receives the
  * same ctx object a CRUD handler would get, so
  * `TransactionScope.run(ctx, ...)` behaves uniformly across the app.
+ *
+ * Validation and serialization run on Nest 12's native Standard Schema
+ * path: the class-level pipe validates `@Body({ schema })` with the
+ * Rockets exception factory, and the serializer interceptor projects each
+ * share row through `petShareResponseSchema` (undeclared keys never leak).
  */
 @ApiTags('Pet shares')
 @ApiBearerAuth()
 @Controller('pets/:petId/share')
+@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
+@UseInterceptors(StandardSchemaSerializerInterceptor)
+@SerializeOptions({ schema: petShareResponseSchema })
 export class PetShareController {
   constructor(private readonly petShareService: PetShareService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Share a pet with another user (owner only)' })
+  @ApiResponse({ status: 201, standardSchema: petShareResponseSchema })
   @ApiNotFoundResponse({ description: 'Pet not found or not owned by you' })
   async share(
     @Ctx() ctx: AppContextInterface,
     @Param('petId', new ParseUUIDPipe()) petId: string,
     @AuthUser() authUser: AuthorizedUser,
-    @Body() dto: PetShareCreateDto,
-  ): Promise<PetShareResponseDto> {
-    const share = await this.petShareService.share(ctx, {
+    @Body({ schema: petShareCreateSchema }) dto: PetShareCreateBody,
+  ): Promise<PetShareResponse> {
+    return this.petShareService.share(ctx, {
       petId,
       actorUserId: authUser.id,
       targetUserId: dto.userId,
       permission: dto.permission,
     });
-    return toResponse(share);
   }
 
   @Get()
   @ApiOperation({ summary: 'List shares for a pet (owner only)' })
+  @ApiResponse({ status: 200, standardSchema: petShareListResponseSchema })
   @ApiNotFoundResponse({ description: 'Pet not found or not owned by you' })
   async list(
     @Ctx() ctx: AppContextInterface,
     @Param('petId', new ParseUUIDPipe()) petId: string,
     @AuthUser() authUser: AuthorizedUser,
-  ): Promise<PetShareResponseDto[]> {
-    const shares = await this.petShareService.listForPet(
-      ctx,
-      petId,
-      authUser.id,
-    );
-    return shares.map(toResponse);
+  ): Promise<PetShareResponse[]> {
+    return this.petShareService.listForPet(ctx, petId, authUser.id);
   }
 
   @Delete(':userId')
@@ -83,14 +98,4 @@ export class PetShareController {
   ): Promise<void> {
     await this.petShareService.revoke(ctx, petId, targetUserId, authUser.id);
   }
-}
-
-function toResponse(share: PetShareEntity): PetShareResponseDto {
-  return {
-    id: share.id,
-    petId: share.petId,
-    userId: share.userId,
-    permission: share.permission,
-    dateCreated: share.dateCreated,
-  };
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Namespaced per-field metadata carried in a CUSTOM zod registry —
  * never `.meta()`. `.meta()` writes to `z.globalRegistry`, which
- * `z.toJSONSchema` (and therefore nestjs-zod's OpenAPI generation)
+ * `z.toJSONSchema` (and therefore the OpenAPI bridge)
  * merges verbatim into the JSON Schema output: a `db` namespace placed
  * there leaks into the public Swagger document. The custom registry is
  * invisible to JSON Schema generation by design.
@@ -304,6 +304,16 @@ export function unwrapField(field: z.ZodType, path: string): UnwrappedField {
       defaultValue = current.def.defaultValue;
       current = asClassicSchema(current.def.innerType, path);
       continue;
+    }
+    // `guard.pipe(schema)` validates the input; `schema` is the stored
+    // type (`f.date()` narrows before `z.coerce.date()`). A `.transform()`
+    // pipe has no schema on its output side and stays opaque.
+    if (current instanceof z.ZodPipe) {
+      const out = asClassicSchema(current.def.out, path);
+      if (!(out instanceof z.ZodTransform)) {
+        current = out;
+        continue;
+      }
     }
     break;
   }

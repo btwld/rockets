@@ -7,7 +7,7 @@ process.env.OPENAI_API_KEY = '';
 process.env.OPEN_API_KEY = '';
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import request from 'supertest';
 
@@ -87,9 +87,6 @@ describe('sample-code-review — Firebase + GitHub + analysis (e2e)', () => {
     // Deferring the import to beforeAll guarantees fake mode is set first.
     const { AppModule } = await import('../src/app.module');
     app = await NestFactory.create(AppModule, { logger: ['error'] });
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     await app.init();
@@ -130,6 +127,16 @@ describe('sample-code-review — Firebase + GitHub + analysis (e2e)', () => {
     expect(
       repos.body.some((r: { fullName: string }) => r.fullName === 'conceptadev/rockets'),
     ).toBe(true);
+
+    // Per-route Standard Schema pipe (no global pipe): the Rockets
+    // envelope names the offending field.
+    const invalid = await request(app.getHttpServer())
+      .post('/analysis/review')
+      .set('Authorization', FIREBASE_USER)
+      .send({ owner: '', repo: 'rockets' })
+      .expect(400);
+    expect(invalid.body.errorCode).toBeTruthy();
+    expect(JSON.stringify(invalid.body.message)).toContain('owner');
 
     const review = await request(app.getHttpServer())
       .post('/analysis/review')

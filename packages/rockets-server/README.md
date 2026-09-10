@@ -42,8 +42,9 @@ Auth0, Okta, a custom JWT issuer, an API-key service).
 
 What it adds on top of core:
 
-- A `MeController` (`GET /me`, `PATCH /me`) that reads the authenticated user
-  and the local `userMetadata` row joined by external id.
+- The `/me` routes (`GET /me`, `PATCH /me`), built by `buildMeController`
+  from your `userMetadata` config, that read the authenticated user and the
+  local `userMetadata` row joined by external id.
 - Auto-opt-in for `AuthServerGuard` as the `APP_GUARD` (disable per-instance
   with `enableGlobalGuard: false`).
 - An `auth` option that accepts an `AuthBootstrap` (or array) from
@@ -87,7 +88,8 @@ a **micro app** on this package:
 **What `@concepta/rockets` adds** on top of core (so every micro app shares the
 same shell):
 
-- `MeController` — `GET /me`, `PATCH /me` + local `userMetadata` row
+- `/me` routes (`buildMeController`) — `GET /me`, `PATCH /me` + local
+  `userMetadata` row
 - `APP_GUARD` → `AuthServerGuard` (opt out with `enableGlobalGuard: false`)
 - `auth` chain — `defineFirebaseAuth()`, app-local `AuthBootstrap`, or array of
   both
@@ -118,12 +120,13 @@ pattern:
 ### Install
 
 ```bash
-yarn add @concepta/rockets@alpha \
-  class-transformer class-validator reflect-metadata rxjs
+yarn add @concepta/rockets@alpha reflect-metadata rxjs
 ```
 
-`@concepta/rockets` pulls in `rockets-core` and the matching `@concepta/nestjs-*`
-motors transitively (repository + CRUD re-exported by `@concepta/rockets-core`).
+`@concepta/rockets` pulls in `rockets-core`, `zod` (the schema engine — no
+`class-validator` / `class-transformer` needed) and the matching
+`@concepta/nestjs-*` motors transitively (repository + CRUD re-exported by
+`@concepta/rockets-core`).
 Add TypeORM (`@concepta/rockets-repository-typeorm@alpha`, `typeorm`, `@nestjs/typeorm`,
 driver) only when you use SQL. Add other `@concepta/*` packages only if you import
 from
@@ -177,16 +180,12 @@ import { createServer, defineResource } from '@concepta/rockets';
 import { defineTypeOrmRepository } from '@concepta/rockets-repository-typeorm';
 import { jwtAuth } from './auth/jwt.adapter';
 import { PetEntity } from './pet.entity';
-import { UserMetadataEntity } from './user/user-metadata.entity';
-import { UserMetadataCreateDto, UserMetadataUpdateDto } from './user/dto';
+// defineUserMetadata(userMetadataSchema) → { entity, updateSchema, responseSchema }
+import { userMetadataConfig } from './user/user-metadata.schema';
 
 export const server = createServer({
   auth: jwtAuth,
-  userMetadata: {
-    entity: UserMetadataEntity,
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
-  },
+  userMetadata: userMetadataConfig,
   repository: defineTypeOrmRepository({
     type: 'sqlite',
     database: ':memory:',
@@ -233,7 +232,7 @@ RocketsModule.forRoot({
     }),
     defineApiKeyAuth(),
   ],
-  userMetadata: { entity, createDto, updateDto },
+  userMetadata: { entity, updateSchema, responseSchema },
   repository,
   resources: [
     defineModuleResource({ entities: [UserEntity] }),
@@ -277,8 +276,12 @@ RocketsModule.forRoot({
 });
 ```
 
-`PATCH /me` validates `userMetadata` against `userMetadata.updateDto` — if you
-ship that DTO, keep the controller.
+`PATCH /me` validates `body.userMetadata` against `userMetadata.updateSchema`
+and both routes serialize through `userMetadata.responseSchema` — if you
+ship those schemas, keep the controller. To mount it yourself (for example
+to list it in `routePolicy.allowControllers`, which needs a class
+reference), call `buildMeController(userMetadataConfig)` once and pass the
+returned class through `controllers:`.
 
 ### Override the user-metadata handlers
 
@@ -364,7 +367,7 @@ defineModuleResource({
 | -------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
 | Motor                      | `@concepta/nestjs-repository`, `crud`, `hook`, … | Runtime behaviour (via `@concepta/rockets-*` facades)                                    |
 | Planner                    | `@concepta/rockets-core`                          | `buildAppRegistrationPlan`, `defineResource`, `AuthServerGuard`                         |
-| **This package**           | `@concepta/rockets`                               | `RocketsModule`, `MeController`, `APP_GUARD` wiring                                     |
+| **This package**           | `@concepta/rockets`                               | `RocketsModule`, `buildMeController` (`/me`), `APP_GUARD` wiring                        |
 | Built-in identity (path B) | `@concepta/rockets-auth`                          | `defineRocketsAuth()` — **sibling**, not a dependency of this package; apps import both |
 
 Path B: `createServer({ auth: defineRocketsAuth(...), resources })`. The auth
@@ -388,34 +391,44 @@ definition asynchronously.
 | `repository`        | `RepositoryModuleInterface \| RepositoryBootstrap` | optional                  | Default persistence adapter forwarded to core. Omit if the auth integration registers everything.                        |
 | `resources`         | `ReadonlyArray<ResourceInput>`                     | optional                  | Bundles from `defineResource` / `defineModuleResource` / `defineSubResource` / `defineOperationResource` / `operationResource` / hand-built `RocketsResourceConfig`. |
 | `enableGlobalGuard` | `boolean` (default `true`)                         | optional                  | Set `false` to skip the `APP_GUARD: AuthServerGuard` provider.                                                           |
-| `disableController` | `{ me?: boolean }`                                 | optional                  | Drop `MeController` (or other built-ins added later).                                                                    |
+| `disableController` | `{ me?: boolean }`                                 | optional                  | Skip the built `/me` controller (`buildMeController`) — or other built-ins added later.                                  |
 | `handlers`          | `{ upsertUserMetadata?, getUserMetadata? }`        | optional                  | Override the default CQRS handlers for the metadata table.                                                               |
 | `controllers`       | `Type[]`                                           | optional                  | Replace the default controller list (advanced).                                                                          |
 | `global`            | `boolean` (default `false`)                        | optional                  | Make this module global.                                                                                                 |
 
-### `MeController`
+### `buildMeController(config)` — the `/me` routes
 
-| Route       | Description                                                                   |
-| ----------- | ----------------------------------------------------------------------------- |
-| `GET /me`   | Returns the authenticated user + their `userMetadata` row (joined by `id`).   |
-| `PATCH /me` | Validates `body.userMetadata` against `userMetadata.updateDto`, then upserts. |
+A factory, not a static class: both schemas depend on the app's
+`userMetadata` config. `RocketsModule` calls it for you unless
+`disableController.me` is set; call it yourself only when you mount the
+controller through `controllers:`. Request/response components are
+`UserUpdateDto` / `UserResponseDto` (`meUpdateSchema` / `meResponseSchema`,
+also exported), nesting your metadata schemas by `$ref`.
+
+| Route       | Description                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------- |
+| `GET /me`   | Returns the authenticated user + their `userMetadata` row (joined by `id`; `null` before the first `PATCH`).      |
+| `PATCH /me` | Validates `body.userMetadata` against `userMetadata.updateSchema` (`400` with `details`), then upserts.           |
+
+Both routes serialize through `userMetadata.responseSchema`, so a column
+hidden from the response projection never leaves `/me` either.
 
 ### Curated re-exports from `@concepta/rockets-core`
 
 Everything most external-auth apps need:
 
 - Auth: `AuthServerGuard`, `AuthPublic`, `extractBearerToken`,
-  `AUTH_ADAPTERS_TOKEN`, `ROCKETS_DISABLE_GUARDS_TOKEN`.
+  `AUTH_ADAPTERS_TOKEN`. (Reading the `AuthPublic` metadata back is
+  `isAuthPublic()` from `@concepta/nestjs-authentication` — Rockets no
+  longer mirrors upstream's metadata key.)
 - Types: `AuthAdapterInterface`, `AuthAttemptResult`, `AuthRequest`,
   `AuthorizedUser`, `RepositoryPersistenceConfig`, `RocketsUserMetadataConfig`,
   `RocketsCoreOptionsInterface`, `RocketsCoreOptionsExtrasInterface`,
   `RocketsCoreSettingsInterface`, all `User*Interface` and
   `UserMetadata*Interface` shapes.
 - Module: `RocketsCoreModule`, `UserModule` (sub-module).
-- DTOs: `BaseUserDto`, `BaseUserCreateDto`, `BaseUserUpdateDto`,
-  `BaseUserMetadataDto`, `BaseUserMetadataCreateDto`,
-  `BaseUserMetadataUpdateDto`, `UserUpdateDto`, `UserResponseDto`,
-  `RoleNameDto`, `UserRoleItemDto`.
+- `/me` schema factories (this package's own): `buildMeController`,
+  `meUpdateSchema`, `meResponseSchema`.
 - User-metadata CQRS: `UpsertUserMetadataCommand`,
   `AbstractUpsertUserMetadataHandler`, `UpsertUserMetadataHandler`,
   `GetUserMetadataQuery`, `AbstractGetUserMetadataHandler`,
@@ -423,7 +436,7 @@ Everything most external-auth apps need:
 - Resource API: `defineResource`, `defineModuleResource`, `defineSubResource`,
   `isModuleResource`, `isCrudResource`, `isSubResourceDefinition`,
   `ResourceKind`, `relation`, `createBoundRelation`, `resolveRelationTarget`,
-  `createPaginatedDto`, `buildAppRegistrationPlan`, `PathScopeHook`, and the
+  `buildAppRegistrationPlan`, `PathScopeHook`, and the
   full type surface (`AppRegistrationPlan`, `ResourceInput`,
   `RocketsResourceDefinition`, `ModuleResource`, `CrudResource`,
   `RelationOptions`, …).
@@ -452,10 +465,15 @@ the following advanced seams from `@concepta/rockets-core` directly:
   `RocketsEntityHookForResource`, `OwnedEntity`, `OwnerStampHookOptions`,
   `PathScopeGuard`, `RocketsResourceConfig`, `DEFAULT_OWNER_COLUMN`, and
   `defaultParentParam`.
+- Schema engine: `withOpenApi`, `rocketsSchemaValidation`,
+  `assertNamedSchema`, `assertFailClosedResponse`, `buildPaginatedSchema`,
+  `paginatedSchema`, `createBatchSchema`, `readSchemaId`,
+  `isOpenApiBridged`, `createRocketsStandardSchemaConverter`,
+  `SchemaValidatorConflictCheck`, and `validateWithSchema`.
 - Swagger and low-level utilities: `SwaggerUiModule`,
   `SwaggerUiOptionsInterface`, `SwaggerUiSettingsInterface`,
-  `ERROR_MESSAGE_FALLBACK`, `deriveEntityKey`, `resolveEntityKey`,
-  `stripUndefined`, and `whitelistedFromDto`.
+  `ERROR_MESSAGE_FALLBACK`, `deriveEntityKey`, `resolveEntityKey`, and
+  `stripUndefined`.
 
 The repository's [public API policy](../../api/public-api-policy.md) and
 committed declaration report guard this boundary. Any intentional addition,

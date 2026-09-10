@@ -2,6 +2,7 @@ import { Global, Logger, Module } from '@nestjs/common';
 import { EventModule } from '@concepta/nestjs-event';
 import {
   defineRocketsAuth,
+  rocketsAuthRoleSchema,
   type DefineRocketsAuthInput,
   type EmailSendOptionsInterface,
 } from '@concepta/rockets-auth';
@@ -19,9 +20,9 @@ import {
 } from './notification/sample-notification';
 import { UserMetadataEntity } from './modules/user/entities/user-metadata.entity';
 import {
-  UserMetadataCreateDto,
-  UserMetadataUpdateDto,
-} from './modules/user/dto/user-metadata.dto';
+  userMetadataResponseSchema,
+  userMetadataUpdateSchema,
+} from './modules/user/user-metadata.schema';
 import {
   PetModule,
   createPetResource,
@@ -36,12 +37,8 @@ import {
   UserRoleEntity,
   FederatedEntity,
   InvitationEntity,
-  UserDto,
-  UserCreateDto,
-  SampleUserUpdateDto,
 } from './modules/user';
-import { RoleEntity, RoleDto, RoleUpdateDto } from './modules/role';
-import { RoleCreateDto } from './modules/role/role.dto';
+import { RoleEntity } from './modules/role';
 
 // Single TypeORM bootstrap owned by the auth integration below.
 // `defineTypeOrmRepository` returns a `RepositoryBootstrap`, which the
@@ -134,30 +131,25 @@ const rocketsAuthInput: DefineRocketsAuthInput = {
     },
   },
   invitationEntity: InvitationEntity,
+  // The app's userMetadata schemas. `/signup`, `/admin/users` and `/me`
+  // derive their request/response schemas from these two, so there is no
+  // per-route user DTO to maintain here.
   userMetadata: {
     entity: UserMetadataEntity,
-    createDto: UserMetadataCreateDto,
-    updateDto: UserMetadataUpdateDto,
+    updateSchema: userMetadataUpdateSchema,
+    responseSchema: userMetadataResponseSchema,
   },
   useFactory: () => ({
     services: { mailerService: buildSampleMailerService() },
     authentication: { ports: rocketsAuthNotificationPorts },
     settings: rocketsAuthRuntimeSettings,
   }),
-  userCrud: {
-    model: UserDto,
-    dto: {
-      createOne: UserCreateDto,
-      updateOne: SampleUserUpdateDto,
-    },
-  },
-  roleCrud: {
-    model: RoleDto,
-    dto: {
-      createOne: RoleCreateDto,
-      updateOne: RoleUpdateDto,
-    },
-  },
+  // `model` / `dto` omitted: the signup and admin modules derive them from
+  // `userMetadata` (`RocketsAuthUserDto`, `RocketsAuthUserCreateDto`,
+  // `RocketsAuthUserUpdateDto`).
+  userCrud: {},
+  // Request schemas default to the package's role create/update schemas.
+  roleCrud: { model: rocketsAuthRoleSchema },
   invitation: {},
   accessControl: {
     service: new ACService(),

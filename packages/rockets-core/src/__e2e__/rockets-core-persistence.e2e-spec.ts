@@ -20,6 +20,7 @@ import {
 import { Test } from '@nestjs/testing';
 import { APP_GUARD } from '@nestjs/core';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { withOpenApi } from '@concepta/nestjs-core';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import type {
@@ -35,10 +36,7 @@ import { defineModuleResource } from '../infrastructure/resource/define-module-r
 import { UpsertUserMetadataCommand } from '../application/commands/impl/upsert-user-metadata.command';
 import { GetUserMetadataQuery } from '../application/queries/impl/get-user-metadata.query';
 import { defineAuthAdapter } from '../infrastructure/auth/define-auth-adapter';
-import type {
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../domain/interfaces/user-metadata.interface';
+import { z } from 'zod';
 
 // ────────────────────────────────────────────────────────────────────
 // Fixtures
@@ -139,20 +137,21 @@ const FakeRepositoryModule: RepositoryModuleInterface = {
 class UserMetadataEntity {}
 class AuditEntity {}
 
-class CoreE2eUserMetadataCreateDto implements UserMetadataCreatableInterface {
-  userId!: string;
-}
-
-class CoreE2eUserMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  id!: string;
-}
-
 const coreE2eUserMetadataConfig = {
   entity: UserMetadataEntity,
-  createDto: CoreE2eUserMetadataCreateDto,
-  updateDto: CoreE2eUserMetadataUpdateDto,
+  updateSchema: withOpenApi(
+    z.object({ firstName: z.string().optional(), bio: z.string().optional() }),
+    'CoreE2eUserMetadataUpdateDto',
+  ),
+  responseSchema: withOpenApi(
+    z.object({
+      id: z.string(),
+      userId: z.string(),
+      firstName: z.string().optional(),
+      bio: z.string().optional(),
+    }),
+    'CoreE2eUserMetadataResponseDto',
+  ),
 } as const;
 
 // ────────────────────────────────────────────────────────────────────
@@ -191,7 +190,7 @@ describe('RocketsCoreModule — top-level repository + module resources (e2e)', 
 
     const commandBus = app.get(CommandBus);
     const result = await commandBus.execute(
-      new UpsertUserMetadataCommand('test-user', { firstName: 'Test' }),
+      new UpsertUserMetadataCommand({}, 'test-user', { firstName: 'Test' }),
     );
     expect(result).toHaveProperty('userId', 'test-user');
   });
@@ -249,11 +248,11 @@ describe('RocketsCoreModule — top-level repository + module resources (e2e)', 
     const queryBus = app.get(QueryBus);
 
     await commandBus.execute(
-      new UpsertUserMetadataCommand('query-user', { bio: 'hello' }),
+      new UpsertUserMetadataCommand({}, 'query-user', { bio: 'hello' }),
     );
 
     const result = await queryBus.execute(
-      new GetUserMetadataQuery('query-user'),
+      new GetUserMetadataQuery({}, 'query-user'),
     );
     expect(result).toHaveProperty('userId', 'query-user');
   });

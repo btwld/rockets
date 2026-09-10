@@ -8,7 +8,7 @@
  *   yarn test:e2e --testPathPattern=firebase-live-auth
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import request from 'supertest';
 
@@ -64,9 +64,6 @@ describeLive('firebase live auth — real token → GET /me (e2e)', () => {
     idToken = signInBody.idToken;
 
     app = await NestFactory.create(AppModule, { logger: ['error'] });
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     await app.init();

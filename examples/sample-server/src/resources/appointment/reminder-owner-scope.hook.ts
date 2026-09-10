@@ -61,8 +61,11 @@ export class ReminderOwnerScopeHook extends PassthroughEntityHookBase<PlainLiter
     const actor = getActor(ctx);
     if (!actor?.id) return options;
 
+    // `ctx` forwarded: the lookup joins the surrounding operation's
+    // transaction and keeps entity hooks on (rule 16).
     const appointments = await this.apptRepo.find({
       where: Where.eq<AppointmentRow>('userId', actor.id),
+      ctx,
     });
     const appointmentIds = appointments.map((a) => a.id);
 

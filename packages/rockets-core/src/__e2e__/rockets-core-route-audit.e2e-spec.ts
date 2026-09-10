@@ -11,14 +11,18 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  Body,
   Controller,
   Get,
   Injectable,
   Module,
   Post,
   Scope,
+  SerializeOptions,
+  StandardSchemaValidationPipe,
   type Provider,
   type Type,
+  UsePipes,
 } from '@nestjs/common';
 import { APP_GUARD, DiscoveryModule } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
@@ -27,7 +31,7 @@ import {
   AccessControlQuery,
   type CanAccess,
 } from '@concepta/nestjs-access-control';
-import { ActionEnum } from '@concepta/nestjs-core';
+import { ActionEnum, withOpenApi } from '@concepta/nestjs-core';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { AuthPublic } from '../decorators/auth-public.decorator';
@@ -35,6 +39,7 @@ import { AccessControl } from 'accesscontrol';
 import type { ExecutionContext } from '@nestjs/common';
 import type { AccessControlServiceInterface } from '@concepta/nestjs-access-control';
 import { z } from 'zod';
+import { f } from '../zod/fields';
 import { operationResource } from '../zod';
 import { RocketsCoreModule } from '../rockets-core.module';
 import { defineAuthAdapter } from '../infrastructure/auth/define-auth-adapter';
@@ -51,6 +56,7 @@ import {
 import { AuthSession } from '../decorators/auth-session.decorator';
 import { CsrfGuard } from '../infrastructure/guards/csrf.guard';
 import { CSRF_GUARD_OPTIONS_TOKEN } from '../rockets-core.constants';
+import { rocketsSchemaValidation } from '../common/utils/standard-schema.util';
 
 @Injectable()
 class AllowAllGuard {
@@ -543,9 +549,11 @@ describe('routePolicy through RocketsCoreModule (e2e)', () => {
 
   it('boots and exposes the report when no policy is declared', async () => {
     const app = await bootCore();
-    // No policy means no enforcement AND no service: an app that never
-    // asked for the check pays no discovery cost.
-    expect(() => app.get(RouteAuditService)).toThrow();
+    // No policy means no policy enforcement — but the service is always
+    // registered (its schema-pipe check needs no policy), so the report
+    // is available without declaring one.
+    const report = app.get(RouteAuditService).audit();
+    expect(report.routes.map((r) => r.id)).toContain('GET /invoices');
     await app.close();
   });
 
@@ -930,6 +938,154 @@ describe('route policy — requireCsrf (e2e)', () => {
     expect(app.get(RouteAuditService).audit().csrfGuards).toEqual([
       'HomegrownCsrfGuard',
     ]);
+    await app.close();
+  });
+});
+
+// ── requireSchemaPipe: always on, no policy needed ──
+//
+// `@Body({ schema })` without a StandardSchemaValidationPipe documents the
+// body in OpenAPI and validates nothing — Nest installs no pipe for
+// `schema`. The audit catches it at boot in EVERY app, policy or not.
+
+const noteSchema = z.object({ text: z.string() });
+
+@Controller('notes-unpiped')
+@ApiTags('Notes')
+class UnpipedNotesController {
+  @Post()
+  @ApiOkResponse({ description: 'Unvalidated body probe' })
+  create(@Body({ schema: noteSchema }) body: unknown): unknown {
+    return body;
+  }
+}
+
+@Controller('notes-piped')
+@ApiTags('Notes')
+@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
+class PipedNotesController {
+  @Post()
+  @ApiOkResponse({ description: 'Validated body probe' })
+  create(@Body({ schema: noteSchema }) body: unknown): unknown {
+    return body;
+  }
+}
+
+const openNotesResponse = withOpenApi(
+  z.object({ items: z.array(z.looseObject({ text: z.string() })) }),
+  'OpenNotesResponseDto',
+);
+const closedNotesResponse = withOpenApi(
+  z.object({ items: z.array(z.object({ text: z.string() })) }),
+  'ClosedNotesResponseDto',
+);
+
+@Controller('notes-open-response')
+@ApiTags('Notes')
+class OpenResponseNotesController {
+  @Get()
+  @SerializeOptions({ schema: openNotesResponse })
+  @ApiOkResponse({ standardSchema: openNotesResponse })
+  list(): unknown {
+    return { items: [] };
+  }
+}
+
+const hiddenNotesResponse = withOpenApi(
+  z.object({
+    items: z.array(
+      z.object({
+        text: z.string(),
+        secret: f.string({ dto: { response: false } }),
+      }),
+    ),
+  }),
+  'HiddenNotesResponseDto',
+);
+
+@Controller('notes-hidden-response')
+@ApiTags('Notes')
+class HiddenResponseNotesController {
+  @Get()
+  @SerializeOptions({ schema: hiddenNotesResponse })
+  @ApiOkResponse({ standardSchema: hiddenNotesResponse })
+  list(): unknown {
+    return { items: [] };
+  }
+}
+
+@Controller('notes-closed-response')
+@ApiTags('Notes')
+@SerializeOptions({ schema: closedNotesResponse })
+class ClosedResponseNotesController {
+  @Get()
+  @ApiOkResponse({ standardSchema: closedNotesResponse })
+  list(): unknown {
+    return { items: [] };
+  }
+}
+
+describe('requireSchemaPipe through RocketsCoreModule (e2e)', () => {
+  const bootCoreWith = async (
+    controller: Type<unknown>,
+    policy?: RoutePolicy,
+  ) => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        RocketsCoreModule.forRoot({
+          auth: defineAuthAdapter(NoopAuthAdapter),
+          providers: [NoopAuthAdapter],
+          ...(policy ? { routePolicy: policy } : {}),
+        }),
+      ],
+      controllers: [controller],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    await app.init();
+    return app;
+  };
+
+  it('rejects the boot when a schema parameter is reached by no pipe (no policy declared)', async () => {
+    await expect(bootCoreWith(UnpipedNotesController)).rejects.toThrow(
+      /requireSchemaPipe\] POST \/notes-unpiped: UnpipedNotesController\.create: body declares a schema/,
+    );
+  });
+
+  it('boots the same route once a class-level StandardSchemaValidationPipe is present', async () => {
+    const app = await bootCoreWith(PipedNotesController);
+    const [route] = app
+      .get(RouteAuditService)
+      .audit()
+      .routes.filter((r) => r.controller === 'PipedNotesController');
+    expect(route.unvalidatedSchemaParams).toEqual([]);
+    await app.close();
+  });
+
+  it('is exempted only by allowUnvalidatedSchema — allow / allowControllers do not switch it off', async () => {
+    await expect(
+      bootCoreWith(UnpipedNotesController, {
+        allowControllers: [UnpipedNotesController],
+      }),
+    ).rejects.toThrow(/requireSchemaPipe/);
+    const app = await bootCoreWith(UnpipedNotesController, {
+      allowUnvalidatedSchema: ['POST /notes-unpiped'],
+    });
+    await app.close();
+  });
+
+  // Serialization IS validation for a hand-written route: an open object
+  // in its @SerializeOptions schema ships whatever the row carries.
+  it('rejects a hand-written @SerializeOptions({ schema }) with a hidden field', async () => {
+    await expect(bootCoreWith(HiddenResponseNotesController)).rejects.toThrow(
+      /requireClosedResponse\] GET \/notes-hidden-response: HiddenResponseNotesController\.list: @SerializeOptions\({ schema }\) contains a field declared/,
+    );
+  });
+
+  it('rejects a hand-written @SerializeOptions({ schema }) with an open object', async () => {
+    await expect(bootCoreWith(OpenResponseNotesController)).rejects.toThrow(
+      /requireClosedResponse\] GET \/notes-open-response: OpenResponseNotesController\.list: @SerializeOptions\({ schema }\) is open at "\$\.items\[\]"/,
+    );
+    const app = await bootCoreWith(ClosedResponseNotesController);
     await app.close();
   });
 });

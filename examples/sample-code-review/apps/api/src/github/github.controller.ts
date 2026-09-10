@@ -7,28 +7,41 @@ import {
   Post,
   Header,
   Query,
+  SerializeOptions,
+  StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe,
+  UseInterceptors,
+  UsePipes,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiQuery,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthPublic } from '@concepta/rockets';
 import { Ctx, type AppContextInterface } from '@concepta/nestjs-core';
 import type { AuthorizedUser } from '@concepta/rockets';
+import { AuthUser, rocketsSchemaValidation } from '@concepta/rockets-core';
 import { GithubConfig } from '../config/github.config';
 import {
-  GithubConnectDto,
-  GithubConnectionResponseDto,
-  GithubOAuthUrlResponseDto,
-  GithubRepoResponseDto,
-} from './github.dto';
+  githubConnectSchema,
+  githubConnectionResponseSchema,
+  githubOAuthUrlResponseSchema,
+  githubRepoListResponseSchema,
+  githubRepoResponseSchema,
+  type GithubConnectBody,
+  type GithubConnectionResponse,
+  type GithubOAuthUrlResponse,
+  type GithubRepoResponse,
+} from './github.schema';
 import { GithubService } from './github.service';
-import { AuthUser } from '@concepta/rockets-core';
 
 @ApiTags('GitHub')
 @Controller('github')
+@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
+@UseInterceptors(StandardSchemaSerializerInterceptor)
 export class GithubController {
   constructor(
     private readonly githubService: GithubService,
@@ -41,9 +54,9 @@ export class GithubController {
     summary:
       'Start GitHub OAuth — open authorizeUrl in browser (requires Firebase token)',
   })
-  oauthUrl(
-    @AuthUser() user: AuthorizedUser,
-  ): GithubOAuthUrlResponseDto {
+  @ApiResponse({ status: 200, standardSchema: githubOAuthUrlResponseSchema })
+  @SerializeOptions({ schema: githubOAuthUrlResponseSchema })
+  oauthUrl(@AuthUser() user: AuthorizedUser): GithubOAuthUrlResponse {
     const { authorizeUrl, state } = this.githubService.startOAuth(user.id);
     return { authorizeUrl, state };
   }
@@ -90,11 +103,13 @@ export class GithubController {
     summary:
       'Exchange GitHub OAuth code (SPA flow — same code from callback query)',
   })
+  @ApiResponse({ status: 200, standardSchema: githubConnectionResponseSchema })
+  @SerializeOptions({ schema: githubConnectionResponseSchema })
   async connect(
     @Ctx() ctx: AppContextInterface,
     @AuthUser() user: AuthorizedUser,
-    @Body() dto: GithubConnectDto,
-  ): Promise<GithubConnectionResponseDto> {
+    @Body({ schema: githubConnectSchema }) dto: GithubConnectBody,
+  ): Promise<GithubConnectionResponse> {
     const row = await this.githubService.connect(ctx, user.id, dto.code);
     return {
       githubLogin: row.githubLogin,
@@ -105,10 +120,12 @@ export class GithubController {
   @Get('connection')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Current GitHub connection status' })
+  @ApiResponse({ status: 200, standardSchema: githubConnectionResponseSchema })
+  @SerializeOptions({ schema: githubConnectionResponseSchema })
   async connection(
     @Ctx() ctx: AppContextInterface,
     @AuthUser() user: AuthorizedUser,
-  ): Promise<GithubConnectionResponseDto> {
+  ): Promise<GithubConnectionResponse> {
     const row = await this.githubService.getConnection(ctx, user.id);
     return {
       githubLogin: row.githubLogin,
@@ -119,10 +136,12 @@ export class GithubController {
   @Get('repos')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List repositories from your GitHub account' })
+  @ApiResponse({ status: 200, standardSchema: githubRepoListResponseSchema })
+  @SerializeOptions({ schema: githubRepoResponseSchema })
   async repos(
     @Ctx() ctx: AppContextInterface,
     @AuthUser() user: AuthorizedUser,
-  ): Promise<GithubRepoResponseDto[]> {
+  ): Promise<GithubRepoResponse[]> {
     const repos = await this.githubService.listRepositories(ctx, user.id);
     return repos.map((r) => ({
       owner: r.owner,

@@ -1,102 +1,36 @@
 /**
  * E2E bootstrap for {@link UserModule.register} with CQRS handler wiring.
- * Tests that the MeController works with CommandBus/QueryBus dispatch
+ * Tests that the /me controller works with CommandBus/QueryBus dispatch
  * in a standalone wiring (not through RocketsModule).
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import {
-  DynamicModule,
-  Module,
-  INestApplication,
-  ValidationPipe,
-} from '@nestjs/common';
-import {
-  APP_GUARD,
-  APP_INTERCEPTOR,
-  HttpAdapterHost,
-  Reflector,
-} from '@nestjs/core';
-import { AuthUserContextOverlay } from '@concepta/rockets-core';
+import { DynamicModule, Module, INestApplication } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { getDynamicRepositoryToken } from '@concepta/rockets-core';
-import { IsOptional, IsString } from 'class-validator';
-
 import {
   AUTH_ADAPTERS_TOKEN,
+  AuthUserContextOverlay,
   USER_METADATA_MODULE_ENTITY_KEY,
   UpsertUserMetadataHandler,
   GetUserMetadataHandler,
+  getDynamicRepositoryToken,
 } from '@concepta/rockets-core';
 import { ServerAuthAdapterFixture } from '../__fixtures__/providers/server-auth.adapter.fixture';
 import { UserMetadataRepositoryFixture } from '../__fixtures__/repositories/user-metadata.repository.fixture';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
-import type { RocketsOptions } from '../rockets.module-definition';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
-import {
-  RAW_OPTIONS_TOKEN,
-  ROCKETS_USER_METADATA_DTO_TOKEN,
-} from '../rockets.tokens';
 import { UserModule } from '../user.module';
-import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
-import {
-  BaseUserMetadataCreateDto,
-  BaseUserMetadataUpdateDto,
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../domain/interfaces/user-metadata.interface';
-import { ExceptionsFilter } from '../infrastructure/filters/exceptions.filter';
-import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
-
-class E2eUserMetadataCreateDto
-  extends BaseUserMetadataCreateDto
-  implements UserMetadataCreatableInterface
-{
-  @IsString()
-  userId!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  [key: string]: unknown;
-}
-
-class E2eUserMetadataUpdateDto
-  extends BaseUserMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  [key: string]: unknown;
-}
 
 @Module({})
 class UserMetadataModuleRegisterE2eHarnessModule {
-  static forTest(
-    options: RocketsOptions,
-    repo: UserMetadataRepositoryFixture,
-  ): DynamicModule {
+  static forTest(repo: UserMetadataRepositoryFixture): DynamicModule {
     return {
       module: UserMetadataModuleRegisterE2eHarnessModule,
       global: true,
       imports: [CqrsModule.forRoot()],
       providers: [
-        { provide: RAW_OPTIONS_TOKEN, useValue: options },
         {
           provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
           useValue: repo,
@@ -110,29 +44,10 @@ class UserMetadataModuleRegisterE2eHarnessModule {
         Reflector,
         { provide: APP_GUARD, useClass: AuthServerGuard },
         { provide: APP_INTERCEPTOR, useClass: AuthUserContextOverlay },
-        {
-          provide: ROCKETS_USER_METADATA_DTO_TOKEN,
-          inject: [RAW_OPTIONS_TOKEN],
-          useFactory: (opts: RocketsOptions) => {
-            const um = opts.userMetadata;
-            if (!um) {
-              throw new Error(
-                'UserMetadataModuleRegisterE2eHarnessModule requires userMetadata on RocketsOptions',
-              );
-            }
-            return {
-              updateDto: um.updateDto,
-            };
-          },
-        },
         UpsertUserMetadataHandler,
         GetUserMetadataHandler,
       ],
-      exports: [
-        RAW_OPTIONS_TOKEN,
-        ROCKETS_USER_METADATA_DTO_TOKEN,
-        getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      ],
+      exports: [getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY)],
     };
   }
 }
@@ -140,15 +55,20 @@ class UserMetadataModuleRegisterE2eHarnessModule {
 describe('UserModule.register via standalone wiring (e2e)', () => {
   let app: INestApplication;
 
-  const baseOptions: RocketsOptions = {
-    settings: {},
-    auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-    userMetadata: {
-      entity: StubUserMetadataEntity,
-      createDto: E2eUserMetadataCreateDto,
-      updateDto: E2eUserMetadataUpdateDto,
-    },
-  };
+  async function bootApp(): Promise<INestApplication> {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        UserMetadataModuleRegisterE2eHarnessModule.forTest(
+          new UserMetadataRepositoryFixture(),
+        ),
+        UserModule.register(userMetadataConfigFixture),
+      ],
+    }).compile();
+
+    const booted = moduleRef.createNestApplication();
+    await booted.init();
+    return booted;
+  }
 
   afterEach(async () => {
     if (app) {
@@ -157,25 +77,7 @@ describe('UserModule.register via standalone wiring (e2e)', () => {
   });
 
   it('GET /me uses handler dispatched via CommandBus/QueryBus', async () => {
-    const repo = new UserMetadataRepositoryFixture();
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        UserMetadataModuleRegisterE2eHarnessModule.forTest(baseOptions, repo),
-        UserModule.register(),
-      ],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    const httpAdapterHost = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        forbidUnknownValues: true,
-      }),
-    );
-    await app.init();
+    app = await bootApp();
 
     const res = await request(app.getHttpServer())
       .get('/me')
@@ -192,39 +94,30 @@ describe('UserModule.register via standalone wiring (e2e)', () => {
   });
 
   it('PATCH /me exercises upsert via CommandBus', async () => {
-    const repo = new UserMetadataRepositoryFixture();
-    const moduleRef = await Test.createTestingModule({
-      imports: [
-        UserMetadataModuleRegisterE2eHarnessModule.forTest(baseOptions, repo),
-        UserModule.register(),
-      ],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    const httpAdapterHost = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        forbidUnknownValues: true,
-      }),
-    );
-    await app.init();
-
-    const body: UserUpdateDto = {
-      userMetadata: { firstName: 'E2E', lastName: 'Module' },
-    };
+    app = await bootApp();
 
     const res = await request(app.getHttpServer())
       .patch('/me')
       .set('Authorization', 'Bearer valid-token')
-      .send(body)
+      .send({ userMetadata: { firstName: 'E2E', lastName: 'Module' } })
       .expect(200);
 
     expect(res.body.userMetadata).toMatchObject({
       firstName: 'E2E',
       lastName: 'Module',
     });
+  });
+
+  it('PATCH /me validates the body with the per-route schema pipe (no global pipe)', async () => {
+    app = await bootApp();
+
+    const res = await request(app.getHttpServer())
+      .patch('/me')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ userMetadata: { firstName: 42 } })
+      .expect(400);
+
+    expect(res.body.statusCode).toBe(400);
+    expect(res.body.message).toMatch(/^userMetadata\.firstName: /);
   });
 });

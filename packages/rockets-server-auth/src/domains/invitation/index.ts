@@ -6,12 +6,13 @@
  * and factory-built controllers (Phase 4 — 2026-04-29).
  */
 
-// DTOs
-export { RocketsAuthInvitationDto } from './infrastructure/dto/rockets-auth-invitation.dto';
-export { RocketsAuthInvitationCreateDto } from './infrastructure/dto/rockets-auth-invitation-create.dto';
-export { RocketsAuthInvitationAcceptDto } from './infrastructure/dto/rockets-auth-invitation-accept.dto';
-export { RocketsAuthInvitationRevokeDto } from './infrastructure/dto/rockets-auth-invitation-revoke.dto';
-export { RocketsAuthInvitationResponseDto } from './infrastructure/dto/rockets-auth-invitation-response.dto';
+// Schemas
+export { rocketsAuthInvitationSchema } from './infrastructure/schemas/rockets-auth-invitation.schema';
+export { rocketsAuthInvitationCreateSchema } from './infrastructure/schemas/rockets-auth-invitation-create.schema';
+export { rocketsAuthInvitationAcceptSchema } from './infrastructure/schemas/rockets-auth-invitation-accept.schema';
+export { rocketsAuthInvitationResponseSchema } from './infrastructure/schemas/rockets-auth-invitation-response.schema';
+export { rocketsAuthInvitationAcceptancePayloadSchema } from './infrastructure/schemas/rockets-auth-invitation-acceptance-payload.schema';
+export { rocketsAuthInvitationRevokeSchema } from './infrastructure/schemas/rockets-auth-invitation-revoke.schema';
 
 // Interfaces
 export {

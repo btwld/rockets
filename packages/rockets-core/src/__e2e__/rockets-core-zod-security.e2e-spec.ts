@@ -18,7 +18,6 @@ import {
   INestApplication,
   Injectable,
   Module,
-  type Type,
   UnauthorizedException,
 } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
@@ -32,10 +31,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
+import { withOpenApi } from '@concepta/nestjs-core';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
 import { z } from 'zod';
 import type {
@@ -55,17 +52,24 @@ import {
 import { OwnerStampHook } from '../infrastructure/hooks/owner-stamp.hook';
 import { defineResource } from '../infrastructure/resource/define-resource';
 import { defineSubResource } from '../infrastructure/resource/define-sub-resource';
-import { baseEntity, f, zodResource } from '../zod';
+import { asClassicSchema, baseEntity, f, zodResource } from '../zod';
 
 // ── Auth / metadata ──
+
+/**
+ * Real uuids: `f.owner()` is `z.uuid()` and the response schema VALIDATES
+ * the row on the way out, so a non-uuid owner id is a 500, not a pass.
+ */
+const U1 = '00000000-0000-4000-8000-0000000000a1';
+const U2 = '00000000-0000-4000-8000-0000000000a2';
 
 @Injectable()
 class StubAuthAdapter implements AuthAdapterInterface {
   async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
     const token = extractBearerToken(request);
     if (token === null) return { matched: false };
-    if (token === 'u1') return { matched: true, user: { id: 'u1', sub: 'u1' } };
-    if (token === 'u2') return { matched: true, user: { id: 'u2', sub: 'u2' } };
+    if (token === 'u1') return { matched: true, user: { id: U1, sub: U1 } };
+    if (token === 'u2') return { matched: true, user: { id: U2, sub: U2 } };
     return { matched: true, error: new UnauthorizedException() };
   }
 }
@@ -140,15 +144,20 @@ const noteResource = zodResource({
   operations: ['list', 'read', 'create'],
 });
 
-/** nestjs-zod DTO classes carry the compiled schema as a STATIC property. */
-type ZodDtoClass = Type<object> & { readonly schema?: z.ZodObject };
-
-function responseSchemaKeys(dto: ZodDtoClass): string[] {
-  const schema = dto.schema;
-  if (schema === undefined) {
-    throw new Error('expected nestjs-zod DTO with .schema');
+/**
+ * Declared keys of a response schema. A resource with computed fields
+ * wraps its object in a `z.preprocess` pipe, so the object is the pipe's
+ * `out` side.
+ */
+function responseSchemaKeys(schema: z.ZodType): string[] {
+  const object =
+    schema instanceof z.ZodPipe
+      ? asClassicSchema(schema.def.out, 'response')
+      : schema;
+  if (!(object instanceof z.ZodObject)) {
+    throw new Error('expected an object response schema');
   }
-  return Object.keys(schema.shape);
+  return Object.keys(object.shape);
 }
 
 describe('zod security HIGHs (e2e RED) — owner scope + response exposure', () => {
@@ -192,7 +201,7 @@ describe('zod security HIGHs (e2e RED) — owner scope + response exposure', () 
         .send({ title: 'u1-private', internalNote: 'u1-secret' })
         .expect(201);
 
-      expect(created.body.userId).toBe('u1');
+      expect(created.body.userId).toBe(U1);
 
       const list = await request(app.getHttpServer())
         .get('/notes')
@@ -220,13 +229,14 @@ describe('zod security HIGHs (e2e RED) — owner scope + response exposure', () 
   });
 
   describe('HIGH CWE-200 — response DTO opt-in', () => {
-    it('compiled response DTO omits non-base fields without dto.response:true', () => {
-      expect(responseSchemaKeys(noteResource.zod.dtos.response)).toEqual(
+    it('compiled response schema omits non-base fields without dto.response:true', () => {
+      const keys = responseSchemaKeys(
+        noteResource.zod.schemas.response.resource,
+      );
+      expect(keys).toEqual(
         expect.arrayContaining(['id', 'title', 'dateCreated', 'dateUpdated']),
       );
-      expect(responseSchemaKeys(noteResource.zod.dtos.response)).not.toContain(
-        'internalNote',
-      );
+      expect(keys).not.toContain('internalNote');
     });
 
     /**
@@ -291,22 +301,22 @@ class SecChildEntity {
   @Column({ type: 'uuid' }) parentId!: string;
 }
 
-class SecParentCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-}
-class SecParentResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty() userId!: string;
-}
-class SecChildCreateDto {
-  @Expose() @IsString() @ApiProperty() title!: string;
-}
-class SecChildResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() title!: string;
-  @Expose() @ApiProperty() parentId!: string;
-}
+const secParentCreateSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'SecParentCreateDto',
+);
+const secParentResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string(), userId: z.string() }),
+  'SecParentResponseDto',
+);
+const secChildCreateSchema = withOpenApi(
+  z.object({ title: z.string() }),
+  'SecChildCreateDto',
+);
+const secChildResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), title: z.string(), parentId: z.uuid() }),
+  'SecChildResponseDto',
+);
 
 @EntityHook()
 @Injectable()
@@ -321,9 +331,9 @@ const secParentResource = defineResource<SecParentEntity>({
   tags: ['SecParents'],
   hooks: [ParentOwnerStamp],
   operations: {
-    list: { output: SecParentResponseDto },
-    read: { output: SecParentResponseDto },
-    create: { input: SecParentCreateDto, output: SecParentResponseDto },
+    list: { output: secParentResponseSchema },
+    read: { output: secParentResponseSchema },
+    create: { input: secParentCreateSchema, output: secParentResponseSchema },
   },
   subResources: {
     children: defineSubResource<SecChildEntity>({
@@ -334,8 +344,8 @@ const secParentResource = defineResource<SecParentEntity>({
       owner: 'userId',
       hooks: [CustomChildHook],
       operations: {
-        list: { output: SecChildResponseDto },
-        create: { input: SecChildCreateDto, output: SecChildResponseDto },
+        list: { output: secChildResponseSchema },
+        create: { input: secChildCreateSchema, output: secChildResponseSchema },
       },
     }),
   },

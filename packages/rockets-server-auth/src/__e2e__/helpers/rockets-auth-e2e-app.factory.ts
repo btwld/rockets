@@ -1,16 +1,7 @@
-import { vi } from 'vitest';
-import { EmailSendInterface } from '@concepta/nestjs-common';
 import type { AuthenticationStrategiesSettingsInterface } from '@concepta/nestjs-authentication';
 import { EventModule } from '@concepta/nestjs-event';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
-import {
-  DynamicModule,
-  INestApplication,
-  Module,
-  Type,
-  ValidationPipe,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { DynamicModule, INestApplication, Type } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -30,11 +21,12 @@ import { RoleEntityFixture } from '../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../__fixtures__/role/user-role.entity.fixture';
 import { UserMetadataEntityFixture } from '../../__fixtures__/user/user-metadata.entity.fixture';
 import { UserPasswordHistoryEntityFixture } from '../../__fixtures__/user/user-password-history.entity.fixture';
-import { RocketsAuthUserDto } from '../../domains/user/infrastructure/dto/rockets-auth-user.dto';
-import { RocketsAuthUserMetadataDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-metadata.dto';
-import { RocketsAuthUserCreateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-create.dto';
-import { RocketsAuthUserUpdateDto } from '../../domains/user/infrastructure/dto/rockets-auth-user-update.dto';
+import {
+  rocketsAuthUserMetadataResponseSchema,
+  rocketsAuthUserMetadataUpdateSchema,
+} from '../../domains/user/infrastructure/schemas/rockets-auth-user-metadata.schema';
 import { ROCKETS_AUTH_OTP_ASSIGNMENT } from '../../shared/constants/rockets-auth.constants';
+import type { EmailSendInterface } from '../../shared/email/email-send.interfaces';
 import { defineRocketsAuth } from '../../define-rockets-auth';
 import type { DefineRocketsAuthInput } from '../../define-rockets-auth';
 import {
@@ -44,24 +36,6 @@ import {
   E2eSendRecoverPasswordNotificationCommand,
   E2eSendVerifyNotificationCommand,
 } from '../../__fixtures__/notification/test-notification.fixture';
-
-/** ConfigService stub used by several Rockets Auth e2e apps. */
-@Module({
-  providers: [
-    {
-      provide: ConfigService,
-      useValue: {
-        get: vi.fn().mockImplementation((key: string) => {
-          if (key === 'jwt.secret') return 'test-secret';
-          if (key === 'jwt.expiresIn') return '1h';
-          return null;
-        }),
-      },
-    },
-  ],
-  exports: [ConfigService],
-})
-export class RocketsAuthE2eMockConfigModule {}
 
 const typeOrmRootEntities = [
   UserFixture,
@@ -160,18 +134,15 @@ function defaultDefineRocketsAuthInput(
     },
     userMetadata: {
       entity: UserMetadataEntityFixture,
-      createDto: RocketsAuthUserMetadataDto,
-      updateDto: RocketsAuthUserMetadataDto,
+      updateSchema: rocketsAuthUserMetadataUpdateSchema,
+      responseSchema: rocketsAuthUserMetadataResponseSchema,
     },
+    // `model` / `dto` are derived by the signup and admin modules from the
+    // userMetadata schemas above.
     userCrud: {
       imports: [
         TypeOrmModule.forFeature([UserFixture, UserMetadataEntityFixture]),
       ],
-      model: RocketsAuthUserDto,
-      dto: {
-        createOne: RocketsAuthUserCreateDto,
-        updateOne: RocketsAuthUserUpdateDto,
-      },
     },
     invitationEntity: InvitationEntityFixture,
     invitation: {},
@@ -201,6 +172,14 @@ export interface CreateRocketsAuthStandardE2eModuleOptions {
   readonly factoryExtras?: RocketsAuthE2eFactoryExtras;
   /** Credential-only adapters appended after the built-in identity owner. */
   readonly additionalAuth?: ReadonlyArray<AuthBootstrap>;
+  /**
+   * Modules imported BEFORE the Rockets registration, for a test that
+   * needs to compete with it (an app module providing one of core's
+   * tokens, say).
+   */
+  readonly importsBefore?: DynamicModule['imports'];
+  /** Modules imported AFTER the Rockets registration. */
+  readonly importsAfter?: DynamicModule['imports'];
 }
 
 /**
@@ -216,6 +195,8 @@ export async function createRocketsAuthStandardE2eTestingModule(
     rocketsAuthOverrides,
     factoryExtras,
     additionalAuth = [],
+    importsBefore = [],
+    importsAfter = [],
   } = options;
 
   const baseInput = defaultDefineRocketsAuthInput(
@@ -234,7 +215,7 @@ export async function createRocketsAuthStandardE2eTestingModule(
   const rocketsAuth = defineRocketsAuth(mergedInput);
 
   const imports: DynamicModule['imports'] = [
-    RocketsAuthE2eMockConfigModule,
+    ...importsBefore,
     EventModule.forRoot({}),
     TypeOrmModule.forRootAsync({
       inject: [],
@@ -256,6 +237,7 @@ export async function createRocketsAuthStandardE2eTestingModule(
           ? [rocketsAuth, ...additionalAuth]
           : rocketsAuth,
     }),
+    ...importsAfter,
   ];
 
   return Test.createTestingModule({
@@ -272,12 +254,5 @@ export function applyRocketsAuthE2eAppGlobals(
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(
     new RocketsCoreExceptionsFilter(httpAdapterHost, serializer),
-  );
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidUnknownValues: true,
-    }),
   );
 }

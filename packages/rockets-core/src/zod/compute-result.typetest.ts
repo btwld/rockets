@@ -6,10 +6,12 @@ import { f } from './fields';
  * Type-level contract for `f.compute` callbacks. Run with
  * `yarn workspace @concepta/rockets-core test:typetests`.
  *
- * The division of labour: the runtime strip in `compileDtoClass` decides
- * which KEYS may ship (undeclared and `response: false` keys are removed
- * and cannot leak); TypeScript decides the value TYPES. Runtime `parse`
- * is deliberately not used — it would reject the legitimate case below.
+ * The callback must return `z.output<schema>` — the ROW shape (`Date` for
+ * date columns), because the response schema validates the computed value
+ * at serialization time. Undeclared keys on the returned rows are still
+ * fine at the type level (structural typing) and are stripped by the
+ * response schema at runtime; the value TYPES of declared keys are
+ * enforced here.
  */
 
 const tagSchema = baseEntity({
@@ -30,12 +32,12 @@ interface TagRow {
 declare const tagRows: TagRow[];
 
 // ── ALLOWED ───────────────────────────────────────────────────────────
-// Re-emitting ORM rows: `dateCreated` is documented as an ISO string but
-// arrives as a Date, and the row carries an undeclared column. Both are
-// fine — the serializer converts the Date and strips `internalCost`.
+// Re-emitting ORM rows: `dateCreated` is a `Date` on the row AND in the
+// schema output, and the extra `internalCost` column is a structural
+// superset — the response schema strips it.
 export const reemitsOrmRows = f.compute(z.array(tagSchema), () => tagRows);
 
-// Hand-built objects that match the declared types.
+// Hand-built objects that match the declared output types.
 export const handBuilt = f.compute(z.array(tagSchema), () =>
   tagRows.map((tag) => ({
     id: tag.id,
@@ -46,15 +48,31 @@ export const handBuilt = f.compute(z.array(tagSchema), () =>
   })),
 );
 
+// A scalar compute whose output is a Date (`f.date()` output is Date).
+export const scalarDate = f.compute(f.date(), (row) =>
+  row.dateCreated instanceof Date ? row.dateCreated : new Date(0),
+);
+
 // ── REJECTED ──────────────────────────────────────────────────────────
 // Wrong value type on a declared key: `name` is a string in the schema.
-// The mismatch surfaces on the callback's return expression.
 export const wrongValueType = f.compute(z.array(tagSchema), () =>
-  // @ts-expect-error — name: number is not assignable to string | Date
+  // @ts-expect-error — name: number is not assignable to string
   tagRows.map((tag) => ({
     id: tag.id,
     name: tag.internalCost,
     dateCreated: tag.dateCreated,
+    dateUpdated: tag.dateUpdated,
+  })),
+);
+
+// ISO strings are the WIRE format, not the output: a date column computed
+// as a string is rejected — it would fail schema validation at runtime.
+export const isoStringForDate = f.compute(z.array(tagSchema), () =>
+  // @ts-expect-error — dateCreated: string is not assignable to Date
+  tagRows.map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+    dateCreated: tag.dateCreated.toISOString(),
     dateUpdated: tag.dateUpdated,
   })),
 );

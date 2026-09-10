@@ -35,29 +35,11 @@ import type {
 } from '@concepta/rockets-core';
 import { extractBearerToken } from '@concepta/rockets-core';
 
-import { IsNotEmpty, IsString } from 'class-validator';
-
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
-import {
-  type UserMetadataCreatableInterface,
-  type UserMetadataModelUpdatableInterface,
-} from '../domain/interfaces/user-metadata.interface';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import type { RocketsOptions } from '../rockets.module-definition';
 import { RocketsModule } from '../rockets.module';
 import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
-
-class MetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  userId!: string;
-}
-
-class MetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsNotEmpty()
-  @IsString()
-  id!: string;
-}
 
 /**
  * Implements ONLY `@concepta/rockets-core`'s `AuthAdapterInterface` —
@@ -99,11 +81,7 @@ describe('Core ↔ Server auth-adapter contract (e2e)', () => {
     // `AuthAdapterInterface`. If TypeScript ever rejects this
     // assignment, server has drifted from core.
     auth: e2eAuthBootstrap(CoreOnlyAuthAdapter),
-    userMetadata: {
-      entity: StubUserMetadataEntity,
-      createDto: MetadataCreateDto,
-      updateDto: MetadataUpdateDto,
-    },
+    userMetadata: userMetadataConfigFixture,
     repository: E2eFakeRepositoryModule,
   };
 

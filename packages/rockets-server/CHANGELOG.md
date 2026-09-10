@@ -34,6 +34,29 @@ and this project adheres to
 
 ### Changed
 
+- **`ROCKETS_DISABLE_GUARDS_TOKEN` is no longer re-exported.** Read the
+  `AuthPublic` metadata with `isAuthPublic()` from
+  `@concepta/nestjs-authentication` instead of the key.
+
+- `class-validator` / `class-transformer` are no longer peers (RFC #104,
+  stage 6).
+- **`/me` on the schema engine (RFC #104, stage 4).** `MeController` is
+  replaced by `buildMeController(config)` — a factory built from the app's
+  `userMetadata` config (`updateSchema` / `responseSchema`). `PATCH /me`
+  validates `{ userMetadata?: UserMetadataUpdateDto }` through the per-route
+  Standard Schema pipe (`400` with `details[].path = ['userMetadata', field]`);
+  both routes serialize through `UserResponseDto` (`meResponseSchema`), so a
+  userMetadata column hidden with `dto: { response: false }` stays hidden;
+  `userMetadata` is `null` before the first PATCH (was `{}`).
+  `UserModule.register(config)` takes the same config. Exports
+  `buildMeController`, `meUpdateSchema`, `meResponseSchema`; removes
+  `MeController`, `ROCKETS_USER_METADATA_DTO_TOKEN`, `RocketsUserMetadataDtoConfig`,
+  `createPaginatedDto` and the `UserUpdateDto` / `UserResponseDto` /
+  `RoleNameDto` / `UserRoleItemDto` re-exports.
+- `@nestjs/config` dropped (RFC #104, stage 1). `RocketsModule` registers its
+  own default settings provider (`ROCKETS_SERVER_SETTINGS_DEFAULTS_TOKEN`)
+  instead of reading core's `registerAs` namespace. Consumers keep passing
+  `settings` as before.
 - Guard ownership is singular: the presentation layer no longer registers a
   second global auth guard when an auth integration already owns it.
 - `RocketsModule` resolves auth contributions before module registration.
@@ -46,7 +69,9 @@ and this project adheres to
 - TypeORM bootstrap ownership moved to
   `@concepta/rockets-repository-typeorm`; the server no longer depends on
   TypeORM.
-- Node.js 20 is the minimum supported runtime.
+- Node.js 20.19 is the minimum supported runtime: the build is CommonJS and
+  loads the ESM Nest 12 / `@concepta/nestjs-*` 8 line through `require(esm)`
+  (Node 20.18 fails with `ERR_REQUIRE_ESM`; `engines` says `>=20.19.0`).
 
 ### Removed
 

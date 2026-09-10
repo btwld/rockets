@@ -15,10 +15,9 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { withOpenApi } from '@concepta/nestjs-core';
 import request from 'supertest';
+import { z } from 'zod';
 
 import type {
   AuthAdapterInterface,
@@ -40,15 +39,14 @@ class PetEntity {
   @Column({ type: 'varchar' }) shelterId!: string;
 }
 
-class PetCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose() @IsString() @ApiProperty() shelterId!: string;
-}
-class PetResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty() shelterId!: string;
-}
+const petCreateSchema = withOpenApi(
+  z.object({ name: z.string(), shelterId: z.string() }),
+  'PetCreateDto',
+);
+const petResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string(), shelterId: z.string() }),
+  'PetResponseDto',
+);
 
 @Injectable()
 class MultiUserAuthAdapter implements AuthAdapterInterface {
@@ -84,9 +82,9 @@ const petResource = defineResource<PetEntity>({
   tags: ['Pets'],
   hooks: [ShelterScope],
   operations: {
-    list: { output: PetResponseDto },
-    read: { output: PetResponseDto },
-    create: { input: PetCreateDto, output: PetResponseDto },
+    list: { output: petResponseSchema },
+    read: { output: petResponseSchema },
+    create: { input: petCreateSchema, output: petResponseSchema },
   },
 });
 

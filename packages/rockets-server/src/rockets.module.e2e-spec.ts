@@ -12,18 +12,13 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AuthPublic, AuthUser } from '@concepta/rockets-core';
 import { AuthorizedUser } from './domain/interfaces/auth-user.interface';
-import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
-import {
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from './domain/interfaces/user-metadata.interface';
 
 import { FirebaseAuthAdapterFixture } from './__fixtures__/providers/firebase-auth.adapter.fixture';
 import { ServerAuthAdapterFixture } from './__fixtures__/providers/server-auth.adapter.fixture';
 import { FailingAuthAdapterFixture } from './__fixtures__/providers/failing-auth.adapter.fixture';
 import { E2eFakeRepositoryModule } from './__e2e__/helpers/e2e-fake-repository.module';
 import type { RocketsOptions } from './rockets.module-definition';
-import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataConfigFixture } from './__fixtures__/schemas/user-metadata.schema.fixture';
 import { RocketsModule } from './rockets.module';
 import { e2eAuthBootstrap } from './__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
@@ -89,48 +84,10 @@ class TestModule {}
 describe('RocketsModule (e2e)', () => {
   let app: INestApplication | undefined;
 
-  class TestUserMetadataCreateDto implements UserMetadataCreatableInterface {
-    @IsNotEmpty()
-    @IsString()
-    userId!: string;
-
-    @IsOptional()
-    @IsString()
-    firstName?: string;
-
-    @IsOptional()
-    @IsString()
-    lastName?: string;
-
-    [key: string]: unknown;
-  }
-
-  class TestUserMetadataUpdateDto
-    implements UserMetadataModelUpdatableInterface
-  {
-    @IsNotEmpty()
-    @IsString()
-    id!: string;
-
-    @IsOptional()
-    @IsString()
-    firstName?: string;
-
-    @IsOptional()
-    @IsString()
-    lastName?: string;
-
-    [key: string]: unknown;
-  }
-
   const baseOptions: RocketsOptions = {
     settings: {},
     auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-    userMetadata: {
-      entity: StubUserMetadataEntity,
-      createDto: TestUserMetadataCreateDto,
-      updateDto: TestUserMetadataUpdateDto,
-    },
+    userMetadata: userMetadataConfigFixture,
     repository: E2eFakeRepositoryModule,
   };
 

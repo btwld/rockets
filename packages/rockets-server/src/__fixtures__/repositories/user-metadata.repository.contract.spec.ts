@@ -65,7 +65,7 @@ describe('UserMetadataRepositoryFixture — handler contract', () => {
       await repo.clear();
       const handler = new UpsertUserMetadataHandler(asRepository(repo));
       const created = await handler.execute(
-        new UpsertUserMetadataCommand('new-user-99', { firstName: 'Novo' }),
+        new UpsertUserMetadataCommand({}, 'new-user-99', { firstName: 'Novo' }),
       );
       expect(created.userId).toBe('new-user-99');
       expect((created as UserMetadataEntityFixture).firstName).toBe('Novo');
@@ -75,7 +75,7 @@ describe('UserMetadataRepositoryFixture — handler contract', () => {
       const repo = new UserMetadataRepositoryFixture();
       const handler = new UpsertUserMetadataHandler(asRepository(repo));
       const updated = await handler.execute(
-        new UpsertUserMetadataCommand('serverauth-user-1', {
+        new UpsertUserMetadataCommand({}, 'serverauth-user-1', {
           bio: 'Contract migration',
         }),
       );
@@ -92,7 +92,7 @@ describe('UserMetadataRepositoryFixture — handler contract', () => {
       const repo = new UserMetadataRepositoryFixture();
       const handler = new GetUserMetadataHandler(asRepository(repo));
       const result = await handler.execute(
-        new GetUserMetadataQuery('serverauth-user-1'),
+        new GetUserMetadataQuery({}, 'serverauth-user-1'),
       );
       expect(result).not.toBeNull();
       expect(result?.id).toBe('userMetadata-1');
@@ -102,7 +102,7 @@ describe('UserMetadataRepositoryFixture — handler contract', () => {
       const repo = new UserMetadataRepositoryFixture();
       const handler = new GetUserMetadataHandler(asRepository(repo));
       const result = await handler.execute(
-        new GetUserMetadataQuery('no-such-user'),
+        new GetUserMetadataQuery({}, 'no-such-user'),
       );
       expect(result).toBeNull();
     });

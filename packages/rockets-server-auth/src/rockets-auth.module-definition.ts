@@ -13,11 +13,6 @@ import {
 import { PassportModule } from '@nestjs/passport';
 import { CommandBus, CqrsModule, QueryBus } from '@nestjs/cqrs';
 import {
-  ThrottlerModule,
-  type ThrottlerModuleOptions,
-} from '@nestjs/throttler';
-import { ConfigModule } from '@nestjs/config';
-import {
   AuthenticationModule,
   AuthenticationOptionsInterface,
   OtpPort,
@@ -55,8 +50,11 @@ import {
   PasswordModule,
   ValidatePasswordHistoryCommand,
 } from '@concepta/nestjs-password';
-import { RepositoryModule } from '@concepta/nestjs-repository';
-import { RoleModule } from '@concepta/nestjs-role';
+import {
+  RepositoryModule,
+  TransactionScope,
+} from '@concepta/nestjs-repository';
+import { RoleModule, RoleOptionsInterface } from '@concepta/nestjs-role';
 import {
   CreateUserCommand,
   GetUserQuery,
@@ -64,7 +62,10 @@ import {
   UserModule,
 } from '@concepta/nestjs-user';
 
-import { rocketsAuthOptionsDefaultConfig } from './shared/config/rockets-auth-options-default.config';
+import {
+  ROCKETS_AUTH_SETTINGS_DEFAULTS_TOKEN,
+  rocketsAuthOptionsDefaultConfig,
+} from './shared/config/rockets-auth-options-default.config';
 import { RAW_OPTIONS_TOKEN } from './shared/constants/rockets-auth-raw-options.token';
 import { buildMePasswordController } from './domains/auth/gateways/http/factories/build-me-password-controller';
 import { RocketsAuthTokenController } from './domains/auth/gateways/http/controllers/rockets-auth-token.controller';
@@ -99,6 +100,7 @@ import {
 } from './domains/invitation';
 import { RocketsAuthInvitationAcceptanceModule } from './domains/invitation/modules/rockets-auth-invitation-acceptance.module';
 import { RocketsAuthUserMetadataModule } from './domains/user/modules/rockets-auth-user-metadata.module';
+import { RocketsAuthRateLimitModule } from './shared/throttling/rockets-auth-rate-limit.module';
 import { RocketsAuthPortsModule } from './shared/ports/rockets-auth-ports.module';
 import { buildRocketsAuthenticationPorts } from './shared/authentication/build-rockets-authentication-ports';
 import {
@@ -110,7 +112,6 @@ import {
   RocketsValidateCurrentPasswordHandler,
 } from './shared/authentication/rockets-validate-current-password.handler';
 import { RocketsAuthCreateOtpPortHandler } from './shared/authentication/rockets-auth-create-otp-port.handler';
-import { ConceptaRepositoryCompatModule } from './shared/compatibility/concepta-repository-compat.module';
 import { RocketsAuthRecoveryController } from './domains/auth/gateways/http/controllers/rockets-auth-recovery.controller';
 import { RocketsRecoveryService } from './domains/auth/application/services/rockets-recovery.service';
 
@@ -163,43 +164,6 @@ const ROCKETS_DEFAULT_RECOVERY_SETTINGS: RecoveryPolicySettingsInterface = {
 };
 
 const jwtLogger = new Logger('RocketsAuthJwt');
-
-/**
- * Two throttler dimensions on the guarded auth routes, both applied at once:
- *
- * - `ip` — a coarse per-IP volume ceiling. It is NOT overridden per route, so
- *   rotating the account field from one source cannot escape it (credential
- *   stuffing, signup/recovery spam).
- * - `default` — fine per-`(ip, account)` limits (via `AuthAccountThrottlerGuard`),
- *   overridden per route with `@Throttle`. Keying on the pair means an attacker
- *   only throttles themselves, never locks a victim out of login.
- *
- * A consumer `throttling` object/array replaces both. `false` disables all
- * throttling while still registering the module (the guards resolve statically).
- */
-function buildAuthThrottlers(
-  throttling: RocketsAuthOptionsExtrasInterface['throttling'],
-): ThrottlerModuleOptions {
-  if (throttling === false) {
-    return [
-      { name: 'ip', limit: 1, ttl: 1000, skipIf: () => true },
-      { name: 'default', limit: 1, ttl: 1000, skipIf: () => true },
-    ];
-  }
-  if (throttling !== undefined) return throttling;
-  return [
-    // Matches the prior app-wide default (1000/min per IP): a non-regressive
-    // volume ceiling that account rotation cannot exceed.
-    {
-      name: 'ip',
-      limit: 1000,
-      ttl: 60000,
-      getTracker: (req: Record<string, unknown>): string =>
-        typeof req.ip === 'string' ? req.ip : 'unknown',
-    },
-    { name: 'default', limit: 1000, ttl: 60000 },
-  ];
-}
 
 /**
  * Resolves the JWT secret for a given role (access / refresh):
@@ -298,10 +262,20 @@ function definitionTransform(
   const { imports = [], providers = [], exports = [] } = definition;
   const { controllers, userCrud, roleCrud } = extras;
 
+  // Built ONCE and shared. A controller's guard resolves its
+  // dependencies from the injector of the module that DECLARES the
+  // controller, so a sub-module declaring a rate-limited controller of
+  // its own has to import THIS registration — otherwise it reads
+  // `RATE_LIMIT_STORE_TOKEN` off the global registry, where an app that
+  // also registers a store globally wins by being registered first.
+  // Importing the same dynamic-module object is how Nest is told it is
+  // one registration and not two.
+  const rateLimitModule = RocketsAuthRateLimitModule.forRoot(extras.throttling);
+
   const baseModule: DynamicModule = {
     ...definition,
     global: extras.global,
-    imports: createRocketsAuthImports({ imports, extras }),
+    imports: createRocketsAuthImports({ imports, extras, rateLimitModule }),
     controllers: createRocketsAuthControllers({ controllers, extras }),
     providers: createRocketsAuthProviders({ providers, extras }),
     exports: createRocketsAuthExports({ exports, extras }),
@@ -320,11 +294,20 @@ function definitionTransform(
       additionalImports.push(RocketsAuthAdminModule.register(userCrud));
     }
     if (!disableController.signup) {
+      // NOT given `rateLimitModule`: the signup controller is generated by
+      // `CrudModule.forFeature`, which declares it in a module of its own
+      // and accepts neither `imports` nor `providers` — so its guard can
+      // only resolve `RATE_LIMIT_STORE_TOKEN` from the global registry.
+      // Handing the registration to `RocketsAuthSignUpModule` would look
+      // like a fix and change nothing. See CONFIGURATION.md §7b.
       additionalImports.push(RocketsAuthSignUpModule.register(userCrud));
     }
     if (!disableController.invitationAcceptance) {
       additionalImports.push(
-        RocketsAuthInvitationAcceptanceModule.forRoot({ userCrud }),
+        RocketsAuthInvitationAcceptanceModule.forRoot({
+          userCrud,
+          imports: [rateLimitModule],
+        }),
       );
     }
     baseModule.imports = [...(baseModule.imports ?? []), ...additionalImports];
@@ -388,7 +371,7 @@ export function createRocketsAuthSettingsProvider(
   >({
     settingsToken: ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
     optionsToken: RAW_OPTIONS_TOKEN,
-    settingsKey: rocketsAuthOptionsDefaultConfig.KEY,
+    settingsKey: ROCKETS_AUTH_SETTINGS_DEFAULTS_TOKEN,
     optionsOverrides,
   });
 }
@@ -396,27 +379,33 @@ export function createRocketsAuthSettingsProvider(
 export function createRocketsAuthImports(importOptions: {
   imports: DynamicModule['imports'];
   extras?: RocketsAuthOptionsExtrasInterface;
+  /**
+   * The one `RocketsAuthRateLimitModule` registration for this app. The
+   * SAME instance is handed to the sub-modules that declare a
+   * rate-limited controller of their own, so their guards resolve this
+   * registration's store rather than whichever global one happens to win
+   * (see {@link buildRateLimitModule}).
+   */
+  rateLimitModule: DynamicModule;
 }): DynamicModule['imports'] {
+  const { rateLimitModule } = importOptions;
   const imports: DynamicModule['imports'] = [
     ...(importOptions.imports || []),
     PassportModule.register({}),
 
     CqrsModule.forRoot(),
     RepositoryModule.forRoot({}),
-    ConceptaRepositoryCompatModule,
     RocketsAuthPortsModule.forRoot(importOptions.extras?.ports),
-    ConfigModule.forFeature(rocketsAuthOptionsDefaultConfig),
     CrudModule.forRootAsync({
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (options: RocketsAuthOptionsInterface) => ({
         settings: options.crud?.settings,
       }),
     }),
-    // Always imported: the auth controllers reference the throttler guard
-    // statically, so its providers must resolve even when throttling is off.
-    ThrottlerModule.forRoot(
-      buildAuthThrottlers(importOptions.extras?.throttling),
-    ),
+    // Always imported: the auth controllers reference `RateLimitGuard`
+    // statically, so its providers must resolve even when throttling is
+    // off (`throttling: false` disables the guard, not the wiring).
+    rateLimitModule,
     SwaggerUiModule.registerAsync({
       inject: [RAW_OPTIONS_TOKEN],
       useFactory: (options: RocketsAuthOptionsInterface) => ({
@@ -553,20 +542,15 @@ export function createRocketsAuthImports(importOptions: {
       }),
     }),
 
+    // Entity keys are declared on `RoleModule.forFeature` below; upstream's
+    // root options carry nothing else, so the consumer's `role` block is
+    // forwarded verbatim.
     RoleModule.forRootAsync({
       imports: [...(importOptions.extras?.role?.imports || [])],
       inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (rocketsServerAuthOptions: RocketsAuthOptionsInterface) => ({
-        settings: {
-          ...rocketsServerAuthOptions.role?.settings,
-          assignments: {
-            ...rocketsServerAuthOptions.role?.settings?.assignments,
-            entityKey:
-              rocketsServerAuthOptions.role?.settings?.assignments?.entityKey ??
-              USER_ROLE_ENTITY_KEY,
-          },
-        },
-      }),
+      useFactory: (
+        rocketsServerAuthOptions: RocketsAuthOptionsInterface,
+      ): RoleOptionsInterface => ({ ...rocketsServerAuthOptions.role }),
     }),
     RoleModule.forFeature({
       roleEntityKey: ROLE_CRUD_ENTITY_KEY,
@@ -630,7 +614,6 @@ export function createRocketsAuthExports(options: {
 }): DynamicModule['exports'] {
   return [
     ...(options.exports || []),
-    ConfigModule,
     RAW_OPTIONS_TOKEN,
     ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
     AuthenticationModule,
@@ -649,6 +632,7 @@ export function createRocketsAuthProviders(options: {
 }): Provider[] {
   const providers: Provider[] = [
     ...(options.providers ?? []),
+    rocketsAuthOptionsDefaultConfig,
     createRocketsAuthSettingsProvider(),
     RocketsAuthOtpService,
     RocketsAuthNotificationService,
@@ -662,11 +646,12 @@ export function createRocketsAuthProviders(options: {
     RocketsValidateCurrentPasswordHandler,
     {
       provide: RecoveryService,
-      inject: [RAW_OPTIONS_TOKEN, CommandBus, QueryBus],
+      inject: [RAW_OPTIONS_TOKEN, CommandBus, QueryBus, TransactionScope],
       useFactory: (
         authOptions: RocketsAuthOptionsInterface,
         commandBus: CommandBus,
         queryBus: QueryBus,
+        txScope: TransactionScope,
       ) => {
         const ports = buildRocketsAuthenticationPorts(authOptions);
         // Must resolve to the same policy the settings factory above hands to
@@ -681,6 +666,7 @@ export function createRocketsAuthProviders(options: {
           new PasswordPort(ports.password, commandBus),
           ports.recoveryNotification,
           commandBus,
+          txScope,
         );
       },
     },

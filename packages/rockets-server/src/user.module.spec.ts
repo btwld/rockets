@@ -1,42 +1,19 @@
 import { vi, type Mocked, describe, it, expect } from 'vitest';
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, Module, type Type } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getDynamicRepositoryToken } from '@concepta/rockets-core';
 import { CqrsModule } from '@nestjs/cqrs';
-import { UserModule } from './user.module';
-import { MeController } from './gateways/http/me.controller';
 import {
   USER_METADATA_MODULE_ENTITY_KEY,
   UpsertUserMetadataHandler,
   GetUserMetadataHandler,
+  getDynamicRepositoryToken,
 } from '@concepta/rockets-core';
-import {
-  RAW_OPTIONS_TOKEN,
-  ROCKETS_USER_METADATA_DTO_TOKEN,
-} from './rockets.tokens';
-import type { RocketsOptions } from './rockets.module-definition';
-import { StubUserMetadataEntity } from './__fixtures__/entities/stub-user-metadata.entity';
-import type { RepositoryInterface } from '@concepta/rockets-core';
-import type { UserMetadataEntityInterface } from '@concepta/rockets-core';
-
-class MetadataCreateDto {
-  userId!: string;
-}
-
-class MetadataUpdateDto {
-  id!: string;
-}
-
-function rocketsOptionsFixture(): RocketsOptions {
-  return {
-    settings: {},
-    userMetadata: {
-      entity: StubUserMetadataEntity,
-      createDto: MetadataCreateDto,
-      updateDto: MetadataUpdateDto,
-    },
-  };
-}
+import type {
+  RepositoryInterface,
+  UserMetadataEntityInterface,
+} from '@concepta/rockets-core';
+import { UserModule } from './user.module';
+import { userMetadataConfigFixture } from './__fixtures__/schemas/user-metadata.schema.fixture';
 
 function metadataRepositoryFixture(): Mocked<
   RepositoryInterface<UserMetadataEntityInterface>
@@ -61,7 +38,6 @@ function metadataRepositoryFixture(): Mocked<
 @Module({})
 class UserModuleTestHarnessModule {
   static forTest(
-    options: RocketsOptions,
     repo: Mocked<RepositoryInterface<UserMetadataEntityInterface>>,
   ): DynamicModule {
     return {
@@ -69,14 +45,6 @@ class UserModuleTestHarnessModule {
       global: true,
       imports: [CqrsModule.forRoot()],
       providers: [
-        { provide: RAW_OPTIONS_TOKEN, useValue: options },
-        {
-          // MeController reads only the narrowed DTO config token.
-          provide: ROCKETS_USER_METADATA_DTO_TOKEN,
-          useValue: {
-            updateDto: options.userMetadata?.updateDto,
-          },
-        },
         {
           provide: getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
           useValue: repo,
@@ -84,27 +52,34 @@ class UserModuleTestHarnessModule {
         UpsertUserMetadataHandler,
         GetUserMetadataHandler,
       ],
-      exports: [
-        RAW_OPTIONS_TOKEN,
-        ROCKETS_USER_METADATA_DTO_TOKEN,
-        getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY),
-      ],
+      exports: [getDynamicRepositoryToken(USER_METADATA_MODULE_ENTITY_KEY)],
     };
   }
 }
 
+// `buildMeController` returns a fresh class per config, so the only handle
+// on the mounted controller is the module definition itself.
+function registeredController(definition: DynamicModule): Type<unknown> {
+  const [controller] = definition.controllers ?? [];
+  if (controller === undefined) {
+    throw new Error('UserModule.register() mounted no controller');
+  }
+  return controller;
+}
+
 describe('UserModule', () => {
-  it('register() loads MeController', async () => {
-    const options = rocketsOptionsFixture();
-    const repo = metadataRepositoryFixture();
+  it('register() mounts the /me controller built from the userMetadata config', async () => {
+    const userModule = UserModule.register(userMetadataConfigFixture);
+    const controller = registeredController(userModule);
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [
-        UserModuleTestHarnessModule.forTest(options, repo),
-        UserModule.register(),
+        UserModuleTestHarnessModule.forTest(metadataRepositoryFixture()),
+        userModule,
       ],
     }).compile();
 
-    expect(moduleRef.get(MeController)).toBeInstanceOf(MeController);
+    expect(controller.name).toBe('MeController');
+    expect(moduleRef.get(controller)).toBeInstanceOf(controller);
   });
 });

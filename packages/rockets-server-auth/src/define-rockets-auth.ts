@@ -44,8 +44,8 @@ function toUserMetadataConfig(
 ): UserMetadataConfigInterface {
   return {
     entity: config.entity,
-    createDto: config.createDto,
-    updateDto: config.updateDto,
+    updateSchema: config.updateSchema,
+    responseSchema: config.responseSchema,
   };
 }
 

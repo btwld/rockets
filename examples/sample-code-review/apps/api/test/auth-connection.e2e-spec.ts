@@ -12,7 +12,7 @@ process.env.GITHUB_CLIENT_SECRET = 'e2e-client-secret';
 process.env.GITHUB_OAUTH_CALLBACK_URL = 'http://localhost:3000/auth/github/callback';
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import request from 'supertest';
 
@@ -27,9 +27,6 @@ describe('auth connection — Bearer token → GET /me (e2e)', () => {
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: ['error'] });
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));
     await app.init();

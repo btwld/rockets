@@ -24,16 +24,16 @@ import {
   isCrudResource,
   isModuleResource,
 } from '@concepta/rockets-core';
-import { MeController } from './gateways/http/me.controller';
+import { buildMeController } from './gateways/http/build-me-controller';
 import { RocketsOptionsInterface } from './infrastructure/config/interfaces/rockets-options.interface';
 import type { RocketsOptionsExtrasInterface } from './infrastructure/config/interfaces/rockets-options-extras.interface';
 import type { RocketsAuthOption } from './infrastructure/config/interfaces/rockets-options-extras.interface';
 import { RocketsSettingsInterface } from './infrastructure/config/interfaces/rockets-settings.interface';
-import { rocketsOptionsDefaultConfig } from './infrastructure/config/rockets-options-default.config';
 import {
-  RAW_OPTIONS_TOKEN,
-  ROCKETS_USER_METADATA_DTO_TOKEN,
-} from './rockets.tokens';
+  ROCKETS_SERVER_SETTINGS_DEFAULTS_TOKEN,
+  rocketsOptionsDefaultConfig,
+} from './infrastructure/config/rockets-options-default.config';
+import { RAW_OPTIONS_TOKEN } from './rockets.tokens';
 
 function isAuthBootstrapChain(
   value: RocketsAuthOption,
@@ -339,7 +339,7 @@ export function createRocketsControllers(options: {
   const controllers: DynamicModule['controllers'] = [];
 
   if (composition.userMetadata && !disableController.me) {
-    controllers.push(MeController);
+    controllers.push(buildMeController(composition.userMetadata));
   }
 
   return controllers;
@@ -354,7 +354,7 @@ export function createRocketsSettingsProvider(
   >({
     settingsToken: ROCKETS_CORE_SETTINGS_TOKEN,
     optionsToken: RAW_OPTIONS_TOKEN,
-    settingsKey: rocketsOptionsDefaultConfig.KEY,
+    settingsKey: ROCKETS_SERVER_SETTINGS_DEFAULTS_TOKEN,
     optionsOverrides,
   });
 }
@@ -374,18 +374,11 @@ export function createRocketsProviders(options: {
   extras?: RocketsOptionsExtrasInterface;
 }): Provider[] {
   const composition = resolveRocketsComposition(options.extras);
-  const extrasUserMetadata = composition.userMetadata;
   const providers: Provider[] = [
     ...(options.providers ?? []),
+    rocketsOptionsDefaultConfig,
     createRocketsSettingsProvider(),
   ];
-
-  if (extrasUserMetadata) {
-    providers.push({
-      provide: ROCKETS_USER_METADATA_DTO_TOKEN,
-      useValue: { updateDto: extrasUserMetadata.updateDto },
-    });
-  }
 
   if (composition.enableGlobalGuard !== false) {
     providers.push({

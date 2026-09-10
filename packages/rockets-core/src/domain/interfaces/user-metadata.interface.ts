@@ -20,13 +20,3 @@ export interface UserMetadataModelUpdatableInterface
   extends UserMetadataUpdatableInterface {
   id: string;
 }
-
-export class BaseUserMetadataDto {
-  userId?: string;
-}
-
-export class BaseUserMetadataCreateDto extends BaseUserMetadataDto {
-  userId!: string;
-}
-
-export class BaseUserMetadataUpdateDto extends BaseUserMetadataDto {}

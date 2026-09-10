@@ -13,22 +13,22 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
 import request from 'supertest';
-import { extractBearerToken } from '@concepta/rockets-core';
+import { z } from 'zod';
+import {
+  SwaggerUiService,
+  extractBearerToken,
+  withOpenApi,
+} from '@concepta/rockets-core';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
   AuthRequest,
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
 } from '@concepta/rockets-core';
 import { RocketsModule } from '../rockets.module';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
 import { defineResource } from '@concepta/rockets-core';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
@@ -54,23 +54,27 @@ class GadgetEntity {
   dateUpdated!: Date;
 }
 
-@Exclude()
-class GadgetCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose() @IsOptional() @IsString() @ApiPropertyOptional() category?: string;
-}
+const gadgetCreateSchema = withOpenApi(
+  z.object({ name: z.string(), category: z.string().optional() }),
+  'GadgetCreateDto',
+);
 
-@Exclude()
-class GadgetUpdateDto {
-  @Expose() @IsOptional() @IsString() @ApiPropertyOptional() name?: string;
-  @Expose() @IsOptional() @IsString() @ApiPropertyOptional() category?: string;
-}
+const gadgetUpdateSchema = withOpenApi(
+  z.object({ name: z.string().optional(), category: z.string().optional() }),
+  'GadgetUpdateDto',
+);
 
-class GadgetResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiPropertyOptional() category?: string;
-}
+// `dateUpdated` is deliberately undeclared: the response schema is the
+// wire contract, so the column must be stripped.
+const gadgetResponseSchema = withOpenApi(
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    category: z.string().nullable().optional(),
+    dateCreated: z.date(),
+  }),
+  'GadgetResponseDto',
+);
 
 @Injectable()
 class TestAuthAdapter implements AuthAdapterInterface {
@@ -93,14 +97,6 @@ class TestAuthAdapter implements AuthAdapterInterface {
   }
 }
 
-class TestMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsString() userId!: string;
-}
-
-class TestMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsString() id!: string;
-}
-
 // defineResource() bundle — the full subject under test. Wired through
 // RocketsModule with NO explicit entity registration for the gadget
 // entity; the bundle must auto-contribute it via buildAppRegistrationPlan.
@@ -110,11 +106,13 @@ const gadgetResource = defineResource({
   path: 'gadgets',
   tags: ['Gadgets'],
   dto: {
-    response: GadgetResponseDto,
-    create: GadgetCreateDto,
-    update: GadgetUpdateDto,
+    response: gadgetResponseSchema,
+    create: gadgetCreateSchema,
+    update: gadgetUpdateSchema,
   },
 });
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 describe('RocketsModule — defineResource() bundle (e2e)', () => {
   let app: INestApplication;
@@ -132,9 +130,7 @@ describe('RocketsModule — defineResource() bundle (e2e)', () => {
         RocketsModule.forRoot({
           auth: e2eAuthBootstrap(TestAuthAdapter),
           userMetadata: {
-            entity: StubUserMetadataEntity,
-            createDto: TestMetadataCreateDto,
-            updateDto: TestMetadataUpdateDto,
+            ...userMetadataConfigFixture,
             // Per-entity override — user-metadata uses the in-memory fake
             // so this suite doesn't need to wire StubUserMetadataEntity into
             // TypeOrmModule.forRoot.
@@ -170,6 +166,28 @@ describe('RocketsModule — defineResource() bundle (e2e)', () => {
     createdId = res.body.id;
   });
 
+  it('POST /gadgets — response comes from the response schema (dates ISO, undeclared keys gone)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/gadgets')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ name: 'Cog' })
+      .expect(201);
+
+    expect(res.body.dateCreated).toMatch(ISO_DATE);
+    expect(res.body).not.toHaveProperty('dateUpdated');
+  });
+
+  it('POST /gadgets — 400 from the Rockets exception factory when the body fails the create schema', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/gadgets')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ category: 'no-name' })
+      .expect(400);
+
+    expect(res.body.statusCode).toBe(400);
+    expect(res.body.message).toMatch(/^name: /);
+  });
+
   it('GET /gadgets — lists items (default List operation enabled)', async () => {
     const res = await request(app.getHttpServer())
       .get('/gadgets')
@@ -178,6 +196,7 @@ describe('RocketsModule — defineResource() bundle (e2e)', () => {
 
     expect(res.body).toHaveProperty('data');
     expect(res.body.data.length).toBeGreaterThan(0);
+    expect(res.body.data[0]).not.toHaveProperty('dateUpdated');
   });
 
   it('GET /gadgets/:id — reads single item', async () => {
@@ -213,5 +232,50 @@ describe('RocketsModule — defineResource() bundle (e2e)', () => {
 
   it('GET /gadgets — 401 without token (bearerAuth default)', async () => {
     await request(app.getHttpServer()).get('/gadgets').expect(401);
+  });
+
+  it('documents the resource responses as named components', () => {
+    const document = app
+      .get(SwaggerUiService, { strict: false })
+      .createDocument(app);
+
+    expect(Object.keys(document.components?.schemas ?? {})).toEqual(
+      expect.arrayContaining([
+        'GadgetResponseDto',
+        'GadgetResponseDtoPaginatedDto',
+      ]),
+    );
+    expect(document.paths['/gadgets']?.get?.responses['200']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: {
+            $ref: '#/components/schemas/GadgetResponseDtoPaginatedDto',
+          },
+        },
+      },
+    });
+    expect(
+      document.paths['/gadgets/{id}']?.patch?.responses['200'],
+    ).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/GadgetResponseDto' },
+        },
+      },
+    });
+
+    // Since nestjs-modules#467 upstream stamps the body as
+    // `ApiBody({ standardSchema })`, so it goes through the document
+    // converter and is `$ref`'d like every response.
+    expect(document.paths['/gadgets']?.post?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/GadgetCreateDto' },
+        },
+      },
+    });
+    expect(document.components?.schemas).toHaveProperty('GadgetCreateDto');
+    expect(document.components?.schemas).toHaveProperty('GadgetUpdateDto');
   });
 });

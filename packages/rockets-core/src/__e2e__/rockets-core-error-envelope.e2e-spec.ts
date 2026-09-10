@@ -18,6 +18,7 @@ import {
   PlainLiteralObject,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   InternalServerErrorException,
   Global,
   INestApplication,
@@ -28,13 +29,17 @@ import {
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import { getDynamicRepositoryToken, Where } from '@concepta/nestjs-repository';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
+import { z } from 'zod';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
@@ -53,11 +58,15 @@ import {
   type RocketsErrorSerializerInterface,
 } from '../infrastructure/filters/error-serializer';
 import { defineResource } from '../infrastructure/resource/define-resource';
-import { RuntimeException } from '@concepta/nestjs-core';
+import { RuntimeException, withOpenApi } from '@concepta/nestjs-core';
 import { attachErrorDetails } from '../common/utils/validation-error-details.util';
 import { baseEntity, f, zodResource } from '../zod';
 import { defineAuthAdapter } from '../infrastructure/auth/define-auth-adapter';
 import { defineHook } from '../infrastructure/hooks/define-hook';
+import {
+  EntityHook,
+  PassthroughEntityHookBase,
+} from '../infrastructure/hooks/entity-hook';
 
 // ── Fixtures ──
 
@@ -77,13 +86,14 @@ class NoteEntity {
   @Column({ type: 'varchar' }) ref!: string;
 }
 
-class NoteCreateDto {
-  @Expose() @IsString() @ApiProperty() ref!: string;
-}
-class NoteResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() ref!: string;
-}
+const noteCreateSchema = withOpenApi(
+  z.object({ ref: z.string() }),
+  'NoteCreateDto',
+);
+const noteResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), ref: z.string() }),
+  'NoteResponseDto',
+);
 
 class StubMetadataRepo {
   async findOne() {
@@ -172,8 +182,8 @@ const noteResource = defineResource<NoteEntity>({
   tags: ['Notes'],
   hooks: [NoteUniqueHook],
   operations: {
-    read: { output: NoteResponseDto },
-    create: { input: NoteCreateDto, output: NoteResponseDto },
+    read: { output: noteResponseSchema },
+    create: { input: noteCreateSchema, output: noteResponseSchema },
   },
 });
 
@@ -181,6 +191,37 @@ const noteResource = defineResource<NoteEntity>({
 class ZoteEntity {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column({ type: 'varchar' }) label!: string;
+  // `baseEntity` declares both, and the response schema validates them —
+  // without the columns a successful create serializes to a 500. No test
+  // exercised a passing `/zotes` create before, so the gap was invisible.
+  @CreateDateColumn() dateCreated!: Date;
+  @UpdateDateColumn() dateUpdated!: Date;
+}
+
+/**
+ * A CLASS hook, not `defineHook`. Until `8.0.0-alpha.10` the docs told
+ * class-hook authors to throw `RepositoryQueryException` directly,
+ * because only `defineHook` could pre-wrap an `HttpException` so the
+ * membrane preserved it. That contract is gone: upstream's
+ * `RepositoryQueryException` now keeps `context.originalError`, so a
+ * class hook throws its own domain exception like everything else.
+ * Nothing pinned that, which is how the removal could have regressed
+ * silently.
+ */
+@EntityHook({ entity: ZoteEntity })
+@Injectable()
+class ZoteLabelGuardHook extends PassthroughEntityHookBase<PlainLiteralObject> {
+  override async beforeCreate(
+    payload: PlainLiteralObject,
+  ): Promise<PlainLiteralObject> {
+    if (payload.label === 'reserved') {
+      throw new ConflictException('label "reserved" is not available');
+    }
+    if (payload.label === 'forbidden') {
+      throw new ForbiddenException('label "forbidden" is not yours');
+    }
+    return payload;
+  }
 }
 
 /**
@@ -196,6 +237,7 @@ const zoteResource = zodResource({
   path: 'zotes',
   tags: ['Zotes'],
   operations: { create: true, read: true },
+  hooks: [ZoteLabelGuardHook],
 });
 
 /** An app envelope that shares no keys with the Rockets default. */
@@ -342,6 +384,40 @@ describe('custom error envelope via ROCKETS_ERROR_SERIALIZER_TOKEN (e2e)', () =>
       .expect(401);
 
     expect(res.body.http).toBe(401);
+  });
+
+  // The CLASS-hook half. `defineHook` is sugar; a hand-written
+  // `@EntityHook` class goes through the same membrane and must reach
+  // the client with the same status. This is what the removed
+  // "class hooks should throw RepositoryQueryException directly"
+  // contract used to work around.
+  it('keeps a CLASS hook ConflictException at 409', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/zotes')
+      .set('Authorization', 'Bearer u1')
+      .send({ label: 'reserved' })
+      .expect(409);
+
+    expect(res.body.http).toBe(409);
+    expect(res.body.ok).toBe(false);
+  });
+
+  it('keeps a CLASS hook ForbiddenException at 403', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/zotes')
+      .set('Authorization', 'Bearer u1')
+      .send({ label: 'forbidden' })
+      .expect(403);
+
+    expect(res.body.http).toBe(403);
+  });
+
+  it('lets a class hook pass a legitimate create through', async () => {
+    await request(app.getHttpServer())
+      .post('/zotes')
+      .set('Authorization', 'Bearer u1')
+      .send({ label: 'fine' })
+      .expect(201);
   });
 });
 

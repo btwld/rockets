@@ -12,8 +12,11 @@
  *     from one operation without touching the resource.
  *  2. `output` narrows the serialized response per operation (a list
  *     projection that is deliberately thinner than the read one).
- *  3. The overrides are real OpenAPI components, not just runtime
- *     behaviour, and the untouched operations keep the derived DTOs.
+ *  3. The overrides reach the OpenAPI document, not just runtime
+ *     behaviour, and the untouched operations keep the derived schemas.
+ *     Both sides are `$ref`'d components — since nestjs-modules#467
+ *     upstream documents CRUD bodies through the converter like every
+ *     response — so body assertions resolve the ref into `components`.
  *
  * The last block covers the same behaviour on the CLASS path. Per-operation
  * `output` was accepted there but never reached the route: upstream reads
@@ -40,13 +43,10 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
+import { withOpenApi } from '@concepta/nestjs-core';
 import request from 'supertest';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import type {
   AuthAdapterInterface,
@@ -60,15 +60,21 @@ import { AuthServerGuard } from '../infrastructure/guards/auth-server.guard';
 import { defineAuthAdapter } from '../infrastructure/auth/define-auth-adapter';
 import { baseEntity, f, zodResource, zodSubResource } from '../zod';
 import { defineResource } from '../infrastructure/resource/define-resource';
+import { createRocketsStandardSchemaConverter } from '../common/swagger-ui/rockets-standard-schema.converter';
 
 // ── Auth / metadata fixtures ──
+
+/** `f.owner()` is a uuid column and the response schema validates the row. */
+const U1_ID = '00000000-0000-4000-8000-000000000001';
 
 @Injectable()
 class StubAuthAdapter implements AuthAdapterInterface {
   async authenticate(request: AuthRequest): Promise<AuthAttemptResult> {
     const token = extractBearerToken(request);
     if (token === null) return { matched: false };
-    if (token === 'u1') return { matched: true, user: { id: 'u1', sub: 'u1' } };
+    if (token === 'u1') {
+      return { matched: true, user: { id: U1_ID, sub: U1_ID } };
+    }
     return { matched: true, error: new UnauthorizedException() };
   }
 }
@@ -149,15 +155,19 @@ const articleSchema = baseEntity({
   title: f.string(),
   body: f.string(),
   // Required by the resource schema, absent from the create override —
-  // that combination is the point of the first block below.
-  slug: f.string(),
+  // that combination is the point of the first block below. `nullable`
+  // because the response schema validates the ROW, and a row created
+  // through the override carries `slug: null`.
+  slug: f.string().nullable(),
   userId: f.owner(),
 });
 
 /** Sub-resource: the override plumbing must reach it too. */
 const commentSchema = baseEntity({
   text: f.string(),
-  authorNote: f.string().optional(),
+  // `nullish`: the nullable column reads back as `null`, which the
+  // response schema must accept.
+  authorNote: f.string().nullish(),
   articleId: f.string(),
   userId: f.owner(),
 });
@@ -238,11 +248,13 @@ class StrictEntity {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column({ type: 'varchar' }) label!: string;
   @Column({ type: 'varchar', nullable: true }) note?: string;
+  @CreateDateColumn() dateCreated!: Date;
+  @UpdateDateColumn() dateUpdated!: Date;
 }
 
 const strictSchema = baseEntity({
   label: f.string(),
-  note: f.string().optional(),
+  note: f.string().nullish(),
 });
 
 const strictResource = zodResource({
@@ -280,6 +292,8 @@ class StrictEchoEntity {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column({ type: 'varchar' }) label!: string;
   @Column({ type: 'varchar', nullable: true }) meta?: string;
+  @CreateDateColumn() dateCreated!: Date;
+  @UpdateDateColumn() dateUpdated!: Date;
 }
 
 // `nullish`, not `optional`: the nullable column echoes back as
@@ -314,24 +328,24 @@ const strictEchoResource = zodResource({
   },
 });
 
-// ── Class-path resource (same feature, DTO classes instead of schemas) ──
+// ── Core-path resource (same feature, hand-named schemas instead of a
+// zodResource projection) ──
 
-class WidgetCreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose() @IsString() @ApiProperty() secretNote!: string;
-}
+const widgetCreateSchema = withOpenApi(
+  z.object({ name: z.string(), secretNote: z.string() }),
+  'WidgetCreateDto',
+);
 
-class WidgetReadDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty() secretNote!: string;
-}
+const widgetReadSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string(), secretNote: z.string() }),
+  'WidgetReadDto',
+);
 
-/** Deliberately thinner than the read DTO — the list route must use it. */
-class WidgetCardDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-}
+/** Deliberately thinner than the read schema — the list route must use it. */
+const widgetCardSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string() }),
+  'WidgetCardDto',
+);
 
 const widgetResource = defineResource<WidgetEntity>({
   key: 'widget',
@@ -339,9 +353,9 @@ const widgetResource = defineResource<WidgetEntity>({
   path: 'widgets',
   tags: ['Widgets'],
   operations: {
-    list: { output: WidgetCardDto },
-    read: { output: WidgetReadDto },
-    create: { input: WidgetCreateDto, output: WidgetReadDto },
+    list: { output: widgetCardSchema },
+    read: { output: widgetReadSchema },
+    create: { input: widgetCreateSchema, output: widgetReadSchema },
   },
 });
 
@@ -350,7 +364,45 @@ const widgetResource = defineResource<WidgetEntity>({
 describe('zodResource per-operation input/output (e2e)', () => {
   let app: INestApplication;
   let components: Record<string, unknown>;
+  let paths: Record<string, unknown>;
   let articleId: string;
+
+  interface JsonSchemaLike {
+    readonly properties?: Record<string, unknown>;
+    readonly required?: string[];
+    readonly additionalProperties?: unknown;
+  }
+
+  /**
+   * The JSON Schema of a route's request body, resolved through its
+   * component. Upstream documents generated CRUD bodies as a `$ref` to
+   * `components/schemas/<id>` (nestjs-modules#467), the same as responses.
+   */
+  const requestBody = (path: string, method: 'post' | 'patch' | 'put') => {
+    const route = paths[path] as
+      | Record<
+          string,
+          { requestBody?: { content?: Record<string, { schema?: unknown }> } }
+        >
+      | undefined;
+    const schema =
+      route?.[method]?.requestBody?.content?.['application/json']?.schema;
+    if (schema === undefined) {
+      throw new Error(`no request body documented on ${method} ${path}`);
+    }
+    const ref = (schema as { $ref?: unknown }).$ref;
+    if (typeof ref !== 'string') {
+      throw new Error(
+        `request body on ${method} ${path} is inlined, expected a $ref`,
+      );
+    }
+    const id = ref.replace('#/components/schemas/', '');
+    const component = components[id];
+    if (component === undefined) {
+      throw new Error(`request body component "${id}" is not registered`);
+    }
+    return component as JsonSchemaLike;
+  };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -390,14 +442,18 @@ describe('zodResource per-operation input/output (e2e)', () => {
     app = moduleRef.createNestApplication();
     await app.init();
 
+    // The Rockets converter is what `SwaggerUiService.createDocument`
+    // installs: every named schema becomes a `components.schemas` entry.
     const document = SwaggerModule.createDocument(
       app,
       new DocumentBuilder().setTitle('io').build(),
+      { standardSchemaConverter: createRocketsStandardSchemaConverter() },
     );
     components = (document.components?.schemas ?? {}) as Record<
       string,
       unknown
     >;
+    paths = document.paths as Record<string, unknown>;
 
     const created = await request(app.getHttpServer())
       .post('/articles')
@@ -423,15 +479,14 @@ describe('zodResource per-operation input/output (e2e)', () => {
       expect(res.body.title).toBe('no-slug');
     });
 
-    it('the derived create DTO would have required it', () => {
-      const createDto = components.ArticleCreateInputDto as {
-        required?: string[];
-      };
-      const derived = components.DerivedCreateDto as { required?: string[] };
-      expect(createDto.required?.sort()).toEqual(['body', 'title']);
+    it('the derived create body would have required it', () => {
+      expect(requestBody('/articles', 'post').required?.sort()).toEqual([
+        'body',
+        'title',
+      ]);
       // Control: the un-overridden resource still documents its own
       // required set, so the assertion above is about the override.
-      expect(derived.required).toContain('label');
+      expect(requestBody('/deriveds', 'post').required).toContain('label');
     });
 
     it('strips keys the override does not declare', async () => {
@@ -534,55 +589,43 @@ describe('zodResource per-operation input/output (e2e)', () => {
   });
 
   describe('OpenAPI', () => {
-    // F1 from review: the "additionalProperties: false" claim is only
-    // true AFTER `cleanupOpenApiDoc` lifts nestjs-zod's per-property
-    // marker onto the object schema. Core's SwaggerUiService does not
-    // call it, so the docs must name the step — and this asserts both
-    // halves: the marker exists raw, and the cleanup produces the real
-    // keyword. If either half changes upstream, this fails loudly.
-    it('strict DTOs gain additionalProperties: false once the document is cleaned', () => {
-      const rawDoc = SwaggerModule.createDocument(
-        app,
-        new DocumentBuilder().setTitle('io').build(),
-      );
-      const cleaned = cleanupOpenApiDoc(
-        rawDoc as Parameters<typeof cleanupOpenApiDoc>[0],
-      );
-      const schemas = (cleaned.components?.schemas ?? {}) as Record<
-        string,
-        { additionalProperties?: unknown }
-      >;
-      expect(schemas.StrictCreateDto?.additionalProperties).toBe(false);
+    // A `.strict()` input schema documents `additionalProperties: false`
+    // straight from the JSON Schema bridge — no post-processing step.
+    it('strict bodies document additionalProperties: false', () => {
+      expect(requestBody('/stricts', 'post').additionalProperties).toBe(false);
       // The flag must reach BOTH input sources: the derived projection
       // above and an `input` override (a strict `.strict()` applied to
       // the schema the author supplied).
-      expect(schemas.StrictEchoCreateInputDto?.additionalProperties).toBe(
+      expect(requestBody('/strict-echoes', 'post').additionalProperties).toBe(
         false,
       );
-      // A non-strict DTO must NOT gain the keyword — the flag stays
+      // A non-strict body must NOT gain the keyword — the flag stays
       // per-operation, not document-wide.
-      expect(schemas.DerivedCreateDto?.additionalProperties).toBeUndefined();
+      expect(
+        requestBody('/deriveds', 'post').additionalProperties,
+      ).toBeUndefined();
     });
 
-    it('registers the override DTOs as named components', () => {
-      expect(components).toHaveProperty('ArticleCreateInputDto');
+    it('registers the override output as a named component', () => {
       expect(components).toHaveProperty('ArticleListOutputDto');
+      expect(components).toHaveProperty('ArticleListOutputDtoPaginatedDto');
+      expect(components).toHaveProperty('ArticleUpdateOutputDto');
     });
 
     it('documents the override body shape, not the derived one', () => {
-      const createDto = components.ArticleCreateInputDto as {
-        properties: Record<string, unknown>;
-      };
-      expect(Object.keys(createDto.properties).sort()).toEqual([
-        'body',
-        'title',
-      ]);
+      expect(
+        Object.keys(requestBody('/articles', 'post').properties ?? {}).sort(),
+      ).toEqual(['body', 'title']);
     });
 
-    it('leaves resources without overrides on the derived DTOs', () => {
-      expect(components).toHaveProperty('DerivedCreateDto');
+    it('leaves resources without overrides on the derived schemas', () => {
       expect(components).toHaveProperty('DerivedResponseDto');
-      expect(components).not.toHaveProperty('DerivedCreateInputDto');
+      expect(components).toHaveProperty('DerivedResponseDtoPaginatedDto');
+      expect(components).not.toHaveProperty('DerivedListOutputDto');
+      // The derived create body carries every writable column.
+      expect(
+        Object.keys(requestBody('/deriveds', 'post').properties ?? {}).sort(),
+      ).toEqual(['label']);
     });
   });
 
@@ -616,9 +659,11 @@ describe('zodResource per-operation input/output (e2e)', () => {
       );
     });
 
-    it('registers the sub-resource override components', () => {
+    it('documents the sub-resource overrides', () => {
       expect(components).toHaveProperty('CommentListOutputDto');
-      expect(components).toHaveProperty('CommentCreateInputDto');
+      const body = requestBody('/articles/{articleId}/comments', 'post');
+      expect(Object.keys(body.properties ?? {})).toEqual(['text']);
+      expect(body.additionalProperties).toBe(false);
     });
   });
 

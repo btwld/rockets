@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   INestApplication,
-  ValidationPipe,
   ExceptionFilter,
   Catch,
   ArgumentsHost,
@@ -81,10 +80,6 @@ describe('Role-Based Access Control (e2e)', () => {
     app = await NestFactory.create(AppModule, {
       logger: ['error', 'warn', 'log'],
     });
-
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
 
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(
@@ -358,6 +353,39 @@ describe('Role-Based Access Control (e2e)', () => {
           roleId: managerRole.id,
         })
         .expect(201);
+    });
+
+    // The admin update bodies declare their schema on the OPERATION: upstream
+    // stamps the validation pipe from the method-level body only, so a
+    // controller-level body would document the route and validate nothing.
+    it('validates the admin user update body', async () => {
+      await request(app.getHttpServer())
+        .patch(`/admin/users/${managerUserId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ active: 'not-a-boolean' })
+        .expect(400);
+
+      await request(app.getHttpServer())
+        .patch(`/admin/users/${managerUserId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ active: true })
+        .expect(200);
+    });
+
+    it('validates the admin role update body', async () => {
+      const rolesResponse = await request(app.getHttpServer())
+        .get('/admin/roles')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const managerRole = rolesResponse.body.data.find(
+        (role: { name: string; id: string }) => role.name === 'manager',
+      );
+
+      await request(app.getHttpServer())
+        .patch(`/admin/roles/${managerRole.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 123 })
+        .expect(400);
     });
 
     it('should login as manager successfully', async () => {

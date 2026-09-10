@@ -1,14 +1,11 @@
 import 'reflect-metadata';
-import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { SwaggerModule } from '@nestjs/swagger';
 import { ExceptionsFilter } from '@concepta/rockets';
 
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
-import { UserMetadataUpdateDto } from './user-metadata.schema';
-import { patchMePatchOpenApi } from './swagger/patch-me-openapi';
+import { SwaggerModule } from '@nestjs/swagger';
 import { SwaggerUiService } from '@concepta/rockets-core';
 
 async function bootstrap() {
@@ -19,19 +16,12 @@ async function bootstrap() {
     origin: process.env.ALLOWED_ORIGINS?.split(',') ?? '*',
     credentials: true,
   });
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   const swaggerUiService = app.get(SwaggerUiService);
   swaggerUiService.builder().addBearerAuth();
 
   const swaggerPath = process.env.SWAGGER_UI_PATH ?? 'api';
-  const document = SwaggerModule.createDocument(
-    app,
-    swaggerUiService.builder().build(),
-    { extraModels: [UserMetadataUpdateDto] },
-  );
-  patchMePatchOpenApi(document, UserMetadataUpdateDto);
-  SwaggerModule.setup(swaggerPath, app, document);
+  SwaggerModule.setup(swaggerPath, app, swaggerUiService.createDocument(app));
 
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ExceptionsFilter(httpAdapterHost));

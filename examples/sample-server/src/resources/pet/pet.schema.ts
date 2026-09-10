@@ -22,6 +22,7 @@ export enum PetStatus {
  * | `text` column (`description`)    | `db.column: { type: 'text' }`                |
  * | int range (`age` 0–50)           | `z.int().min(0).max(50)` → int + docs        |
  * | enum + column default (`status`) | `z.enum(PetStatus).default(...)`             |
+ * | optional column (`breed`, …)     | `.nullable().optional()` — reads return NULL |
  * | nullable UNIQUE (`uniqueRef`)    | `.nullable().optional()` + `db.unique`       |
  * | server-stamped `userId`          | `dto: { create: false, update: false }`      |
  * | immutable-on-PATCH `uniqueRef`   | `dto: { update: false }`                     |
@@ -35,7 +36,7 @@ export const vaccinationResponseShape = z.object({
   id: f.pk(),
   name: f.string({ example: 'Rabies' }),
   dateAdministered: f.string({ example: '2024-01-15' }),
-  dateExpires: f.string({ example: '2025-01-15' }).optional(),
+  dateExpires: f.string({ example: '2025-01-15' }).nullable().optional(),
   petId: z.uuid().register(rocketsFieldMeta, { dto: { response: true } }),
 });
 
@@ -52,10 +53,10 @@ export const petSchema = auditableEntity({
     .optional(),
   name: f.string({ min: 1, max: 255, example: 'Buddy' }),
   species: f.string({ min: 1, max: 100, example: 'dog' }),
-  breed: f.string({ max: 255, example: 'Labrador' }).optional(),
+  breed: f.string({ max: 255, example: 'Labrador' }).nullable().optional(),
   age: f.int({ min: 0, max: 50 }),
-  color: f.string({ max: 100, example: 'golden' }).optional(),
-  description: f.string({ text: true }).optional(),
+  color: f.string({ max: 100, example: 'golden' }).nullable().optional(),
+  description: f.string({ text: true }).nullable().optional(),
   status: f.enum(PetStatus, { default: PetStatus.ACTIVE, length: 20 }),
   /**
    * Owner column — also declared as the resource's owner via

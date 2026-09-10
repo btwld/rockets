@@ -3,11 +3,10 @@ import { describe, it, expect } from 'vitest';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
+import { withOpenApi } from '@concepta/nestjs-core';
+import { z } from 'zod';
 import type { RepositoryPersistenceConfig } from '../../domain/interfaces/repository-persistence.interface';
-import type {
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../../domain/interfaces/user-metadata.interface';
+import type { RocketsUserMetadataConfig } from '../../domain/interfaces/rockets-user-metadata-config.interface';
 import { defineResource } from './define-resource';
 import { defineModuleResource } from './define-module-resource';
 import { relation } from './relation';
@@ -62,21 +61,19 @@ class UserMetadataEntity {
   id!: string;
 }
 
-class AggregateUserMetadataCreateDto implements UserMetadataCreatableInterface {
-  userId!: string;
-}
-
-class AggregateUserMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  id!: string;
-}
-
-const aggregateUserMetadataConfig = {
+const aggregateUserMetadataConfig: RocketsUserMetadataConfig = {
   entity: UserMetadataEntity,
-  createDto: AggregateUserMetadataCreateDto,
-  updateDto: AggregateUserMetadataUpdateDto,
-} as const;
+  updateSchema: withOpenApi(
+    // No server-managed column: `PATCH /me` never writes one, and
+    // declaring `id` here fails the boot check.
+    z.object({ nickname: z.string().optional() }),
+    'AggregateUserMetadataUpdateDto',
+  ),
+  responseSchema: withOpenApi(
+    z.object({ id: z.uuid(), userId: z.string() }),
+    'AggregateUserMetadataResponseDto',
+  ),
+};
 
 describe('isCrudResource', () => {
   it('returns true for a defineResource() result', () => {

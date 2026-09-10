@@ -5,13 +5,17 @@ import { AfterCreateReloadHook } from '../hooks/after-create-reload.hook';
 import { describe, it, expect } from 'vitest';
 import { Injectable, type PlainLiteralObject } from '@nestjs/common';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { Operation } from '@concepta/nestjs-core';
+import { Operation, withOpenApi } from '@concepta/nestjs-core';
 import { Where } from '@concepta/nestjs-repository';
+import { z } from 'zod';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import {
   CrudOperationResolver,
+  paginatedSchema,
   type ConfigurableCrudGeneratedOptions,
 } from '@concepta/nestjs-crud';
+import { readSchemaId } from '../../common/utils/open-api-schema.util';
+import { f } from '../../zod/fields';
 import { defineResource } from './define-resource';
 import { relation } from './relation';
 import { EntityHook, PassthroughEntityHookBase } from '../hooks/entity-hook';
@@ -65,18 +69,45 @@ class WidgetEntity {
   a?: PartEntity[];
 }
 
-class WidgetResponseDto {
-  id!: string;
-  name!: string;
-}
-
-class WidgetCreateDto {
-  name!: string;
-}
-
-class WidgetUpdateDto {
-  name?: string;
-}
+// Named OpenAPI components: `withOpenApi(schema, id)` as the LAST call.
+// One instance per id — two different instances claiming one id fail in
+// the document converter.
+const widgetResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string() }),
+  'WidgetResponseDto',
+);
+const widgetCreateSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'WidgetCreateDto',
+);
+const widgetUpdateSchema = withOpenApi(
+  z.object({ name: z.string().optional() }),
+  'WidgetUpdateDto',
+);
+const widgetReplaceSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'WidgetReplaceDto',
+);
+const readShapeSchema = withOpenApi(
+  z.object({ id: z.uuid() }),
+  'WidgetReadShapeDto',
+);
+const listShapeSchema = withOpenApi(
+  z.object({ id: z.uuid() }),
+  'WidgetListShapeDto',
+);
+const explicitShapeSchema = withOpenApi(
+  z.object({ id: z.uuid() }),
+  'WidgetExplicitShapeDto',
+);
+const listWrapperSchema = withOpenApi(
+  paginatedSchema(widgetResponseSchema),
+  'WidgetListWrapperDto',
+);
+const customCreateSchema = withOpenApi(
+  z.object({ name: z.string() }),
+  'WidgetCustomCreateDto',
+);
 
 @EntityHook()
 @Injectable()
@@ -661,16 +692,16 @@ describe('defineResource', () => {
         path: 'widget',
         tags: ['widget'],
         dto: {
-          response: WidgetResponseDto,
-          create: WidgetCreateDto,
-          update: WidgetUpdateDto,
+          response: widgetResponseSchema,
+          create: widgetCreateSchema,
+          update: widgetUpdateSchema,
         },
       });
       const { operations } = narrow(bundle);
       const createOp = operations.find((o) => o.operation === Operation.Create);
       const updateOp = operations.find((o) => o.operation === Operation.Update);
-      expect(createOp?.request?.body).toBe(WidgetCreateDto);
-      expect(updateOp?.request?.body).toBe(WidgetUpdateDto);
+      expect(createOp?.request?.body).toBe(widgetCreateSchema);
+      expect(updateOp?.request?.body).toBe(widgetUpdateSchema);
     });
 
     it('auto-generates paginated response when only response is supplied', () => {
@@ -679,14 +710,209 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widget',
         tags: ['widget'],
-        dto: { response: WidgetResponseDto },
+        dto: { response: widgetResponseSchema },
       });
       const { controller } = narrow(bundle);
-      expect(controller.response?.resource).toBe(WidgetResponseDto);
-      expect(controller.response?.paginated).toBeDefined();
-      // The generated class name reflects the resource DTO name
-      const paginated = controller.response?.paginated as { name: string };
-      expect(paginated.name).toBe('WidgetResponseDtoPaginatedDto');
+      expect(controller.response?.resource).toBe(widgetResponseSchema);
+      const paginated = controller.response?.paginated;
+      expect(paginated).toBeDefined();
+      // The derived component id reflects the resource schema id.
+      expect(readSchemaId(paginated!)).toBe('WidgetResponseDtoPaginatedDto');
+    });
+
+    it('rejects a response schema that is not a named OpenAPI component', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          dto: { response: z.object({ id: z.uuid() }) },
+        }),
+      ).toThrow(/not a named OpenAPI component/);
+    });
+
+    // A hand-written response schema is not projected: a field declared
+    // `dto: { response: false }` inside it would reach the wire, so it is
+    // rejected at definition time (the author drops it with `.omit()`).
+    it('rejects a hand-written response schema that contains a hidden field', () => {
+      const leaky = withOpenApi(
+        z.object({
+          id: z.uuid(),
+          secret: f.string({ dto: { response: false } }),
+        }),
+        'WidgetLeakyResponseDto',
+      );
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          dto: { response: leaky },
+        }),
+      ).toThrow(/hand-written response schema contains a field/);
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          dto: { response: widgetResponseSchema },
+          operations: { read: { output: leaky } },
+        }),
+      ).toThrow(/operations\.read\.output: this hand-written response schema/);
+    });
+
+    // `responseOverride` is the escape hatch for the upstream response
+    // config, and `buildOperationDecorators` stamps whatever it carries
+    // as the serializer — so it reaches the wire exactly like `output`
+    // and clears exactly the same bar.
+    it('holds responseOverride to the same bar as output', () => {
+      const base = {
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        dto: { response: widgetResponseSchema },
+      } as const;
+
+      expect(() =>
+        defineResource({
+          ...base,
+          operations: {
+            read: {
+              responseOverride: { resource: z.object({ id: z.uuid() }) },
+            },
+          },
+        }),
+      ).toThrow(
+        /operations\.read\.responseOverride\.resource: schema is not a named/,
+      );
+
+      expect(() =>
+        defineResource({
+          ...base,
+          operations: {
+            read: {
+              responseOverride: {
+                resource: withOpenApi(
+                  z.looseObject({ id: z.uuid() }),
+                  'WidgetOverrideOpenDto',
+                ),
+              },
+            },
+          },
+        }),
+      ).toThrow(
+        /operations\.read\.responseOverride\.resource: response schema is open at/,
+      );
+
+      expect(() =>
+        defineResource({
+          ...base,
+          operations: {
+            list: {
+              responseOverride: {
+                paginated: withOpenApi(
+                  z.object({
+                    data: z.array(
+                      z.object({
+                        id: z.uuid(),
+                        secret: f.string({ dto: { response: false } }),
+                      }),
+                    ),
+                  }),
+                  'WidgetOverrideHiddenDto',
+                ),
+              },
+            },
+          },
+        }),
+      ).toThrow(
+        /operations\.list\.responseOverride\.paginated: this hand-written response schema/,
+      );
+    });
+
+    // A list route serializes through the PAGINATED envelope, so an open
+    // envelope leaks exactly like an open resource schema would.
+    it('rejects a hand-supplied paginated envelope with an open object', () => {
+      const openEnvelope = withOpenApi(
+        z.looseObject({ data: z.array(widgetResponseSchema) }),
+        'WidgetOpenEnvelopeDto',
+      );
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          dto: { response: widgetResponseSchema, paginated: openEnvelope },
+        }),
+      ).toThrow(/dto\.paginated: response schema is open at/);
+
+      const openItems = withOpenApi(
+        z.object({ data: z.array(z.looseObject({ id: z.uuid() })) }),
+        'WidgetOpenItemsDto',
+      );
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          dto: { response: widgetResponseSchema },
+          operations: { list: { paginated: openItems } },
+        }),
+      ).toThrow(/operations\.list\.paginated: response schema is open at/);
+    });
+
+    // Every chained call after `withOpenApi()` returns a clone that drops
+    // the id (and keeps a bridge bound to the OLD shape) — the document
+    // would describe a schema the route no longer serializes with.
+    it('rejects a schema extended AFTER withOpenApi (wrap must be the last call)', () => {
+      const extendedAfterWrap = widgetResponseSchema.extend({
+        extra: z.string(),
+      });
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          dto: { response: extendedAfterWrap },
+        }),
+      ).toThrow(/not a named OpenAPI component/);
+    });
+
+    it('rejects a response schema with an open object (passthrough)', () => {
+      const open = withOpenApi(
+        z.object({ id: z.uuid() }).passthrough(),
+        'WidgetOpenResponseDto',
+      );
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widget',
+          tags: ['widget'],
+          dto: { response: open },
+        }),
+      ).toThrow(/is open at "\$"/);
+    });
+
+    it('validates every body through the Rockets Standard Schema pipe options', () => {
+      const bundle = defineResource({
+        key: 'widget',
+        entity: WidgetEntity,
+        path: 'widget',
+        tags: ['widget'],
+        dto: { response: widgetResponseSchema, create: widgetCreateSchema },
+      });
+      const validation = narrow(bundle).controller.request?.validation;
+      expect(validation).toMatchObject({
+        exceptionFactory: expect.any(Function),
+      });
     });
   });
 
@@ -732,8 +958,8 @@ describe('defineResource', () => {
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          list: { output: WidgetResponseDto },
-          read: { output: WidgetResponseDto },
+          list: { output: widgetResponseSchema },
+          read: { output: widgetResponseSchema },
         },
       });
       const ops = narrow(bundle).operations.map((o) => o.operation);
@@ -747,8 +973,8 @@ describe('defineResource', () => {
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          list: { output: WidgetResponseDto },
-          read: { output: WidgetResponseDto },
+          list: { output: widgetResponseSchema },
+          read: { output: widgetResponseSchema },
         },
       });
       // The promoted dto.response drives the controller-level response wiring.
@@ -756,7 +982,7 @@ describe('defineResource', () => {
       const list = narrow(bundle).operations.find(
         (o) => o.operation === Operation.List,
       );
-      expect(list?.response?.resource).toBe(WidgetResponseDto);
+      expect(list?.response?.resource).toBe(widgetResponseSchema);
     });
 
     // Differing read/list outputs used to throw, because per-operation
@@ -764,116 +990,97 @@ describe('defineResource', () => {
     // both. Now each operation carries its own response metadata, so a
     // thinner collection projection is a supported shape.
     it('accepts differing read.output and list.output', () => {
-      class ReadShape {
-        id!: string;
-      }
-      class ListShape {
-        id!: string;
-      }
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          list: { output: ListShape },
-          read: { output: ReadShape },
+          list: { output: listShapeSchema },
+          read: { output: readShapeSchema },
         },
       });
 
       const ops = narrow(bundle).operations;
       const list = ops.find((o) => o.operation === Operation.List);
       const read = ops.find((o) => o.operation === Operation.Read);
-      expect(read?.response?.resource).toBe(ReadShape);
-      expect(list?.response?.resource).toBe(ListShape);
+      expect(read?.response?.resource).toBe(readShapeSchema);
+      expect(list?.response?.resource).toBe(listShapeSchema);
       // The collection wrapper must be rebuilt around the list override,
       // otherwise the route documents and serializes the read shape.
-      expect(list?.response?.paginated).toBeDefined();
-      expect(list?.response?.paginated).not.toBe(read?.response?.paginated);
+      const listPaginated = list?.response?.paginated;
+      expect(listPaginated).toBeDefined();
+      expect(readSchemaId(listPaginated!)).toBe(
+        'WidgetListShapeDtoPaginatedDto',
+      );
+      expect(listPaginated).not.toBe(
+        narrow(bundle).controller.response?.paginated,
+      );
     });
 
     // `paginated` used to be read only alongside `output`, so declaring
     // it alone was accepted and dropped — the list route kept
     // serializing (and documenting) the resource-level wrapper.
     it('honours list.paginated declared without an output', () => {
-      class ListWrapper {
-        data!: unknown[];
-      }
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
-        dto: { response: WidgetResponseDto },
-        operations: { list: { paginated: ListWrapper }, read: {} },
+        dto: { response: widgetResponseSchema },
+        operations: { list: { paginated: listWrapperSchema }, read: {} },
       });
 
       const list = narrow(bundle).operations.find(
         (o) => o.operation === Operation.List,
       );
-      expect(list?.response?.paginated).toBe(ListWrapper);
+      expect(list?.response?.paginated).toBe(listWrapperSchema);
     });
 
     it('rejects paginated on an operation that serializes no collection', () => {
-      class ListWrapper {
-        data!: unknown[];
-      }
       expect(() =>
         defineResource({
           key: 'widget',
           entity: WidgetEntity,
           path: 'widgets',
           tags: ['Widgets'],
-          dto: { response: WidgetResponseDto },
-          operations: { read: { paginated: ListWrapper } },
+          dto: { response: widgetResponseSchema },
+          operations: { read: { paginated: listWrapperSchema } },
         }),
       ).toThrow(/only meaningful on `list`/);
     });
 
     it('uses read.output as the resource-level fallback when they differ', () => {
-      class ReadShape {
-        id!: string;
-      }
-      class ListShape {
-        id!: string;
-      }
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          list: { output: ListShape },
-          read: { output: ReadShape },
+          list: { output: listShapeSchema },
+          read: { output: readShapeSchema },
           create: {},
         },
       });
 
       // `create` declares no output of its own, so it falls back to the
       // controller-level response built from `read.output`.
-      expect(narrow(bundle).controller.response?.resource).toBe(ReadShape);
+      expect(narrow(bundle).controller.response?.resource).toBe(
+        readShapeSchema,
+      );
     });
 
     it('does NOT promote when consumer declares dto.response explicitly', () => {
-      class ReadShape {
-        id!: string;
-      }
-      class ListShape {
-        id!: string;
-      }
-      class ExplicitShape {
-        id!: string;
-      }
       // With dto.response explicit, divergent per-op responses are allowed.
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
-        dto: { response: ExplicitShape },
+        dto: { response: explicitShapeSchema },
         operations: {
-          list: { output: ListShape },
-          read: { output: ReadShape },
+          list: { output: listShapeSchema },
+          read: { output: readShapeSchema },
         },
       });
       // Per-op responses still flow to their own operation overrides.
@@ -883,8 +1090,11 @@ describe('defineResource', () => {
       const read = narrow(bundle).operations.find(
         (o) => o.operation === Operation.Read,
       );
-      expect(list?.response?.resource).toBe(ListShape);
-      expect(read?.response?.resource).toBe(ReadShape);
+      expect(list?.response?.resource).toBe(listShapeSchema);
+      expect(read?.response?.resource).toBe(readShapeSchema);
+      expect(narrow(bundle).controller.response?.resource).toBe(
+        explicitShapeSchema,
+      );
     });
 
     it('routes per-op handler to the correct slot', () => {
@@ -894,7 +1104,7 @@ describe('defineResource', () => {
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          create: { input: WidgetCreateDto, handler: FakeCreateHandler },
+          create: { input: widgetCreateSchema, handler: FakeCreateHandler },
         },
       });
       const create = narrow(bundle).operations.find(
@@ -973,12 +1183,59 @@ describe('defineResource', () => {
           tags: ['Widgets'],
           operations: {
             create: {
-              input: WidgetCreateDto,
-              requestOverride: { body: WidgetCreateDto },
+              input: widgetCreateSchema,
+              requestOverride: { body: widgetCreateSchema },
             },
           },
         }),
       ).toThrow(/declares both `input` and `requestOverride\.body`/);
+    });
+
+    // `input` was checked; the escape hatch that reaches the same request
+    // body was not, so an unnamed schema documented inline while every
+    // sibling body was a `$ref`.
+    it('throws when requestOverride.body is not a named component', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {
+            create: {
+              requestOverride: { body: z.object({ name: z.string() }) },
+            },
+          },
+        }),
+      ).toThrow(
+        /requestOverride\.body: schema is not a named OpenAPI component/,
+      );
+    });
+
+    it('throws when a resource-level request.body is not a named component', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          request: { body: z.object({ name: z.string() }) },
+        }),
+      ).toThrow(/request\.body: schema is not a named OpenAPI component/);
+    });
+
+    it('accepts a named requestOverride.body', () => {
+      expect(() =>
+        defineResource({
+          key: 'widget',
+          entity: WidgetEntity,
+          path: 'widgets',
+          tags: ['Widgets'],
+          operations: {
+            create: { requestOverride: { body: widgetCreateSchema } },
+          },
+        }),
+      ).not.toThrow();
     });
 
     it('throws when an op declares both output and responseOverride.resource', () => {
@@ -990,8 +1247,8 @@ describe('defineResource', () => {
           tags: ['Widgets'],
           operations: {
             list: {
-              output: WidgetResponseDto,
-              responseOverride: { resource: WidgetResponseDto },
+              output: widgetResponseSchema,
+              responseOverride: { resource: widgetResponseSchema },
             },
           },
         }),
@@ -1021,7 +1278,7 @@ describe('defineResource', () => {
         tags: ['Widgets'],
         operations: {
           list: {
-            output: WidgetResponseDto,
+            output: widgetResponseSchema,
             decorators: [fakeMethodDecorator()],
             hooks: [MinimalPlainHook],
           },
@@ -1113,7 +1370,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             owner: false,
             entity: PartEntity,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1133,7 +1390,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             owner: false,
             entity: PartEntity,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1153,7 +1410,7 @@ describe('defineResource', () => {
             owner: false,
             entity: PartEntity,
             parentKey: 'wid',
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1172,7 +1429,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             owner: false,
             entity: PartEntity,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1195,7 +1452,7 @@ describe('defineResource', () => {
             owner: false,
             entity: PartEntity,
             tags: ['Parts'],
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1213,7 +1470,7 @@ describe('defineResource', () => {
           parts: defineSubResource({
             key: 'widgetPart',
             entity: PartEntity,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1233,7 +1490,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             entity: PartEntity,
             owner: 'userId',
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1253,7 +1510,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             entity: PartEntity,
             owner: 'orgId',
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1273,7 +1530,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             entity: PartEntity,
             owner: 'userId',
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1294,7 +1551,7 @@ describe('defineResource', () => {
             entity: PartEntity,
             owner: 'userId',
             reloadAfterCreate: true,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1314,7 +1571,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             entity: PartEntity,
             owner: false,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1347,7 +1604,7 @@ describe('defineResource', () => {
             entity: PartEntity,
             hooks: [CustomPartHook],
             providers: [CustomProvider],
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1374,7 +1631,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             entity: PartEntity,
             providers: [CustomProvider],
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1405,7 +1662,7 @@ describe('defineResource', () => {
               key: 'widgetPart',
               owner: false,
               entity: PartEntity,
-              operations: { list: { output: WidgetResponseDto } },
+              operations: { list: { output: widgetResponseSchema } },
             }),
           },
         }),
@@ -1423,7 +1680,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             owner: false,
             entity: PartEntity,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1443,7 +1700,7 @@ describe('defineResource', () => {
             key: 'widgetPart',
             owner: false,
             entity: PartEntity,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
           }),
         },
       });
@@ -1471,13 +1728,13 @@ describe('defineResource', () => {
             key: 'widgetPart',
             owner: false,
             entity: LocalPartEntity,
-            operations: { list: { output: WidgetResponseDto } },
+            operations: { list: { output: widgetResponseSchema } },
             subResources: {
               labels: defineSubResource({
                 key: 'partLabel',
                 owner: false,
                 entity: GrandPartEntity,
-                operations: { list: { output: WidgetResponseDto } },
+                operations: { list: { output: widgetResponseSchema } },
               }),
             },
           }),
@@ -1683,16 +1940,13 @@ describe('defineResource', () => {
   // ────────────────────────────────────────────────────────────────────
   describe('operations object form — replace op (council gap #7)', () => {
     it('keyed replace op routes body and registers Operation.Replace', () => {
-      class WidgetReplaceDto {
-        name!: string;
-      }
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
         operations: {
-          replace: { input: WidgetReplaceDto, output: WidgetResponseDto },
+          replace: { input: widgetReplaceSchema, output: widgetResponseSchema },
         },
       });
       const ops = narrow(bundle).operations.map((o) => o.operation);
@@ -1700,13 +1954,10 @@ describe('defineResource', () => {
       const replace = narrow(bundle).operations.find(
         (o) => o.operation === Operation.Replace,
       );
-      expect(replace?.request?.body).toBe(WidgetReplaceDto);
+      expect(replace?.request?.body).toBe(widgetReplaceSchema);
     });
 
     it('routes the per-op handler to the replace slot', () => {
-      class WidgetReplaceDto {
-        name!: string;
-      }
       class FakeReplaceHandler {}
       const bundle = defineResource({
         key: 'widget',
@@ -1715,8 +1966,8 @@ describe('defineResource', () => {
         tags: ['Widgets'],
         operations: {
           replace: {
-            input: WidgetReplaceDto,
-            output: WidgetResponseDto,
+            input: widgetReplaceSchema,
+            output: widgetResponseSchema,
             handler: FakeReplaceHandler,
           },
         },
@@ -1809,7 +2060,7 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
-        dto: { create: WidgetCreateDto, response: WidgetResponseDto },
+        dto: { create: widgetCreateSchema, response: widgetResponseSchema },
         operations: {
           create: {}, // body omitted — should fall back to dto.create
         },
@@ -1817,7 +2068,7 @@ describe('defineResource', () => {
       const op = narrow(bundle).operations.find(
         (o) => o.operation === Operation.Create,
       );
-      expect(op?.request?.body).toBe(WidgetCreateDto);
+      expect(op?.request?.body).toBe(widgetCreateSchema);
     });
 
     it('falls back to dto.update when keyed operations.update omits body', () => {
@@ -1826,7 +2077,7 @@ describe('defineResource', () => {
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
-        dto: { update: WidgetUpdateDto, response: WidgetResponseDto },
+        dto: { update: widgetUpdateSchema, response: widgetResponseSchema },
         operations: {
           update: {},
         },
@@ -1834,35 +2085,29 @@ describe('defineResource', () => {
       const op = narrow(bundle).operations.find(
         (o) => o.operation === Operation.Update,
       );
-      expect(op?.request?.body).toBe(WidgetUpdateDto);
+      expect(op?.request?.body).toBe(widgetUpdateSchema);
     });
 
     it('per-op body wins over dto.create fallback', () => {
-      class CustomCreateDto {
-        name!: string;
-      }
       const bundle = defineResource({
         key: 'widget',
         entity: WidgetEntity,
         path: 'widgets',
         tags: ['Widgets'],
-        dto: { create: WidgetCreateDto, response: WidgetResponseDto },
+        dto: { create: widgetCreateSchema, response: widgetResponseSchema },
         operations: {
-          create: { input: CustomCreateDto },
+          create: { input: customCreateSchema },
         },
       });
       const op = narrow(bundle).operations.find(
         (o) => o.operation === Operation.Create,
       );
-      expect(op?.request?.body).toBe(CustomCreateDto);
+      expect(op?.request?.body).toBe(customCreateSchema);
     });
   });
 
   describe('body + requestOverride co-existence (legitimate use case)', () => {
     it('accepts body + requestOverride.params together', () => {
-      class CustomBody {
-        name!: string;
-      }
       // `body` sets request.body; `requestOverride: { params: ... }` is
       // independent — the conflict throw only fires when BOTH set
       // `requestOverride.body`. This pins the legitimate use case where
@@ -1876,7 +2121,7 @@ describe('defineResource', () => {
           tags: ['Widgets'],
           operations: {
             create: {
-              input: CustomBody,
+              input: customCreateSchema,
               requestOverride: {
                 params: {
                   id: { field: 'id', type: 'uuid', primary: true },

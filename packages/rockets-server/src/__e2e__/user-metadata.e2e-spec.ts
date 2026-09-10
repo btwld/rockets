@@ -4,89 +4,21 @@ import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { AuthUser } from '@concepta/rockets-core';
 import {
+  AuthUser,
   AuthorizedUser,
-  UpsertUserMetadataCommand,
   GetUserMetadataQuery,
+  SwaggerUiService,
+  UpsertUserMetadataCommand,
   UserMetadataEntityInterface,
 } from '@concepta/rockets-core';
-import { UserUpdateDto } from '../infrastructure/dtos/user.dto';
-import { IsString, IsOptional } from 'class-validator';
 
 import { ServerAuthAdapterFixture } from '../__fixtures__/providers/server-auth.adapter.fixture';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 import type { RocketsOptions } from '../rockets.module-definition';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { RocketsModule } from '../rockets.module';
-
 import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
-import {
-  BaseUserMetadataCreateDto,
-  BaseUserMetadataUpdateDto,
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
-} from '../domain/interfaces/user-metadata.interface';
-
-class TestUserMetadataCreateDto
-  extends BaseUserMetadataCreateDto
-  implements UserMetadataCreatableInterface
-{
-  @IsString()
-  userId!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @IsOptional()
-  @IsString()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  bio?: string;
-
-  @IsOptional()
-  @IsString()
-  location?: string;
-
-  [key: string]: unknown;
-}
-
-class TestUserMetadataUpdateDto
-  extends BaseUserMetadataUpdateDto
-  implements UserMetadataModelUpdatableInterface
-{
-  @IsString()
-  id!: string;
-
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @IsOptional()
-  @IsString()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  bio?: string;
-
-  @IsOptional()
-  @IsString()
-  location?: string;
-
-  [key: string]: unknown;
-}
 
 @ApiTags('userMetadata-test')
 @Controller('userMetadata-test')
@@ -109,19 +41,30 @@ class UserMetadataTestController {
 })
 class UserMetadataE2eControllersModule {}
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
 describe('RocketsModule - UserMetadata Integration (e2e)', () => {
   let app: INestApplication;
 
   const baseOptions: RocketsOptions = {
     settings: {},
     auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-    userMetadata: {
-      entity: StubUserMetadataEntity,
-      createDto: TestUserMetadataCreateDto,
-      updateDto: TestUserMetadataUpdateDto,
-    },
+    userMetadata: userMetadataConfigFixture,
     repository: E2eFakeRepositoryModule,
   };
+
+  async function bootApp(options: RocketsOptions): Promise<INestApplication> {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        UserMetadataE2eControllersModule,
+        RocketsModule.forRoot(options),
+      ],
+    }).compile();
+
+    const booted = moduleRef.createNestApplication();
+    await booted.init();
+    return booted;
+  }
 
   afterEach(async () => {
     if (app) await app.close();
@@ -129,15 +72,7 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
 
   describe('UserMetadata Functionality', () => {
     it('GET /me should return user data with userMetadata when userMetadata exists', async () => {
-      const moduleRef = await Test.createTestingModule({
-        imports: [
-          UserMetadataE2eControllersModule,
-          RocketsModule.forRoot(baseOptions),
-        ],
-      }).compile();
-
-      app = moduleRef.createNestApplication();
-      await app.init();
+      app = await bootApp(baseOptions);
 
       const res = await request(app.getHttpServer())
         .get('/me')
@@ -156,35 +91,47 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
           lastName: 'Doe',
           bio: 'Test user userMetadata',
           location: 'Test City',
-          dateCreated: expect.any(String),
-          dateUpdated: expect.any(String),
+          dateCreated: expect.stringMatching(ISO_DATE),
+          dateUpdated: expect.stringMatching(ISO_DATE),
         },
       });
     });
 
+    it('GET /me is serialized by the response schema: only declared keys reach the wire', async () => {
+      app = await bootApp(baseOptions);
+
+      const res = await request(app.getHttpServer())
+        .get('/me')
+        .set('Authorization', 'Bearer valid-token')
+        .expect(200);
+
+      expect(Object.keys(res.body).sort()).toEqual([
+        'claims',
+        'email',
+        'id',
+        'sub',
+        'userMetadata',
+        'userRoles',
+      ]);
+      // The in-memory row carries `version` and `dateDeleted`; the
+      // response projection does not declare them.
+      expect(res.body.userMetadata).not.toHaveProperty('version');
+      expect(res.body.userMetadata).not.toHaveProperty('dateDeleted');
+    });
+
     it('PATCH /me should create new userMetadata for user', async () => {
-      const moduleRef = await Test.createTestingModule({
-        imports: [
-          UserMetadataE2eControllersModule,
-          RocketsModule.forRoot(baseOptions),
-        ],
-      }).compile();
-
-      app = moduleRef.createNestApplication();
-      await app.init();
-
-      const updateData: UserUpdateDto = {
-        userMetadata: {
-          firstName: 'Updated',
-          lastName: 'Name',
-          bio: 'Updated bio',
-        },
-      };
+      app = await bootApp(baseOptions);
 
       const res = await request(app.getHttpServer())
         .patch('/me')
         .set('Authorization', 'Bearer valid-token')
-        .send(updateData)
+        .send({
+          userMetadata: {
+            firstName: 'Updated',
+            lastName: 'Name',
+            bio: 'Updated bio',
+          },
+        })
         .expect(200);
 
       expect(res.body).toMatchObject({
@@ -198,31 +145,19 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
           firstName: 'Updated',
           lastName: 'Name',
           bio: 'Updated bio',
-          dateCreated: expect.any(String),
-          dateUpdated: expect.any(String),
+          dateCreated: expect.stringMatching(ISO_DATE),
+          dateUpdated: expect.stringMatching(ISO_DATE),
         },
       });
     });
 
     it('should work with minimal userMetadata configuration', async () => {
-      const moduleRef = await Test.createTestingModule({
-        imports: [
-          UserMetadataE2eControllersModule,
-          RocketsModule.forRoot({
-            settings: {},
-            auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
-            userMetadata: {
-              entity: StubUserMetadataEntity,
-              createDto: TestUserMetadataCreateDto,
-              updateDto: TestUserMetadataUpdateDto,
-            },
-            repository: E2eFakeRepositoryModule,
-          }),
-        ],
-      }).compile();
-
-      app = moduleRef.createNestApplication();
-      await app.init();
+      app = await bootApp({
+        settings: {},
+        auth: e2eAuthBootstrap(ServerAuthAdapterFixture),
+        userMetadata: userMetadataConfigFixture,
+        repository: E2eFakeRepositoryModule,
+      });
 
       const res = await request(app.getHttpServer())
         .get('/me')
@@ -235,6 +170,57 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
         email: 'serverauth@example.com',
         userRoles: [{ role: { name: 'admin' } }],
       });
+    });
+  });
+
+  describe('OpenAPI document', () => {
+    it('documents /me with named components and $refs', async () => {
+      app = await bootApp(baseOptions);
+
+      const document = app
+        .get(SwaggerUiService, { strict: false })
+        .createDocument(app);
+
+      const schemas = document.components?.schemas ?? {};
+      expect(Object.keys(schemas)).toEqual(
+        expect.arrayContaining([
+          'UserResponseDto',
+          'UserUpdateDto',
+          'UserMetadataUpdateDto',
+          'UserMetadataResponseDto',
+        ]),
+      );
+
+      const me = document.paths['/me'];
+      expect(me?.get?.responses['200']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/UserResponseDto' },
+          },
+        },
+      });
+      expect(me?.patch?.requestBody).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/UserUpdateDto' },
+          },
+        },
+      });
+      expect(me?.patch?.responses['200']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/UserResponseDto' },
+          },
+        },
+      });
+
+      // The app's userMetadata schemas are nested by reference, not inlined.
+      expect(JSON.stringify(schemas['UserUpdateDto'])).toContain(
+        '#/components/schemas/UserMetadataUpdateDto',
+      );
+      expect(JSON.stringify(schemas['UserResponseDto'])).toContain(
+        '#/components/schemas/UserMetadataResponseDto',
+      );
     });
   });
 
@@ -252,7 +238,7 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
         UpsertUserMetadataCommand,
         UserMetadataEntityInterface
       >(
-        new UpsertUserMetadataCommand('serverauth-user-1', {
+        new UpsertUserMetadataCommand({}, 'serverauth-user-1', {
           firstName: 'CommandBus',
         }),
       );
@@ -274,7 +260,7 @@ describe('RocketsModule - UserMetadata Integration (e2e)', () => {
       const result = await queryBus.execute<
         GetUserMetadataQuery,
         UserMetadataEntityInterface | null
-      >(new GetUserMetadataQuery('serverauth-user-1'));
+      >(new GetUserMetadataQuery({}, 'serverauth-user-1'));
 
       expect(result).toMatchObject({
         id: 'userMetadata-1',

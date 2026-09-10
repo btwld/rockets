@@ -59,17 +59,14 @@ test('records same-package declarations reachable through public signatures', ()
   const supporting = report.supportingDeclarations?.['@concepta/rockets-auth'];
 
   assert.ok(Array.isArray(supporting));
-  const throttlerOptions = supporting.find(
-    (item) => item.name === 'RocketsAuthThrottlerOptions',
+  const rateLimitWindow = supporting.find(
+    (item) => item.name === 'RocketsAuthRateLimitWindow',
   );
 
-  assert.deepEqual(throttlerOptions.referencedBy, [
+  assert.deepEqual(rateLimitWindow.referencedBy, [
     'RocketsAuthThrottlingOptions',
   ]);
-  assert.match(
-    throttlerOptions.signature,
-    /limit: RocketsAuthThrottlerResolvable/,
-  );
+  assert.match(rateLimitWindow.signature, /readonly limit: number/);
 });
 
 test('distinguishes a type-only class export from a runtime class export', () => {

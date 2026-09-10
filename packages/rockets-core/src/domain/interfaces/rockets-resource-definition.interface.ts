@@ -1,4 +1,5 @@
 import type { PlainLiteralObject, Provider, Type } from '@nestjs/common';
+import type { z } from 'zod';
 import type { RocketsEntityHookForResource } from '../../infrastructure/hooks/entity-hook';
 import type { Operation } from '@concepta/nestjs-core';
 import type { RocketsRepositoryModuleInterface } from '../../common';
@@ -6,7 +7,7 @@ import type { ResourceKind } from './resource-kind.enum';
 import type {
   CrudRequestConfig,
   CrudResponseConfig,
-} from '../../infrastructure/crud-compat';
+} from '@concepta/nestjs-crud';
 import type { WhereCondition } from '@concepta/nestjs-repository';
 import type {
   OperationAclConfig,
@@ -31,19 +32,24 @@ export type ResourceOperationName =
   | Operation.Restore;
 
 /**
- * DTO contract for a resource.
+ * Schema contract for a resource. Every entry is a NAMED zod schema —
+ * `withOpenApi(schema, 'ComponentName')` as the LAST call — because the
+ * id is the OpenAPI component name and the bridge is what documents it.
  *
- * When provided, these DTOs drive:
- * - `response.resource` → `response` (single-item response)
- * - `response.paginated` → `paginated` (auto-generated if missing and `response` supplied)
- * - `create` / `update` / `replace` → request body for the respective operation
+ * When provided, these schemas drive:
+ * - `response` → `response.resource` (single-item response, validated and
+ *   serialized by the schema: undeclared row columns never leave)
+ * - `paginated` → `response.paginated` (derived as
+ *   `${responseId}PaginatedDto` when omitted)
+ * - `create` / `update` / `replace` → request body for the respective
+ *   operation, validated per route by Nest's Standard Schema pipe
  */
 export interface ResourceDtoConfig {
-  readonly response?: Type;
-  readonly paginated?: Type;
-  readonly create?: Type;
-  readonly update?: Type;
-  readonly replace?: Type;
+  readonly response?: z.ZodType;
+  readonly paginated?: z.ZodType;
+  readonly create?: z.ZodType;
+  readonly update?: z.ZodType;
+  readonly replace?: z.ZodType;
 }
 
 /**
@@ -228,12 +234,12 @@ export interface ResourceOperationConfig {
    * surface most of all. See `CONFIGURATION.md` §5a.
    */
   readonly acl?: OperationAclConfig;
-  /** Request input (body) DTO. Maps to `request.body`. Falls back to `definition.dto.{create,update,replace}`. */
-  readonly input?: Type;
-  /** Single-item output (response) DTO. Maps to `response.resource`. Falls back to `definition.dto.response`. */
-  readonly output?: Type;
-  /** Paginated response DTO (auto-generated if omitted when needed). */
-  readonly paginated?: Type;
+  /** Request body schema (named). Maps to `request.body`. Falls back to `definition.dto.{create,update,replace}`. */
+  readonly input?: z.ZodType;
+  /** Single-item response schema (named). Maps to `response.resource`. Falls back to `definition.dto.response`. */
+  readonly output?: z.ZodType;
+  /** Paginated response schema (derived from `output` on `list` when omitted). */
+  readonly paginated?: z.ZodType;
   /** Custom command/query handler class. */
   readonly handler?: Type;
   /** Hook classes applied to this operation only (via `@UseHooks`). */

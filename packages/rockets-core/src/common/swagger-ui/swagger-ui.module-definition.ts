@@ -3,7 +3,6 @@ import {
   DynamicModule,
   Provider,
 } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 
 import { createSettingsProvider } from '@concepta/nestjs-core';
 
@@ -14,6 +13,7 @@ import { SwaggerUiSettingsInterface } from './interfaces/swagger-ui-settings.int
 import {
   SWAGGER_UI_MODULE_DOCUMENT_BUILDER_TOKEN,
   SWAGGER_UI_MODULE_SETTINGS_TOKEN,
+  SWAGGER_UI_DEFAULT_SETTINGS_TOKEN,
 } from './swagger-ui.constants';
 import { SwaggerUiService } from './swagger-ui.service';
 import { createDefaultDocumentBuilder } from './utils/create-default-document-builder';
@@ -51,7 +51,7 @@ function definitionTransform(
   return {
     ...definition,
     global: extras.global,
-    imports: [...imports, ConfigModule.forFeature(swaggerUiDefaultConfig)],
+    imports: [...imports],
     providers: createSwaggerUiProviders({ providers }),
     exports: createSwaggerUiExports(),
   };
@@ -61,7 +61,6 @@ export function createSwaggerUiExports(): NonNullable<
   DynamicModule['exports']
 > {
   return [
-    ConfigModule,
     SWAGGER_UI_MODULE_RAW_OPTIONS_TOKEN,
     SWAGGER_UI_MODULE_SETTINGS_TOKEN,
     SwaggerUiService,
@@ -74,6 +73,7 @@ export function createSwaggerUiProviders(options: {
   return [
     ...(options.providers ?? []),
     SwaggerUiService,
+    swaggerUiDefaultConfig,
     createSwaggerUiSettingsProvider(),
     createSwaggerUiDocumentBuilderProvider(),
   ];
@@ -86,7 +86,7 @@ export function createSwaggerUiSettingsProvider(): Provider {
   >({
     settingsToken: SWAGGER_UI_MODULE_SETTINGS_TOKEN,
     optionsToken: SWAGGER_UI_MODULE_RAW_OPTIONS_TOKEN,
-    settingsKey: swaggerUiDefaultConfig.KEY,
+    settingsKey: SWAGGER_UI_DEFAULT_SETTINGS_TOKEN,
   });
 }
 

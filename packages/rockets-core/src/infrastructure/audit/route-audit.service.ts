@@ -11,6 +11,8 @@ import { collectRouteAudit, type ControllerScan } from './collect-route-audit';
 import {
   evaluateRoutePolicy,
   formatPolicyViolations,
+  openResponseViolations,
+  schemaPipeViolations,
 } from './evaluate-route-policy';
 import type { RouteAuditReport, RoutePolicy } from './route-audit.types';
 
@@ -43,10 +45,19 @@ export class RouteAuditService {
     private readonly policy?: RoutePolicy,
   ) {}
 
+  /**
+   * Two layers. The schema-pipe check is always on — a parameter that
+   * declares a schema and is validated by nothing is a defect in any
+   * app, so it needs no policy to be declared. The policy rules run only
+   * when the app declared one.
+   */
   onApplicationBootstrap(): void {
-    if (!this.policy) return;
-
-    const violations = evaluateRoutePolicy(this.audit(), this.policy);
+    const report = this.audit();
+    const violations = [
+      ...schemaPipeViolations(report, this.policy),
+      ...openResponseViolations(report),
+      ...(this.policy ? evaluateRoutePolicy(report, this.policy) : []),
+    ];
     if (violations.length > 0) {
       throw new Error(formatPolicyViolations(violations));
     }

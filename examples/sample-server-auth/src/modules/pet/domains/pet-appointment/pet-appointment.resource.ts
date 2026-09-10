@@ -3,10 +3,10 @@ import { Operation } from '@concepta/nestjs-core';
 import { PetAppointmentEntity } from './pet-appointment.entity';
 import { PetEntity } from '../pet/pet.entity';
 import {
-  PetAppointmentCreateDto,
-  PetAppointmentDto,
-  PetAppointmentUpdateDto,
-} from './pet-appointment.dto';
+  petAppointmentCreateSchema,
+  petAppointmentResponseSchema,
+  petAppointmentUpdateSchema,
+} from './pet-appointment.schemas';
 
 export const petAppointmentResource = defineResource({
   entity: PetAppointmentEntity,
@@ -14,9 +14,9 @@ export const petAppointmentResource = defineResource({
   tags: ['Pet Appointments'],
   // Inherits the root `repository` adapter from `RocketsModule.forRoot`.
   dto: {
-    response: PetAppointmentDto,
-    create: PetAppointmentCreateDto,
-    update: PetAppointmentUpdateDto,
+    response: petAppointmentResponseSchema,
+    create: petAppointmentCreateSchema,
+    update: petAppointmentUpdateSchema,
   },
   operations: [
     Operation.List,

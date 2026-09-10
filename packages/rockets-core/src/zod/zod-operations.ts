@@ -1,4 +1,3 @@
-import type { ClassTransformOptions } from 'class-transformer';
 import type { z } from 'zod';
 import type {
   ResourceDeleteOperationConfig,
@@ -18,16 +17,15 @@ export type ZodCrudOperation =
 /**
  * Per-operation `input` / `output` overrides on the zod path.
  *
- * The class path takes DTO **classes** here; the zod path takes
- * **schemas**, and compiles them to DTO classes with the same pipeline
- * the schema-derived projections use (Standard Schema validation +
- * OpenAPI components). Omit either one to keep the projection derived
- * from the resource schema.
+ * Both are compiled into named OpenAPI components with the same pipeline
+ * the schema-derived projections use (Standard Schema validation on the
+ * way in, schema serialization on the way out). Omit either one to keep
+ * the projection derived from the resource schema.
  *
  * An override replaces the projection outright — it is not merged with
  * it. A field the resource schema hides via `dto: { response: false }`
  * is exposed again if the override schema declares it; that is the same
- * explicit opt-in the class path has when an app passes its own DTO.
+ * explicit opt-in `defineResource` has when an app passes its own schema.
  */
 export interface ZodOperationSchemas {
   /**
@@ -53,7 +51,7 @@ export interface ZodOperationSchemas {
    * With `strictInput: true` the effective input schema (the derived
    * projection, or the `input` override) is compiled with `.strict()`,
    * unknown keys become validation issues, and the response is `400`
-   * naming the offending keys in the message.
+   * naming the offending keys in `details`.
    *
    * Know exactly what you are buying:
    *
@@ -66,10 +64,7 @@ export interface ZodOperationSchemas {
    *   For owner columns that is a feature — a spoof attempt is named
    *   instead of silently overwritten — but a read-modify-write client
    *   must strip server-owned keys first.
-   * - **OpenAPI:** the schema gains `additionalProperties: false` only
-   *   once the document passes through `nestjs-zod`'s
-   *   `cleanupOpenApiDoc` (which lifts the per-property marker); a raw
-   *   `SwaggerModule.createDocument` does not show it.
+   * - **OpenAPI:** the request body gains `additionalProperties: false`.
    * - On an `input` override, `input: z.object({...}).strict()` is the
    *   equivalent spelling; this flag exists for the DERIVED projection,
    *   which an app cannot otherwise reach.
@@ -85,8 +80,8 @@ export interface ZodOperationSchemas {
 /**
  * Per-operation config accepted by the zod layer: everything
  * `defineResource` accepts for the operation, with `input` / `output`
- * re-typed as zod schemas. `true` enables the operation with defaults;
- * `false` / omitted disables it.
+ * re-typed as zod object schemas. `true` enables the operation with
+ * defaults; `false` / omitted disables it.
  */
 export type ZodOperationConfig = Omit<
   ResourceOperationConfig,
@@ -143,43 +138,19 @@ export function opConfig<T extends object>(
 }
 
 /**
- * Outbound serialization for zod DTO responses. The module default pair
- * (`strategy: 'excludeAll'` + `excludeExtraneousValues`) makes
- * class-transformer SKIP custom `@Transform`s on `classToPlain` and
- * recursively empty free-form objects (json columns). Whitelisting
- * already happened on the way IN (`toInstance` keeps the excludeAll
- * defaults); the way out only needs prefix hygiene.
- */
-const ZOD_TO_PLAIN_OPTIONS: ClassTransformOptions = {
-  strategy: 'exposeAll',
-  excludeExtraneousValues: false,
-  excludePrefixes: ['_', '__'],
-};
-
-/**
- * Per-operation config with the zod outbound serialization installed,
- * preserving any consumer-provided `responseOverride` keys (theirs win).
+ * Per-operation config with the zod-only keys removed. `input` /
+ * `output` / `strictInput` are consumed by the compiler, which names the
+ * schemas and re-attaches them; dropping them here keeps a raw override
+ * from reaching core unnamed.
  */
 export function zodOpConfig<T extends ZodOperationConfig>(
   value: boolean | T | undefined,
-): ResourceOperationConfig {
-  // `input` / `output` are zod schemas on this path; the compiler turns
-  // them into DTO classes and re-attaches them. Dropping them here keeps
-  // a schema from reaching core where a `Type` is expected.
+): Omit<ResourceOperationConfig, 'input' | 'output' | 'paginated'> {
   const {
     input: _input,
     output: _output,
     strictInput: _strictInput,
     ...config
   } = opConfig(value);
-  return {
-    ...config,
-    responseOverride: {
-      ...config.responseOverride,
-      serialization: {
-        toPlainOptions: ZOD_TO_PLAIN_OPTIONS,
-        ...config.responseOverride?.serialization,
-      },
-    },
-  };
+  return config;
 }

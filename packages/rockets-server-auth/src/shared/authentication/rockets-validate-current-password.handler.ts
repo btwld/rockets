@@ -1,7 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Command, CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import type { PasswordStorageInterface } from '@concepta/nestjs-common';
-import { PasswordCreationService } from '@concepta/nestjs-password';
+import {
+  PasswordCreationService,
+  type PasswordStorageInterface,
+} from '@concepta/nestjs-password';
 
 /** A distinct CQRS route avoids competing with the upstream command handler. */
 export class RocketsValidateCurrentPasswordCommand extends Command<boolean> {

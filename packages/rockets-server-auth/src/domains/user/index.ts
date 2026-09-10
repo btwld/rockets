@@ -1,8 +1,21 @@
-// DTOs
-export { RocketsAuthUserDto } from './infrastructure/dto/rockets-auth-user.dto';
-export { RocketsAuthUserCreateDto } from './infrastructure/dto/rockets-auth-user-create.dto';
-export { RocketsAuthUserUpdateDto } from './infrastructure/dto/rockets-auth-user-update.dto';
-export { RocketsAuthUserMetadataDto } from './infrastructure/dto/rockets-auth-user-metadata.dto';
+// Schemas
+export {
+  rocketsAuthUserSchema,
+  type RocketsAuthUserSchema,
+} from './infrastructure/schemas/rockets-auth-user.schema';
+export {
+  rocketsAuthUserCreateSchema,
+  type RocketsAuthUserCreateSchema,
+} from './infrastructure/schemas/rockets-auth-user-create.schema';
+export {
+  rocketsAuthUserUpdateSchema,
+  type RocketsAuthUserUpdateSchema,
+} from './infrastructure/schemas/rockets-auth-user-update.schema';
+export {
+  rocketsAuthUserMetadataSchema,
+  rocketsAuthUserMetadataUpdateSchema,
+  rocketsAuthUserMetadataResponseSchema,
+} from './infrastructure/schemas/rockets-auth-user-metadata.schema';
 
 // Interfaces
 export { RocketsAuthUserInterface } from './interfaces/rockets-auth-user.interface';

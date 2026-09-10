@@ -121,7 +121,6 @@ export class FirestoreRepository<
       true,
       precondition,
     );
-    this.markDirty(options?.ctx);
   }
 
   /**
@@ -200,7 +199,6 @@ export class FirestoreRepository<
       materializeSoftDeleteNull: true,
     });
     await client.create(this.options.collection, id, stored);
-    this.markDirty(options?.ctx);
     return this.fromStore(stored);
   }
 
@@ -246,7 +244,6 @@ export class FirestoreRepository<
           skipExistenceRead: true,
         });
       }
-      this.markDirty(options?.ctx);
       return prepared.map((row) => this.fromStore(row.stored));
     }
 
@@ -284,7 +281,6 @@ export class FirestoreRepository<
       true,
       options?.precondition,
     );
-    this.markDirty(options?.ctx);
     return this.fromStore(merged);
   }
 
@@ -326,7 +322,6 @@ export class FirestoreRepository<
       materializeSoftDeleteNull: await this.isMissingDocument(client, id),
     });
     await client.set(this.options.collection, id, stored, true);
-    this.markDirty(options?.ctx);
     return this.fromStore(stored);
   }
 
@@ -364,7 +359,6 @@ export class FirestoreRepository<
 
     const stored = this.toStore(payload, { materializeSoftDeleteNull });
     await client.set(this.options.collection, id, stored, false);
-    this.markDirty(options?.ctx);
     return this.fromStore(stored);
   }
 
@@ -375,7 +369,6 @@ export class FirestoreRepository<
     const client = await this.resolveClient(options?.ctx);
     const id = this.resolveId(entity);
     await client.delete(this.options.collection, id);
-    this.markDirty(options?.ctx);
     return entity;
   }
 
@@ -423,7 +416,6 @@ export class FirestoreRepository<
     const patch = { [field]: removedAt } as DeepPartial<Entity>;
     const merged = this.toStore({ ...entity, ...patch, id });
     await client.set(this.options.collection, id, merged, true);
-    this.markDirty(options?.ctx);
     return this.fromStore(merged);
   }
 
@@ -437,7 +429,6 @@ export class FirestoreRepository<
     const patch = { [field]: null } as DeepPartial<Entity>;
     const merged = this.toStore({ ...entity, ...patch, id });
     await client.set(this.options.collection, id, merged, true);
-    this.markDirty(options?.ctx);
     return this.fromStore(merged);
   }
 
@@ -480,24 +471,6 @@ export class FirestoreRepository<
     }
     const tx = await trx.getOrStart(this.transactionKey);
     return tx.getClient<FirestoreTransactionHandle>();
-  }
-
-  private markDirty(ctx?: PlainLiteralObject): void {
-    // Ambient callback transactions commit when runTransaction returns —
-    // no dirty flag to track.
-    if (getAmbientFirestoreTransaction(this.options.backend) !== undefined) {
-      return;
-    }
-    const context = AppContextHost.from(ctx);
-    if (!context.supports(TrxCtx)) {
-      return;
-    }
-    const { trx } = context.with(TrxCtx);
-    if (!trx?.isSupported) {
-      return;
-    }
-    const tx = trx.get(this.transactionKey);
-    tx?.markDirty();
   }
 
   private buildQueryRequest(

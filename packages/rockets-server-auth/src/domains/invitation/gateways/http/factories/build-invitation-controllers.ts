@@ -7,7 +7,12 @@ import {
   Patch,
   Post,
   Req,
+  SerializeOptions,
+  StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe,
   UseGuards,
+  UseInterceptors,
+  UsePipes,
 } from '@nestjs/common';
 import type { Type } from '@nestjs/common';
 import {
@@ -19,7 +24,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { plainToInstance } from 'class-transformer';
 import { AuthPublic } from '@concepta/nestjs-authentication';
 import {
   AcceptInvitationCommand,
@@ -30,16 +34,17 @@ import {
   SendInvitationCommand,
   type Invitation,
 } from '@concepta/nestjs-invitation';
-import { getAppContext } from '@concepta/rockets-core';
+import { getAppContext, rocketsSchemaValidation } from '@concepta/rockets-core';
 import type { Request } from 'express';
+import type { z } from 'zod';
 
 import { AdminGuard } from '../../../../../guards/admin.guard';
-import { AuthAccountThrottlerGuard } from '../../../../auth/gateways/http/guards/auth-account-throttler.guard';
+import { RateLimit, RateLimitGuard } from '@concepta/rockets-core';
 import { applyControllerExtras } from '../../../../../shared/utils/apply-controller-extras.helper';
-import { RocketsAuthInvitationAcceptDto } from '../../../infrastructure/dto/rockets-auth-invitation-accept.dto';
-import { RocketsAuthInvitationCreateDto } from '../../../infrastructure/dto/rockets-auth-invitation-create.dto';
-import { RocketsAuthInvitationResponseDto } from '../../../infrastructure/dto/rockets-auth-invitation-response.dto';
-import { RocketsAuthInvitationRevokeDto } from '../../../infrastructure/dto/rockets-auth-invitation-revoke.dto';
+import { rocketsAuthInvitationAcceptSchema } from '../../../infrastructure/schemas/rockets-auth-invitation-accept.schema';
+import { rocketsAuthInvitationCreateSchema } from '../../../infrastructure/schemas/rockets-auth-invitation-create.schema';
+import { rocketsAuthInvitationResponseSchema } from '../../../infrastructure/schemas/rockets-auth-invitation-response.schema';
+import { rocketsAuthInvitationRevokeSchema } from '../../../infrastructure/schemas/rockets-auth-invitation-revoke.schema';
 import { RocketsAuthInvitationNotAcceptedException } from '../../../domain/exceptions/invitation.exception';
 import type {
   InvitationAcceptanceControllerExtras,
@@ -48,12 +53,18 @@ import type {
   InvitationRevocationControllerExtras,
 } from '../../../interfaces/invitation-controller-extras.interface';
 
-/** Build `POST /admin/invitations` and materialize its response DTO. */
+type InvitationCreateBody = z.output<typeof rocketsAuthInvitationCreateSchema>;
+type InvitationAcceptBody = z.output<typeof rocketsAuthInvitationAcceptSchema>;
+type InvitationRevokeBody = z.output<typeof rocketsAuthInvitationRevokeSchema>;
+type InvitationResponse = z.output<typeof rocketsAuthInvitationResponseSchema>;
+
+/** Build `POST /admin/invitations`; the response is serialized by its schema. */
 export function buildInvitationController(
   extras: InvitationControllerExtras = {},
 ): Type<unknown> {
   @Controller('admin/invitations')
   @UseGuards(AdminGuard)
+  @UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
   @ApiBearerAuth()
   @ApiTags('admin')
   class InvitationController {
@@ -61,6 +72,8 @@ export function buildInvitationController(
     constructor(private readonly commandBus: CommandBus) {}
 
     @Post()
+    @UseInterceptors(StandardSchemaSerializerInterceptor)
+    @SerializeOptions({ schema: rocketsAuthInvitationResponseSchema })
     @ApiOperation({
       summary: 'Create and send invitation (Admin only)',
       description:
@@ -71,15 +84,16 @@ export function buildInvitationController(
     @ApiCreatedResponse({
       description:
         'Invitation created. Check emailSent field to verify if email was sent successfully.',
-      type: RocketsAuthInvitationResponseDto,
+      standardSchema: rocketsAuthInvitationResponseSchema,
     })
     async create(
-      @Body() dto: RocketsAuthInvitationCreateDto,
+      @Body({ schema: rocketsAuthInvitationCreateSchema })
+      body: InvitationCreateBody,
       @Req() req: Request,
-    ): Promise<RocketsAuthInvitationResponseDto> {
+    ): Promise<InvitationResponse> {
       const ctx = getAppContext(req);
       const invitation: Invitation = await this.commandBus.execute(
-        new CreateInvitationByEmailCommand(ctx, dto),
+        new CreateInvitationByEmailCommand(ctx, body),
       );
       let emailError: string | undefined;
       try {
@@ -88,22 +102,24 @@ export function buildInvitationController(
         );
         this.logger.log('Invitation sent successfully', {
           invitationId: invitation.id,
-          email: dto.email,
+          email: body.email,
         });
       } catch (e) {
         emailError = e instanceof Error ? e.message : String(e);
         this.logger.error('Failed to send invitation', {
           invitationId: invitation.id,
-          email: dto.email,
+          email: body.email,
           error: emailError,
         });
       }
 
-      return plainToInstance(RocketsAuthInvitationResponseDto, {
+      // `active` is an aggregate getter, not a prop — `toPlain()` omits it.
+      return {
         ...invitation.toPlain(),
+        active: invitation.active,
         emailSent: emailError === undefined,
         emailError,
-      });
+      };
     }
   }
 
@@ -117,7 +133,11 @@ export function buildInvitationAcceptanceController(
 ): Type<unknown> {
   @Controller('invitation-acceptance')
   @AuthPublic({ classLevel: true })
-  @UseGuards(AuthAccountThrottlerGuard)
+  @UseGuards(RateLimitGuard)
+  // Body is `{ passcode, payload }` — no account field, so the fine
+  // dimension keeps its per-IP default.
+  @RateLimit({})
+  @UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
   @ApiTags('auth')
   class InvitationAcceptanceController {
     constructor(private readonly commandBus: CommandBus) {}
@@ -137,11 +157,12 @@ export function buildInvitationAcceptanceController(
     @ApiOkResponse({ description: 'Invitation accepted successfully' })
     async accept(
       @Param('code') code: string,
-      @Body() dto: RocketsAuthInvitationAcceptDto,
+      @Body({ schema: rocketsAuthInvitationAcceptSchema })
+      body: InvitationAcceptBody,
       @Req() req: Request,
     ): Promise<void> {
       const ctx = getAppContext(req);
-      const { passcode, payload } = dto;
+      const { passcode, payload } = body;
       const result: Invitation | null = await this.commandBus.execute(
         new AcceptInvitationCommand(ctx, code, { passcode, payload }),
       );
@@ -163,6 +184,7 @@ export function buildInvitationRevocationController(
 ): Type<unknown> {
   @Controller('admin/invitations')
   @UseGuards(AdminGuard)
+  @UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
   @ApiBearerAuth()
   @ApiTags('admin')
   class InvitationRevocationController {
@@ -176,12 +198,13 @@ export function buildInvitationRevocationController(
     })
     @ApiCreatedResponse({ description: 'Invitations revoked successfully' })
     async revoke(
-      @Body() dto: RocketsAuthInvitationRevokeDto,
+      @Body({ schema: rocketsAuthInvitationRevokeSchema })
+      body: InvitationRevokeBody,
       @Req() req: Request,
     ): Promise<void> {
       const ctx = getAppContext(req);
       await this.commandBus.execute(
-        new RevokeInvitationsCommand(ctx, dto.email, dto.category),
+        new RevokeInvitationsCommand(ctx, body.email, body.category),
       );
     }
   }
@@ -198,6 +221,7 @@ export function buildInvitationReattemptController(
 ): Type<unknown> {
   @Controller('admin/invitations')
   @UseGuards(AdminGuard)
+  @UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
   @ApiBearerAuth()
   @ApiTags('admin')
   class InvitationReattemptController {

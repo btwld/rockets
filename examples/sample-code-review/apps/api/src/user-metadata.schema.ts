@@ -3,11 +3,11 @@ import { auditableEntity, f } from '@concepta/rockets-core/zod';
 import { defineUserMetadata } from './zod-bindings';
 
 /**
- * Zod source of truth for user metadata (replaces the handwritten
- * `entities/user-metadata.entity.ts` + `dto/user-metadata.dto.ts`).
- * `defineUserMetadata` compiles it into the `{ entity, createDto,
- * updateDto, responseDto }` quad the `userMetadata` config slot expects.
- * The base fields (`id`, `userId`, timestamps, `version`) satisfy
+ * Zod source of truth for user metadata. `defineUserMetadata` compiles it
+ * into the `{ entity, updateSchema, responseSchema }` config the
+ * `userMetadata` slot expects — `PATCH /me` validates with the update
+ * schema, both `/me` routes serialize with the response schema. The base
+ * fields (`id`, `userId`, timestamps, `version`) satisfy
  * `BaseUserMetadataEntityInterface`; `auditableEntity` supplies all but
  * `userId`.
  */
@@ -27,8 +27,3 @@ export const userMetadataConfig = defineUserMetadata(userMetadataSchema, {
   name: 'UserMetadata',
   table: 'userMetadata',
 });
-
-/** Re-exported under the historical names so the rest of the app is unchanged. */
-export const UserMetadataEntity = userMetadataConfig.entity;
-export const UserMetadataCreateDto = userMetadataConfig.createDto;
-export const UserMetadataUpdateDto = userMetadataConfig.updateDto;

@@ -9,11 +9,7 @@ import { createFirebaseAdminApp } from './auth-firebase';
 import { resolveFirebaseAuthModuleOptions } from './auth-firebase';
 import { UserEntity } from './auth/user.entity';
 import { defineApiKeyAuth, apiKeyAuthResource } from './auth-api-key';
-import {
-  UserMetadataEntity,
-  UserMetadataCreateDto,
-  UserMetadataUpdateDto,
-} from './user-metadata.schema';
+import { userMetadataConfig } from './user-metadata.schema';
 import { githubFeature } from './github';
 import { analysisFeature } from './analysis';
 
@@ -39,11 +35,7 @@ if (process.env.FIREBASE_USE_FAKE === 'true') {
         }),
         defineApiKeyAuth(),
       ],
-      userMetadata: {
-        entity: UserMetadataEntity,
-        createDto: UserMetadataCreateDto,
-        updateDto: UserMetadataUpdateDto,
-      },
+      userMetadata: userMetadataConfig,
       repository: defineTypeOrmRepository({
         type: 'sqlite',
         database: process.env.DATABASE_PATH ?? ':memory:',

@@ -1,12 +1,26 @@
-import { RequestMethod, type Type } from '@nestjs/common';
+import {
+  RequestMethod,
+  StandardSchemaValidationPipe,
+  type Type,
+} from '@nestjs/common';
 import {
   HOST_METADATA,
   METHOD_METADATA,
   PATH_METADATA,
+  PIPES_METADATA,
+  ROUTE_ARGS_METADATA,
   VERSION_METADATA,
 } from '@nestjs/common/constants';
+import { RouteParamtypes } from '@nestjs/common/enums/route-paramtypes.enum';
+import { CLASS_SERIALIZER_OPTIONS } from '@nestjs/common/serializer/class-serializer.constants';
+import { z } from 'zod';
+import { DECORATORS } from '@nestjs/swagger';
+import { CrudEntity } from '@concepta/nestjs-crud';
+import { isAuthPublic } from '@concepta/nestjs-authentication';
 
-import { ROCKETS_DISABLE_GUARDS_TOKEN } from '../../rockets-core.constants';
+import { findOpenResponseObject } from '../../common/utils/open-api-schema.util';
+import { hasHiddenResponseField } from '../../zod/zod-projections';
+
 import { ROCKETS_AUTH_SESSION_TOKEN } from '../../decorators/auth-session.decorator';
 import { aclMetadataKeys } from './acl-metadata-keys';
 import type {
@@ -66,7 +80,7 @@ export function collectRouteAudit(args: {
 
   for (const { controller, methodNames } of args.controllers) {
     const basePaths = readPaths(controller);
-    const classPublic = readPublic(controller);
+    const classPublic = isAuthPublic(controller);
 
     for (const methodName of methodNames) {
       const handler = readHandler(controller, methodName);
@@ -77,7 +91,7 @@ export function collectRouteAudit(args: {
 
       const method = METHOD_NAMES[httpMethod] ?? String(httpMethod);
       const authentication = resolveAuth(
-        readPublic(handler),
+        isAuthPublic(handler),
         classPublic,
         appIsUnguarded,
       );
@@ -108,6 +122,21 @@ export function collectRouteAudit(args: {
       // dimension is declared.
       const version = readVersion(handler) ?? readVersion(controller);
       const host = readHost(controller);
+      const unvalidatedSchemaParams = readUnvalidatedSchemaParams(
+        controller,
+        handler,
+        methodName,
+      );
+      const openResponseSchema = readOpenResponseSchema(controller, handler);
+      const hiddenResponseField = readHiddenResponseField(controller, handler);
+      const unvalidatedCrudBody = readUnvalidatedCrudBody(
+        controller,
+        methodName,
+      );
+      const unserializedResponseSchemas = readUnserializedResponseSchemas(
+        controller,
+        handler,
+      );
       const qualifier =
         (version !== undefined ? ` [v${version}]` : '') +
         (host !== undefined ? ` [host:${host}]` : '');
@@ -124,6 +153,10 @@ export function collectRouteAudit(args: {
             handler: methodName,
             authentication,
             sessionAuth,
+            openResponseSchema,
+            hiddenResponseField,
+            unvalidatedCrudBody,
+            unserializedResponseSchemas,
             // Grants mirror enforcement exactly: upstream reads them
             // with `reflector.get(..., getHandler())` — handler ONLY.
             aclAction: readGrantField(handler, 'action'),
@@ -134,6 +167,7 @@ export function collectRouteAudit(args: {
             // the handler reported it null and `requireAclQuery`
             // aborted the boot of a correctly-enforced app.
             aclQuery: readQueryService(handler) ?? readQueryService(controller),
+            unvalidatedSchemaParams,
           });
         }
       }
@@ -154,29 +188,20 @@ export function collectRouteAudit(args: {
  * as the author's intent and is preserved.
  */
 function resolveAuth(
-  handlerPublic: unknown,
-  classPublic: unknown,
+  handlerPublic: boolean,
+  classPublic: boolean,
   appIsUnguarded: boolean,
 ): RouteAuthState {
-  if (isPublic(handlerPublic)) return 'public';
-  if (isPublic(classPublic)) return 'public-class';
+  if (handlerPublic) return 'public';
+  if (classPublic) return 'public-class';
   return appIsUnguarded ? 'unguarded-app' : 'guarded';
-}
-
-/**
- * Upstream `AuthPublic({ classLevel: true })` stores the sentinel string
- * rather than `true`, so its own guard can tell a deliberate class-wide
- * choice from an accidental one. Both disable the guard.
- */
-function isPublic(value: unknown): boolean {
-  return value === true || value === 'classLevel';
 }
 
 function readSession(target: object): unknown {
   return Reflect.getMetadata(ROCKETS_AUTH_SESSION_TOKEN, target);
 }
 
-/** Same `true | 'classLevel'` sentinel shape as `isPublic`. */
+/** Same `true | 'classLevel'` sentinel shape upstream `AuthPublic` uses. */
 function isSession(handlerValue: unknown, classValue: unknown): boolean {
   return (
     handlerValue === true ||
@@ -202,10 +227,6 @@ function readHost(target: object): string | undefined {
   if (value === undefined) return undefined;
   const list = Array.isArray(value) ? value : [value];
   return list.map(String).sort().join(',') || undefined;
-}
-
-function readPublic(target: object): unknown {
-  return Reflect.getMetadata(ROCKETS_DISABLE_GUARDS_TOKEN, target);
 }
 
 function readHandler(
@@ -274,6 +295,185 @@ function readQueryService(handler: object): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Parameters declaring a `schema` that no `StandardSchemaValidationPipe`
+ * reaches. Nest resolves a parameter through global pipes, route pipes
+ * and param pipes and nothing else (`router-execution-context.js`,
+ * `createPipesFn`): `schema` alone installs no validator. Global pipes are
+ * not consulted here on purpose — `SchemaValidatorConflictCheck` rejects a
+ * global Standard Schema pipe, so per-route is the only place one can be.
+ */
+function readUnvalidatedSchemaParams(
+  controller: Type<unknown>,
+  handler: object,
+  methodName: string,
+): string[] {
+  // Nest keys route-argument metadata by method name on the CLASS, not
+  // on the handler function.
+  const args: unknown = Reflect.getMetadata(
+    ROUTE_ARGS_METADATA,
+    controller,
+    methodName,
+  );
+  if (typeof args !== 'object' || args === null) return [];
+
+  const routePipes = [...readPipes(controller), ...readPipes(handler)];
+  const missing: Array<{ index: number; label: string }> = [];
+
+  for (const [key, entry] of Object.entries(args)) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    if (Reflect.get(entry, 'schema') === undefined) continue;
+
+    const own: unknown = Reflect.get(entry, 'pipes');
+    const paramPipes = Array.isArray(own) ? own : [];
+    if ([...routePipes, ...paramPipes].some(isStandardSchemaPipe)) continue;
+
+    const index: unknown = Reflect.get(entry, 'index');
+    const data: unknown = Reflect.get(entry, 'data');
+    missing.push({
+      index: typeof index === 'number' ? index : Number.MAX_SAFE_INTEGER,
+      label: paramLabel(key, data),
+    });
+  }
+
+  return missing.sort((a, b) => a.index - b.index).map((m) => m.label);
+}
+
+/** The zod schema a route serializes with (handler over class, as Nest resolves it). */
+function readSerializerSchema(
+  controller: Type<unknown>,
+  handler: object,
+): z.ZodType | undefined {
+  const options: unknown =
+    Reflect.getMetadata(CLASS_SERIALIZER_OPTIONS, handler) ??
+    Reflect.getMetadata(CLASS_SERIALIZER_OPTIONS, controller);
+  if (typeof options !== 'object' || options === null) return undefined;
+  const schema: unknown = Reflect.get(options, 'schema');
+  return schema instanceof z.ZodType ? schema : undefined;
+}
+
+function readHiddenResponseField(
+  controller: Type<unknown>,
+  handler: object,
+): boolean {
+  const schema = readSerializerSchema(controller, handler);
+  return schema === undefined
+    ? false
+    : hasHiddenResponseField(schema, `${controller.name}.serializer`);
+}
+
+/**
+ * A hand-written route serializes with `@SerializeOptions({ schema })`
+ * (handler wins over class, like Nest resolves it). Its schema gets the
+ * same fail-closed check a generated resource's response schema gets at
+ * definition time — reported here, failed at boot by the service.
+ */
+function readOpenResponseSchema(
+  controller: Type<unknown>,
+  handler: object,
+): string | null {
+  const schema = readSerializerSchema(controller, handler);
+  return schema === undefined ? null : findOpenResponseObject(schema) ?? null;
+}
+
+/**
+ * Generated CRUD only (the controller carries upstream's entity metadata):
+ * a handler whose `@Body()` parameter has no schema. Upstream's
+ * `CrudInitValidation` reads the OPERATION-level body; a controller-level
+ * `request.body` leaves the parameter schema-less and unvalidated while
+ * `CrudInitApiBody` (class hierarchy) still documents it.
+ */
+function readUnvalidatedCrudBody(
+  controller: Type<unknown>,
+  methodName: string,
+): boolean {
+  // Upstream stamps its entity on the controller class through
+  // `CrudMetadata.createDecorator` (Nest's `ReflectableDecorator` shape:
+  // the metadata key is `decorator.KEY`). Only create / update / replace /
+  // batch handlers of a generated controller carry a `@Body()` at all, so
+  // "a body parameter without a schema" is the whole test.
+  if (Reflect.getMetadata(CrudEntity.KEY, controller) === undefined) {
+    return false;
+  }
+  const args: unknown = Reflect.getMetadata(
+    ROUTE_ARGS_METADATA,
+    controller,
+    methodName,
+  );
+  if (typeof args !== 'object' || args === null) return false;
+  const bodyPrefix = `${RouteParamtypes.BODY}:`;
+  return Object.entries(args).some(
+    ([key, entry]) =>
+      key.startsWith(bodyPrefix) &&
+      typeof entry === 'object' &&
+      entry !== null &&
+      Reflect.get(entry, 'schema') === undefined,
+  );
+}
+
+/**
+ * Statuses documented with `standardSchema` (handler entries over class
+ * entries, like Swagger merges them) on a route that serializes through no
+ * `@SerializeOptions({ schema })`.
+ */
+function readUnserializedResponseSchemas(
+  controller: Type<unknown>,
+  handler: object,
+): string[] {
+  if (readSerializerSchema(controller, handler) !== undefined) {
+    return [];
+  }
+  const classResponses: unknown = Reflect.getMetadata(
+    DECORATORS.API_RESPONSE,
+    controller,
+  );
+  const handlerResponses: unknown = Reflect.getMetadata(
+    DECORATORS.API_RESPONSE,
+    handler,
+  );
+  const merged: Record<string, unknown> = {
+    ...(typeof classResponses === 'object' && classResponses !== null
+      ? classResponses
+      : {}),
+    ...(typeof handlerResponses === 'object' && handlerResponses !== null
+      ? handlerResponses
+      : {}),
+  };
+  return Object.entries(merged)
+    .filter(
+      ([, entry]) =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        Reflect.get(entry, 'standardSchema') instanceof z.ZodType,
+    )
+    .map(([status]) => status);
+}
+
+function readPipes(target: object): unknown[] {
+  const value: unknown = Reflect.getMetadata(PIPES_METADATA, target);
+  return Array.isArray(value) ? value : [];
+}
+
+/** `@UsePipes` accepts instances and classes; both count, subclasses too. */
+function isStandardSchemaPipe(pipe: unknown): boolean {
+  if (pipe instanceof StandardSchemaValidationPipe) return true;
+  return (
+    typeof pipe === 'function' &&
+    (pipe === StandardSchemaValidationPipe ||
+      pipe.prototype instanceof StandardSchemaValidationPipe)
+  );
+}
+
+/** Metadata key "3:0" reads as body; "4:1" with data "page" as query('page'). */
+function paramLabel(metadataKey: string, data: unknown): string {
+  const paramtype = Number(metadataKey.split(':')[0]);
+  const kind: unknown = RouteParamtypes[paramtype];
+  const name = typeof kind === 'string' ? kind.toLowerCase() : 'param';
+  return typeof data === 'string' && data.length > 0
+    ? `${name}('${data}')`
+    : name;
 }
 
 function joinPath(base: string, segment: string): string {

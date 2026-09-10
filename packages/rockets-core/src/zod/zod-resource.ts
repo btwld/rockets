@@ -21,7 +21,7 @@ import {
 
 export type {
   ZodResourceDefinition,
-  ZodResourceDtos,
+  ZodResourceSchemas,
   ZodResourceManifest,
   ZodSubResourceDefinition,
 } from './zod-resource-contracts';
@@ -64,7 +64,10 @@ export function zodResource(
     // when an operation overrides its own `output`. Declaring it here
     // (rather than letting core infer it from `read`/`list`) is what
     // lets those two differ.
-    dto: { response: core.dtos.response },
+    dto: {
+      response: core.schemas.response.resource,
+      paginated: core.schemas.response.paginated,
+    },
     operations: core.operations,
     relations: mergeRelations(passthrough.relations, core.relations),
     hooks: applyOwnerHooks(
@@ -80,7 +83,7 @@ export function zodResource(
   return Object.assign(resource, {
     zod: {
       definition,
-      dtos: core.dtos,
+      schemas: core.schemas,
       entity: core.entity,
     },
   });
@@ -116,7 +119,10 @@ export function zodSubResource(
     entity: core.entity,
     // See `zodResource` — the derived projection stays the resource-level
     // response so per-operation `output` overrides can differ from it.
-    dto: { response: core.dtos.response },
+    dto: {
+      response: core.schemas.response.resource,
+      paginated: core.schemas.response.paginated,
+    },
     operations: core.operations,
     relations: mergeRelations(passthrough.relations, core.relations),
     hooks: applyOwnerHooks(
@@ -132,7 +138,7 @@ export function zodSubResource(
   return Object.assign(sub, {
     zod: {
       definition,
-      dtos: core.dtos,
+      schemas: core.schemas,
       entity: core.entity,
     },
   });

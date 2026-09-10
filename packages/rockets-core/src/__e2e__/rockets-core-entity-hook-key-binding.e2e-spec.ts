@@ -29,10 +29,9 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
-import { Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { withOpenApi } from '@concepta/nestjs-core';
 import request from 'supertest';
+import { z } from 'zod';
 
 import type {
   AuthAdapterInterface,
@@ -63,15 +62,14 @@ class AnimalEntity {
   @Column({ type: 'varchar' }) shelterId!: string;
 }
 
-class CreateDto {
-  @Expose() @IsString() @ApiProperty() name!: string;
-  @Expose() @IsString() @ApiProperty() shelterId!: string;
-}
-class ResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiProperty() shelterId!: string;
-}
+const createSchema = withOpenApi(
+  z.object({ name: z.string(), shelterId: z.string() }),
+  'HookBindingCreateDto',
+);
+const responseSchema = withOpenApi(
+  z.object({ id: z.uuid(), name: z.string(), shelterId: z.string() }),
+  'HookBindingResponseDto',
+);
 
 @Injectable()
 class MultiUserAuthAdapter implements AuthAdapterInterface {
@@ -113,8 +111,8 @@ describe('entity-hook key binding (issue #69 review, M1)', () => {
           }),
         ],
         operations: {
-          list: { output: ResponseDto },
-          create: { input: CreateDto, output: ResponseDto },
+          list: { output: responseSchema },
+          create: { input: createSchema, output: responseSchema },
         },
       });
 
@@ -172,9 +170,9 @@ describe('entity-hook key binding (issue #69 review, M1)', () => {
           }),
         ],
         operations: {
-          list: { output: ResponseDto },
-          read: { output: ResponseDto },
-          create: { input: CreateDto, output: ResponseDto },
+          list: { output: responseSchema },
+          read: { output: responseSchema },
+          create: { input: createSchema, output: responseSchema },
         },
       });
 

@@ -1,3 +1,9 @@
+import type { PlainLiteralObject } from '@nestjs/common';
+
 export class GetUserMetadataQuery {
-  constructor(public readonly userId: string) {}
+  /** `ctx` is the request's app context — forwarded to the repository. */
+  constructor(
+    public readonly ctx: PlainLiteralObject,
+    public readonly userId: string,
+  ) {}
 }

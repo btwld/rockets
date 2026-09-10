@@ -8,33 +8,46 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  SerializeOptions,
+  StandardSchemaSerializerInterceptor,
+  StandardSchemaValidationPipe,
+  UseInterceptors,
+  UsePipes,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { Ctx, type AppContextInterface } from '@concepta/nestjs-core';
 import type { AuthorizedUser } from '@concepta/rockets';
+import { AuthUser, rocketsSchemaValidation } from '@concepta/rockets-core';
 
 import {
-  CodeReviewReportListItemDto,
-  CodeReviewReportExecutionDto,
-  CodeReviewReportResponseDto,
-  CodeReviewSectionScoreDto,
-  ListCodeReviewReportsQueryDto,
-  RunCodeReviewDto,
-} from './analysis.dto';
+  codeReviewReportListItemSchema,
+  codeReviewReportListSchema,
+  codeReviewReportResponseSchema,
+  listCodeReviewReportsQuerySchema,
+  runCodeReviewSchema,
+  type CodeReviewPersistence,
+  type CodeReviewReportExecution,
+  type CodeReviewReportListItem,
+  type CodeReviewReportResponse,
+  type ListCodeReviewReportsQuery,
+  type RunCodeReviewBody,
+} from './analysis.schema';
 import { AnalysisService } from './analysis.service';
 import { CodeReviewReportEntity } from './code-review-report.entity';
 import { CodeReviewReportExecutionEntity } from './code-review-report-execution.entity';
 import type { CodeReviewReportView } from './code-review-report.view';
 import { CODE_REVIEW_REPORT_COLLECTION } from '../repository/code-review-reports.persistence';
-import { AuthUser } from '@concepta/rockets-core';
 
 @ApiTags('Code review')
 @ApiBearerAuth()
 @Controller('analysis')
+@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))
+@UseInterceptors(StandardSchemaSerializerInterceptor)
 export class AnalysisController {
   constructor(private readonly analysisService: AnalysisService) {}
 
@@ -44,11 +57,13 @@ export class AnalysisController {
     summary:
       'Enqueue code review (reports persist in Firestore; poll GET /analysis/reports/:id)',
   })
+  @ApiResponse({ status: 202, standardSchema: codeReviewReportResponseSchema })
+  @SerializeOptions({ schema: codeReviewReportResponseSchema })
   async runReview(
     @Ctx() ctx: AppContextInterface,
     @AuthUser() user: AuthorizedUser,
-    @Body() dto: RunCodeReviewDto,
-  ): Promise<CodeReviewReportResponseDto> {
+    @Body({ schema: runCodeReviewSchema }) dto: RunCodeReviewBody,
+  ): Promise<CodeReviewReportResponse> {
     const report = await this.analysisService.enqueueReview(
       ctx,
       user.id,
@@ -63,27 +78,25 @@ export class AnalysisController {
     summary:
       'List reports from Firestore (filter by github repo, text, status)',
   })
+  @ApiResponse({ status: 200, standardSchema: codeReviewReportListSchema })
+  @SerializeOptions({ schema: codeReviewReportListItemSchema })
   async listReports(
     @AuthUser() user: AuthorizedUser,
-    @Query() query: ListCodeReviewReportsQueryDto,
-  ): Promise<CodeReviewReportListItemDto[]> {
-    const rows = await this.analysisService.listReports(user.id, {
-      github: query.github,
-      q: query.q,
-      status: query.status,
-      reviewEngine: query.reviewEngine,
-      sortBy: query.sortBy,
-      sortOrder: query.sortOrder,
-    });
+    @Query({ schema: listCodeReviewReportsQuerySchema })
+    query: ListCodeReviewReportsQuery,
+  ): Promise<CodeReviewReportListItem[]> {
+    const rows = await this.analysisService.listReports(user.id, query);
     return rows.map((r) => toListItem(r));
   }
 
   @Get('reports/:reportId')
   @ApiOperation({ summary: 'Get full report document from Firestore' })
+  @ApiResponse({ status: 200, standardSchema: codeReviewReportResponseSchema })
+  @SerializeOptions({ schema: codeReviewReportResponseSchema })
   async getReport(
     @AuthUser() user: AuthorizedUser,
     @Param('reportId', new ParseUUIDPipe()) reportId: string,
-  ): Promise<CodeReviewReportResponseDto> {
+  ): Promise<CodeReviewReportResponse> {
     const report = await this.analysisService.getReport(user.id, reportId);
     return toDetail(report);
   }
@@ -95,7 +108,7 @@ function documentPath(report: CodeReviewReportEntity): string {
 
 function toExecution(
   execution: CodeReviewReportExecutionEntity | undefined,
-): CodeReviewReportExecutionDto | undefined {
+): CodeReviewReportExecution | undefined {
   if (!execution) {
     return undefined;
   }
@@ -116,20 +129,14 @@ function toExecution(
   };
 }
 
-function toScorecard(report: CodeReviewReportEntity): CodeReviewSectionScoreDto[] {
-  return report.scorecard ?? [];
-}
-
-function toPersistence(
-  report: CodeReviewReportView,
-): CodeReviewReportResponseDto['persistence'] {
+function toPersistence(report: CodeReviewReportView): CodeReviewPersistence {
   return {
     reportDocument: 'firebase-firestore',
     executionRecord: report.execution ? 'sqlite-typeorm' : undefined,
   };
 }
 
-function toDetail(report: CodeReviewReportView): CodeReviewReportResponseDto {
+function toDetail(report: CodeReviewReportView): CodeReviewReportResponse {
   return {
     id: report.id,
     fullName: report.fullName,
@@ -137,7 +144,7 @@ function toDetail(report: CodeReviewReportView): CodeReviewReportResponseDto {
     summary: report.summary,
     persistence: toPersistence(report),
     progressMessage: report.progressMessage,
-    scorecard: toScorecard(report),
+    scorecard: report.scorecard ?? [],
     findings: report.findings,
     promptUsed: report.promptUsed,
     dateCreated: report.dateCreated,
@@ -146,14 +153,14 @@ function toDetail(report: CodeReviewReportView): CodeReviewReportResponseDto {
   };
 }
 
-function toListItem(report: CodeReviewReportView): CodeReviewReportListItemDto {
+function toListItem(report: CodeReviewReportView): CodeReviewReportListItem {
   return {
     id: report.id,
     fullName: report.fullName,
     status: report.status,
     summary: report.summary,
     persistence: toPersistence(report),
-    scorecard: toScorecard(report),
+    scorecard: report.scorecard ?? [],
     progressMessage: report.progressMessage,
     dateCreated: report.dateCreated,
     documentPath: documentPath(report),

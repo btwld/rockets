@@ -11,7 +11,7 @@ import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmRepositoryModule } from '@concepta/rockets-repository-typeorm';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { CrudResponsePaginatedDto } from '@concepta/nestjs-crud';
+import { withOpenApi } from '@concepta/nestjs-core';
 import { getDynamicRepositoryToken } from '@concepta/nestjs-repository';
 import {
   AccessControlCreateOne,
@@ -19,10 +19,8 @@ import {
   AccessControlServiceInterface,
 } from '@concepta/nestjs-access-control';
 import { AccessControl } from 'accesscontrol';
-import { Expose, Type } from 'class-transformer';
-import { IsString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import request from 'supertest';
+import { z } from 'zod';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
@@ -90,24 +88,15 @@ class GizmoEntity {
   @Column({ type: 'varchar' }) label!: string;
 }
 
-class GizmoCreateDto {
-  @Expose()
-  @IsString()
-  @ApiProperty()
-  label!: string;
-}
+const gizmoCreateSchema = withOpenApi(
+  z.object({ label: z.string() }),
+  'GizmoCreateDto',
+);
 
-class GizmoResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() label!: string;
-}
-
-class GizmoPaginatedDto extends CrudResponsePaginatedDto<GizmoResponseDto> {
-  @Expose()
-  @Type(() => GizmoResponseDto)
-  @ApiProperty({ type: [GizmoResponseDto], isArray: true })
-  declare data: GizmoResponseDto[];
-}
+const gizmoResponseSchema = withOpenApi(
+  z.object({ id: z.uuid(), label: z.string() }),
+  'GizmoResponseDto',
+);
 
 class InMemoryMetadataRepo {
   async findOne() {
@@ -157,9 +146,8 @@ describe('RocketsCoreModule — opt-in accessControl (e2e)', () => {
               path: 'gizmos',
               tags: ['Gizmos'],
               dto: {
-                response: GizmoResponseDto,
-                create: GizmoCreateDto,
-                paginated: GizmoPaginatedDto,
+                response: gizmoResponseSchema,
+                create: gizmoCreateSchema,
               },
               operations: {
                 list: {

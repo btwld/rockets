@@ -4,15 +4,9 @@ import {
   Injectable,
   Module,
   PlainLiteralObject,
-  ValidationPipe,
 } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import {
-  DocumentBuilder,
-  OpenAPIObject,
-  SwaggerModule,
-} from '@nestjs/swagger';
-import { cleanupOpenApiDoc } from 'nestjs-zod';
+import type { OpenAPIObject } from '@nestjs/swagger';
 import request from 'supertest';
 import { z } from 'zod';
 import {
@@ -31,12 +25,9 @@ import {
   InjectDynamicRepository,
   RepositoryInterface,
 } from '@concepta/nestjs-repository';
-import {
-  UserMetadataCreateDto,
-  UserMetadataEntity,
-  UserMetadataUpdateDto,
-} from '../src/user-metadata.schema';
+import { userMetadataConfig } from '../src/user-metadata.schema';
 import { defineSampleAuth, sampleAuthUserResource } from '../src/auth';
+import { createSampleServerOpenApiDocument } from '../src/swagger/create-openapi-document';
 import { rocketsEntityMeta, rocketsFieldMeta, f } from '@concepta/rockets-core/zod';
 import { typeOrmZodEntityCompiler } from '@concepta/rockets-repository-typeorm/zod';
 import { zodResource } from '../src/zod-bindings';
@@ -81,6 +72,7 @@ export const productSchema = z.object({
       db: { column: { type: 'simple-json' } },
       dto: { response: true },
     })
+    .nullable()
     .optional(),
   categoryId: z.uuid().register(rocketsFieldMeta, {
     db: { index: true },
@@ -90,9 +82,7 @@ export const productSchema = z.object({
     // the thunk is narrowed at runtime anyway.
     relation: { target: (): unknown => categorySchema, onDelete: 'CASCADE' },
   }),
-  dateCreated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, { db: { createdAt: true } }),
+  dateCreated: f.createdAt(),
 });
 
 export const categorySchema = z.object({
@@ -108,9 +98,7 @@ export const categorySchema = z.object({
     mappedBy: 'categoryId',
     expose: true,
   }),
-  dateCreated: z.iso
-    .datetime()
-    .register(rocketsFieldMeta, { db: { createdAt: true } }),
+  dateCreated: f.createdAt(),
 });
 
 // Composite UNIQUE: a product name may repeat across categories but not
@@ -174,11 +162,7 @@ describe('zod full defineResource coverage (e2e)', () => {
       imports: [
         RocketsModule.forRoot({
           auth: defineSampleAuth(),
-          userMetadata: {
-            entity: UserMetadataEntity,
-            createDto: UserMetadataCreateDto,
-            updateDto: UserMetadataUpdateDto,
-          },
+          userMetadata: userMetadataConfig,
           repository: defineTypeOrmRepository({
             type: 'sqlite',
             database: ':memory:',
@@ -196,20 +180,12 @@ describe('zod full defineResource coverage (e2e)', () => {
     class CoverageModule {}
 
     app = await NestFactory.create(CoverageModule, { logger: ['error'] });
-    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
     app.useGlobalFilters(new ExceptionsFilter(app.get(HttpAdapterHost)));
     await app.init();
 
-    doc = cleanupOpenApiDoc(
-      SwaggerModule.createDocument(
-        app,
-        new DocumentBuilder()
-          .setTitle('coverage')
-          .setVersion('1.0')
-          .addBearerAuth()
-          .build(),
-      ),
-    );
+    // Through the app's own builder so the Rockets converter turns every
+    // named schema into a `$ref`'d component — the document main.ts serves.
+    doc = createSampleServerOpenApiDocument(app);
 
     const signup = await request(app.getHttpServer())
       .post('/auth/signup')
@@ -239,7 +215,15 @@ describe('zod full defineResource coverage (e2e)', () => {
   }
 
   describe('OpenAPI document', () => {
-    it('create DTO excludes the server-computed slug; response includes it', () => {
+    it('create body excludes the server-computed slug; response includes it', () => {
+      // Generated CRUD request bodies are `$ref`'d to their named
+      // component; the create projection is read off `ProductzfcCreateDto`.
+      const post = doc.paths['/zfc-products'].post?.requestBody as {
+        content: Record<string, { schema: { $ref: string } }>;
+      };
+      expect(post.content['application/json'].schema.$ref).toBe(
+        '#/components/schemas/ProductzfcCreateDto',
+      );
       const create = schemaOf('ProductzfcCreateDto').properties as Record<
         string,
         unknown
@@ -254,15 +238,23 @@ describe('zod full defineResource coverage (e2e)', () => {
       expect(response).toHaveProperty('slug');
     });
 
-    it('category response exposes the hasMany products projection as an array', () => {
+    it('category response exposes the hasMany products projection as an array of the named nested component', () => {
       const properties = schemaOf('CategoryzfcResponseDto')
         .properties as Record<string, Record<string, unknown>>;
-      expect(properties.products).toMatchObject({ type: 'array' });
-      const items = properties.products.items as Record<string, unknown>;
-      const nested = items.properties as Record<string, unknown>;
+      expect(properties.products).toEqual({
+        type: 'array',
+        items: { $ref: '#/components/schemas/CategoryzfcProductsResponseDto' },
+      });
+      const nested = schemaOf('CategoryzfcProductsResponseDto')
+        .properties as Record<string, unknown>;
       expect(nested).toHaveProperty('slug');
       expect(nested).toHaveProperty('price');
       expect(nested).not.toHaveProperty('products');
+    });
+
+    it('response components are fail-closed (additionalProperties: false)', () => {
+      expect(schemaOf('ProductzfcResponseDto').additionalProperties).toBe(false);
+      expect(schemaOf('CategoryzfcResponseDto').additionalProperties).toBe(false);
     });
   });
 

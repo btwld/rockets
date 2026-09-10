@@ -8,7 +8,5 @@ export * from './entities/federated.entity';
 export * from './entities/invitation.entity';
 export * from './entities/user.interface';
 
-// DTOs
-export * from './dto/user.dto';
-export * from './dto/user-create.dto';
-export * from './dto/user-update.dto';
+// Schemas
+export * from './user-metadata.schema';

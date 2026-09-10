@@ -1,3 +1,4 @@
+import { TransactionScope } from '@concepta/nestjs-repository';
 import { vi, expect, type Mock, describe, it, beforeEach } from 'vitest';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { HttpStatus } from '@nestjs/common';
@@ -81,9 +82,17 @@ describe('User application handlers', () => {
     let handler: UpdateUserHandler;
 
     beforeEach(() => {
+      // Run the scope callback eagerly so the test exercises the inner work.
+      const txScope = {
+        run: vi.fn(
+          async (_ctx: unknown, fn: (txCtx: unknown) => Promise<unknown>) =>
+            fn(ctx),
+        ),
+      };
       handler = new UpdateUserHandler(
         commandBus as unknown as CommandBus,
         queryBus as unknown as QueryBus,
+        txScope as unknown as TransactionScope,
       );
     });
 

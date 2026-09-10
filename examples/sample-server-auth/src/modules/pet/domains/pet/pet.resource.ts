@@ -13,7 +13,11 @@ import {
 import { PetEntity } from './pet.entity';
 import { PetVaccinationEntity } from '../pet-vaccination/pet-vaccination.entity';
 import { PetAppointmentEntity } from '../pet-appointment/pet-appointment.entity';
-import { PetCreateDto, PetResponseDto, PetUpdateDto } from './pet.dto';
+import {
+  petCreateSchema,
+  petResponseSchema,
+  petUpdateSchema,
+} from './pet.schemas';
 import { PetResource } from './pet.types';
 import { PetCreateHandler } from './pet-create.handler';
 import { PetListHandler } from './pet-list.handler';
@@ -45,9 +49,9 @@ export const petResource = defineResource({
   // with `defineRocketsAuth`). The planner still registers
   // `DYNAMIC_REPOSITORY_TOKEN_pet` for `PetEntity`.
   dto: {
-    response: PetResponseDto,
-    create: PetCreateDto,
-    update: PetUpdateDto,
+    response: petResponseSchema,
+    create: petCreateSchema,
+    update: petUpdateSchema,
   },
   relations: (relation) => [
     relation(PetVaccinationEntity, 'vaccinations'),

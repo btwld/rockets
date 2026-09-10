@@ -1,7 +1,7 @@
 /**
   Minimal email send contract used by rockets-auth notification services.
-  Owned here so we do not depend on `@concepta/nestjs-common` (Scenario B:
-  email package stays on v7 until Concepta publishes a v8 email surface).
+  Owned here because the email package stays on v7 until Concepta publishes
+  a v8 email surface, and `@concepta/nestjs-common` is no longer a dependency.
  */
 type EmailAddress =
   | string

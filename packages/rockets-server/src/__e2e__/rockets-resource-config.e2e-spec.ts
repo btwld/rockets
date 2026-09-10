@@ -17,25 +17,25 @@ import {
   CrudCreateCommand,
   CrudUpdateCommand,
   CrudDeleteCommand,
-  CrudResponsePaginatedDto,
   Operation,
 } from '@concepta/nestjs-crud';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Expose, Type } from 'class-transformer';
 import request from 'supertest';
-import { RepositoryModule } from '@concepta/rockets-core';
+import { z } from 'zod';
+import {
+  RepositoryModule,
+  buildPaginatedSchema,
+  rocketsSchemaValidation,
+  withOpenApi,
+} from '@concepta/rockets-core';
 import type {
   AuthAdapterInterface,
   AuthAttemptResult,
   AuthRequest,
-  UserMetadataCreatableInterface,
-  UserMetadataModelUpdatableInterface,
 } from '@concepta/rockets-core';
 import { extractBearerToken } from '@concepta/rockets-core';
 import { RocketsModule } from '../rockets.module';
-import { StubUserMetadataEntity } from '../__fixtures__/entities/stub-user-metadata.entity';
+import { userMetadataConfigFixture } from '../__fixtures__/schemas/user-metadata.schema.fixture';
 import { E2eFakeRepositoryModule } from './helpers/e2e-fake-repository.module';
 import { e2eAuthBootstrap } from '../__fixtures__/providers/e2e-auth-bootstrap.fixture';
 
@@ -62,53 +62,37 @@ class ItemEntity {
 }
 
 // ────────────────────────────────────────────────────────────────────
-// Test DTOs
+// Test schemas — `dateUpdated` is deliberately NOT declared on the
+// response so the suite can prove undeclared columns never reach the wire.
 // ────────────────────────────────────────────────────────────────────
 
-@Exclude()
-class ItemCreateDto {
-  @Expose()
-  @IsString()
-  @ApiProperty()
-  name!: string;
+const itemCreateSchema = withOpenApi(
+  z.object({ name: z.string(), category: z.string().optional() }),
+  'ItemCreateDto',
+);
 
-  @Expose()
-  @IsOptional()
-  @IsString()
-  @ApiPropertyOptional()
-  category?: string;
-}
+const itemUpdateSchema = withOpenApi(
+  z.object({ name: z.string().optional(), category: z.string().optional() }),
+  'ItemUpdateDto',
+);
 
-@Exclude()
-class ItemUpdateDto {
-  @Expose()
-  @IsOptional()
-  @IsString()
-  @ApiPropertyOptional()
-  name?: string;
+const itemResponseSchema = withOpenApi(
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    category: z.string().nullable().optional(),
+    dateCreated: z.date(),
+  }),
+  'ItemResponseDto',
+);
 
-  @Expose()
-  @IsOptional()
-  @IsString()
-  @ApiPropertyOptional()
-  category?: string;
-}
-
-class ItemResponseDto {
-  @Expose() @ApiProperty() id!: string;
-  @Expose() @ApiProperty() name!: string;
-  @Expose() @ApiPropertyOptional() category?: string;
-}
-
-class ItemPaginatedDto extends CrudResponsePaginatedDto<ItemResponseDto> {
-  @Expose()
-  @Type(() => ItemResponseDto)
-  @ApiProperty({ type: [ItemResponseDto], isArray: true })
-  declare data: ItemResponseDto[];
-}
+const itemPaginatedSchema = buildPaginatedSchema(
+  itemResponseSchema,
+  'rockets-resource-config e2e',
+);
 
 // ────────────────────────────────────────────────────────────────────
-// Auth + UserMetadata fixtures (reused from other tests)
+// Auth fixture (reused from other tests)
 // ────────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -132,17 +116,11 @@ class TestAuthAdapter implements AuthAdapterInterface {
   }
 }
 
-class TestMetadataCreateDto implements UserMetadataCreatableInterface {
-  @IsString() userId!: string;
-}
-
-class TestMetadataUpdateDto implements UserMetadataModelUpdatableInterface {
-  @IsString() id!: string;
-}
-
 // ────────────────────────────────────────────────────────────────────
 // Tests
 // ────────────────────────────────────────────────────────────────────
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 describe('RocketsModule — Resource Config (e2e)', () => {
   let app: INestApplication;
@@ -165,11 +143,7 @@ describe('RocketsModule — Resource Config (e2e)', () => {
         }),
         RocketsModule.forRoot({
           auth: e2eAuthBootstrap(TestAuthAdapter),
-          userMetadata: {
-            entity: StubUserMetadataEntity,
-            createDto: TestMetadataCreateDto,
-            updateDto: TestMetadataUpdateDto,
-          },
+          userMetadata: userMetadataConfigFixture,
           repository: E2eFakeRepositoryModule,
           resources: [
             {
@@ -178,9 +152,12 @@ describe('RocketsModule — Resource Config (e2e)', () => {
                   path: 'items',
                   entity: 'item',
                   resolver: CrudOperationResolver,
+                  // Hand-built configs do not go through `defineResource`,
+                  // so the Rockets exception factory must be wired here.
+                  request: { validation: rocketsSchemaValidation },
                   response: {
-                    resource: ItemResponseDto,
-                    paginated: ItemPaginatedDto,
+                    resource: itemResponseSchema,
+                    paginated: itemPaginatedSchema,
                   },
                 },
                 operations: [
@@ -188,12 +165,12 @@ describe('RocketsModule — Resource Config (e2e)', () => {
                   { operation: Operation.Read, query: CrudReadQuery },
                   {
                     operation: Operation.Create,
-                    request: { body: ItemCreateDto },
+                    request: { body: itemCreateSchema },
                     command: CrudCreateCommand,
                   },
                   {
                     operation: Operation.Update,
-                    request: { body: ItemUpdateDto },
+                    request: { body: itemUpdateSchema },
                     command: CrudUpdateCommand,
                   },
                   { operation: Operation.Delete, command: CrudDeleteCommand },
@@ -228,6 +205,28 @@ describe('RocketsModule — Resource Config (e2e)', () => {
     createdItemId = res.body.id;
   });
 
+  it('POST /items — response is serialized by the response schema', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/items')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ name: 'Serialized Item' })
+      .expect(201);
+
+    expect(res.body.dateCreated).toMatch(ISO_DATE);
+    expect(res.body).not.toHaveProperty('dateUpdated');
+  });
+
+  it('POST /items — 400 when the body fails the create schema', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/items')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ name: 42 })
+      .expect(400);
+
+    expect(res.body.statusCode).toBe(400);
+    expect(res.body.message).toMatch(/^name: /);
+  });
+
   it('GET /items — lists items', async () => {
     const res = await request(app.getHttpServer())
       .get('/items')
@@ -237,6 +236,7 @@ describe('RocketsModule — Resource Config (e2e)', () => {
     expect(res.body).toHaveProperty('data');
     expect(res.body.data.length).toBeGreaterThan(0);
     expect(res.body.data[0].name).toBe('Test Item');
+    expect(res.body.data[0]).not.toHaveProperty('dateUpdated');
   });
 
   it('GET /items/:id — reads single item', async () => {

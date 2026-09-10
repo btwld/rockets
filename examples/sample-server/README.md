@@ -40,10 +40,10 @@ For **Firebase / external IdP** auth, use
 | --------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `petResource`                                 | `zodResource`                | Full zod schema → entity + DTOs + hooks + sub-resource (`/pets/:petId/tags`).                                                                |
 | `tagZodResource`                              | `zodResource`                | Minimal zod CRUD (`/tags`).                                                                                                                  |
-| `petVaccinationResource`                      | `defineSubResource`          | Nested CRUD with handwritten entity/DTOs.                                                                                                    |
+| `petVaccinationResource`                      | `zodResource`                | Zod CRUD with an FK to the pet entity class and response-hidden audit columns.                                                              |
 | `authorZodResource` / `bookZodResource`       | `zodResource`                | DTO field roles (create-only / write-only), FK relation meta with response projection, keyed `operations` (soft delete + restore + replace). |
-| `appointmentResource`                         | `defineResource`             | Handwritten entity/DTOs; custom create handler wraps appointment + reminder writes in one `txScope`.                                         |
-| `reminderZodResource`                         | `zodResource`                | Zod-driven; FK relation meta back to the (classic) appointment entity.                                                                       |
+| `appointmentResource`                         | `defineResource`             | Handwritten request/response schemas (`withOpenApi`); custom create handler wraps appointment + reminder writes in one `txScope`.          |
+| `reminderZodResource`                         | `zodResource`                | Zod-driven; FK relation meta back to the appointment entity; its response schema is nested by `AppointmentResponseDto`.                    |
 | `petShareFeature`                             | `defineModuleResource`       | Junction-table feature + custom controller.                                                                                                  |
 | `petTransferFeature`                          | `operationResource` + CQRS   | Issues #43/#50: `POST /pets/:petId/transfer` — `path: 'pets/:petId'`, op key `transfer`, `params: z.object({ petId })`, `op.write` over CommandBus (no hand-written controller). |
 | `adminFeature`                                | `defineModuleResource`       | Admin-only routes via exported guard.                                                                                                        |
@@ -101,7 +101,15 @@ curl http://localhost:3000/me -H "Authorization: Bearer $TOKEN"
 
 The `/auth/signup` and `/auth/login` routes live in
 `src/auth/auth.controller.ts` — they are app code, not framework code.
-The framework only enforces the chain via `AuthServerGuard`.
+The framework only enforces the chain via `AuthServerGuard`. The
+controller is the reference for Nest 12's native Standard Schema path:
+a class-level `@UsePipes(new StandardSchemaValidationPipe(rocketsSchemaValidation))`
+validates each `@Body({ schema })` (zod schemas in `src/auth/auth.schema.ts`),
+and `@ApiResponse({ standardSchema })` + `StandardSchemaSerializerInterceptor`
+document and serialize the responses. `src/resources/pet-share/pet-share.controller.ts`
+follows the same idiom. There is no global pipe at all: a global
+`StandardSchemaValidationPipe` is refused at boot, and nothing in the
+app depends on class-validator or class-transformer.
 
 ### Create a pet (owner-scoped resource)
 
@@ -125,11 +133,22 @@ curl http://localhost:3000/pets -H "Authorization: Bearer $TOKEN"
 3. `src/resources/<thing>/index.ts` — re-export.
 4. `src/app.module.ts` — add to `resources: [...]`.
 
-Entity, create/update/response DTOs, and OpenAPI fields are compiled
-from the schema. See `src/resources/tag/` (minimal) and
+Entity, create/update/response schemas, and OpenAPI components are
+compiled from the schema. See `src/resources/tag/` (minimal) and
 `src/resources/pet/` (full hooks + sub-resource).
 
-Handwritten entity + DTO path still demonstrated in `pet-vaccination/` for comparison.
+Two conventions the fail-closed response validation makes load-bearing:
+
+- `.optional()` compiles to a nullable column and a row written without
+  the field reads back as `null` — a response-exposed optional column is
+  declared `.nullable().optional()`.
+- Datetimes are `z.date()` (`f.createdAt()` / `f.updatedAt()` /
+  `f.deletedAt()` for audit columns, `f.date()` for writable ones);
+  `z.iso.datetime()` on a response field is rejected at definition time.
+
+The handwritten-schema `defineResource` path (named `withOpenApi`
+schemas instead of a `zodResource`) is demonstrated in `appointment/`
+for comparison.
 
 ### Add a typed non-CRUD endpoint (`operationResource`)
 
@@ -157,13 +176,13 @@ examples/sample-server
 ├── src/
 │   ├── auth/                       AuthBootstrap + JWT signup/login
 │   ├── zod-bindings.ts             bindZodResources(typeOrmZodEntityCompiler)
-│   ├── user-metadata.schema.ts     zod schema -> { entity, createDto, updateDto, responseDto }
+│   ├── user-metadata.schema.ts     zod schema -> { entity, updateSchema, responseSchema }
 │   ├── resources/                  CRUD + sub-resource + operationResource + module bundles
 │   ├── admin/                      Admin gate (defineModuleResource)
 │   ├── audit/                      Cross-cutting audit (consumes adminFeature)
 │   ├── events/                     Domain-event listeners
 │   ├── providers/                  Unused reference adapter (mock-auth.adapter.ts) — not wired into app.module
-│   ├── swagger/                    OpenAPI post-processing helpers
+│   ├── swagger/                    OpenAPI document builder (main.ts + contract spec share it)
 │   ├── app.module.ts               Single composition root
 │   └── main.ts                     Bootstrap (helmet, validation, swagger, cors)
 └── package.json
@@ -171,8 +190,11 @@ examples/sample-server
 
 There is no handwritten `entities/`/`dto/` split for user metadata —
 `user-metadata.schema.ts` is the zod source of truth and
-`defineUserMetadata()` compiles the entity + create/update/response
-DTOs from it (same pattern as every zod resource in `resources/`).
+`defineUserMetadata()` compiles the entity + update/response schemas
+from it (same pattern as every zod resource in `resources/`). `/me`
+documents and validates through those schemas directly
+(`UserUpdateDto` / `UserResponseDto` components nest
+`UserMetadataUpdateDto` / `UserMetadataResponseDto`).
 
 ### Environment variables
 
