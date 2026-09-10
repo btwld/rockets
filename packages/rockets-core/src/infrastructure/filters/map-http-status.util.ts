@@ -11,6 +11,11 @@ const HTTP_ERROR_CODE: ReadonlyMap<number, string> = new Map([
   [401, 'HTTP_UNAUTHORIZED'],
   [404, 'HTTP_NOT_FOUND'],
   [500, 'HTTP_INTERNAL_SERVER_ERROR'],
+  // Not in the vendored alpha.8 map: nothing in Rockets emitted a 504
+  // until `operationResource`'s `deadlineMs` (issue #78), which would
+  // otherwise ship the unclassifiable `HTTP_UNKNOWN` on a status core
+  // now raises by design.
+  [504, 'HTTP_GATEWAY_TIMEOUT'],
 ]);
 
 export function mapHttpStatus(statusCode: number): string {
