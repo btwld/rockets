@@ -108,3 +108,18 @@ export class RocketsAuthInvitationNotAcceptedException extends RocketsAuthInvita
     this.errorCode = 'ROCKETS_AUTH_INVITATION_NOT_ACCEPTED_ERROR';
   }
 }
+
+/**
+ * The accepted invitation points at a user row that is gone. Creation and
+ * the invitation share one transaction, so this is a broken invariant (a
+ * hand-deleted user), not invitee input.
+ */
+export class RocketsAuthInvitationUserMissingException extends RocketsAuthInvitationException {
+  constructor(options?: RuntimeExceptionOptions) {
+    super('The invited user no longer exists', {
+      httpStatus: HttpStatus.INTERNAL_SERVER_ERROR,
+      ...options,
+    });
+    this.errorCode = 'ROCKETS_AUTH_INVITATION_USER_MISSING_ERROR';
+  }
+}

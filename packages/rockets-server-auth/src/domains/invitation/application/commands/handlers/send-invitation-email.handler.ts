@@ -46,28 +46,44 @@ export class SendInvitationEmailHandler
 
   async execute(command: SendInvitationEmailCommand): Promise<void> {
     const { invitation, passcode, tokenExp } = command;
-    const email = await resolveUserEmail(
-      this.queryBus,
-      command.ctx,
-      invitation.userId,
-    );
-    const { from, baseUrl, templates } = this.settings.email;
-    const template = templates.invitation;
-    this.logger.debug(`Sending invitation email to ${email}`);
-    await this.emailService.sendMail({
-      to: email,
-      from,
-      subject: template.subject,
-      template: template.fileName,
-      context: {
-        ...invitation,
-        email,
-        passcode,
-        tokenExp,
-        baseUrl,
-        logo: template.logo,
-      },
-    });
+    // Reached from the invitation transaction's commit hook, after the
+    // response is built, so nothing can be reported to the caller. Nest
+    // CQRS's EventBus does catch what escapes here, but it logs only
+    // `"InvitationDispatchedListener" has thrown an unhandled exception`
+    // — no invitation, no recipient, and nothing subscribes to its
+    // UnhandledExceptionBus. Own the failure instead, with the ids that
+    // make it actionable. Covers the user lookup too: a failure there
+    // loses the passcode exactly the same way.
+    try {
+      const email = await resolveUserEmail(
+        this.queryBus,
+        command.ctx,
+        invitation.userId,
+      );
+      const { from, baseUrl, templates } = this.settings.email;
+      const template = templates.invitation;
+      this.logger.debug(`Sending invitation email to ${email}`);
+      await this.emailService.sendMail({
+        to: email,
+        from,
+        subject: template.subject,
+        template: template.fileName,
+        context: {
+          ...invitation,
+          email,
+          passcode,
+          tokenExp,
+          baseUrl,
+          logo: template.logo,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to send invitation email', {
+        invitationId: invitation.id,
+        userId: invitation.userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }
 
@@ -91,24 +107,34 @@ export class SendAcceptedEmailHandler
 
   async execute(command: SendAcceptedEmailCommand): Promise<void> {
     const { invitation } = command;
-    const email = await resolveUserEmail(
-      this.queryBus,
-      command.ctx,
-      invitation.userId,
-    );
-    const { from, templates } = this.settings.email;
-    const template = templates.invitationAccepted;
-    this.logger.debug(`Sending accepted email to ${email}`);
-    await this.emailService.sendMail({
-      to: email,
-      from,
-      subject: template.subject,
-      template: template.fileName,
-      context: {
-        ...invitation,
-        email,
-        logo: template.logo,
-      },
-    });
+    try {
+      const email = await resolveUserEmail(
+        this.queryBus,
+        command.ctx,
+        invitation.userId,
+      );
+      const { from, templates } = this.settings.email;
+      const template = templates.invitationAccepted;
+      this.logger.debug(`Sending accepted email to ${email}`);
+      await this.emailService.sendMail({
+        to: email,
+        from,
+        subject: template.subject,
+        template: template.fileName,
+        context: {
+          ...invitation,
+          email,
+          logo: template.logo,
+        },
+      });
+    } catch (error) {
+      // Courtesy notification on an already-committed acceptance: same
+      // commit-hook path as the invitation email above.
+      this.logger.error('Failed to send invitation accepted email', {
+        invitationId: invitation.id,
+        userId: invitation.userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }

@@ -210,6 +210,13 @@ export interface RocketsAuthOptionsExtrasInterface
      * See `domains/invitation/interfaces/invitation-controller-extras.interface.ts`.
      */
     controllers?: import('../../domains/invitation/interfaces/invitation-controller-extras.interface').InvitationDomainControllerExtras;
+    /**
+     * Replace the service that onboards the invited account on acceptance
+     * (activation, password, metadata, role). It runs INSIDE the acceptance
+     * transaction, so anything it throws rolls the acceptance back and the
+     * invitee keeps a usable passcode — it must not swallow.
+     */
+    onboardingService?: import('../../domains/invitation/modules/rockets-auth-invitation-acceptance.module-definition').InvitationUserOnboardingServiceClass;
   };
   /**
    * Port handler overrides for granular customization.

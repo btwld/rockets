@@ -1,3 +1,4 @@
+import { AppContextHost } from '@concepta/rockets-core';
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import {
   Logger,
@@ -9,7 +10,6 @@ import {
   UserPasswordCurrentInvalidException,
 } from '@concepta/nestjs-user';
 
-import { AppContextHost } from '@concepta/nestjs-core';
 import { ChangeMyPasswordCommand } from '../impl/change-my-password.command';
 
 export interface ChangeMyPasswordPayload {

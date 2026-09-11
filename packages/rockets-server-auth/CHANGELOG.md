@@ -11,6 +11,12 @@ and this project adheres to
 
 ### Security
 
+- Invitation trust model, now explicit: inviting an address that already
+  has an account creates no user; accepting the invitation activates that
+  account and sets the supplied password. The passcode only reaches the
+  mailbox owner (same model as password recovery), and inviting is
+  admin-only — so an admin can re-activate a deactivated user by inviting
+  them, by design.
 - **A consumer-supplied `userCrud.model` / `roleCrud.model` is checked like
   every other response schema.** The signup and admin CRUD modules hand the
   model straight to upstream CRUD serialization (no `defineResource`
@@ -55,6 +61,32 @@ and this project adheres to
 
 ### Breaking
 
+- `RocketsAuthInvitationResponseDto` no longer carries `emailSent` /
+  `emailError`: the invitation email is dispatched from the transaction's
+  commit hook, after the response is built, so the route cannot know the
+  delivery outcome. `SendInvitationEmailHandler` and
+  `SendAcceptedEmailHandler` now catch and log delivery failures — the
+  recipient lookup included — with `invitationId` and `userId`. Reached from
+  a commit hook, an escaping error was caught by Nest CQRS's EventBus and
+  logged as `"InvitationDispatchedListener" has thrown an unhandled
+  exception`: no invitation, no recipient, and nothing subscribed to its
+  `UnhandledExceptionBus`. Use `POST /admin/invitations/:code/reattempt` to
+  re-send.
+
+- **Invitation onboarding is a service inside the acceptance transaction,
+  not a post-commit event listener.** `InvitationUserAcceptanceListener`
+  becomes `InvitationUserOnboardingService`
+  (`onAccepted(ctx, invitation, payload)`, no `@EventsHandler`), and the
+  `RocketsAuthInvitationAcceptanceModule` option `listenerService` becomes
+  `onboardingService` — the exported type `InvitationAcceptedEventHandler`
+  is replaced by `InvitationUserOnboardingServiceClass`
+  (`Type<InvitationUserOnboardingServiceInterface>`, DI-constructed). The
+  chosen class is aliased to `INVITATION_USER_ONBOARDING_SERVICE_TOKEN`,
+  which is how the accept handler resolves it. It receives the acceptance
+  transaction's context and MUST NOT swallow — what it throws rolls the
+  acceptance back. Supply it through `RocketsAuthModule` as
+  `invitationAcceptance: { onboardingService }`, or register
+  `RocketsAuthInvitationAcceptanceModule` yourself.
 - Authentication is now fail-closed on `active`: a user authenticates only when
   `active === true`. Deactivated users are rejected on both access and refresh
   tokens, and any persisted row with `active` unset/null (or an admin-created
@@ -116,6 +148,25 @@ and this project adheres to
   the password, OTP and user handlers. `AppContextHost.from()` throws on
   a non-empty non-host value.
 
+- `GET /admin/users/:userId/roles` is serialized through a named schema
+  (`RocketsAuthUserRoleDto`, exported as `rocketsAuthUserRoleSchema`) and
+  documented as an array of it; it used to return the raw upstream
+  aggregates with no response contract.
+- Every repository symbol (`RepositoryInterface`, `Where`,
+  `getDynamicRepositoryToken`, `RepositoryModuleInterface`,
+  `TransactionScope`) is imported from `@concepta/rockets-core`; the package
+  no longer imports `@concepta/nestjs-repository` directly.
+- `RocketsAuthModule` no longer registers `CqrsModule`, `RepositoryModule`,
+  `CrudModule` or `SwaggerUiModule` itself: it always boots inside
+  `RocketsCoreModule`, which registers each of them once (the Swagger
+  registration in particular is global, so the second one competed with
+  core's for the same document).
+- `GetActiveCredentialQuery` takes the repository context first and requires
+  it (`new GetActiveCredentialQuery(ctx, userId)`), like every other Rockets
+  command and query. Its handler now requires the credentials repository:
+  `userCredentials` is a mandatory persistence entity, so a missing
+  repository is a wiring error that fails boot instead of answering "no
+  credential" (a 401) at login time.
 - **Hand-written auth request bodies keep their OpenAPI component names.**
   `POST /token/password`, `POST /token/refresh` and the four `/recovery`
   bodies are documented as `LocalLoginDto`, `RefreshDto` and
@@ -195,6 +246,59 @@ and this project adheres to
 
 ### Fixed
 
+- **Invitations work again end to end** (first package e2e for the four
+  invitation routes found all of this):
+  - `POST /admin/invitations` answered 500 for any address without an
+    account: upstream v8's `CreateInvitationByEmailCommand` only resolves an
+    existing user. The new `RocketsInviteUserByEmailCommand` creates the
+    invited account inactive (activated on acceptance) in the same
+    transaction scope as the invitation.
+  - `SendInvitationEmailHandler` / `SendAcceptedEmailHandler` were declared
+    as the invitation notification port but never registered as providers,
+    so no invitation email was ever sent.
+  - The controller sent the invitation a second time after creating it;
+    upstream `create()` already does, and the second send issued a new OTP
+    that deactivated the passcode the invitee had received — acceptance
+    always failed.
+  - `InvitationAcceptedEvent` reached the acceptance listener twice: the
+    listener was also provided under an alias token (`useExisting`), and
+    Nest CQRS registers an event handler once per provider wrapper that
+    holds its instance. Two concurrent onboarding transactions raced per
+    acceptance — fatal on SQLite's single connection, a duplicate role
+    assignment elsewhere.
+  - The invitation entity needs `dateAccepted` / `dateRevoked` columns:
+    upstream v8 derives `active` / "already accepted" from them, and an
+    entity without them reads every invitation as accepted.
+    `DefineRocketsAuthInput.invitationEntity` is now typed
+    `Type<InvitationEntityInterface>` so a missing column fails to compile;
+    the sample entity and the e2e fixture carry both columns.
+  - Accepting an already-accepted invitation is a 409
+    (`ROCKETS_AUTH_INVITATION_ALREADY_ACCEPTED_ERROR`) and a revoked one a
+    410 (`ROCKETS_AUTH_INVITATION_REVOKED_ERROR`) instead of 500s: the
+    upstream exceptions carry no HTTP status.
+  - Acceptance sets the password through the same set-password port as
+    recovery (user credentials); it used to write v7-style `passwordHash`
+    columns onto the user row, which v8 login never reads.
+  - Inviting an address that is already another account's **username**
+    answers `400 USER_DUPLICATE_ERROR` instead of a 500. The invited
+    account takes the address as its username, and upstream's
+    `CreateUserCommand` saves with no uniqueness pre-check, so the
+    collision surfaced as a driver error; the invite handler now checks
+    the same email/username pair signup does.
+  - **A failed onboarding no longer burns the invitation.** Upstream commits
+    the acceptance and announces it with a post-commit
+    `InvitationAcceptedEvent`, so the listener that activated the account,
+    set the password, saved metadata and assigned the role ran in its own
+    context, outside that transaction — and caught everything it hit. Any
+    failure (a password-history violation on a re-invited account, a role
+    or metadata error) left the route answering 2xx, the invitation marked
+    accepted, and the account inactive with no password; re-accepting then
+    answers 409, so the invitee had no way back and only a log line
+    recorded it. `RocketsAcceptInvitationCommand` now opens the scope that
+    upstream's own `txScope.run` joins and runs onboarding inside it, so a
+    failure rolls back the acceptance AND the consumed passcode — the
+    invitee retries with the passcode they already have. Covered by an e2e
+    that makes onboarding throw and then accepts again.
 - **Admin user / role update bodies are validated again.** Both admin CRUD
   modules declared the update body at controller level; upstream stamps the
   validation pipe from the OPERATION-level body only, so `PATCH /admin/users/:id`
@@ -209,6 +313,36 @@ and this project adheres to
 
 ### Removed
 
+- `INVITATION_ACCEPTANCE_LISTENER_TOKEN` (an alias of the acceptance
+  listener provider; see the double-delivery fix). Aliasing was unsafe only
+  while the provider carried `@EventsHandler` — Nest CQRS registers one of
+  those per provider wrapper holding the instance, so the alias delivered
+  every event twice. Onboarding is a plain service now, and its replacement
+  alias `INVITATION_USER_ONBOARDING_SERVICE_TOKEN` is how the accept handler
+  resolves it.
+- Dead dependencies: `jsonwebtoken`, `passport`, `passport-jwt`,
+  `passport-strategy`, `@nestjs/jwt`, `accesscontrol` were declared but never
+  imported — upstream `@concepta/nestjs-authentication` /
+  `nestjs-access-control` own them. Four stay, each satisfying a package in
+  the published closure that does not declare what it uses:
+  `@types/passport-jwt` (now `^4.0.1`, the version upstream compiles
+  against) and `@types/passport-strategy`, because
+  `@concepta/nestjs-authentication`'s `jwt-passport.strategy.d.ts` imports
+  them while listing the types packages only as devDependencies, so a
+  consumer's `tsc` fails without them; and `class-transformer` /
+  `class-validator`, which `@concepta/nestjs-common` declares as **peer**
+  dependencies and `require`s at runtime (`audit/dto/audit.dto.js`,
+  reachable from `RocketsAuthModule` through `@concepta/nestjs-email`) —
+  dropping either breaks module loading, not just types.
+  `@concepta/nestjs-repository` and
+  `accesscontrol` move to devDependencies (test fixtures only; the runtime
+  contract comes through `@concepta/rockets-core`).
+- `RocketsAuthOptionsInterface.swagger` and `.crud` — they only fed the
+  duplicate registrations above; configure `swagger` on `RocketsModule` /
+  `RocketsCoreModule` instead.
+- `resolveConceptadevAppContext`, the helper that accompanied the removed
+  `ConceptaRepositoryCompatModule` (that module's own removal is recorded
+  under Changed, above).
 - `RocketsAuthExceptionsFilter` (issue #87). Internal-only and never
   exported from `src/index.ts`, so no consumer could import it and no
   application's behaviour changes — apps register

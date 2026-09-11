@@ -1,9 +1,9 @@
+import { AppContextHost } from '@concepta/rockets-core';
 import { QueryBus, QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import type { AuthenticationUserResult } from '@concepta/nestjs-authentication';
 import { DomainAggregate } from '@concepta/nestjs-core/aggregate';
 import { GetUserBySubjectQuery, UserInterface } from '@concepta/nestjs-user';
 
-import { AppContextHost } from '@concepta/nestjs-core';
 import { RocketsGetUserBySubjectQuery } from '../impl/rockets-get-user-by-subject.query';
 import {
   resolveUserRoles,
