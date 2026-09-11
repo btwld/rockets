@@ -321,18 +321,19 @@ and this project adheres to
   alias `INVITATION_USER_ONBOARDING_SERVICE_TOKEN` is how the accept handler
   resolves it.
 - Dead dependencies: `jsonwebtoken`, `passport`, `passport-jwt`,
-  `passport-strategy`, `@nestjs/jwt`, `accesscontrol`, `class-transformer`
-  were declared but never imported — upstream
-  `@concepta/nestjs-authentication` / `nestjs-access-control` own them, and
-  validation moved to the Standard Schema pipe. Three stay for the same
-  reason — a published `.d.ts` in the closure imports them while its own
-  package lists them only as devDependencies, so a consumer's `tsc` fails
-  without them (the packed-consumer check proves it): `@types/passport-jwt`
-  (now `^4.0.1`, the version upstream compiles against) and
-  `@types/passport-strategy` for
-  `@concepta/nestjs-authentication`'s `jwt-passport.strategy.d.ts`, and
-  `class-validator` for `@concepta/nestjs-common`'s
-  `model-validation.exception.d.ts`.
+  `passport-strategy`, `@nestjs/jwt`, `accesscontrol` were declared but never
+  imported — upstream `@concepta/nestjs-authentication` /
+  `nestjs-access-control` own them. Four stay, each satisfying a package in
+  the published closure that does not declare what it uses:
+  `@types/passport-jwt` (now `^4.0.1`, the version upstream compiles
+  against) and `@types/passport-strategy`, because
+  `@concepta/nestjs-authentication`'s `jwt-passport.strategy.d.ts` imports
+  them while listing the types packages only as devDependencies, so a
+  consumer's `tsc` fails without them; and `class-transformer` /
+  `class-validator`, which `@concepta/nestjs-common` declares as **peer**
+  dependencies and `require`s at runtime (`audit/dto/audit.dto.js`,
+  reachable from `RocketsAuthModule` through `@concepta/nestjs-email`) —
+  dropping either breaks module loading, not just types.
   `@concepta/nestjs-repository` and
   `accesscontrol` move to devDependencies (test fixtures only; the runtime
   contract comes through `@concepta/rockets-core`).
