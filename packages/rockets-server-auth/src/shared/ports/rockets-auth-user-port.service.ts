@@ -111,7 +111,7 @@ export class RocketsAuthUserPortService {
     const credential = await this.queryBus.execute<
       GetActiveCredentialQuery,
       UserCredentialEntityInterface | null
-    >(new GetActiveCredentialQuery(userAggregate.id, ctx));
+    >(new GetActiveCredentialQuery(ctx, userAggregate.id));
 
     if (credential) {
       plain.passwordHash = credential.passwordHash;

@@ -8,10 +8,10 @@ import {
 } from '@nestjs/common';
 import {
   buildAccessControlImport,
-  SwaggerUiModule,
+  TransactionScope,
 } from '@concepta/rockets-core';
 import { PassportModule } from '@nestjs/passport';
-import { CommandBus, CqrsModule, QueryBus } from '@nestjs/cqrs';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
   AuthenticationModule,
   AuthenticationOptionsInterface,
@@ -23,7 +23,6 @@ import {
   UserPort,
 } from '@concepta/nestjs-authentication';
 import { createSettingsProvider } from '@concepta/nestjs-core';
-import { CrudModule } from '@concepta/nestjs-crud';
 import { EmailModule } from '@concepta/nestjs-email';
 import {
   FederatedModule,
@@ -38,6 +37,11 @@ import {
   SendInvitationEmailCommand,
   SendAcceptedEmailCommand,
 } from './domains/invitation/application/commands/impl/send-invitation-email.command';
+import { RocketsInviteUserByEmailHandler } from './domains/invitation/application/commands/handlers/invite-user-by-email.handler';
+import {
+  SendAcceptedEmailHandler,
+  SendInvitationEmailHandler,
+} from './domains/invitation/application/commands/handlers/send-invitation-email.handler';
 import {
   ConsumeOtpCommand,
   ClearOtpsCommand,
@@ -50,10 +54,6 @@ import {
   PasswordModule,
   ValidatePasswordHistoryCommand,
 } from '@concepta/nestjs-password';
-import {
-  RepositoryModule,
-  TransactionScope,
-} from '@concepta/nestjs-repository';
 import { RoleModule, RoleOptionsInterface } from '@concepta/nestjs-role';
 import {
   CreateUserCommand,
@@ -307,6 +307,9 @@ function definitionTransform(
         RocketsAuthInvitationAcceptanceModule.forRoot({
           userCrud,
           imports: [rateLimitModule],
+          ...(extras.invitation?.onboardingService !== undefined && {
+            onboardingService: extras.invitation.onboardingService,
+          }),
         }),
       );
     }
@@ -393,27 +396,11 @@ export function createRocketsAuthImports(importOptions: {
     ...(importOptions.imports || []),
     PassportModule.register({}),
 
-    CqrsModule.forRoot(),
-    RepositoryModule.forRoot({}),
     RocketsAuthPortsModule.forRoot(importOptions.extras?.ports),
-    CrudModule.forRootAsync({
-      inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => ({
-        settings: options.crud?.settings,
-      }),
-    }),
     // Always imported: the auth controllers reference `RateLimitGuard`
     // statically, so its providers must resolve even when throttling is
     // off (`throttling: false` disables the guard, not the wiring).
     rateLimitModule,
-    SwaggerUiModule.registerAsync({
-      inject: [RAW_OPTIONS_TOKEN],
-      useFactory: (options: RocketsAuthOptionsInterface) => ({
-        documentBuilder: options.swagger?.documentBuilder,
-        settings: options.swagger?.settings,
-      }),
-    }),
-
     // Single v8 authentication module replaces the seven v7 packages
     // (auth-jwt, auth-local, auth-refresh, auth-recovery, auth-verify,
     // auth-router, plus standalone nestjs-jwt). The `ports` block points
@@ -618,7 +605,6 @@ export function createRocketsAuthExports(options: {
     ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN,
     AuthenticationModule,
     FederatedModule,
-    SwaggerUiModule,
     RoleModule,
     AdminGuard,
     RocketsJwtAuthAdapter,
@@ -640,6 +626,9 @@ export function createRocketsAuthProviders(options: {
     AdminGuard,
     RocketsGetRoleByNameHandler,
     RocketsGetRolesByIdsHandler,
+    RocketsInviteUserByEmailHandler,
+    SendInvitationEmailHandler,
+    SendAcceptedEmailHandler,
     ChangeMyPasswordHandler,
     RocketsAuthValidatePasswordPortHandler,
     RocketsAuthCreateOtpPortHandler,

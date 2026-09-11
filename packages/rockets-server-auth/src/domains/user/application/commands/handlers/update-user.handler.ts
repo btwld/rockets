@@ -8,7 +8,7 @@ import {
   UpdateUserCommand as UpstreamUpdateUserCommand,
   User,
 } from '@concepta/nestjs-user';
-import { TransactionScope } from '@concepta/nestjs-repository';
+import { TransactionScope } from '@concepta/rockets-core';
 
 import { UpdateUserCommand } from '../impl/update-user.command';
 import { RocketsAuthUserEntityInterface } from '../../../interfaces/rockets-auth-user-entity.interface';

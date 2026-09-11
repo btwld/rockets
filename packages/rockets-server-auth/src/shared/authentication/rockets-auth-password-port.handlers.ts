@@ -1,3 +1,4 @@
+import { AppContextHost, TransactionScope } from '@concepta/rockets-core';
 import {
   CommandBus,
   CommandHandler,
@@ -15,8 +16,7 @@ import {
   type UserSettingsInterface,
 } from '@concepta/nestjs-user';
 import { ValidateCurrentPasswordCommand } from '@concepta/nestjs-password';
-import { AppContextHost, EventContextHost } from '@concepta/nestjs-core';
-import { TransactionScope } from '@concepta/nestjs-repository';
+import { EventContextHost } from '@concepta/nestjs-core';
 
 import { GetActiveCredentialQuery } from '../../domains/user/application/queries/impl/get-active-credential.query';
 import {
@@ -51,7 +51,7 @@ export class RocketsAuthValidatePasswordPortHandler
     const userId = command.target.id;
     const credential: UserCredentialEntityInterface | null =
       await this.queryBus.execute(
-        new GetActiveCredentialQuery(userId, command.ctx),
+        new GetActiveCredentialQuery(command.ctx, userId),
       );
 
     if (!credential) {

@@ -1,3 +1,4 @@
+import { AppContextHost } from '@concepta/rockets-core';
 import { CommandBus, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import type { AuthenticationOtpInterface } from '@concepta/nestjs-authentication';
 import type { ReferenceId } from '@concepta/nestjs-core';
@@ -7,7 +8,6 @@ import {
   type OtpCreatableInterface,
 } from '@concepta/nestjs-otp';
 
-import { AppContextHost } from '@concepta/nestjs-core';
 import { RocketsAuthCreateOtpPortCommand } from './rockets-auth-create-otp-port.command';
 
 /**

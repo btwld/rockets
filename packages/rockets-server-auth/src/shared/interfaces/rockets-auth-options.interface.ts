@@ -9,7 +9,6 @@ import {
 } from '@concepta/nestjs-email';
 import { OtpOptionsInterface } from '@concepta/nestjs-otp';
 import { PasswordOptionsInterface } from '@concepta/nestjs-password';
-import type { SwaggerUiOptionsInterface } from '@concepta/rockets-core';
 import type {
   FederatedOptionsInterface,
   FederatedUserPortSettings,
@@ -21,7 +20,6 @@ import type {
   InvitationUserPortSettings,
 } from '@concepta/nestjs-invitation';
 
-import { CrudModule } from '@concepta/nestjs-crud';
 import { RoleOptionsInterface } from '@concepta/nestjs-role';
 import type {
   UserOptionsInterface,
@@ -29,14 +27,6 @@ import type {
   UserSettingsInterface,
 } from '@concepta/nestjs-user';
 import { RocketsAuthSettingsInterface } from './rockets-auth-settings.interface';
-
-/**
- * Options accepted by `CrudModule.forRoot()` (the upstream interface
- * `CrudModuleOptionsInterface` is not exported publicly in
- * `@concepta/nestjs-crud`, so we extract it via TypeScript
- * inference instead of deep-importing).
- */
-type CrudModuleOptions = Parameters<typeof CrudModule.forRoot>[0];
 
 /**
  * Options for `RocketsAuthModule.forRoot(Async)`.
@@ -58,11 +48,6 @@ export interface RocketsAuthOptionsInterface {
    * Rockets-defined defaults with upstream module options.
    */
   settings: RocketsAuthSettingsInterface;
-
-  /**
-   * Swagger UI configuration. Forwarded to `SwaggerUiModule`.
-   */
-  swagger?: SwaggerUiOptionsInterface;
 
   /**
    * Authentication module configuration. Maps directly onto
@@ -147,9 +132,6 @@ export interface RocketsAuthOptionsInterface {
 
   /** Email module options. Forwarded to `EmailModule.forRootAsync`. */
   email?: Partial<EmailOptionsInterface>;
-
-  /** CRUD module options. Forwarded to `CrudModule.forRootAsync`. */
-  crud?: CrudModuleOptions;
 
   /** Role module options. Forwarded to `RoleModule.forRootAsync`. */
   role?: Partial<RoleOptionsInterface>;

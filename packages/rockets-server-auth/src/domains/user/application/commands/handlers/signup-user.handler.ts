@@ -1,6 +1,6 @@
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Injectable } from '@nestjs/common';
-import { TransactionScope } from '@concepta/nestjs-repository';
+import { TransactionScope } from '@concepta/rockets-core';
 
 import {
   CreateUserCommand,

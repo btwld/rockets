@@ -7,6 +7,7 @@ import {
   type EmailSendOptionsInterface,
 } from '@concepta/rockets-auth';
 import { RocketsModule } from '@concepta/rockets';
+import { RateLimit } from '@concepta/rockets-core';
 import { defineTypeOrmRepository } from '@concepta/rockets-repository-typeorm';
 
 import { ACService } from './access-control.service';
@@ -19,6 +20,7 @@ import {
   SampleSendVerifyCommand,
 } from './notification/sample-notification';
 import { UserMetadataEntity } from './modules/user/entities/user-metadata.entity';
+import { SampleSignupHandler } from './modules/user/signup/sample-signup.handler';
 import {
   userMetadataResponseSchema,
   userMetadataUpdateSchema,
@@ -147,10 +149,23 @@ const rocketsAuthInput: DefineRocketsAuthInput = {
   // `model` / `dto` omitted: the signup and admin modules derive them from
   // `userMetadata` (`RocketsAuthUserDto`, `RocketsAuthUserCreateDto`,
   // `RocketsAuthUserUpdateDto`).
-  userCrud: {},
+  // Extension point: app policy in front of the built-in signup transaction
+  // (see modules/user/signup, proven by test/auth-extension-points).
+  userCrud: { handlers: { signupHandler: SampleSignupHandler } },
   // Request schemas default to the package's role create/update schemas.
   roleCrud: { model: rocketsAuthRoleSchema },
   invitation: {},
+  // Extension point: per-route decorators on a generated controller — a
+  // stricter throttle on the OTP send route than the package default.
+  otp: {
+    controller: {
+      routes: {
+        send: {
+          decorators: [RateLimit({ limit: 2, windowMs: 60_000 })],
+        },
+      },
+    },
+  },
   accessControl: {
     service: new ACService(),
     settings: { rules: acRules },

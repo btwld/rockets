@@ -146,6 +146,21 @@ services: {
 }
 ```
 
+### Override a handler or decorate a generated route
+
+The package's extension points are exercised here, so they stay proven:
+
+- `userCrud.handlers.signupHandler` — `SampleSignupHandler`
+  (`src/modules/user/signup/`) extends the built-in `SignupUserHandler`
+  and rejects blocked email domains with `BlockedEmailDomainException`, an
+  app-owned subclass of `RocketsAuthException` (403,
+  `SAMPLE_SIGNUP_DOMAIN_BLOCKED`, standard error envelope).
+- `otp.controller.routes.send.decorators` — a stricter `@Throttle` on
+  `POST /otp` (send) than the package default, applied to the generated
+  controller without forking it.
+
+Both are asserted by `test/auth-extension-points.e2e-spec.ts`.
+
 ### Disable parts of the built-in stack
 
 Skip controllers your app does not need. Pass `disableController` to

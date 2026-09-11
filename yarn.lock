@@ -915,18 +915,13 @@ __metadata:
     "@nestjs/testing": "npm:12.0.1"
     "@nestjs/typeorm": "npm:^12.0.1"
     "@types/express": "npm:^4.17.21"
-    "@types/jsonwebtoken": "npm:9.0.6"
-    "@types/passport-jwt": "npm:^3.0.13"
+    "@types/passport-jwt": "npm:^4.0.1"
     "@types/passport-strategy": "npm:^0.2.38"
     "@types/supertest": "npm:^6.0.2"
     accesscontrol: "npm:^2.2.1"
     class-transformer: "npm:^0.5.1"
     class-validator: "npm:^0.14.1"
     express-serve-static-core: "npm:^0.1.1"
-    jsonwebtoken: "npm:^9.0.2"
-    passport: "npm:^0.7.0"
-    passport-jwt: "npm:^4.0.1"
-    passport-strategy: "npm:^1.0.0"
     reflect-metadata: "npm:^0.1.14"
     sqlite3: "npm:^5.1.4"
     supertest: "npm:^6.3.4"
@@ -3999,15 +3994,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/jsonwebtoken@npm:9.0.6":
-  version: 9.0.6
-  resolution: "@types/jsonwebtoken@npm:9.0.6"
-  dependencies:
-    "@types/node": "npm:*"
-  checksum: 10c0/9c29e3896e5fb6056e54d87514643e59e0cfb966ae25171a107776270195bba955f0373e98c8ed6450c145b18984f5df9cf0fcac360f382cec3c7c4d3510b202
-  languageName: node
-  linkType: hard
-
 "@types/long@npm:^4.0.0":
   version: 4.0.2
   resolution: "@types/long@npm:4.0.2"
@@ -4090,14 +4076,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/passport-jwt@npm:^3.0.13":
-  version: 3.0.13
-  resolution: "@types/passport-jwt@npm:3.0.13"
+"@types/passport-jwt@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "@types/passport-jwt@npm:4.0.1"
   dependencies:
-    "@types/express": "npm:*"
     "@types/jsonwebtoken": "npm:*"
     "@types/passport-strategy": "npm:*"
-  checksum: 10c0/39aeafa92d869f38f17994dd02f8124d88dc6977b0fee56d8ef4c6d4ff86378456a4904644a83dabc8d3fd69c23d0503c8af14ee51a7ced5d54c3c0115c1422c
+  checksum: 10c0/0ced0eaa7bb379d674821108d9bc6758223f1a5f2b9790ec78d3eaaccce6a58a424cf8ed22b53d813740ec53d929e21d92cf794ef0fb30c732866750763c0d7a
   languageName: node
   linkType: hard
 

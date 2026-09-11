@@ -3,9 +3,9 @@ import { z } from 'zod';
 
 /**
  * Public invitation-acceptance `payload`. Loose on purpose: the default
- * listener only applies `password` / `userMetadata`, and application
- * listeners may read extra keys. The nested `userMetadata` shape is
- * validated again by the configured update schema inside the listener.
+ * onboarding service only applies `password` / `userMetadata`, and a
+ * replacement service may read extra keys. The nested `userMetadata` shape
+ * is validated again by the configured update schema inside that service.
  */
 export const rocketsAuthInvitationAcceptancePayloadSchema = withOpenApi(
   z
