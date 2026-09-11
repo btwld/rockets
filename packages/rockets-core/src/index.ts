@@ -187,12 +187,27 @@ export { isRepositoryBootstrap } from './domain/interfaces/repository-bootstrap.
 export type {
   RepositoryModuleInterface,
   RepositoryInterface,
+  // The `Where.*` builder result types. Without these, a feature package
+  // that lets TypeScript INFER a filter's type emits
+  // `import("@concepta/nestjs-repository").WhereConditionScalar<...>` into
+  // its public `.d.ts` — reaching past this re-export to a package the
+  // consumer does not install, which the packed-consumer gate rejects.
+  WhereClause,
+  WhereCondition,
+  WhereConditionScalar,
+  WhereConditionArray,
+  WhereCompound,
 } from '@concepta/nestjs-repository';
 export {
   RepositoryModule,
   TransactionScope,
   Where,
   getDynamicRepositoryToken,
+  // Raised when a version-guarded update loses the compare-and-swap — a
+  // 409 with `OPTIMISTIC_LOCK_CONFLICT`. Apps that want to retry or
+  // surface the conflict need to catch it, so it belongs on the surface
+  // they are allowed to import from.
+  OptimisticLockException,
 } from '@concepta/nestjs-repository';
 export {
   AppContextHost,

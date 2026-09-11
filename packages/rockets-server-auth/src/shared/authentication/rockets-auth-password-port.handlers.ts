@@ -16,7 +16,7 @@ import {
   type UserSettingsInterface,
 } from '@concepta/nestjs-user';
 import { ValidateCurrentPasswordCommand } from '@concepta/nestjs-password';
-import { EventContextHost } from '@concepta/nestjs-core';
+import { createEventContext } from '@concepta/nestjs-core';
 
 import { GetActiveCredentialQuery } from '../../domains/user/application/queries/impl/get-active-credential.query';
 import {
@@ -87,7 +87,12 @@ export class RocketsAuthSetPasswordPortHandler
     const ctx = AppContextHost.from(command.ctx);
 
     await this.txScope.run(ctx, async (txCtx) => {
-      const eventContext = new EventContextHost({}, {});
+      // alpha.11 made the causal headers (correlationId, causationId,
+      // recordedAt) required. `createEventContext` derives them from the
+      // surrounding ctx, so the credential events join the caller's causal
+      // chain instead of starting an anonymous one — building the host
+      // directly with `{}` no longer type-checks, and that is the point.
+      const eventContext = createEventContext(txCtx, {}, {});
       const active = await this.credentialsRepository.findActiveByUserId(
         txCtx,
         command.assigneeId,

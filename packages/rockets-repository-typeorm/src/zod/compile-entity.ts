@@ -25,6 +25,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import type { ColumnOptions } from 'typeorm';
 import { z } from 'zod';
@@ -41,6 +42,7 @@ import { z } from 'zod';
  * - `createdAt: true` → `@CreateDateColumn()`
  * - `updatedAt: true` → `@UpdateDateColumn()`
  * - `deletedAt: true` → `@DeleteDateColumn()` (soft-delete support)
+ * - `version: true` → `@VersionColumn()` (optimistic locking)
  * - `unique: true`    → `@Column({ unique: true })`
  * - `index: true`     → `@Index()`
  * A field carrying `relation` meta becomes the FK uuid column plus a
@@ -152,6 +154,14 @@ function compileColumn(
   }
   if (db.deletedAt === true) {
     DeleteDateColumn()(proto, key);
+    return;
+  }
+  if (db.version === true) {
+    // TypeORM increments this on every save; upstream's repository reads it
+    // through `getVersionColumn()` and turns update/replace into a
+    // compare-and-swap. A plain `@Column()` here would type-check and
+    // silently provide no locking at all.
+    VersionColumn()(proto, key);
     return;
   }
 

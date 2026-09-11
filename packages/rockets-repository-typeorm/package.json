@@ -52,7 +52,7 @@
     "test": "cd ../.. && ./node_modules/.bin/vitest run --project unit packages/rockets-repository-typeorm"
   },
   "dependencies": {
-    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.10",
+    "@concepta/nestjs-repository-typeorm": "8.0.0-alpha.11",
     "@concepta/rockets-core": "workspace:^"
   },
   "devDependencies": {

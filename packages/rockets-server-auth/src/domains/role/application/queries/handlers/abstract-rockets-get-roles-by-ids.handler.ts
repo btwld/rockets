@@ -5,6 +5,7 @@ import {
   getDynamicRepositoryToken,
   type RepositoryInterface,
   Where,
+  type WhereConditionArray,
 } from '@concepta/rockets-core';
 
 import { ROLE_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
@@ -34,7 +35,12 @@ export abstract class AbstractRocketsGetRolesByIdsHandler
     return this.mapResponse(entities);
   }
 
-  protected buildFilter(query: RocketsGetRolesByIdsQuery) {
+  // Annotated for the same reason as the by-name handler: an inferred
+  // return would name `@concepta/nestjs-repository` in this class's public
+  // `.d.ts`, which consumers do not install.
+  protected buildFilter(
+    query: RocketsGetRolesByIdsQuery,
+  ): WhereConditionArray<RoleEntityInterface> {
     return Where.in<RoleEntityInterface>('id', [...query.ids]);
   }
 

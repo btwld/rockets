@@ -509,6 +509,41 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
 
 ### Changed
 
+- **Upstream `@concepta/nestjs-*` moved to `8.0.0-alpha.11`.** Three contract
+  changes needed work on this side, and two of them were gaps this repo
+  already had:
+  - Domain events now carry causal headers (`correlationId`, `causationId`,
+    `recordedAt`) and `EventContextHost` can no longer be built with `{}`.
+    The set-password port uses `createEventContext(ctx, {}, {})`, so its
+    credential events join the caller's causal chain instead of starting an
+    anonymous one.
+  - `RepositoryColumnMetadataInterface` gained `isVersion`, backing
+    upstream's new optimistic locking. `f.version()` registered only DTO
+    roles, so it compiled to a plain integer nobody incremented — the lock
+    `auditableEntity` documents did not exist. It now declares
+    `db: { version: true }` and the TypeORM compiler emits `@VersionColumn`,
+    which turns `update`/`replace` into a compare-and-swap. Removing the
+    flag makes two concurrent writers both answer `200` with one change
+    lost; an e2e in `examples/sample-server` pins it. The Firestore adapter
+    reports `isVersion: false` deliberately: it maintains no counter, and a
+    claimed guarantee is worse than none. `OptimisticLockException` (409,
+    `OPTIMISTIC_LOCK_CONFLICT`) is re-exported from `@concepta/rockets-core`
+    so apps can catch it.
+  - Invitation email failures publish upstream's
+    `NotificationSendFailedEvent` instead of only logging. alpha.11 added it
+    for the verify and recovery ports, which hit the same wall invitations
+    did — mail leaves from a commit hook, so failures reach no one. One
+    event, one subscription, every notification this package sends.
+    `SendInvitationEmailCommand` / `SendAcceptedEmailCommand` now extend
+    `Command<void>`, which is also what makes `commandBus.execute` infer
+    their result.
+- `@concepta/rockets-core` re-exports the `Where*` clause types and
+  `OptimisticLockException`. Without the former, a handler that let
+  TypeScript infer a filter's type emitted
+  `import("@concepta/nestjs-repository")` into its published `.d.ts` —
+  naming a package consumers do not install, which the packed-consumer gate
+  caught after `@concepta/nestjs-repository` became a devDependency.
+
 - **A request body declared through the escape hatch must be a named
   component too.** `operations.X.input` was checked at definition time,
   but `operations.X.requestOverride.body` / `bodyBatch` and the

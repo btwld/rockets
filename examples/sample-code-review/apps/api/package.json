@@ -14,8 +14,8 @@
     "test:e2e:auth": "vitest run --config vitest.e2e.config.mts test/auth-connection.e2e-spec.ts"
   },
   "dependencies": {
-    "@concepta/nestjs-core": "8.0.0-alpha.10",
-    "@concepta/nestjs-repository": "8.0.0-alpha.10",
+    "@concepta/nestjs-core": "8.0.0-alpha.11",
+    "@concepta/nestjs-repository": "8.0.0-alpha.11",
     "@concepta/rockets": "workspace:^",
     "@concepta/rockets-adapter-firebase": "workspace:^",
     "@concepta/rockets-core": "workspace:^",

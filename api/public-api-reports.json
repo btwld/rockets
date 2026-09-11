@@ -893,13 +893,13 @@
         "name": "AbstractRocketsGetRoleByNameHandler",
         "kind": "class",
         "runtime": true,
-        "signature": "export declare abstract class AbstractRocketsGetRoleByNameHandler implements IQueryHandler<RocketsGetRoleByNameQuery, RoleEntityInterface | null> {\n    protected readonly roleRepo: RepositoryInterface<RoleEntityInterface>;\n    constructor(roleRepo: RepositoryInterface<RoleEntityInterface>);\n    execute(query: RocketsGetRoleByNameQuery): Promise<RoleEntityInterface | null>;\n    protected buildFilter(query: RocketsGetRoleByNameQuery): import(\"@concepta/nestjs-repository\").WhereConditionScalar<RoleEntityInterface>;\n    protected fetch(query: RocketsGetRoleByNameQuery, where: ReturnType<AbstractRocketsGetRoleByNameHandler['buildFilter']>): Promise<RoleEntityInterface | null>;\n    protected mapResponse(entity: RoleEntityInterface | null): RoleEntityInterface | null;\n}"
+        "signature": "export declare abstract class AbstractRocketsGetRoleByNameHandler implements IQueryHandler<RocketsGetRoleByNameQuery, RoleEntityInterface | null> {\n    protected readonly roleRepo: RepositoryInterface<RoleEntityInterface>;\n    constructor(roleRepo: RepositoryInterface<RoleEntityInterface>);\n    execute(query: RocketsGetRoleByNameQuery): Promise<RoleEntityInterface | null>;\n    protected buildFilter(query: RocketsGetRoleByNameQuery): WhereConditionScalar<RoleEntityInterface>;\n    protected fetch(query: RocketsGetRoleByNameQuery, where: ReturnType<AbstractRocketsGetRoleByNameHandler['buildFilter']>): Promise<RoleEntityInterface | null>;\n    protected mapResponse(entity: RoleEntityInterface | null): RoleEntityInterface | null;\n}"
       },
       {
         "name": "AbstractRocketsGetRolesByIdsHandler",
         "kind": "class",
         "runtime": true,
-        "signature": "export declare abstract class AbstractRocketsGetRolesByIdsHandler implements IQueryHandler<RocketsGetRolesByIdsQuery, RoleEntityInterface[]> {\n    protected readonly roleRepo: RepositoryInterface<RoleEntityInterface>;\n    constructor(roleRepo: RepositoryInterface<RoleEntityInterface>);\n    execute(query: RocketsGetRolesByIdsQuery): Promise<RoleEntityInterface[]>;\n    protected buildFilter(query: RocketsGetRolesByIdsQuery): import(\"@concepta/nestjs-repository\").WhereConditionArray<RoleEntityInterface>;\n    protected fetch(query: RocketsGetRolesByIdsQuery, where: ReturnType<AbstractRocketsGetRolesByIdsHandler['buildFilter']>): Promise<RoleEntityInterface[]>;\n    protected mapResponse(entities: RoleEntityInterface[]): RoleEntityInterface[];\n}"
+        "signature": "export declare abstract class AbstractRocketsGetRolesByIdsHandler implements IQueryHandler<RocketsGetRolesByIdsQuery, RoleEntityInterface[]> {\n    protected readonly roleRepo: RepositoryInterface<RoleEntityInterface>;\n    constructor(roleRepo: RepositoryInterface<RoleEntityInterface>);\n    execute(query: RocketsGetRolesByIdsQuery): Promise<RoleEntityInterface[]>;\n    protected buildFilter(query: RocketsGetRolesByIdsQuery): WhereConditionArray<RoleEntityInterface>;\n    protected fetch(query: RocketsGetRolesByIdsQuery, where: ReturnType<AbstractRocketsGetRolesByIdsHandler['buildFilter']>): Promise<RoleEntityInterface[]>;\n    protected mapResponse(entities: RoleEntityInterface[]): RoleEntityInterface[];\n}"
       },
       {
         "name": "AbstractSignupUserHandler",
@@ -2686,6 +2686,12 @@
         "signature": "export interface OperationResponse {\n    readonly raw: unknown;\n}"
       },
       {
+        "name": "OptimisticLockException",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class OptimisticLockException extends RuntimeException {\n    context: RuntimeException['context'] & {\n        entityName: string;\n    };\n    constructor(entityName: string, options?: RuntimeExceptionOptions);\n}"
+      },
+      {
         "name": "OwnedEntity",
         "kind": "interface",
         "runtime": false,
@@ -3175,7 +3181,7 @@
         "name": "TransactionScope",
         "kind": "class",
         "runtime": true,
-        "signature": "export declare class TransactionScope {\n    private readonly registry;\n    private readonly defaultTimeout;\n    constructor(registry: TransactionFactoryRegistry, options?: RepositoryModuleOptionsInterface);\n    run<T>(ctx: PlainLiteralObject, operation: (txCtx: TransactionContextInterface) => Promise<T>, options?: TransactionRunOptions): Promise<T>;\n    private settle;\n    runReadOnly<T>(ctx: PlainLiteralObject, operation: (txCtx: TransactionContextInterface) => Promise<T>): Promise<T>;\n    private withTimeout;\n}"
+        "signature": "export declare class TransactionScope implements OnApplicationBootstrap {\n    private readonly registry;\n    private readonly defaultTimeout;\n    private warnedEmptyRegistry;\n    constructor(registry: TransactionFactoryRegistry, options?: RepositoryModuleOptionsInterface);\n    onApplicationBootstrap(): void;\n    private warnEmptyRegistryOnce;\n    run<T>(ctx: PlainLiteralObject, operation: (txCtx: TransactionContextInterface) => Promise<T>, options?: TransactionRunOptions): Promise<T>;\n    private settle;\n    runReadOnly<T>(ctx: PlainLiteralObject, operation: (txCtx: TransactionContextInterface) => Promise<T>): Promise<T>;\n    private withTimeout;\n}"
       },
       {
         "name": "USER_METADATA_MANAGED_FIELDS",
@@ -3284,6 +3290,36 @@
         "kind": "class",
         "runtime": true,
         "signature": "export declare class Where<Entity extends PlainLiteralObject = PlainLiteralObject> {\n    static eq<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown): WhereConditionScalar<E>;\n    static ne<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown): WhereConditionScalar<E>;\n    static gt<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown): WhereConditionScalar<E>;\n    static gte<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown): WhereConditionScalar<E>;\n    static lt<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown): WhereConditionScalar<E>;\n    static lte<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown): WhereConditionScalar<E>;\n    static contains<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: string): WhereConditionScalar<E>;\n    static notContains<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: string): WhereConditionScalar<E>;\n    static starts<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: string): WhereConditionScalar<E>;\n    static notStarts<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: string): WhereConditionScalar<E>;\n    static ends<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: string): WhereConditionScalar<E>;\n    static notEnds<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: string): WhereConditionScalar<E>;\n    static in<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown[]): WhereConditionArray<E>;\n    static notIn<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, value: unknown[]): WhereConditionArray<E>;\n    static isNull<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>): WhereConditionNullary<E>;\n    static notNull<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>): WhereConditionNullary<E>;\n    static between<E extends PlainLiteralObject = PlainLiteralObject>(field: EntityColumn<E>, from: unknown, to: unknown): WhereConditionPair<E>;\n    static and(...conditions: WhereClause[]): WhereCompound;\n    static or(...conditions: WhereClause[]): WhereCompound;\n    static where(clause: WhereClause): {\n        where: WhereClause;\n    };\n    static for<E extends PlainLiteralObject>(): Where<E>;\n    static rel<E extends PlainLiteralObject = PlainLiteralObject, C extends WhereCondition<E> = WhereCondition<E>>(relation: string, condition: C): C;\n    static relDot<E extends PlainLiteralObject = PlainLiteralObject, C extends WhereCondition<E> = WhereCondition<E>>(dotField: string, condition: C): C;\n    eq(field: EntityColumn<Entity>, value: unknown): WhereConditionScalar<Entity>;\n    ne(field: EntityColumn<Entity>, value: unknown): WhereConditionScalar<Entity>;\n    gt(field: EntityColumn<Entity>, value: unknown): WhereConditionScalar<Entity>;\n    gte(field: EntityColumn<Entity>, value: unknown): WhereConditionScalar<Entity>;\n    lt(field: EntityColumn<Entity>, value: unknown): WhereConditionScalar<Entity>;\n    lte(field: EntityColumn<Entity>, value: unknown): WhereConditionScalar<Entity>;\n    contains(field: EntityColumn<Entity>, value: string): WhereConditionScalar<Entity>;\n    notContains(field: EntityColumn<Entity>, value: string): WhereConditionScalar<Entity>;\n    starts(field: EntityColumn<Entity>, value: string): WhereConditionScalar<Entity>;\n    notStarts(field: EntityColumn<Entity>, value: string): WhereConditionScalar<Entity>;\n    ends(field: EntityColumn<Entity>, value: string): WhereConditionScalar<Entity>;\n    notEnds(field: EntityColumn<Entity>, value: string): WhereConditionScalar<Entity>;\n    in(field: EntityColumn<Entity>, value: unknown[]): WhereConditionArray<Entity>;\n    notIn(field: EntityColumn<Entity>, value: unknown[]): WhereConditionArray<Entity>;\n    isNull(field: EntityColumn<Entity>): WhereConditionNullary<Entity>;\n    notNull(field: EntityColumn<Entity>): WhereConditionNullary<Entity>;\n    between(field: EntityColumn<Entity>, from: unknown, to: unknown): WhereConditionPair<Entity>;\n    and(...conditions: WhereClause[]): WhereCompound;\n    or(...conditions: WhereClause[]): WhereCompound;\n    rel<C extends WhereCondition<Entity> = WhereCondition<Entity>>(relation: string, condition: C): C;\n    relDot<C extends WhereCondition<Entity> = WhereCondition<Entity>>(dotField: string, condition: C): C;\n    where(clause: WhereClause): {\n        where: WhereClause;\n    };\n}"
+      },
+      {
+        "name": "WhereClause",
+        "kind": "type",
+        "runtime": false,
+        "signature": "export type WhereClause = WhereCondition | WhereCompound;"
+      },
+      {
+        "name": "WhereCompound",
+        "kind": "interface",
+        "runtime": false,
+        "signature": "export interface WhereCompound {\n    operator: WhereCompoundOperator;\n    conditions: WhereClause[];\n}"
+      },
+      {
+        "name": "WhereCondition",
+        "kind": "type",
+        "runtime": false,
+        "signature": "export type WhereCondition<T extends PlainLiteralObject = PlainLiteralObject> = WhereConditionNullary<T> | WhereConditionScalar<T> | WhereConditionArray<T> | WhereConditionPair<T>;"
+      },
+      {
+        "name": "WhereConditionArray",
+        "kind": "interface",
+        "runtime": false,
+        "signature": "export interface WhereConditionArray<T extends PlainLiteralObject = PlainLiteralObject> {\n    field: EntityColumn<T>;\n    operator: WhereArrayOperator;\n    value: unknown[];\n    relation?: string;\n}"
+      },
+      {
+        "name": "WhereConditionScalar",
+        "kind": "interface",
+        "runtime": false,
+        "signature": "export interface WhereConditionScalar<T extends PlainLiteralObject = PlainLiteralObject> {\n    field: EntityColumn<T>;\n    operator: WhereScalarOperator;\n    value: unknown;\n    relation?: string;\n}"
       },
       {
         "name": "WithActor",
@@ -3699,7 +3735,7 @@
         "name": "RocketsDbFieldMeta",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface RocketsDbFieldMeta {\n    readonly pk?: boolean;\n    readonly generated?: boolean;\n    readonly index?: boolean;\n    readonly unique?: boolean;\n    readonly createdAt?: boolean;\n    readonly updatedAt?: boolean;\n    readonly deletedAt?: boolean;\n    readonly column?: Readonly<Record<string, unknown>>;\n}"
+        "signature": "export interface RocketsDbFieldMeta {\n    readonly pk?: boolean;\n    readonly generated?: boolean;\n    readonly index?: boolean;\n    readonly unique?: boolean;\n    readonly createdAt?: boolean;\n    readonly updatedAt?: boolean;\n    readonly deletedAt?: boolean;\n    readonly version?: boolean;\n    readonly column?: Readonly<Record<string, unknown>>;\n}"
       },
       {
         "name": "RocketsDtoFieldMeta",
@@ -4297,7 +4333,7 @@
         "name": "TypeOrmRepository",
         "kind": "class",
         "runtime": true,
-        "signature": "export declare class TypeOrmRepository<Entity extends PlainLiteralObject> extends RepositoryAdapter<Entity> {\n    private readonly repo;\n    private readonly options;\n    readonly metadata: RepositoryMetadataInterface<Entity>;\n    constructor(repo: Repository<Entity>, options: TypeOrmRepositoryOptions);\n    protected getRepo(ctx?: AppContextLike): Promise<Repository<Entity>>;\n    protected translateWhere(clause?: WhereClause): FindOptionsWhere<Entity>[] | undefined;\n    protected branchToFindOptionsWhere(leaves: WhereClause[]): FindOptionsWhere<Entity>;\n    protected toFindOperator(cond: WhereCondition): FindOperator<unknown>;\n    protected translateJoin(join?: JoinClause[]): FindOptionsRelations<Entity> | undefined;\n    protected buildNativeFindManyOptions(options: RepositoryFindOptions<Entity>): FindManyOptions<Entity>;\n    protected buildNativeFindOneOptions(options: RepositoryFindOneOptions<Entity>): FindOneOptions<Entity>;\n    private buildNativeFindBaseOptions;\n    protected doFind(options?: RepositoryFindOptions<Entity>): Promise<Entity[]>;\n    protected doFindOne(options: RepositoryFindOneOptions<Entity>): Promise<Entity | null>;\n    protected doCount(options?: RepositoryFindOptions<Entity>): Promise<number>;\n    protected doFindAndCount(options?: RepositoryFindOptions<Entity>): Promise<[\n        Entity[],\n        number\n    ]>;\n    protected doCreate(entity: DeepPartial<Entity>, options?: RepositoryCreateOptions): Promise<Entity>;\n    protected doCreateMany(entities: DeepPartial<Entity>[], options?: RepositoryCreateOptions): Promise<Entity[]>;\n    protected doUpdate(entity: Entity, data: DeepPartial<Entity>, options?: RepositoryUpdateOptions): Promise<Entity>;\n    protected doUpsert(entity: DeepPartial<Entity>, options?: RepositoryUpsertOptions): Promise<Entity>;\n    protected doReplace(entity: Entity, data: DeepPartial<Entity>, options?: RepositoryUpdateOptions): Promise<Entity>;\n    protected doDelete(entity: Entity, options?: RepositoryDeleteOptions): Promise<Entity>;\n    protected doDeleteMany(entities: Entity[], options?: RepositoryDeleteOptions): Promise<Entity[]>;\n    protected doSoftDelete(entity: Entity, options?: RepositoryDeleteOptions): Promise<Entity>;\n    protected doRestore(entity: Entity, options?: RepositoryRestoreOptions): Promise<Entity>;\n    transform(entityLike: DeepPartial<Entity>): Entity;\n    merge(mergeIntoEntity: Entity, ...entityLikes: DeepPartial<Entity>[]): Entity;\n}"
+        "signature": "export declare class TypeOrmRepository<Entity extends PlainLiteralObject> extends RepositoryAdapter<Entity> {\n    private readonly repo;\n    private readonly options;\n    readonly metadata: RepositoryMetadataInterface<Entity>;\n    constructor(repo: Repository<Entity>, options: TypeOrmRepositoryOptions);\n    protected getRepo(ctx?: AppContextLike): Promise<Repository<Entity>>;\n    protected translateWhere(clause?: WhereClause): FindOptionsWhere<Entity>[] | undefined;\n    protected branchToFindOptionsWhere(leaves: WhereClause[]): FindOptionsWhere<Entity>;\n    protected toFindOperator(cond: WhereCondition): FindOperator<unknown>;\n    protected translateJoin(join?: JoinClause[]): FindOptionsRelations<Entity> | undefined;\n    protected buildNativeFindManyOptions(options: RepositoryFindOptions<Entity>): FindManyOptions<Entity>;\n    protected buildNativeFindOneOptions(options: RepositoryFindOneOptions<Entity>): FindOneOptions<Entity>;\n    private buildNativeFindBaseOptions;\n    protected doFind(options?: RepositoryFindOptions<Entity>): Promise<Entity[]>;\n    protected doFindOne(options: RepositoryFindOneOptions<Entity>): Promise<Entity | null>;\n    protected doCount(options?: RepositoryFindOptions<Entity>): Promise<number>;\n    protected doFindAndCount(options?: RepositoryFindOptions<Entity>): Promise<[\n        Entity[],\n        number\n    ]>;\n    protected doCreate(entity: DeepPartial<Entity>, options?: RepositoryCreateOptions): Promise<Entity>;\n    protected doCreateMany(entities: DeepPartial<Entity>[], options?: RepositoryCreateOptions): Promise<Entity[]>;\n    protected doUpdate(entity: Entity, data: DeepPartial<Entity>, options?: RepositoryUpdateOptions): Promise<Entity>;\n    protected doUpsert(entity: DeepPartial<Entity>, options?: RepositoryUpsertOptions): Promise<Entity>;\n    protected doReplace(entity: Entity, data: DeepPartial<Entity>, options?: RepositoryUpdateOptions): Promise<Entity>;\n    private saveWithVersionCheck;\n    protected doDelete(entity: Entity, options?: RepositoryDeleteOptions): Promise<Entity>;\n    protected doDeleteMany(entities: Entity[], options?: RepositoryDeleteOptions): Promise<Entity[]>;\n    protected doSoftDelete(entity: Entity, options?: RepositoryDeleteOptions): Promise<Entity>;\n    protected doRestore(entity: Entity, options?: RepositoryRestoreOptions): Promise<Entity>;\n    transform(entityLike: DeepPartial<Entity>): Entity;\n    merge(mergeIntoEntity: Entity, ...entityLikes: DeepPartial<Entity>[]): Entity;\n}"
       },
       {
         "name": "TypeOrmRepositoryModule",
