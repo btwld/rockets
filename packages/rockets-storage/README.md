@@ -41,10 +41,16 @@ filesystem.
 - NestJS 12 for the root Nest module entry point.
 - ESM internally. On supported Node versions the published entry points work
   with both `import` and synchronous `require()`.
-- TypeScript `moduleResolution: "node16"`, `"nodenext"`, or `"bundler"` for
-  `/files-sdk/fs`, `/files-sdk/provider`, `/files-sdk/s3`, and `/testing`.
-  The root, `/core`, and `/files-sdk` also resolve with legacy Node10
-  resolution; `files-sdk` provider subpaths publish modern export maps only.
+- TypeScript: every entry point resolves under `moduleResolution: "node16"`,
+  `"nodenext"` or `"bundler"`. Legacy `Node10` resolution also works —
+  `typesVersions` maps every subpath — with one caveat: the driver subpaths
+  (`/files-sdk/fs`, `/files-sdk/provider`, `/files-sdk/s3`, `/testing`)
+  re-export types from `files-sdk`, which publishes an export map and no
+  `typesVersions`, so a Node10 project must keep `skipLibCheck: true` (the
+  default in Nest's own scaffolding) to avoid type-checking into it. The
+  root, `/core` and `/files-sdk` need no such caveat.
+  `examples/sample-server` is a Node10 + `skipLibCheck` consumer, and the
+  packed-consumer gate pins both cases.
 
 The `@concepta/rockets-storage/core` entry point has no NestJS runtime or type
 dependency. Nest, RxJS, AWS SDK, and other provider SDK peers are optional and

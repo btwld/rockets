@@ -1315,7 +1315,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@concepta/rockets-storage@workspace:packages/rockets-storage":
+"@concepta/rockets-storage@workspace:^, @concepta/rockets-storage@workspace:packages/rockets-storage":
   version: 0.0.0-use.local
   resolution: "@concepta/rockets-storage@workspace:packages/rockets-storage"
   dependencies:
@@ -12138,6 +12138,7 @@ __metadata:
     "@concepta/rockets": "workspace:^"
     "@concepta/rockets-core": "workspace:^"
     "@concepta/rockets-repository-typeorm": "workspace:^"
+    "@concepta/rockets-storage": "workspace:^"
     "@nestjs/cli": "npm:12.0.0"
     "@nestjs/common": "npm:12.0.1"
     "@nestjs/core": "npm:12.0.1"

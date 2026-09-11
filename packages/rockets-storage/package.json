@@ -52,6 +52,18 @@
       ],
       "files-sdk": [
         "dist/files-sdk/index.d.ts"
+      ],
+      "files-sdk/fs": [
+        "dist/files-sdk/fs/index.d.ts"
+      ],
+      "files-sdk/s3": [
+        "dist/files-sdk/s3/index.d.ts"
+      ],
+      "files-sdk/provider": [
+        "dist/files-sdk/provider/index.d.ts"
+      ],
+      "testing": [
+        "dist/testing/index.d.ts"
       ]
     }
   },

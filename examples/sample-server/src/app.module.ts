@@ -13,6 +13,8 @@ import { tagZodResource } from './resources/tag';
 // keyed operations form (soft delete + restore + replace).
 import { authorZodResource, bookZodResource } from './resources/library';
 import { petShareFeature } from './resources/pet-share';
+// Storage in a real shape: bytes in a named store, metadata in a table.
+import { petPhotoFeature } from './resources/pet-photo';
 import { petTransferFeature } from './resources/pet-transfer';
 import {
   appointmentResource,
@@ -43,6 +45,7 @@ export const server = createServer({
     appointmentResource,
     reminderZodResource,
     petShareFeature,
+    petPhotoFeature,
     petTransferFeature,
     adminFeature,
     auditFeature,

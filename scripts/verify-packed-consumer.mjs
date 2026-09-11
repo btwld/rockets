@@ -415,6 +415,46 @@ void legacyStorageSurface;
 `,
   );
 
+  // Second legacy fixture: same Node10 resolution, but `skipLibCheck: true`
+  // — what Nest's own scaffolding and every example in this repo use. There
+  // the DRIVER subpaths resolve too, and that is the difference between
+  // "storage is unusable on a legacy tsconfig" and "storage works, you just
+  // cannot deep-check upstream's types". What makes them resolve is
+  // `typesVersions` in the package manifest; drop an entry and this stops
+  // compiling. It cannot be folded into the strict fixture above: the
+  // driver `.d.ts` re-export types from `files-sdk`, which is ESM with an
+  // export map and no `typesVersions`, so Node10 cannot follow them — not
+  // something this package can fix from its side.
+  writeJson(join(consumerRoot, 'tsconfig.storage-node10-drivers.json'), {
+    compilerOptions: {
+      module: 'CommonJS',
+      moduleResolution: 'Node10',
+      target: 'ES2022',
+      strict: true,
+      noEmit: true,
+      skipLibCheck: true,
+    },
+    include: ['storage-node10-drivers.ts'],
+  });
+  writeFileSync(
+    join(consumerRoot, 'storage-node10-drivers.ts'),
+    `import { createFsStorageDriver } from '@concepta/rockets-storage/files-sdk/fs';
+import { createProviderStorageDriver } from '@concepta/rockets-storage/files-sdk/provider';
+import { createS3StorageDriver } from '@concepta/rockets-storage/files-sdk/s3';
+import { createMemoryStorageDriver } from '@concepta/rockets-storage/testing';
+
+type LegacyDriverSurface = readonly [
+  typeof createFsStorageDriver,
+  typeof createProviderStorageDriver,
+  typeof createS3StorageDriver,
+  typeof createMemoryStorageDriver,
+];
+
+declare const legacyDriverSurface: LegacyDriverSurface;
+void legacyDriverSurface;
+`,
+  );
+
   run(process.execPath, ['verify-cjs.cjs'], consumerRoot);
   run(process.execPath, ['verify-esm.mjs'], consumerRoot);
   run(
@@ -428,6 +468,15 @@ void legacyStorageSurface;
       join(consumerRoot, 'node_modules', 'typescript', 'bin', 'tsc'),
       '-p',
       'tsconfig.storage-node10.json',
+    ],
+    consumerRoot,
+  );
+  run(
+    process.execPath,
+    [
+      join(consumerRoot, 'node_modules', 'typescript', 'bin', 'tsc'),
+      '-p',
+      'tsconfig.storage-node10-drivers.json',
     ],
     consumerRoot,
   );
