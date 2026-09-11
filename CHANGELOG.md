@@ -50,9 +50,11 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
   an in-memory test driver, and reusable provider conformance cases. The
   package implements issue #106 and complements issue #86 without adding
   multipart parsing or provider SDK dependencies to `rockets-core`.
-  `examples/sample-server` consumes it for real — pet photos, with the
-  bytes in a filesystem store and the metadata in its own table — which is
-  what surfaced the `typesVersions` gap below.
+  `examples/sample-server` consumes it for real, in two shapes: pet photos
+  (small uploads, a signed-download capability gate, owner-scoped keys) and
+  pet documents (two named stores, streamed reads, byte ranges, bulk
+  delete, and cross-store archival). Building those surfaced the
+  `typesVersions` gap and the web/Node stream interop gap below.
   Signed downloads fail closed: `signDownload` rejects a requested
   `expiresIn` with `NOT_SUPPORTED` unless the store advertises
   `signedDownloadPolicy.expiresIn`, instead of minting a URL that ignores it.

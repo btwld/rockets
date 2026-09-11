@@ -4800,6 +4800,12 @@
         "kind": "function",
         "runtime": true,
         "signature": "export declare function normalizeStorageError(error: unknown, options?: Omit<StorageErrorOptions, 'code' | 'cause'> & {\n    code?: StorageErrorCode;\n}): StorageError;"
+      },
+      {
+        "name": "toNodeReadable",
+        "kind": "function",
+        "runtime": true,
+        "signature": "export declare function toNodeReadable(source: StorageObject | StorageObject['body']): Readable;"
       }
     ],
     "@concepta/rockets-storage/core": [
@@ -5198,6 +5204,12 @@
         "kind": "function",
         "runtime": true,
         "signature": "export declare function normalizeStorageError(error: unknown, options?: Omit<StorageErrorOptions, 'code' | 'cause'> & {\n    code?: StorageErrorCode;\n}): StorageError;"
+      },
+      {
+        "name": "toNodeReadable",
+        "kind": "function",
+        "runtime": true,
+        "signature": "export declare function toNodeReadable(source: StorageObject | StorageObject['body']): Readable;"
       }
     ],
     "@concepta/rockets-storage/files-sdk": [

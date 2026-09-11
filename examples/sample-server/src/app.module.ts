@@ -15,6 +15,8 @@ import { authorZodResource, bookZodResource } from './resources/library';
 import { petShareFeature } from './resources/pet-share';
 // Storage in a real shape: bytes in a named store, metadata in a table.
 import { petPhotoFeature } from './resources/pet-photo';
+// Two named stores, streaming, ranges and cross-store archive.
+import { petDocumentFeature } from './resources/pet-document';
 import { petTransferFeature } from './resources/pet-transfer';
 import {
   appointmentResource,
@@ -46,6 +48,7 @@ export const server = createServer({
     reminderZodResource,
     petShareFeature,
     petPhotoFeature,
+    petDocumentFeature,
     petTransferFeature,
     adminFeature,
     auditFeature,

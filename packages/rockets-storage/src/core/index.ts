@@ -11,6 +11,7 @@ export {
   normalizeStorageError,
   type StorageErrorOptions,
 } from '../storage.error.js';
+export { toNodeReadable } from '../storage-node-stream.js';
 export {
   StorageUploadControl,
   type StorageResumableToken,

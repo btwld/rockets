@@ -52,6 +52,12 @@ filesystem.
   `examples/sample-server` is a Node10 + `skipLibCheck` consumer, and the
   packed-consumer gate pins both cases.
 
+A downloaded object's `body` is a web `ReadableStream`. To pipe it into a Node
+response, use `toNodeReadable(object)` rather than `Readable.fromWeb` — the
+bare `ReadableStream` name resolves against the consumer's own `lib`, so a
+project with `"DOM"` gets a declaration Node's typings reject even though the
+runtime object is the same.
+
 The `@concepta/rockets-storage/core` entry point has no NestJS runtime or type
 dependency. Nest, RxJS, AWS SDK, and other provider SDK peers are optional and
 are needed only by the entry points that use them.

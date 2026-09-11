@@ -507,6 +507,103 @@
         ],
         "type": "object"
       },
+      "PetDocumentArchiveResultDto": {
+        "additionalProperties": false,
+        "properties": {
+          "archived": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "archived",
+          "skipped"
+        ],
+        "type": "object"
+      },
+      "PetDocumentResponseDto": {
+        "additionalProperties": false,
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "petId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "storageKey": {
+            "type": "string"
+          },
+          "store": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "petId",
+          "title",
+          "storageKey",
+          "contentType",
+          "size",
+          "store",
+          "dateCreated"
+        ],
+        "type": "object"
+      },
+      "PetDocumentUploadDto": {
+        "properties": {
+          "contentType": {
+            "enum": [
+              "application/pdf",
+              "text/plain"
+            ],
+            "type": "string"
+          },
+          "data": {
+            "contentEncoding": "base64",
+            "format": "base64",
+            "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "contentType",
+          "data"
+        ],
+        "type": "object"
+      },
       "PetPhotoDownloadUrlDto": {
         "additionalProperties": false,
         "properties": {
@@ -3606,6 +3703,190 @@
         "summary": "",
         "tags": [
           "Pets"
+        ]
+      }
+    },
+    "/pets/{petId}/documents": {
+      "delete": {
+        "operationId": "PetDocumentController_removeAll",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete every document of a pet, in both stores",
+        "tags": [
+          "Pet documents"
+        ]
+      },
+      "get": {
+        "operationId": "PetDocumentController_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PetDocumentResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List a pet documents",
+        "tags": [
+          "Pet documents"
+        ]
+      },
+      "post": {
+        "operationId": "PetDocumentController_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetDocumentUploadDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetDocumentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a document for a pet (owner only)",
+        "tags": [
+          "Pet documents"
+        ]
+      }
+    },
+    "/pets/{petId}/documents/archive": {
+      "post": {
+        "operationId": "PetDocumentController_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetDocumentArchiveResultDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move every live document of a pet to cold storage",
+        "tags": [
+          "Pet documents"
+        ]
+      }
+    },
+    "/pets/{petId}/documents/{documentId}/content": {
+      "get": {
+        "description": "Honors a `bytes=start-end` Range header when the holding store supports range reads.",
+        "operationId": "PetDocumentController_content",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "documentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document bytes"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stream a document, optionally a byte range",
+        "tags": [
+          "Pet documents"
         ]
       }
     },
