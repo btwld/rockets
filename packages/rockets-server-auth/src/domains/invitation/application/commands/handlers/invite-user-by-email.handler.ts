@@ -8,7 +8,12 @@ import {
   CreateInvitationByEmailCommand,
   type Invitation,
 } from '@concepta/nestjs-invitation';
-import { CreateUserCommand, GetUserByEmailQuery } from '@concepta/nestjs-user';
+import {
+  CreateUserCommand,
+  GetUserByEmailQuery,
+  GetUserByUsernameQuery,
+} from '@concepta/nestjs-user';
+import { DuplicateUserException } from '../../../../user/domain/exceptions/user.exception';
 import { TransactionScope } from '@concepta/rockets-core';
 
 import { RocketsInviteUserByEmailCommand } from '../impl/invite-user-by-email.command';
@@ -40,6 +45,17 @@ export class RocketsInviteUserByEmailHandler
         new GetUserByEmailQuery(txCtx, dto.email),
       );
       if (!existing) {
+        // The invited account takes the address as its username, so the
+        // address has to be free on BOTH columns — signup checks the same
+        // pair. Upstream's CreateUserCommand saves without a pre-check, so
+        // without this a collision surfaces as a driver error (a 500),
+        // which is the failure shape this whole command exists to remove.
+        const usernameTaken = await this.queryBus.execute(
+          new GetUserByUsernameQuery(txCtx, dto.email),
+        );
+        if (usernameTaken) {
+          throw new DuplicateUserException();
+        }
         await this.commandBus.execute(
           new CreateUserCommand(txCtx, {
             email: dto.email,

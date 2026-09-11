@@ -279,6 +279,12 @@ and this project adheres to
   - Acceptance sets the password through the same set-password port as
     recovery (user credentials); it used to write v7-style `passwordHash`
     columns onto the user row, which v8 login never reads.
+  - Inviting an address that is already another account's **username**
+    answers `400 USER_DUPLICATE_ERROR` instead of a 500. The invited
+    account takes the address as its username, and upstream's
+    `CreateUserCommand` saves with no uniqueness pre-check, so the
+    collision surfaced as a driver error; the invite handler now checks
+    the same email/username pair signup does.
   - **A failed onboarding no longer burns the invitation.** Upstream commits
     the acceptance and announces it with a post-commit
     `InvitationAcceptedEvent`, so the listener that activated the account,
@@ -315,22 +321,27 @@ and this project adheres to
   alias `INVITATION_USER_ONBOARDING_SERVICE_TOKEN` is how the accept handler
   resolves it.
 - Dead dependencies: `jsonwebtoken`, `passport`, `passport-jwt`,
-  `passport-strategy`, `@nestjs/jwt`, `accesscontrol` were declared but never
-  imported — upstream `@concepta/nestjs-authentication` /
-  `nestjs-access-control` own them. `@types/passport-jwt` and
-  `@types/passport-strategy` stay as runtime dependencies on purpose:
-  upstream's published `.d.ts` reference those modules while it lists the
-  types packages only as devDependencies, so a consumer's `tsc` fails
-  without them (the packed-consumer check proves it).
+  `passport-strategy`, `@nestjs/jwt`, `accesscontrol`, `class-transformer`
+  were declared but never imported — upstream
+  `@concepta/nestjs-authentication` / `nestjs-access-control` own them, and
+  validation moved to the Standard Schema pipe. Three stay for the same
+  reason — a published `.d.ts` in the closure imports them while its own
+  package lists them only as devDependencies, so a consumer's `tsc` fails
+  without them (the packed-consumer check proves it): `@types/passport-jwt`
+  (now `^4.0.1`, the version upstream compiles against) and
+  `@types/passport-strategy` for
+  `@concepta/nestjs-authentication`'s `jwt-passport.strategy.d.ts`, and
+  `class-validator` for `@concepta/nestjs-common`'s
+  `model-validation.exception.d.ts`.
   `@concepta/nestjs-repository` and
   `accesscontrol` move to devDependencies (test fixtures only; the runtime
   contract comes through `@concepta/rockets-core`).
 - `RocketsAuthOptionsInterface.swagger` and `.crud` — they only fed the
   duplicate registrations above; configure `swagger` on `RocketsModule` /
   `RocketsCoreModule` instead.
-- `ConceptaRepositoryCompatModule` — an empty global module left over from
-  the pre-v8 repository bridge — and the `resolveConceptadevAppContext`
-  helper that accompanied it.
+- `resolveConceptadevAppContext`, the helper that accompanied the removed
+  `ConceptaRepositoryCompatModule` (that module's own removal is recorded
+  under Changed, above).
 - `RocketsAuthExceptionsFilter` (issue #87). Internal-only and never
   exported from `src/index.ts`, so no consumer could import it and no
   application's behaviour changes — apps register

@@ -146,27 +146,30 @@ module.exports = {
     // through rockets-core's re-exports; only core and adapter packages
     // import @concepta/nestjs-repository directly.
     {
-      files: [
-        'packages/rockets-server/src/**/*.ts',
-        'packages/rockets-server-auth/src/**/*.ts',
-      ],
+      // Every feature package, not a hand-maintained list: core owns the
+      // re-exports and the adapter packages ARE the implementation, so only
+      // those are excluded. A new package inherits the rule for free.
+      files: ['packages/*/src/**/*.ts'],
       excludedFiles: [
-        'packages/rockets-server/src/**/*.spec.ts',
-        'packages/rockets-server/src/**/*.e2e-spec.ts',
-        'packages/rockets-server/src/**/__fixtures__/**',
-        'packages/rockets-server/src/**/__e2e__/**',
-        'packages/rockets-server-auth/src/**/*.spec.ts',
-        'packages/rockets-server-auth/src/**/*.e2e-spec.ts',
-        'packages/rockets-server-auth/src/**/__fixtures__/**',
-        'packages/rockets-server-auth/src/**/__e2e__/**',
+        'packages/rockets-core/src/**',
+        'packages/rockets-repository-*/src/**',
+        'packages/*/src/**/*.spec.ts',
+        'packages/*/src/**/*.e2e-spec.ts',
+        'packages/*/src/**/__fixtures__/**',
+        'packages/*/src/**/__e2e__/**',
       ],
       rules: {
         'no-restricted-imports': [
           'error',
           {
-            paths: [
+            // `patterns`, not `paths`: `paths` matches the exact specifier
+            // only, so a deep import slipped straight through.
+            patterns: [
               {
-                name: '@concepta/nestjs-repository',
+                group: [
+                  '@concepta/nestjs-repository',
+                  '@concepta/nestjs-repository/*',
+                ],
                 message:
                   'Import the repository contract (RepositoryInterface, Where, ' +
                   'getDynamicRepositoryToken, TransactionScope, …) from ' +

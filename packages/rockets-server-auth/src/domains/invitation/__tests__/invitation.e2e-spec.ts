@@ -337,6 +337,78 @@ describe('Invitations (e2e)', () => {
     await login('rollback@example.com', 'InvitedP@ssw0rd');
   });
 
+  // The CHANGELOG's Security paragraph, as a test: inviting an address that
+  // already has an account creates no second user, and accepting replaces
+  // that account's password and activates it. Admin-only + mailbox-proven,
+  // the same trust model as recovery — but it is an admin-initiated,
+  // mailbox-completed takeover of an existing account, so it gets pinned
+  // rather than described.
+  it('POST /admin/invitations — inviting an existing account replaces its password and activates it', async () => {
+    const userId = await signup('existing-invitee');
+    await login('existing-invitee', 'StrongP@ssw0rd');
+
+    // Deactivate: this is the "admin re-activates by inviting" path.
+    await request(app.getHttpServer())
+      .patch(`/admin/users/${userId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ active: false })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post('/token/password')
+      .send({ username: 'existing-invitee', password: 'StrongP@ssw0rd' })
+      .expect(401);
+
+    const {
+      code,
+      userId: invitedId,
+      passcode,
+    } = await invite('existing-invitee@example.com');
+    // No second account: the invitation points at the account that was
+    // already there.
+    expect(invitedId).toBe(userId);
+
+    await request(app.getHttpServer())
+      .patch(`/invitation-acceptance/${code}`)
+      .send({ passcode, payload: { password: 'RotatedP@ssw0rd' } })
+      .expect(200);
+
+    await expectOnboarded(userId);
+    // No user was created, so the account keeps its own username — and the
+    // supplied password replaced the old one outright.
+    await login('existing-invitee', 'RotatedP@ssw0rd');
+    await request(app.getHttpServer())
+      .post('/token/password')
+      .send({ username: 'existing-invitee', password: 'StrongP@ssw0rd' })
+      .expect(401);
+  });
+
+  it("POST /admin/invitations — an address that is another account's username is refused, not a 500", async () => {
+    // Signup takes `username` verbatim, so this account owns the string
+    // "squatted@example.com" as a USERNAME while its email is different.
+    await request(app.getHttpServer())
+      .post('/signup')
+      .send({
+        username: 'squatted@example.com',
+        email: 'different-address@example.com',
+        password: 'StrongP@ssw0rd',
+        active: true,
+      })
+      .expect(201);
+
+    // The invited account would take the address as its username too.
+    // Upstream's CreateUserCommand saves with no pre-check, so without the
+    // guard this escapes as a driver error — the 500 shape this command
+    // exists to remove.
+    const res = await request(app.getHttpServer())
+      .post('/admin/invitations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ email: 'squatted@example.com', category: 'user' })
+      // 400 + USER_DUPLICATE_ERROR is what signup answers for the same
+      // collision; the point is that it is not a 5xx.
+      .expect(400);
+    expect(res.body.errorCode).toBe('USER_DUPLICATE_ERROR');
+  });
+
   it('admin routes reject non-admin callers and anonymous requests', async () => {
     await request(app.getHttpServer())
       .post('/admin/invitations')
