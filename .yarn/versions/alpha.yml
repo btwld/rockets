@@ -3,5 +3,6 @@ releases:
   "@concepta/rockets-core": major
   "@concepta/rockets-repository-firestore": major
   "@concepta/rockets-repository-typeorm": major
+  "@concepta/rockets-storage": major
   "@concepta/rockets": major
   "@concepta/rockets-auth": major

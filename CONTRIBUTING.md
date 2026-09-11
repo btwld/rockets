@@ -90,6 +90,7 @@ the same standards as source.
 | `packages/rockets-server` | External-auth server (`/me`, global guard) |
 | `packages/rockets-server-auth` | Full built-in auth system (signup, login, OTP, admin) |
 | `packages/rockets-repository-*` | Persistence adapters (TypeORM, Firestore) |
+| `packages/rockets-storage` | Provider-neutral object storage and named Nest stores |
 | `packages/rockets-adapter-firebase` | Firebase auth adapter |
 | `examples/*` | Runnable sample apps, exercised by e2e |
 
@@ -97,7 +98,7 @@ the same standards as source.
 
 All release commands are thin wrappers over Yarn 4's native versioning and
 publishing. The tracked `.yarn/versions/alpha.yml` file is the retained decision
-to release the six public packages as `1.0.0`; Yarn keeps that decision while
+to release the seven public packages as `1.0.0`; Yarn keeps that decision while
 applying numbered prereleases.
 
 **1. Bump versions** (every publishable workspace, in one command):

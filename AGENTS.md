@@ -293,6 +293,11 @@ of it.
 - `packages/rockets-repository-firestore`
   (`@concepta/rockets-repository-firestore`): Firestore implementation of the
   dynamic repository contract.
+- `packages/rockets-storage` (`@concepta/rockets-storage`): provider-neutral
+  object storage with a framework-neutral driver/client contract, named NestJS
+  stores, hardened optional provider adapters, and testing support. It is not a
+  database repository adapter: object bytes, range reads, signed requests, and
+  conditional object capabilities stay separate from `RepositoryInterface`.
 - `packages/rockets-server` (`@concepta/rockets`): external-auth integration
   layer and curated core facade. `MeController` + global guard opt-in. Use when
   users live in Firebase / Auth0 / another external system.

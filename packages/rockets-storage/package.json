@@ -1,0 +1,170 @@
+{
+  "name": "@concepta/rockets-storage",
+  "version": "1.0.0-alpha.8",
+  "description": "Provider-neutral object storage and named NestJS stores for Rockets applications",
+  "author": "Concepta",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "require": "./dist/core/index.js",
+      "import": "./dist/core/index.js"
+    },
+    "./files-sdk": {
+      "types": "./dist/files-sdk/index.d.ts",
+      "require": "./dist/files-sdk/index.js",
+      "import": "./dist/files-sdk/index.js"
+    },
+    "./files-sdk/fs": {
+      "types": "./dist/files-sdk/fs/index.d.ts",
+      "require": "./dist/files-sdk/fs/index.js",
+      "import": "./dist/files-sdk/fs/index.js"
+    },
+    "./files-sdk/provider": {
+      "types": "./dist/files-sdk/provider/index.d.ts",
+      "require": "./dist/files-sdk/provider/index.js",
+      "import": "./dist/files-sdk/provider/index.js"
+    },
+    "./files-sdk/s3": {
+      "types": "./dist/files-sdk/s3/index.d.ts",
+      "require": "./dist/files-sdk/s3/index.js",
+      "import": "./dist/files-sdk/s3/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "require": "./dist/testing/index.js",
+      "import": "./dist/testing/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "core": [
+        "dist/core/index.d.ts"
+      ],
+      "files-sdk": [
+        "dist/files-sdk/index.d.ts"
+      ],
+      "files-sdk/fs": [
+        "dist/files-sdk/fs/index.d.ts"
+      ],
+      "files-sdk/s3": [
+        "dist/files-sdk/s3/index.d.ts"
+      ],
+      "files-sdk/provider": [
+        "dist/files-sdk/provider/index.d.ts"
+      ],
+      "testing": [
+        "dist/testing/index.d.ts"
+      ]
+    }
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/conceptadev/rockets.git",
+    "directory": "packages/rockets-storage"
+  },
+  "homepage": "https://github.com/conceptadev/rockets/tree/main/packages/rockets-storage#readme",
+  "bugs": {
+    "url": "https://github.com/conceptadev/rockets/issues"
+  },
+  "engines": {
+    "node": ">=20.19.0 <21 || >=22.12.0"
+  },
+  "files": [
+    "dist/**/!(*.spec|*.e2e-spec|*.fixture).{js,d.ts}",
+    "README.md",
+    "LICENSE.txt",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "tsc -p tsconfig.json",
+    "prepack": "yarn run -T clean && yarn run -T build",
+    "build:watch": "tsc -p tsconfig.json --watch",
+    "test": "cd ../.. && ./node_modules/.bin/vitest run --project unit packages/rockets-storage",
+    "test:watch": "cd ../.. && ./node_modules/.bin/vitest --project unit packages/rockets-storage",
+    "test:e2e": "cd ../.. && ./node_modules/.bin/vitest run --project e2e-packages packages/rockets-storage",
+    "test:e2e:cov": "cd ../.. && ./node_modules/.bin/vitest run --project e2e-packages --coverage packages/rockets-storage",
+    "test:cov": "cd ../.. && ./node_modules/.bin/vitest run --project unit --coverage packages/rockets-storage"
+  },
+  "dependencies": {
+    "files-sdk": "2.2.3"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "3.1103.0",
+    "@aws-sdk/lib-storage": "3.1103.0",
+    "@aws-sdk/s3-presigned-post": "3.1103.0",
+    "@aws-sdk/s3-request-presigner": "3.1103.0",
+    "@nestjs/common": "12.0.0-alpha.5",
+    "@nestjs/core": "12.0.0-alpha.5",
+    "@nestjs/platform-express": "12.0.0-alpha.5",
+    "@nestjs/swagger": "12.0.0-alpha.2",
+    "@nestjs/testing": "12.0.0-alpha.5",
+    "@types/supertest": "7.2.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "supertest": "7.2.2",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-s3": "^3.919.0",
+    "@aws-sdk/lib-storage": "^3.700.0",
+    "@aws-sdk/s3-presigned-post": "^3.700.0",
+    "@aws-sdk/s3-request-presigner": "^3.700.0",
+    "@nestjs/common": "^12.0.0-alpha.5",
+    "@nestjs/core": "^12.0.0-alpha.5",
+    "reflect-metadata": "^0.1.13 || ^0.2.0",
+    "rxjs": "^7.8.1"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": {
+      "optional": true
+    },
+    "@aws-sdk/lib-storage": {
+      "optional": true
+    },
+    "@aws-sdk/s3-presigned-post": {
+      "optional": true
+    },
+    "@aws-sdk/s3-request-presigner": {
+      "optional": true
+    },
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/core": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    },
+    "rxjs": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "nestjs",
+    "rockets",
+    "storage",
+    "object-storage",
+    "s3",
+    "gcs",
+    "azure",
+    "uploads"
+  ],
+  "stableVersion": "0.0.1-dev.0"
+}

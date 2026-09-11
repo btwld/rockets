@@ -41,6 +41,44 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
   HTTP_GATEWAY_TIMEOUT`, and is logged at `warn` rather than as an
   unhandled 5xx with a stack.
 
+- **Provider-neutral object storage package.** Added
+  `@concepta/rockets-storage` with a framework-neutral driver/client contract,
+  named NestJS stores, streaming and explicitly bounded reads, structured
+  signed transfers, normalized errors, exact conditional-operation
+  capabilities, hardened Files SDK filesystem/S3 wrappers, runtime provider
+  selection,
+  an in-memory test driver, and reusable provider conformance cases. The
+  package implements issue #106 and complements issue #86 without adding
+  multipart parsing or provider SDK dependencies to `rockets-core`.
+  `examples/sample-server` consumes it for real, in two shapes: pet photos
+  (small uploads, a signed-download capability gate, owner-scoped keys) and
+  pet documents (two named stores, streamed reads, byte ranges, bulk
+  delete, and cross-store archival). Building those surfaced the
+  `typesVersions` gap and the web/Node stream interop gap below.
+  Signed downloads fail closed: `signDownload` rejects a requested
+  `expiresIn` with `NOT_SUPPORTED` unless the store advertises
+  `signedDownloadPolicy.expiresIn`, instead of minting a URL that ignores it.
+  Whether a signed URL honors the requested expiry is a per-provider detail
+  no capability can infer, so **only the S3 adapter advertises the guarantee
+  today** — every other provider (GCS, Azure, R2 and other S3-compatible
+  endpoints via the runtime provider entry point, the filesystem driver,
+  third-party drivers) now rejects `expiresIn` until its adapter declares it;
+  `signDownload` without `expiresIn` is unaffected. This closes the case
+  where an S3 store configured with `publicBaseUrl` reported
+  `expiresIn: false` and still returned a permanent public URL for a private
+  object. An expiry outside the positive-integer range, or above the
+  applicable ceiling — the lower of the provider-enforced
+  `signedDownload.maxExpiresIn` and the new adapter-declared
+  `signedDownloadPolicy.maxExpiresIn` (AWS SigV4's 7 days, which the provider
+  documents but does not enforce) — fails with `INVALID_ARGUMENT`. Omitting
+  `expiresIn` falls back to the provider default, which the package now
+  documents rather than sets.
+  `StorageError` raised by a driver now names its `store`, `operation`, and
+  `key` — drivers sanitize those fields out on purpose and the client fills
+  them back in. `sync()` refuses an implicit `compare: 'etag'` across two
+  different drivers, since ETags are opaque per-driver tokens that can never
+  match and would re-upload every object on every run.
+
 - **Background job dispatch port (issue #53).**
   `JobDispatchServiceInterface` (`enqueue` / `claim` / `heartbeat` /
   `complete` / `fail`) under `JOB_DISPATCH_SERVICE_TOKEN` — named tasks

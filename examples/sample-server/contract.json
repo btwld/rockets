@@ -507,6 +507,201 @@
         ],
         "type": "object"
       },
+      "PetDocumentArchiveResultDto": {
+        "additionalProperties": false,
+        "properties": {
+          "archived": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "archived",
+          "skipped"
+        ],
+        "type": "object"
+      },
+      "PetDocumentResponseDto": {
+        "additionalProperties": false,
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "petId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "storageKey": {
+            "type": "string"
+          },
+          "store": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "petId",
+          "title",
+          "storageKey",
+          "contentType",
+          "size",
+          "store",
+          "dateCreated"
+        ],
+        "type": "object"
+      },
+      "PetDocumentUploadDto": {
+        "properties": {
+          "contentType": {
+            "enum": [
+              "application/pdf",
+              "text/plain"
+            ],
+            "type": "string"
+          },
+          "data": {
+            "contentEncoding": "base64",
+            "format": "base64",
+            "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "contentType",
+          "data"
+        ],
+        "type": "object"
+      },
+      "PetPhotoDownloadUrlDto": {
+        "additionalProperties": false,
+        "properties": {
+          "expiresIn": {
+            "description": "Seconds the URL stays valid, or null when the store cannot guarantee an expiry (it then serves a non-expiring URL).",
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "nullable": true,
+            "type": "integer"
+          },
+          "url": {
+            "description": "URL the client can fetch the bytes from.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expiresIn"
+        ],
+        "type": "object"
+      },
+      "PetPhotoResponseDto": {
+        "additionalProperties": false,
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "dateCreated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "petId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "storageKey": {
+            "type": "string"
+          },
+          "uploadedBy": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "petId",
+          "storageKey",
+          "contentType",
+          "size",
+          "uploadedBy",
+          "dateCreated"
+        ],
+        "type": "object"
+      },
+      "PetPhotoUploadDto": {
+        "properties": {
+          "contentType": {
+            "description": "Declared media type; stored with the object.",
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/webp"
+            ],
+            "type": "string"
+          },
+          "data": {
+            "contentEncoding": "base64",
+            "description": "Base64-encoded image bytes.",
+            "format": "base64",
+            "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+            "type": "string"
+          },
+          "filename": {
+            "description": "Original file name, used only for the extension.",
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename",
+          "contentType",
+          "data"
+        ],
+        "type": "object"
+      },
       "PetResponseDto": {
         "additionalProperties": false,
         "properties": {
@@ -3508,6 +3703,406 @@
         "summary": "",
         "tags": [
           "Pets"
+        ]
+      }
+    },
+    "/pets/{petId}/documents": {
+      "delete": {
+        "operationId": "PetDocumentController_removeAll",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete every document of a pet, in both stores",
+        "tags": [
+          "Pet documents"
+        ]
+      },
+      "get": {
+        "operationId": "PetDocumentController_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PetDocumentResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List a pet documents",
+        "tags": [
+          "Pet documents"
+        ]
+      },
+      "post": {
+        "operationId": "PetDocumentController_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetDocumentUploadDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetDocumentResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a document for a pet (owner only)",
+        "tags": [
+          "Pet documents"
+        ]
+      }
+    },
+    "/pets/{petId}/documents/archive": {
+      "post": {
+        "operationId": "PetDocumentController_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetDocumentArchiveResultDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move every live document of a pet to cold storage",
+        "tags": [
+          "Pet documents"
+        ]
+      }
+    },
+    "/pets/{petId}/documents/{documentId}/content": {
+      "get": {
+        "description": "Honors a `bytes=start-end` Range header when the holding store supports range reads.",
+        "operationId": "PetDocumentController_content",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "documentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document bytes"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stream a document, optionally a byte range",
+        "tags": [
+          "Pet documents"
+        ]
+      }
+    },
+    "/pets/{petId}/photos": {
+      "get": {
+        "operationId": "PetPhotoController_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PetPhotoResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List a pet photos (owner only)",
+        "tags": [
+          "Pet photos"
+        ]
+      },
+      "post": {
+        "description": "Bytes are sent base64-encoded in JSON: the storage package adds no multipart parsing, so an app either brings its own middleware or encodes small payloads like this.",
+        "operationId": "PetPhotoController_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetPhotoUploadDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPhotoResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "Pet not found or not owned by you"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a photo for a pet (owner only)",
+        "tags": [
+          "Pet photos"
+        ]
+      }
+    },
+    "/pets/{petId}/photos/{photoId}": {
+      "delete": {
+        "operationId": "PetPhotoController_remove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "photoId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "Photo not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a photo and its stored object",
+        "tags": [
+          "Pet photos"
+        ]
+      }
+    },
+    "/pets/{petId}/photos/{photoId}/raw": {
+      "get": {
+        "description": "For stores with no usable signed URL (the filesystem driver, for one), the app stays the gatekeeper and streams the bytes itself.",
+        "operationId": "PetPhotoController_raw",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "photoId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Raw image bytes"
+          },
+          "404": {
+            "description": "Photo not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Serve the photo bytes through the API",
+        "tags": [
+          "Pet photos"
+        ]
+      }
+    },
+    "/pets/{petId}/photos/{photoId}/url": {
+      "get": {
+        "description": "`expiresIn` is honored only when the configured store advertises that guarantee; the response says which you got.",
+        "operationId": "PetPhotoController_url",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "photoId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetPhotoDownloadUrlDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "Photo not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hand the client a URL for the photo bytes",
+        "tags": [
+          "Pet photos"
         ]
       }
     },

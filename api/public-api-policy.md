@@ -1,11 +1,11 @@
 # Public API Policy
 
-The `exports` maps in the six publishable package manifests define the only
+The `exports` maps in the publishable package manifests define the only
 supported import paths. Deep paths under `src/` or `dist/` are internal unless
 a manifest exposes them explicitly.
 
 [`public-api-reports.json`](public-api-reports.json) is generated from a fresh
-build and records, for all eight TypeScript entry points, every exported name,
+build and records, for every TypeScript entry point, every exported name,
 whether it exists at runtime, its declaration signature, and the same-package
 declarations reachable through that signature. CI byte-compares it, so the
 published surface cannot change unreviewed.

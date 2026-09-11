@@ -24,7 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # The published floor (`engines`), exactly — the example apps and the
-          # packed consumer prove the release on it.
+          # packed consumer prove the release on it. Keep it pinned so the
+          # synchronous require(ESM) compatibility cannot drift.
           node-version: 20.19.0
           cache: yarn
       - uses: actions/setup-java@v4
@@ -42,6 +43,10 @@ jobs:
         run: corepack yarn install --immutable
       - name: Build
         run: corepack yarn build
+      - name: Storage tests on Node 20.19
+        run: |
+          corepack yarn workspace @concepta/rockets-storage test
+          corepack yarn workspace @concepta/rockets-storage test:e2e
       - name: Package artifacts and clean-consumer contracts
         run: corepack yarn release:packages
       - name: Firestore emulator suite
