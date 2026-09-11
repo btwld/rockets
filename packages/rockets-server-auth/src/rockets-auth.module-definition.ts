@@ -307,6 +307,9 @@ function definitionTransform(
         RocketsAuthInvitationAcceptanceModule.forRoot({
           userCrud,
           imports: [rateLimitModule],
+          ...(extras.invitation?.onboardingService !== undefined && {
+            onboardingService: extras.invitation.onboardingService,
+          }),
         }),
       );
     }

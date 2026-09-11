@@ -26,7 +26,6 @@ import {
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { AuthPublic } from '@concepta/nestjs-authentication';
 import {
-  AcceptInvitationCommand,
   FindInvitationByCodeQuery,
   InvitationAlreadyAcceptedException,
   InvitationNotFoundException,
@@ -52,6 +51,7 @@ import {
   RocketsAuthInvitationRevokedException,
 } from '../../../domain/exceptions/invitation.exception';
 import { RocketsInviteUserByEmailCommand } from '../../../application/commands/impl/invite-user-by-email.command';
+import { RocketsAcceptInvitationCommand } from '../../../application/commands/impl/accept-invitation.command';
 import type {
   InvitationAcceptanceControllerExtras,
   InvitationControllerExtras,
@@ -154,7 +154,7 @@ export function buildInvitationAcceptanceController(
       let result: Invitation | null;
       try {
         result = await this.commandBus.execute(
-          new AcceptInvitationCommand(ctx, code, { passcode, payload }),
+          new RocketsAcceptInvitationCommand(ctx, code, { passcode, payload }),
         );
       } catch (error) {
         // Upstream raises these without an HTTP status (→ 500).

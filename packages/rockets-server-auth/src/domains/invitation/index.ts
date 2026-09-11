@@ -40,7 +40,7 @@ export {
 // Modules
 export {
   RocketsAuthInvitationAcceptanceModule,
-  type InvitationAcceptedEventHandler,
+  type InvitationUserOnboardingServiceClass,
 } from './modules/rockets-auth-invitation-acceptance.module';
 
 // Exceptions
@@ -56,8 +56,18 @@ export {
   RocketsAuthInvitationCreationFailedException,
   RocketsAuthInvitationSendFailedException,
   RocketsAuthInvitationNotAcceptedException,
+  RocketsAuthInvitationUserMissingException,
 } from './domain/exceptions/invitation.exception';
 
 // Application — Commands
 export { RocketsInviteUserByEmailCommand } from './application/commands/impl/invite-user-by-email.command';
 export { RocketsInviteUserByEmailHandler } from './application/commands/handlers/invite-user-by-email.handler';
+export { RocketsAcceptInvitationCommand } from './application/commands/impl/accept-invitation.command';
+export { RocketsAcceptInvitationHandler } from './application/commands/handlers/accept-invitation.handler';
+
+// Application — Services
+export {
+  INVITATION_USER_ONBOARDING_SERVICE_TOKEN,
+  InvitationUserOnboardingService,
+  type InvitationUserOnboardingServiceInterface,
+} from './application/services/invitation-user-onboarding.service';

@@ -1166,6 +1166,12 @@
         "signature": "export declare class GetUserQuery {\n    readonly ctx: PlainLiteralObject;\n    readonly id: ReferenceId;\n    constructor(ctx: PlainLiteralObject, id: ReferenceId);\n}"
       },
       {
+        "name": "INVITATION_USER_ONBOARDING_SERVICE_TOKEN",
+        "kind": "value",
+        "runtime": true,
+        "signature": "INVITATION_USER_ONBOARDING_SERVICE_TOKEN: unique symbol"
+      },
+      {
         "name": "InvitationAcceptanceControllerExtras",
         "kind": "interface",
         "runtime": false,
@@ -1176,12 +1182,6 @@
         "kind": "interface",
         "runtime": false,
         "signature": "export interface InvitationAcceptanceDataInterface extends Record<string, unknown> {\n    password?: string;\n    userMetadata?: RocketsAuthUserMetadataUpdatableInterface;\n}"
-      },
-      {
-        "name": "InvitationAcceptedEventHandler",
-        "kind": "type",
-        "runtime": false,
-        "signature": "export type InvitationAcceptedEventHandler = Type<IEventHandler<InvitationAcceptedEvent>>;"
       },
       {
         "name": "InvitationControllerExtras",
@@ -1212,6 +1212,24 @@
         "kind": "interface",
         "runtime": false,
         "signature": "export interface InvitationRouteExtras extends RocketsAuthRouteExtrasBase {\n}"
+      },
+      {
+        "name": "InvitationUserOnboardingService",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class InvitationUserOnboardingService implements InvitationUserOnboardingServiceInterface {\n    protected readonly userModelService: RocketsAuthUserPortService;\n    protected readonly commandBus: CommandBus;\n    protected readonly settings: RocketsAuthSettingsInterface;\n    protected readonly config: InvitationAcceptanceConfig;\n    protected readonly logger: Logger;\n    constructor(userModelService: RocketsAuthUserPortService, commandBus: CommandBus, settings: RocketsAuthSettingsInterface, config: InvitationAcceptanceConfig);\n    onAccepted(ctx: PlainLiteralObject, invitation: InvitationAcceptedEvent['invitation'], payload?: InvitationAcceptedEvent['payload']): Promise<void>;\n    private extractAcceptedData;\n    private ensureUserExists;\n    private updateUserActivation;\n    private setPassword;\n    private updateUserMetadata;\n    private assignUserRole;\n    private logAcceptanceSuccess;\n}"
+      },
+      {
+        "name": "InvitationUserOnboardingServiceClass",
+        "kind": "type",
+        "runtime": false,
+        "signature": "export type InvitationUserOnboardingServiceClass = Type<InvitationUserOnboardingServiceInterface>;"
+      },
+      {
+        "name": "InvitationUserOnboardingServiceInterface",
+        "kind": "interface",
+        "runtime": false,
+        "signature": "export interface InvitationUserOnboardingServiceInterface {\n    onAccepted(ctx: PlainLiteralObject, invitation: InvitationAcceptedEvent['invitation'], payload?: InvitationAcceptedEvent['payload']): Promise<void>;\n}"
       },
       {
         "name": "MePasswordControllerExtras",
@@ -1284,6 +1302,18 @@
         "kind": "value",
         "runtime": true,
         "signature": "ROLE_CRUD_ENTITY_KEY: \"role\""
+      },
+      {
+        "name": "RocketsAcceptInvitationCommand",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class RocketsAcceptInvitationCommand extends Command<Invitation | null> {\n    readonly ctx: PlainLiteralObject;\n    readonly code: string;\n    readonly dto: {\n        readonly passcode: string;\n        readonly payload?: PlainLiteralObject;\n    };\n    constructor(ctx: PlainLiteralObject, code: string, dto: {\n        readonly passcode: string;\n        readonly payload?: PlainLiteralObject;\n    });\n}"
+      },
+      {
+        "name": "RocketsAcceptInvitationHandler",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class RocketsAcceptInvitationHandler implements ICommandHandler<RocketsAcceptInvitationCommand, Invitation | null> {\n    private readonly commandBus;\n    private readonly txScope;\n    private readonly onboarding;\n    constructor(commandBus: CommandBus, txScope: TransactionScope, onboarding: InvitationUserOnboardingServiceInterface);\n    execute(command: RocketsAcceptInvitationCommand): Promise<Invitation | null>;\n}"
       },
       {
         "name": "RocketsAuthAdminModule",
@@ -1376,6 +1406,12 @@
         "signature": "export declare class RocketsAuthInvitationUnauthorizedException extends RocketsAuthInvitationException {\n    constructor(options?: RuntimeExceptionOptions);\n}"
       },
       {
+        "name": "RocketsAuthInvitationUserMissingException",
+        "kind": "class",
+        "runtime": true,
+        "signature": "export declare class RocketsAuthInvitationUserMissingException extends RocketsAuthInvitationException {\n    constructor(options?: RuntimeExceptionOptions);\n}"
+      },
+      {
         "name": "RocketsAuthMethodDecorator",
         "kind": "type",
         "runtime": false,
@@ -1397,7 +1433,7 @@
         "name": "RocketsAuthOptionsExtrasInterface",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface RocketsAuthOptionsExtrasInterface extends Pick<DynamicModule, 'global' | 'controllers'> {\n    user?: {\n        imports: DynamicModule['imports'];\n    };\n    auth?: {\n        imports?: DynamicModule['imports'];\n        controller?: MePasswordControllerExtras;\n        appGuard?: false | CanActivate;\n        guards?: AuthenticationOptionsExtrasInterface['guards'];\n    };\n    otp?: {\n        imports?: DynamicModule['imports'];\n        controller?: OtpControllerExtras;\n    };\n    federated?: {\n        imports: DynamicModule['imports'];\n    };\n    role?: RoleExtrasInterface & {\n        imports: DynamicModule['imports'];\n    };\n    userCrud?: UserCrudOptionsExtrasInterface;\n    roleCrud?: RoleCrudOptionsExtrasInterface;\n    accessControl?: AccessControlOptionsInterface & {\n        imports?: DynamicModule['imports'];\n        queryServices?: Provider<CanAccess>[];\n    };\n    disableController?: DisableControllerOptionsInterface;\n    throttling?: false | RocketsAuthThrottlingOptions;\n    invitation?: {\n        imports?: DynamicModule['imports'];\n        controllers?: InvitationDomainControllerExtras;\n    };\n    ports?: RocketsAuthPortsConfigInterface;\n}"
+        "signature": "export interface RocketsAuthOptionsExtrasInterface extends Pick<DynamicModule, 'global' | 'controllers'> {\n    user?: {\n        imports: DynamicModule['imports'];\n    };\n    auth?: {\n        imports?: DynamicModule['imports'];\n        controller?: MePasswordControllerExtras;\n        appGuard?: false | CanActivate;\n        guards?: AuthenticationOptionsExtrasInterface['guards'];\n    };\n    otp?: {\n        imports?: DynamicModule['imports'];\n        controller?: OtpControllerExtras;\n    };\n    federated?: {\n        imports: DynamicModule['imports'];\n    };\n    role?: RoleExtrasInterface & {\n        imports: DynamicModule['imports'];\n    };\n    userCrud?: UserCrudOptionsExtrasInterface;\n    roleCrud?: RoleCrudOptionsExtrasInterface;\n    accessControl?: AccessControlOptionsInterface & {\n        imports?: DynamicModule['imports'];\n        queryServices?: Provider<CanAccess>[];\n    };\n    disableController?: DisableControllerOptionsInterface;\n    throttling?: false | RocketsAuthThrottlingOptions;\n    invitation?: {\n        imports?: DynamicModule['imports'];\n        controllers?: InvitationDomainControllerExtras;\n        onboardingService?: InvitationUserOnboardingServiceClass;\n    };\n    ports?: RocketsAuthPortsConfigInterface;\n}"
       },
       {
         "name": "RocketsAuthOptionsInterface",
@@ -4370,6 +4406,14 @@
         "signature": "type EmailRecipient = EmailAddress | EmailAddress[];",
         "referencedBy": [
           "EmailSendOptionsInterface"
+        ]
+      },
+      {
+        "name": "InvitationAcceptanceConfig",
+        "kind": "interface",
+        "signature": "export interface InvitationAcceptanceConfig {\n    userMetadataUpdateSchema: z.ZodType;\n}",
+        "referencedBy": [
+          "InvitationUserOnboardingService"
         ]
       },
       {

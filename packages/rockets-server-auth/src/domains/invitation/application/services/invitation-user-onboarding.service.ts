@@ -5,10 +5,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { PlainLiteralObject } from '@nestjs/common';
-import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { CommandBus } from '@nestjs/cqrs';
 
 import { AssignRoleCommand } from '@concepta/nestjs-role';
-import { InvitationAcceptedEvent } from '@concepta/nestjs-invitation';
+import type { InvitationAcceptedEvent } from '@concepta/nestjs-invitation';
+import { validateWithSchema } from '@concepta/rockets-core';
 
 import {
   RocketsAuthUserPortService,
@@ -24,15 +25,34 @@ import { AssignDefaultRoleCommand } from '../../../user/application/commands/imp
 import { SaveUserMetadataCommand } from '../../../user/application/commands/impl/save-user-metadata.command';
 import { RocketsAuthUserMetadataUpdatableInterface } from '../../../user/interfaces/rockets-auth-user-metadata-updatable.interface';
 import { InvitationAcceptanceDataInterface } from '../../interfaces/invitation-acceptance-data.interface';
+import { RocketsAuthInvitationUserMissingException } from '../../domain/exceptions/invitation.exception';
 import {
   InvitationAcceptanceConfig,
   INVITATION_ACCEPTANCE_CONFIG_TOKEN,
 } from '../../infrastructure/config/invitation-acceptance.config';
-import {
-  AppContextHost,
-  validateWithSchema,
-  TransactionScope,
-} from '@concepta/rockets-core';
+
+export const INVITATION_USER_ONBOARDING_SERVICE_TOKEN = Symbol(
+  '__ROCKETS_INVITATION_USER_ONBOARDING_SERVICE_TOKEN__',
+);
+
+/**
+ * Onboards the invited account once the invitation is accepted.
+ *
+ * Runs INSIDE the acceptance transaction (see
+ * `RocketsAcceptInvitationHandler`), so it takes the caller's `ctx` and
+ * never opens a scope of its own, and it never swallows: a failure here
+ * rolls the acceptance back, leaving the invitation pending so the invitee
+ * can retry. It used to be a post-commit `InvitationAcceptedEvent` listener
+ * that logged its failures, which burned the invitation and left the
+ * account inactive with no way back.
+ */
+export interface InvitationUserOnboardingServiceInterface {
+  onAccepted(
+    ctx: PlainLiteralObject,
+    invitation: InvitationAcceptedEvent['invitation'],
+    payload?: InvitationAcceptedEvent['payload'],
+  ): Promise<void>;
+}
 
 /**
  * A validated metadata patch is an object by construction (the schema
@@ -49,113 +69,87 @@ function toMetadataPatch(
 }
 
 /**
- * Invitation User Acceptance Listener
- * Handles CQRS {@link InvitationAcceptedEvent} from `@concepta/nestjs-invitation` v8:
- * - Hashes password if provided
- * - Creates or updates user metadata (always validated with the update
+ * Default {@link InvitationUserOnboardingServiceInterface}:
+ * - activates the invited account
+ * - sets the supplied password through the user-credentials port
+ * - creates or updates user metadata (always validated with the update
  *   schema — the app's, or the base default that strips every key)
- * - Assigns role (from invitation.constraints.roleId set at creation, or default role)
+ * - assigns the role from `invitation.constraints.roleId`, else the default
  *
  * SECURITY:
- * - Role assignment is admin-controlled via invitation.constraints.roleId
- * - Only userMetadata is updatable by user (validated with the update schema;
- *   there is no unvalidated path, so a smuggled `userId` never reaches the row)
+ * - Role assignment is admin-controlled via `invitation.constraints.roleId`
+ * - Only `userMetadata` is updatable by the invitee (validated with the
+ *   update schema; there is no unvalidated path, so a smuggled `userId`
+ *   never reaches the row)
  * - User fields (active, email, username) are blocked from user updates
  */
 @Injectable()
-@EventsHandler(InvitationAcceptedEvent)
-export class InvitationUserAcceptanceListener
-  implements IEventHandler<InvitationAcceptedEvent>
+export class InvitationUserOnboardingService
+  implements InvitationUserOnboardingServiceInterface
 {
-  public readonly logger = new Logger(InvitationUserAcceptanceListener.name);
+  protected readonly logger = new Logger(InvitationUserOnboardingService.name);
 
   constructor(
     @Inject(ROCKETS_AUTH_USER_PORT_TOKEN)
-    public readonly userModelService: RocketsAuthUserPortService,
-    public readonly commandBus: CommandBus,
+    protected readonly userModelService: RocketsAuthUserPortService,
+    protected readonly commandBus: CommandBus,
     @Inject(ROCKETS_AUTH_MODULE_OPTIONS_DEFAULT_SETTINGS_TOKEN)
-    public readonly settings: RocketsAuthSettingsInterface,
+    protected readonly settings: RocketsAuthSettingsInterface,
     @Inject(INVITATION_ACCEPTANCE_CONFIG_TOKEN)
-    public readonly config: InvitationAcceptanceConfig,
-    private readonly txScope: TransactionScope,
+    protected readonly config: InvitationAcceptanceConfig,
   ) {}
 
-  async handle(event: InvitationAcceptedEvent): Promise<void> {
-    const invitation = event.invitation;
-    const acceptanceData = event.payload as
-      | InvitationAcceptanceDataInterface
-      | undefined;
-
+  async onAccepted(
+    ctx: PlainLiteralObject,
+    invitation: InvitationAcceptedEvent['invitation'],
+    payload?: InvitationAcceptedEvent['payload'],
+  ): Promise<void> {
     if (invitation.category !== 'user') {
       return;
     }
 
-    // Wrap the full acceptance flow in a single repository transaction so
-    // failures after `updateUserActivation` roll back the activation rather
-    // than leaving the user half-onboarded (active=true, no metadata, no
-    // role). The outer catch keeps the event-listener contract (don't
-    // re-throw — other listeners on the same event still get to run).
-    const ctx = new AppContextHost();
-    try {
-      await this.txScope.run(ctx, async (txCtx) => {
-        const { password, userMetadata } =
-          this.extractAcceptedData(acceptanceData);
+    const { password, userMetadata } = this.extractAcceptedData(
+      payload as InvitationAcceptanceDataInterface | undefined,
+    );
 
-        const userExists = await this.ensureUserExists({
-          ctx: txCtx,
-          userId: invitation.userId,
-          invitationId: invitation.id,
-        });
-        if (!userExists) return;
+    await this.ensureUserExists(ctx, invitation.userId);
+    await this.updateUserActivation(ctx, invitation.userId);
+    await this.setPassword(ctx, invitation.userId, password);
+    await this.updateUserMetadata({
+      ctx,
+      userId: invitation.userId,
+      userMetadata,
+    });
 
-        await this.updateUserActivation(txCtx, invitation.userId);
-        await this.setPassword(txCtx, invitation.userId, password);
+    const allowedRoleId = invitation.constraints?.roleId as string | undefined;
+    await this.assignUserRole(ctx, invitation.userId, allowedRoleId);
 
-        await this.updateUserMetadata({
-          ctx: txCtx,
-          userId: invitation.userId,
-          userMetadata,
-        });
-
-        const allowedRoleId = invitation.constraints?.roleId as
-          | string
-          | undefined;
-        await this.assignUserRole(txCtx, invitation.userId, allowedRoleId);
-        this.logAcceptanceSuccess({
-          invitationId: invitation.id,
-          userId: invitation.userId,
-          category: invitation.category,
-          roleId: allowedRoleId,
-        });
-      });
-    } catch (error) {
-      this.logger.error('Failed to process invitation acceptance', {
-        invitationId: invitation.id,
-        userId: invitation.userId,
-        category: invitation.category,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    this.logAcceptanceSuccess({
+      invitationId: invitation.id,
+      userId: invitation.userId,
+      category: invitation.category,
+      roleId: allowedRoleId,
+    });
   }
 
   private extractAcceptedData(data: InvitationAcceptanceDataInterface = {}) {
     return { password: data.password, userMetadata: data.userMetadata };
   }
 
-  private async ensureUserExists(options: {
-    ctx: PlainLiteralObject;
-    userId: string;
-    invitationId: string;
-  }): Promise<boolean> {
-    const user = await this.userModelService.byId(options.ctx, options.userId);
+  /**
+   * The invitation row points at a user that must exist — creation happens
+   * at invite time, in the invitation's own transaction. A missing user is
+   * a broken invariant, not a branch to log past.
+   */
+  private async ensureUserExists(
+    ctx: PlainLiteralObject,
+    userId: string,
+  ): Promise<void> {
+    const user = await this.userModelService.byId(ctx, userId);
     if (!user) {
-      this.logger.error('User not found for invitation', {
-        userId: options.userId,
-        invitationId: options.invitationId,
-      });
-      return false;
+      this.logger.error('User not found for accepted invitation', { userId });
+      throw new RocketsAuthInvitationUserMissingException();
     }
-    return true;
   }
 
   private async updateUserActivation(
@@ -191,8 +185,6 @@ export class InvitationUserAcceptanceListener
     const { ctx, userId, userMetadata } = options;
     if (!userMetadata || Object.keys(userMetadata).length === 0) return;
 
-    // Let `validateWithSchema`'s 400 propagate — the outer `txScope.run`
-    // rolls back, and the outer catch logs.
     const metadata = toMetadataPatch(
       await validateWithSchema(
         this.config.userMetadataUpdateSchema,

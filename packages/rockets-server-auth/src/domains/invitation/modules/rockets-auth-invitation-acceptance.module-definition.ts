@@ -4,13 +4,15 @@ import {
   Provider,
   Type,
 } from '@nestjs/common';
-import { IEventHandler } from '@nestjs/cqrs';
-import { InvitationAcceptedEvent } from '@concepta/nestjs-invitation';
-
 import { UserCrudOptionsExtrasInterface } from '../../../shared/interfaces/rockets-auth-options-extras.interface';
 import { buildInvitationAcceptanceController } from '../gateways/http/factories/build-invitation-controllers';
 import { InvitationAcceptanceControllerExtras } from '../interfaces/invitation-controller-extras.interface';
-import { InvitationUserAcceptanceListener } from '../application/listeners/invitation-user-acceptance.listener';
+import {
+  INVITATION_USER_ONBOARDING_SERVICE_TOKEN,
+  InvitationUserOnboardingService,
+  type InvitationUserOnboardingServiceInterface,
+} from '../application/services/invitation-user-onboarding.service';
+import { RocketsAcceptInvitationHandler } from '../application/commands/handlers/accept-invitation.handler';
 import { resolveUserMetadataSchemas } from '../../user/infrastructure/schemas/rockets-auth-user-metadata.schema';
 import {
   INVITATION_ACCEPTANCE_CONFIG_TOKEN,
@@ -21,14 +23,16 @@ export const RAW_INVITATION_ACCEPTANCE_OPTIONS_TOKEN = Symbol(
   '__ROCKETS_INVITATION_ACCEPTANCE_MODULE_RAW_OPTIONS_TOKEN__',
 );
 
-export type InvitationAcceptedEventHandler = Type<
-  IEventHandler<InvitationAcceptedEvent>
->;
+export type InvitationUserOnboardingServiceClass =
+  Type<InvitationUserOnboardingServiceInterface>;
 
 export interface InvitationAcceptanceOptionsInterface {
   userCrud?: UserCrudOptionsExtrasInterface;
-  /** Override {@link InvitationUserAcceptanceListener} with your own CQRS event handler. */
-  listenerService?: InvitationAcceptedEventHandler;
+  /**
+   * Override {@link InvitationUserOnboardingService}. It runs inside the
+   * acceptance transaction, so anything it throws rolls the acceptance back.
+   */
+  onboardingService?: InvitationUserOnboardingServiceClass;
   /** Acceptance controller customization (decorators, hooks). */
   controller?: InvitationAcceptanceControllerExtras;
 }
@@ -92,8 +96,8 @@ function createInvitationAcceptanceProviders(options: {
   extras?: Partial<InvitationAcceptanceExtrasInterface>;
 }): Provider[] {
   const { extras } = options;
-  const ListenerClass =
-    extras?.listenerService ?? InvitationUserAcceptanceListener;
+  const OnboardingClass =
+    extras?.onboardingService ?? InvitationUserOnboardingService;
 
   return [
     ...options.providers,
@@ -110,9 +114,15 @@ function createInvitationAcceptanceProviders(options: {
         ).updateSchema,
       }),
     },
-    // Never alias the listener under a second token: Nest CQRS registers an
-    // @EventsHandler once per provider wrapper holding its instance, so an
-    // alias delivers every InvitationAcceptedEvent twice.
-    ListenerClass,
+    // Safe to alias now that onboarding is a plain service: the old
+    // listener carried @EventsHandler, and Nest CQRS registers one of those
+    // per provider wrapper holding the instance, so a second token used to
+    // deliver every InvitationAcceptedEvent twice.
+    OnboardingClass,
+    {
+      provide: INVITATION_USER_ONBOARDING_SERVICE_TOKEN,
+      useExisting: OnboardingClass,
+    },
+    RocketsAcceptInvitationHandler,
   ];
 }

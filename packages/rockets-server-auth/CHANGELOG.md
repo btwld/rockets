@@ -64,8 +64,29 @@ and this project adheres to
 - `RocketsAuthInvitationResponseDto` no longer carries `emailSent` /
   `emailError`: the invitation email is dispatched from the transaction's
   commit hook, after the response is built, so the route cannot know the
-  delivery outcome. Delivery failures are logged by the email handler; use
-  `POST /admin/invitations/:code/reattempt` to re-send.
+  delivery outcome. `SendInvitationEmailHandler` and
+  `SendAcceptedEmailHandler` now catch and log delivery failures — the
+  recipient lookup included — with `invitationId` and `userId`. Reached from
+  a commit hook, an escaping error was caught by Nest CQRS's EventBus and
+  logged as `"InvitationDispatchedListener" has thrown an unhandled
+  exception`: no invitation, no recipient, and nothing subscribed to its
+  `UnhandledExceptionBus`. Use `POST /admin/invitations/:code/reattempt` to
+  re-send.
+
+- **Invitation onboarding is a service inside the acceptance transaction,
+  not a post-commit event listener.** `InvitationUserAcceptanceListener`
+  becomes `InvitationUserOnboardingService`
+  (`onAccepted(ctx, invitation, payload)`, no `@EventsHandler`), and the
+  `RocketsAuthInvitationAcceptanceModule` option `listenerService` becomes
+  `onboardingService` — the exported type `InvitationAcceptedEventHandler`
+  is replaced by `InvitationUserOnboardingServiceClass`
+  (`Type<InvitationUserOnboardingServiceInterface>`, DI-constructed). The
+  chosen class is aliased to `INVITATION_USER_ONBOARDING_SERVICE_TOKEN`,
+  which is how the accept handler resolves it. It receives the acceptance
+  transaction's context and MUST NOT swallow — what it throws rolls the
+  acceptance back. Supply it through `RocketsAuthModule` as
+  `invitationAcceptance: { onboardingService }`, or register
+  `RocketsAuthInvitationAcceptanceModule` yourself.
 - Authentication is now fail-closed on `active`: a user authenticates only when
   `active === true`. Deactivated users are rejected on both access and refresh
   tokens, and any persisted row with `active` unset/null (or an admin-created
@@ -258,6 +279,20 @@ and this project adheres to
   - Acceptance sets the password through the same set-password port as
     recovery (user credentials); it used to write v7-style `passwordHash`
     columns onto the user row, which v8 login never reads.
+  - **A failed onboarding no longer burns the invitation.** Upstream commits
+    the acceptance and announces it with a post-commit
+    `InvitationAcceptedEvent`, so the listener that activated the account,
+    set the password, saved metadata and assigned the role ran in its own
+    context, outside that transaction — and caught everything it hit. Any
+    failure (a password-history violation on a re-invited account, a role
+    or metadata error) left the route answering 2xx, the invitation marked
+    accepted, and the account inactive with no password; re-accepting then
+    answers 409, so the invitee had no way back and only a log line
+    recorded it. `RocketsAcceptInvitationCommand` now opens the scope that
+    upstream's own `txScope.run` joins and runs onboarding inside it, so a
+    failure rolls back the acceptance AND the consumed passcode — the
+    invitee retries with the passcode they already have. Covered by an e2e
+    that makes onboarding throw and then accepts again.
 - **Admin user / role update bodies are validated again.** Both admin CRUD
   modules declared the update body at controller level; upstream stamps the
   validation pipe from the OPERATION-level body only, so `PATCH /admin/users/:id`
@@ -273,8 +308,12 @@ and this project adheres to
 ### Removed
 
 - `INVITATION_ACCEPTANCE_LISTENER_TOKEN` (an alias of the acceptance
-  listener provider; see the double-delivery fix). Inject the listener
-  class, or the class passed as `listenerService`, directly.
+  listener provider; see the double-delivery fix). Aliasing was unsafe only
+  while the provider carried `@EventsHandler` — Nest CQRS registers one of
+  those per provider wrapper holding the instance, so the alias delivered
+  every event twice. Onboarding is a plain service now, and its replacement
+  alias `INVITATION_USER_ONBOARDING_SERVICE_TOKEN` is how the accept handler
+  resolves it.
 - Dead dependencies: `jsonwebtoken`, `passport`, `passport-jwt`,
   `passport-strategy`, `@nestjs/jwt`, `accesscontrol` were declared but never
   imported — upstream `@concepta/nestjs-authentication` /

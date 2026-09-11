@@ -34,4 +34,4 @@ export class RocketsAuthInvitationAcceptanceModule extends RocketsAuthInvitation
 }
 
 // Re-export for convenience
-export { type InvitationAcceptedEventHandler } from './rockets-auth-invitation-acceptance.module-definition';
+export { type InvitationUserOnboardingServiceClass } from './rockets-auth-invitation-acceptance.module-definition';
