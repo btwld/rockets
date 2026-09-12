@@ -1,5 +1,7 @@
 import { Logger, PlainLiteralObject } from '@nestjs/common';
 import { Command, CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+
+import { SampleNotificationSendFailedListener } from './notification-send-failed.listener';
 import type { ReferenceEmail } from '@concepta/nestjs-core';
 import type {
   SendPasswordUpdatedNotificationCommandInterface,
@@ -139,4 +141,8 @@ export const SAMPLE_NOTIFICATION_HANDLERS = [
   SampleSendRecoverPasswordHandler,
   SampleSendPasswordUpdatedHandler,
   SampleSendVerifyHandler,
+  // Not a sender: the subscriber that hears about the ones that failed.
+  SampleNotificationSendFailedListener,
 ];
+
+export { SampleNotificationSendFailedListener };
