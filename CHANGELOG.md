@@ -529,6 +529,14 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
     claimed guarantee is worse than none. `OptimisticLockException` (409,
     `OPTIMISTIC_LOCK_CONFLICT`) is re-exported from `@concepta/rockets-core`
     so apps can catch it.
+  - Signup no longer depends on a rollback to undo a rejected password.
+    Upstream used to save the user row and only then validate strength, so a
+    weak password left a credential-less account squatting the email and
+    username on any adapter with no transaction factory. The strength check
+    and hash run before the write now. Both adapters this repo ships
+    register factories, so the rollback was already masking it here — the
+    e2e in `domains/user/__tests__/signup-password-atomicity.e2e-spec.ts`
+    pins the guarantee and says so rather than claiming to catch the bug.
   - Invitation email failures publish upstream's
     `NotificationSendFailedEvent` instead of only logging. alpha.11 added it
     for the verify and recovery ports, which hit the same wall invitations
