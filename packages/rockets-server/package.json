@@ -60,7 +60,7 @@
     "test:cov": "cd ../.. && ./node_modules/.bin/vitest run --project unit --coverage packages/rockets-server"
   },
   "dependencies": {
-    "@concepta/nestjs-core": "8.0.0-alpha.10",
+    "@concepta/nestjs-core": "8.0.0-alpha.11",
     "@concepta/rockets-core": "workspace:^",
     "@nestjs/common": "12.0.1",
     "@nestjs/core": "12.0.1",
@@ -69,7 +69,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@concepta/nestjs-crud": "8.0.0-alpha.10",
+    "@concepta/nestjs-crud": "8.0.0-alpha.11",
     "@concepta/rockets-repository-typeorm": "workspace:^",
     "@nestjs/platform-express": "12.0.1",
     "@nestjs/testing": "12.0.1",

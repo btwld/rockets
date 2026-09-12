@@ -1,4 +1,5 @@
 import { PlainLiteralObject } from '@nestjs/common';
+import { Command } from '@nestjs/cqrs';
 import {
   SendInvitationNotificationCommandInterface,
   SendAcceptedNotificationCommandInterface,
@@ -17,6 +18,7 @@ import type { InvitationEventPayloadInterface } from '@concepta/nestjs-invitatio
  * `RocketsAuthSettingsInterface.email`.
  */
 export class SendInvitationEmailCommand
+  extends Command<void>
   implements SendInvitationNotificationCommandInterface
 {
   readonly ctx: PlainLiteralObject;
@@ -30,6 +32,7 @@ export class SendInvitationEmailCommand
     passcode: string;
     tokenExp: Date;
   }) {
+    super();
     this.ctx = params.ctx;
     this.invitation = params.invitation;
     this.passcode = params.passcode;
@@ -45,6 +48,7 @@ export class SendInvitationEmailCommand
  * `ports.notification.sendAcceptedCommand`.
  */
 export class SendAcceptedEmailCommand
+  extends Command<void>
   implements SendAcceptedNotificationCommandInterface
 {
   readonly ctx: PlainLiteralObject;
@@ -54,6 +58,7 @@ export class SendAcceptedEmailCommand
     ctx: PlainLiteralObject;
     invitation: InvitationEventPayloadInterface;
   }) {
+    super();
     this.ctx = params.ctx;
     this.invitation = params.invitation;
   }

@@ -137,12 +137,18 @@ const date = (o: FieldOpts = {}) =>
     o,
   );
 
-/** Optimistic-lock counter — excluded from create/update DTOs. */
+/**
+ * Optimistic-lock counter — excluded from create/update DTOs, and flagged
+ * so the persistence compiler emits a real version column. Without the
+ * `db` flag this was a plain integer nobody incremented, so the lock the
+ * name promises did not exist.
+ */
 const version = () =>
   z
     .int()
     .default(1)
     .register(rocketsFieldMeta, {
+      db: { version: true },
       dto: { create: false, update: false, response: true },
     });
 

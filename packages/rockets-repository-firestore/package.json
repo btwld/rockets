@@ -41,8 +41,8 @@
     "test": "cd ../.. && ./node_modules/.bin/vitest run --project unit packages/rockets-repository-firestore"
   },
   "dependencies": {
-    "@concepta/nestjs-core": "8.0.0-alpha.10",
-    "@concepta/nestjs-repository": "8.0.0-alpha.10",
+    "@concepta/nestjs-core": "8.0.0-alpha.11",
+    "@concepta/nestjs-repository": "8.0.0-alpha.11",
     "@concepta/rockets-core": "workspace:^"
   },
   "devDependencies": {

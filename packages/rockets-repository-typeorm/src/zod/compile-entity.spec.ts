@@ -192,6 +192,35 @@ describe('compileEntity', () => {
     );
   });
 
+  // `auditableEntity` documents an optimistic lock, and upstream's
+  // repository turns update/replace into a compare-and-swap the moment it
+  // sees a version column. `f.version()` used to register only DTO roles,
+  // so it compiled to a plain integer nobody incremented — the promise was
+  // in the name and the docs, never in the schema.
+  it('compiles f.version() to a real VersionColumn', () => {
+    const schema = auditableEntity({
+      name: f.string({ max: 50 }),
+    });
+
+    const Entity = compileEntity(schema, {
+      name: 'CompileVersionEntity',
+      table: 'compile_version',
+    });
+
+    const cols = columnsFor(Entity);
+    expect(cols.find((c) => c.propertyName === 'version')?.mode).toBe(
+      'version',
+    );
+    // The other audit columns keep their own modes — the version branch
+    // returns early, so it must not swallow them.
+    expect(cols.find((c) => c.propertyName === 'dateDeleted')?.mode).toBe(
+      'deleteDate',
+    );
+    expect(cols.find((c) => c.propertyName === 'dateUpdated')?.mode).toBe(
+      'updateDate',
+    );
+  });
+
   it('throws for unsupported zod types without db.column override', () => {
     const schema = z.object({
       id: f.pk(),

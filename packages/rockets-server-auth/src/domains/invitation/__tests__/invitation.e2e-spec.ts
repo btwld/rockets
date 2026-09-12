@@ -6,6 +6,9 @@ import { CommandBus } from '@nestjs/cqrs';
 import { TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AssignRoleCommand, CreateRoleCommand } from '@concepta/nestjs-role';
+import { Module } from '@nestjs/common';
+import { EventsHandler, type IEventHandler } from '@nestjs/cqrs';
+import { NotificationSendFailedEvent } from '@concepta/nestjs-authentication';
 import {
   AppContextHost,
   getDynamicRepositoryToken,
@@ -41,6 +44,26 @@ const INVITATION_RESPONSE_KEYS = [
   'dateAccepted',
   'dateRevoked',
 ];
+
+/**
+ * Subscribes the way an integrator does — a provider with
+ * `@EventsHandler`, registered in the app — rather than reaching for the
+ * `EventBus` instance, which is not necessarily the one the publishing
+ * module injected.
+ */
+const sendFailures: NotificationSendFailedEvent[] = [];
+
+@EventsHandler(NotificationSendFailedEvent)
+class CollectSendFailures
+  implements IEventHandler<NotificationSendFailedEvent>
+{
+  handle(event: NotificationSendFailedEvent): void {
+    sendFailures.push(event);
+  }
+}
+
+@Module({ providers: [CollectSendFailures] })
+class SendFailureCollectorModule {}
 
 describe('Invitations (e2e)', () => {
   let app: INestApplication;
@@ -135,6 +158,7 @@ describe('Invitations (e2e)', () => {
   beforeAll(async () => {
     module = await createRocketsAuthStandardE2eTestingModule({
       mockEmailService: mockEmail,
+      importsAfter: [SendFailureCollectorModule],
     });
     app = module.createNestApplication();
     applyRocketsAuthE2eAppGlobals(app);
@@ -407,6 +431,32 @@ describe('Invitations (e2e)', () => {
       // collision; the point is that it is not a 5xx.
       .expect(400);
     expect(res.body.errorCode).toBe('USER_DUPLICATE_ERROR');
+  });
+
+  // The email leaves from a commit hook, after the response is built, so a
+  // delivery failure can never reach the caller. alpha.11 gave upstream's
+  // verify/recovery ports a NotificationSendFailedEvent for exactly this;
+  // invitations publish the same event so an integrator subscribes once
+  // instead of once per notification kind.
+  it('publishes NotificationSendFailedEvent when the invitation email fails', async () => {
+    sendFailures.length = 0;
+    mockEmail.sendMail.mockRejectedValueOnce(new Error('smtp is down'));
+    await request(app.getHttpServer())
+      .post('/admin/invitations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ email: 'undeliverable@example.com', category: 'user' })
+      // The invitation itself still commits — delivery is not part of the
+      // route's contract.
+      .expect(201);
+
+    const deadline = Date.now() + 5_000;
+    while (sendFailures.length === 0) {
+      if (Date.now() > deadline) throw new Error('no failure event published');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+
+    expect(sendFailures[0].email).toBe('undeliverable@example.com');
+    expect(sendFailures[0].error.errorCode).toBe('AUTHENTICATION_EMAIL_ERROR');
   });
 
   it('admin routes reject non-admin callers and anonymous requests', async () => {

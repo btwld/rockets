@@ -13,9 +13,9 @@
     "contract:check": "yarn contract:build && vitest run --config vitest.e2e.config.mts test/openapi-contract-export.e2e-spec.ts"
   },
   "dependencies": {
-    "@concepta/nestjs-core": "8.0.0-alpha.10",
-    "@concepta/nestjs-crud": "8.0.0-alpha.10",
-    "@concepta/nestjs-repository": "8.0.0-alpha.10",
+    "@concepta/nestjs-core": "8.0.0-alpha.11",
+    "@concepta/nestjs-crud": "8.0.0-alpha.11",
+    "@concepta/nestjs-repository": "8.0.0-alpha.11",
     "@concepta/rockets": "workspace:^",
     "@concepta/rockets-core": "workspace:^",
     "@concepta/rockets-repository-typeorm": "workspace:^",

@@ -20,6 +20,7 @@ import { FederatedEntityFixture } from '../../__fixtures__/federated/federated.e
 import { RoleEntityFixture } from '../../__fixtures__/role/role.entity.fixture';
 import { UserRoleEntityFixture } from '../../__fixtures__/role/user-role.entity.fixture';
 import { UserMetadataEntityFixture } from '../../__fixtures__/user/user-metadata.entity.fixture';
+import type { PasswordSettingsInterface } from '@concepta/nestjs-password';
 import { UserPasswordHistoryEntityFixture } from '../../__fixtures__/user/user-password-history.entity.fixture';
 import {
   rocketsAuthUserMetadataResponseSchema,
@@ -58,6 +59,8 @@ export interface RocketsAuthE2eFactoryExtras {
     readonly reuseAfterDays?: number;
     readonly requireCurrent?: boolean;
   };
+  /** `PasswordModule` settings — strength floor, current-password policy. */
+  readonly passwordSettings?: PasswordSettingsInterface;
   readonly authenticationStrategies?: AuthenticationStrategiesSettingsInterface;
 }
 
@@ -92,6 +95,9 @@ function defaultDefineRocketsAuthInput(
               settings: { password: { ...extras.userPasswordSettings } },
             },
           }
+        : {}),
+      ...(extras.passwordSettings
+        ? { password: { settings: { ...extras.passwordSettings } } }
         : {}),
       settings: {
         role: { adminRoleName: 'admin' },

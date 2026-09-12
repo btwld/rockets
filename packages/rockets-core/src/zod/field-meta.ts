@@ -50,6 +50,16 @@ export interface RocketsDbFieldMeta {
    */
   readonly deletedAt?: boolean;
   /**
+   * Maps to `@VersionColumn` (implies `generated`). The persistence layer
+   * increments it on every write and, since
+   * `@concepta/nestjs-repository` 8.0.0-alpha.11, guards `update` and
+   * `replace` with a compare-and-swap on it: two writers who both read the
+   * same row no longer silently clobber each other. An adapter that cannot
+   * maintain the counter must leave the column unflagged rather than claim
+   * a guarantee it does not enforce.
+   */
+  readonly version?: boolean;
+  /**
    * Raw column options merged LAST over the zod-derived ones — the
    * escape hatch for anything the type mapping cannot express
    * (`{ type: 'decimal', precision: 10, scale: 2 }`, `{ type: 'text' }`,

@@ -17,10 +17,15 @@ export function buildFirestoreEntityMetadata<Entity extends PlainLiteralObject>(
     softDeleteFieldOverride ?? detectSoftDeleteField(entityType);
   const propertyNames = listEntityPropertyNames(entityType);
 
+  // `isVersion` marks the optimistic-locking column upstream's
+  // `getVersionColumn()` reports. This adapter never writes or increments
+  // one — Firestore documents carry no version field here — so claiming a
+  // column would be a lie the moment something starts reading it.
   const columns = propertyNames.map((name) => ({
     name,
     isPrimary: name === DEFAULT_PRIMARY,
     isRemoveDate: softDeleteField !== undefined && name === softDeleteField,
+    isVersion: false,
   }));
 
   if (!columns.some((col) => col.isPrimary)) {
@@ -28,6 +33,7 @@ export function buildFirestoreEntityMetadata<Entity extends PlainLiteralObject>(
       name: DEFAULT_PRIMARY,
       isPrimary: true,
       isRemoveDate: false,
+      isVersion: false,
     });
   }
 
@@ -39,6 +45,7 @@ export function buildFirestoreEntityMetadata<Entity extends PlainLiteralObject>(
       name: softDeleteField,
       isPrimary: false,
       isRemoveDate: true,
+      isVersion: false,
     });
   }
 

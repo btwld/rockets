@@ -5,6 +5,7 @@ import {
   getDynamicRepositoryToken,
   RepositoryInterface,
   Where,
+  type WhereConditionScalar,
 } from '@concepta/rockets-core';
 
 import { ROLE_CRUD_ENTITY_KEY } from '../../../../../shared/constants/repository-entity-keys.constants';
@@ -39,7 +40,13 @@ export abstract class AbstractRocketsGetRoleByNameHandler
     return this.mapResponse(entity);
   }
 
-  protected buildFilter(query: RocketsGetRoleByNameQuery) {
+  // Annotated, not inferred: an inferred return emits
+  // `import("@concepta/nestjs-repository").WhereConditionScalar` into this
+  // class's public `.d.ts`, and this package depends on the repository
+  // contract through rockets-core only (AGENTS.md rule 2).
+  protected buildFilter(
+    query: RocketsGetRoleByNameQuery,
+  ): WhereConditionScalar<RoleEntityInterface> {
     return Where.eq<RoleEntityInterface>('name', query.name);
   }
 
