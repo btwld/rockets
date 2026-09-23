@@ -1,6 +1,6 @@
 {
   "name": "@concepta/rockets",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Rockets server — external-auth composition layer: AuthAdapterInterface, /me, declarative CRUD resources, and database-agnostic persistence",
   "author": "Thiago Ramalho <thiago.ramalho@concepta.com>",
   "license": "BSD-3-Clause",
