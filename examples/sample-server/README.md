@@ -8,7 +8,7 @@
 
 Monorepo dev: `@concepta/*` resolves via `workspace:^` to local
 `packages/*`. External apps: `yarn add @concepta/rockets@alpha`
-(published: `0.1.0-alpha.2`).
+(published: `0.1.0-alpha.3`).
 
 For **Firebase / external IdP** auth, use
 [sample-code-review](../sample-code-review) instead.

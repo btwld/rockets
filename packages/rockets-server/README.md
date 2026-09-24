@@ -7,8 +7,8 @@
 > External-auth NestJS server. One options object → adapter chain, global guard,
 > `/me`, declarative CRUD resources, swagger.
 
-**Status:** pre-1.0 preview. The package manifest is set to `0.1.0-alpha.2`, but
-published on the `alpha` dist-tag. Pin the exact
+**Status:** pre-1.0 preview, published on the `alpha` dist-tag at
+`0.1.0-alpha.3`. Pin the exact
 version in an application you deploy: breaking changes land between alphas,
 and the tag moves.
 

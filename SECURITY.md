@@ -2,14 +2,14 @@
 
 ## Supported versions
 
-Rockets is **pre-1.0**. The published line is `0.1.0-alpha.2` under the
+Rockets is **pre-1.0**. The published line is `0.1.0-alpha.3` under the
 `alpha` dist-tag. npm also still carries an older `0.0.1-dev.0` drop on the
 `dev` tag — that line is not supported. There are no maintained release
 branches yet.
 
 | Version | Supported |
 |---|---|
-| latest published `alpha` (`0.1.0-alpha.2`) | yes |
+| latest published `alpha` (`0.1.0-alpha.3`) | yes |
 | `0.0.1-dev.0` on npm (`dev`) | no — install `@alpha` instead |
 | unreleased workspace builds | no |
 
@@ -37,7 +37,7 @@ Please include:
 
 - **Acknowledgement within 3 business days.**
 - An assessment (severity and affected versions) within 10 business days.
-- A fix released on the supported dist-tag (once `alpha` is live), with a
+- A fix released on the supported `alpha` dist-tag, with a
   GitHub Security Advisory and a `CHANGELOG.md` entry crediting you unless
   you prefer otherwise.
 

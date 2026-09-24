@@ -96,25 +96,26 @@ the same standards as source.
 
 ## Releasing
 
-All release commands are thin wrappers over Yarn 4's native versioning and
-publishing. The tracked `.yarn/versions/alpha.yml` file is the retained decision
-to release the seven public packages as `1.0.0`; Yarn keeps that decision while
-applying numbered prereleases.
+The seven public packages are released in lockstep: every release moves all
+of them to the same version, whether or not a package changed.
 
-**1. Bump versions** (every publishable workspace, in one command):
+**1. Bump versions.** While the line is on `0.x` alphas, set the `version`
+field of every `packages/*/package.json` to the next prerelease
+(`0.1.0-alpha.3` → `0.1.0-alpha.4`) and add a matching section to the root
+`CHANGELOG.md` and to each package `CHANGELOG.md`. A package with no change
+gets a one-line "released in lockstep" entry. Update the version the READMEs,
+guides and `SECURITY.md` name in the same commit.
 
-| Command | Example result | When to use it |
-|---|---|---|
-| `yarn version:alpha` | `0.1.0-alpha.2` → `0.1.0-alpha.3` | Advance the `0.x` alpha line. |
-| `yarn version:stable` | `0.1.0-alpha.2` → `0.1.0` | Drop the prerelease suffix. |
-| `yarn version:patch` | `1.0.0` → `1.0.1` | Stable releases only, after `version:stable`. |
-| `yarn version:minor` | `1.0.0` → `1.1.0` | Stable releases only, after `version:stable`. |
-| `yarn version:major` | `1.0.0` → `2.0.0` | Stable releases only, after `version:stable`. |
+`yarn version:alpha` and `yarn version:stable` applied the retained
+`.yarn/versions/alpha.yml` plan, which was removed when the line restarted at
+`0.1.0-alpha.1`; today they change nothing. The stable helpers below are for
+after the line leaves alpha:
 
-Commit the manifest changes together with the retained plan. Do not run the
-patch/minor/major helpers while `.yarn/versions/alpha.yml` is active; finalize
-it with `version:stable` first. Changing from alpha to another prerelease label
-is a reviewed release-workflow change, not an ad-hoc `version prerelease` bump.
+| Command | Example result |
+|---|---|
+| `yarn version:patch` | `1.0.0` → `1.0.1` |
+| `yarn version:minor` | `1.0.0` → `1.1.0` |
+| `yarn version:major` | `1.0.0` → `2.0.0` |
 
 **2. Verify before publishing:**
 
@@ -124,28 +125,44 @@ yarn release:audit   # fails on high-severity advisories
 yarn release:dry     # lists exactly what each tarball will contain
 ```
 
+`release:check` includes the Firestore emulator suite, which needs JDK 21+.
+Without it, run the rest with `SKIP_EMULATOR=1`; the `release-readiness`
+workflow runs the emulator suite on every pull request, so open the release
+PR before publishing.
+
 Read the `release:dry` output: each tarball must carry `dist/`,
 `README.md`, `LICENSE.txt` and `CHANGELOG.md`, and must NOT carry `src/`,
 `*.spec.*` or `docs/`. Cross-package dependencies are published as real
-version ranges — Yarn resolves the `workspace:^` protocol at pack time
-(verified for this source line: a packed `package.json` contains
-`^0.1.0-alpha.2`, never
-`workspace:`).
+version ranges: Yarn resolves the `workspace:^` protocol at pack time, so a
+packed `package.json` carries `^0.1.0-alpha.3`, never `workspace:`.
 
-**3. Publish** to the matching dist-tag:
+**3. Publish** to the matching dist-tag. Yarn does not read `npm login`;
+give it a granular npm access token with publish rights on the `@concepta`
+scope through the environment, never in a committed file:
 
 ```bash
+export YARN_NPM_PUBLISH_REGISTRY=https://registry.npmjs.org
+export YARN_NPM_AUTH_TOKEN=<token>
 yarn publish:alpha    # or publish:beta / publish:latest
 ```
 
-Each publish helper checks the aligned manifest version immediately before the
-registry write. Alpha and beta versions must match their prerelease dist-tag;
-`publish:latest` accepts only stable versions with no retained version plan.
+Each publish helper re-runs `release:check`, does a clean build, checks the
+aligned manifest version immediately before the registry write, then
+publishes in topological order so dependencies go out before dependents.
+Alpha and beta versions must match their prerelease dist-tag;
+`publish:latest` accepts only stable versions.
 
-Each of these re-runs `release:check`, does a clean build, then publishes
-in topological order so dependencies go out before dependents. Use
-`publish:latest` only for a stable release — it is the tag `npm install`
-resolves by default.
+Until 1.0, `latest` also points at the newest alpha, so a plain
+`npm install @concepta/rockets` does not resolve the unsupported
+`0.0.1-dev.0`. Move it after each alpha publish (this uses the npm CLI, so
+it needs `npm login` or the same token in `~/.npmrc`):
+
+```bash
+for p in rockets-core rockets rockets-auth rockets-repository-typeorm \
+         rockets-repository-firestore rockets-adapter-firebase rockets-storage; do
+  npm dist-tag add @concepta/$p@<version> latest
+done
+```
 
 **4. Confirm:**
 

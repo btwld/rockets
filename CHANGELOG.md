@@ -5,6 +5,15 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
 
 ## [Unreleased]
 
+### Documentation
+
+- READMEs, guides and `SECURITY.md` name `0.1.0-alpha.3`; the published
+  `0.1.0-alpha.3` tarballs still say `0.1.0-alpha.2`, which npm cannot
+  replace in place. `CONTRIBUTING.md` describes the release as it is run
+  today: `version:alpha` / `version:stable` do nothing since the version
+  plan was removed, publishing needs an npm token for Yarn, and `latest`
+  is moved to the newest alpha after each publish.
+
 ## [0.1.0-alpha.3] - 2026-09-23
 
 ### Changed
