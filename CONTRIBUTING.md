@@ -178,7 +178,7 @@ The npm scope is `@concepta` — the same scope as the upstream
 distinguished by their name (`@concepta/rockets-core`,
 `@concepta/rockets-auth`, …), not by a separate scope.
 
-The GitHub organization is `conceptadev`, so package metadata
+The GitHub organization is `btwld`, so package metadata
 (`repository`, `homepage`, `bugs`) points at
 `github.com/btwld/rockets`.
 
