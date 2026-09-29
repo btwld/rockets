@@ -12,7 +12,7 @@
 > auth, dynamic repositories, generated CRUD controllers, hooks, swagger.
 
 **Status:** pre-1.0. The line is published on npm under the `alpha`
-dist-tag at `0.1.0-alpha.2`, and the release gates run on every change.
+dist-tag at `0.1.0-alpha.3`, and the release gates run on every change.
 The public
 surface (`AuthAdapterInterface`, `defineResource`, `defineModuleResource`,
 `defineOperationResource` / `operationResource`,
@@ -286,7 +286,7 @@ yarn add @concepta/rockets@alpha @concepta/rockets-core@alpha \
   reflect-metadata rxjs zod jsonwebtoken
 ```
 
-Pin the exact version (`0.1.0-alpha.2`) in an application you deploy:
+Pin the exact version (`0.1.0-alpha.3`) in an application you deploy:
 breaking changes land between alphas, and the `alpha` tag moves.
 
 #### Consuming a branch instead of the registry
@@ -1176,9 +1176,9 @@ rockets/
 
 ### Versions
 
-- **Rockets packages**: published at `0.1.0-alpha.2` on the `alpha`
+- **Rockets packages**: published at `0.1.0-alpha.3` on the `alpha`
   dist-tag. Install the line with `yarn add @concepta/rockets@alpha`, or pin
-  `0.1.0-alpha.2` in anything you deploy. The line is
+  `0.1.0-alpha.3` in anything you deploy. The line is
   `0.x` on purpose: breaking changes still land between alphas, which is
   what `0.x` allows and `1.0.0-alpha` would misreport. Monorepo packages
   keep `workspace:^` for local development.

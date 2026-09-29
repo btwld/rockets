@@ -9,7 +9,7 @@
 > conformance tests.
 
 **Status:** pre-1.0 preview on the `alpha` dist-tag. Pin
-`0.1.0-alpha.2` in anything you deploy: breaking changes land between
+`0.1.0-alpha.3` in anything you deploy: breaking changes land between
 alphas, and the tag moves.
 
 ## 1. Introduction

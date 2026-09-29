@@ -5,6 +5,17 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
 
 ## [Unreleased]
 
+### Documentation
+
+- READMEs, guides and `SECURITY.md` name `0.1.0-alpha.3`; the published
+  `0.1.0-alpha.3` tarballs still say `0.1.0-alpha.2`, which npm cannot
+  replace in place. `CONTRIBUTING.md` describes the release as it is run
+  today: `version:alpha` / `version:stable` do nothing since the version
+  plan was removed, publishing needs an npm token for Yarn, and `latest`
+  is moved to the newest alpha after each publish.
+
+## [0.1.0-alpha.3] - 2026-09-23
+
 ### Changed
 
 - **Authentication is asserted by default (issue #126).** Omitting
@@ -18,6 +29,37 @@ Per-package release notes live in `packages/*/CHANGELOG.md`.
   `defineRocketsAuth` is recognised without copying route ids.
 
 ### Fixed
+
+- **A hook's return value was discarded unless you wrote it as a
+  function (issue #135).** Upstream merges a hook's result as
+  `Object.assign(fresh, hookResult, originalPayload)` — the ORIGINAL is
+  applied last, so it wins every field it already carries. A hook that
+  returned a new object lost exactly the corrections it was written to
+  make on a client-supplied field (a trimmed name, a sanitised price),
+  while a field the payload did not carry survived. `defineHook` carried
+  a private work-around; a hand-written `@EntityHook` class carried
+  nothing, so the shape the README documents silently did nothing.
+  `@EntityHook()` now owns the merge-back, at the one seam both
+  authoring styles pass through. Mutating in place still works,
+  returning a new object now works, and a partial return cannot drop a
+  column. Seven `after*` channels had the same defect and the same fix —
+  an `afterCreate` that reshaped the created row for the response was
+  discarded too. `entity-hook-merge-back-parity.spec.ts` derives the
+  channel list from upstream's real membrane behaviour, so an upstream
+  change fails a test instead of quietly un-fixing a channel. The
+  README's two wrong statements are corrected: the write `after*`
+  channels do NOT use their return value as-is, and an `afterFind` that
+  drops rows does not merely get them back — the merge is index-wise, so
+  returning 2 of 3 rows yields a duplicated row. No generated route is
+  affected; the CRUD list route reads through `findAndCount`.
+
+- **A gate could pass on a dependency that was not installed (issue
+  #128).** A `node_modules` directory above the repository satisfies
+  Node's resolution for packages this repository never installed, so
+  build, lint, typecheck, the full suites and the packed-consumer gate
+  all passed after removing two dependencies that are load-bearing.
+  `yarn check:governance` now fails when a declared runtime dependency
+  is not installed inside the repository.
 
 - **Hook channel parity watched the wrong artifact (issue #136).**
   `entity-hook-channel-parity.spec.ts` compared upstream to
