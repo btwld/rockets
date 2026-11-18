@@ -1,5 +1,9 @@
 import { randomUUID } from 'crypto';
-import { AppContextHost, type DeepPartial } from '@concepta/nestjs-core';
+import {
+  AppContextHost,
+  type DeepPartial,
+  type HookResolverService,
+} from '@concepta/nestjs-core';
 import {
   isWhereCondition,
   RepositoryAdapter,
@@ -74,8 +78,18 @@ export class FirestoreRepository<
   private readonly softDeleteField?: string;
   private readonly transactionKey: string;
 
-  constructor(private readonly options: FirestoreRepositoryOptions<Entity>) {
-    super(options.entityKey);
+  constructor(
+    private readonly options: FirestoreRepositoryOptions<Entity>,
+    hookResolver: HookResolverService,
+  ) {
+    if (!hookResolver) {
+      throw new Error(
+        `Firestore adapter: entity "${options.entityKey}" requires ` +
+          'HookResolverService; construct repositories through ' +
+          'FirestoreRepositoryModule or pass the resolver explicitly.',
+      );
+    }
+    super(options.entityKey, hookResolver);
     this.metadata = options.metadata;
     this.softDeleteField = resolveSoftDeleteFieldFromMetadata(options.metadata);
     this.transactionKey =
