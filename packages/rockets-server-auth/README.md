@@ -872,6 +872,12 @@ when you need built-in auth HTTP and `/me`.
 | `auth.appGuard`                                                                       | Override the global `APP_GUARD` from `AuthenticationModule`.                                                                                                                                |
 | `auth.controller` / `otp.controller` / `invitation.controllers.*` / `role.controller` | Per-controller decorator extras (`classDecorators`, `routes[*].decorators`).                                                                                                                |
 
+When composed through `defineRocketsAuth`, a custom
+`accessControl.appGuard` is contributed to core's authorization-guard audit
+automatically. Setting it to `false` while routes carry grant metadata
+requires a separately registered global replacement listed in
+`routePolicy.aclGuards`; otherwise bootstrap fails closed.
+
 Worked example of the extension points (handler override via
 `userCrud.handlers.signupHandler`, per-route decorators via
 `otp.controller.routes`, an app-owned `RocketsAuthException` subclass):

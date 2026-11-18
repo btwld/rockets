@@ -97,11 +97,16 @@ function definitionTransform(
   // bundle's entities + `userMetadata.entity`, so junction tables and
   // lookup rows declared via `defineModuleResource({ entities: [...] })`
   // are first-class targets.
+  const routePolicy = buildRoutePolicy(extras);
   const plan = buildAppRegistrationPlan({
     resources: extras.resources ?? [],
     repository: extras.repository,
     userMetadata: extras.userMetadata,
     accessControl: extras.accessControl !== undefined,
+    accessControlGuard:
+      extras.accessControl !== undefined &&
+      (extras.accessControl.appGuard !== false ||
+        (routePolicy.aclGuards?.length ?? 0) > 0),
     enforceGrants: extras.accessControl?.enforceGrants === true,
   });
 
@@ -110,7 +115,7 @@ function definitionTransform(
     global: extras.global ?? true,
     imports: [...defImports, ...createCoreImports(extras, plan)],
     controllers: [],
-    providers: createCoreProviders({ providers, extras, plan }),
+    providers: createCoreProviders({ providers, extras, plan, routePolicy }),
     exports: createCoreExports({ exports: defExports, plan, extras }),
   };
 }
@@ -221,6 +226,7 @@ function createCoreProviders(options: {
   providers?: Provider[];
   extras?: RocketsCoreOptionsExtrasInterface;
   plan: AppRegistrationPlan;
+  routePolicy: RoutePolicy;
 }): Provider[] {
   const providers: Provider[] = [
     ...(options.providers ?? []),
@@ -270,13 +276,9 @@ function createCoreProviders(options: {
   // above), so guard classes contributed by `providesAppGuard`
   // integrations are merged into the policy by the SERVER composition
   // before forwarding.
-  const routePolicy: RoutePolicy = {
-    ...DEFAULT_ROUTE_POLICY,
-    ...options.extras?.routePolicy,
-  };
   const routeAuditProviders: Provider[] = [
     RouteAuditService,
-    { provide: ROCKETS_ROUTE_POLICY_TOKEN, useValue: routePolicy },
+    { provide: ROCKETS_ROUTE_POLICY_TOKEN, useValue: options.routePolicy },
   ];
 
   const actorMetadata = options.extras?.actor?.metadata;
@@ -303,6 +305,46 @@ function createCoreProviders(options: {
     ...(options.extras?.providers ?? []),
     ...extractResourceProviders(options.plan.crudResources),
   ];
+}
+
+/**
+ * Builds the effective route policy and recognises an upstream custom
+ * `accessControl.appGuard` automatically. A guard configured through that
+ * field is already the application's explicit authorization replacement;
+ * requiring the same class again in `routePolicy.aclGuards` would make the
+ * two configuration surfaces drift.
+ */
+function buildRoutePolicy(
+  extras: RocketsCoreOptionsExtrasInterface,
+): RoutePolicy {
+  const configuredGuard = extras.accessControl?.appGuard;
+  const configuredGuardType =
+    configuredGuard === undefined ||
+    configuredGuard === null ||
+    configuredGuard === false
+      ? undefined
+      : guardType(configuredGuard);
+  const aclGuards = [
+    ...(configuredGuardType === undefined ? [] : [configuredGuardType]),
+    ...(extras.routePolicy?.aclGuards ?? []),
+  ];
+
+  return {
+    ...DEFAULT_ROUTE_POLICY,
+    ...extras.routePolicy,
+    ...(aclGuards.length > 0
+      ? { aclGuards: [...new Set(aclGuards)] }
+      : {}),
+  };
+}
+
+function guardType(guard: object): Type<unknown> | undefined {
+  const constructor: unknown = guard.constructor;
+  if (typeof constructor !== 'function') return undefined;
+  // `guard` is an instantiated CanActivate supplied to upstream's appGuard;
+  // its runtime constructor is therefore the exact class identity the audit
+  // must compare against, although TypeScript exposes it only as Function.
+  return constructor as Type<unknown>;
 }
 
 function createCoreExports(options: {

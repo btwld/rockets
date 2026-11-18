@@ -140,12 +140,11 @@ describe('routePolicy with an integration-contributed guard (e2e)', () => {
     }
   });
 
-  // A bootstrap that swaps the global guard (`providesAppGuard`) must
-  // also tell the audit WHICH class the swap installs, via
-  // `contributes.authGuards`. Without the merge this app reports every
-  // route `unguarded-app` and requireAuth aborts the boot — the exact
-  // failure `defineRocketsAuth` compositions had.
-  it('recognises the contributed guard with no authGuards declaration', async () => {
+  // A bootstrap that swaps a global guard must also tell the audit WHICH
+  // class the swap installs. Without the contribution merge this app
+  // reports every route `unguarded-app`; the same mechanism carries
+  // integration-owned authorization guards.
+  it('recognises contributed guards without explicit guard lists', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsModule.forRoot({
@@ -156,6 +155,7 @@ describe('routePolicy with an integration-contributed guard (e2e)', () => {
               enableGlobalGuard: false,
               providesAppGuard: true,
               authGuards: [JwtLikeGuard],
+              aclGuards: [JwtLikeGuard],
             },
           },
           routePolicy: { requireAuth: true },
@@ -170,6 +170,7 @@ describe('routePolicy with an integration-contributed guard (e2e)', () => {
     // The swap is recognised; AuthServerGuard was deliberately not
     // registered (enableGlobalGuard: false), so this is the ONLY guard.
     expect(report.authGuards).toEqual(['JwtLikeGuard']);
+    expect(report.aclGuards).toEqual(['JwtLikeGuard']);
     expect(report.globalGuards).toEqual(['JwtLikeGuard']);
   });
 });

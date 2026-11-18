@@ -492,6 +492,38 @@ describe('declarative resource acl — boot failures', () => {
     ).toThrow(/declared `acl` but the app configured no root/);
   });
 
+  it('rejects declarative acl when the configured app guard is disabled', () => {
+    expect(() =>
+      buildAppRegistrationPlan({
+        resources: [aclResource],
+        repository: TypeOrmRepositoryModule,
+        accessControl: true,
+        accessControlGuard: false,
+      }),
+    ).toThrow(/appGuard[\s\S]*disabled[\s\S]*aclGuards/);
+  });
+
+  it('allows a disabled guard when every operation explicitly opts out', () => {
+    const optedOut = defineResource<WidgetEntity>({
+      key: 'widget',
+      entity: WidgetEntity,
+      path: 'widgets',
+      tags: ['Widgets'],
+      acl: { resource: 'widget' },
+      dto: { response: widgetResponseSchema },
+      operations: { list: { acl: false } },
+    });
+
+    expect(() =>
+      buildAppRegistrationPlan({
+        resources: [optedOut],
+        repository: TypeOrmRepositoryModule,
+        accessControl: true,
+        accessControlGuard: false,
+      }),
+    ).not.toThrow();
+  });
+
   it('rejects an ungranted authenticated operation under enforceGrants', () => {
     expect(() =>
       buildAppRegistrationPlan({

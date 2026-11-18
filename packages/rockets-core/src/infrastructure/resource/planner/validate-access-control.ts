@@ -7,6 +7,8 @@ export interface AccessControlPlanInput {
   readonly plans: ReadonlyArray<ResourceAclPlan>;
   /** Whether the app configured root `accessControl`. */
   readonly configured: boolean;
+  /** Whether the default or a declared replacement ACL guard is configured. */
+  readonly guardConfigured: boolean;
   /**
    * Whether every route this planner GENERATES must carry a grant.
    *
@@ -22,8 +24,8 @@ export interface AccessControlPlanInput {
    * bundle's `decorators` is not possible AT PLAN TIME: the CRUD
    * controller is built downstream, so the metadata does not exist yet
    * and the only way to read it early is to apply the consumer's opaque
-   * decorator list a second time. A bootstrap-time sweep over discovered
-   * routes would close both that and the scope gap above.
+   * decorator list a second time. The bootstrap-time `RouteAuditService`
+   * sweep closes both that and the scope gap above.
    */
   readonly enforceGrants: boolean;
 }
@@ -41,7 +43,7 @@ export interface AccessControlPlanInput {
 export function planAccessControl(
   input: AccessControlPlanInput,
 ): ReadonlyArray<Type<CanAccess>> {
-  const { plans, configured, enforceGrants } = input;
+  const { plans, configured, guardConfigured, enforceGrants } = input;
 
   const declaring = plans.filter((plan) => plan.declared);
   if (declaring.length > 0 && !configured) {
@@ -51,6 +53,19 @@ export function planAccessControl(
         .join(', ')} declared \`acl\` but the app configured no root ` +
         '`accessControl`. Add it to `RocketsCoreModule.forRoot({ accessControl })` ' +
         'or drop the resource-level `acl`.',
+    );
+  }
+
+  const granting = plans.filter((plan) => plan.hasGrants ?? plan.declared);
+  if (granting.length > 0 && configured && !guardConfigured) {
+    throw new Error(
+      `buildAppRegistrationPlan: ${granting
+        .map((plan) => plan.label)
+        .join(', ')} declared \`acl\` while root \`accessControl.appGuard\` ` +
+        'is disabled and `routePolicy.aclGuards` declares no replacement. ' +
+        'Restore the default guard by omitting `appGuard`, or register a ' +
+        'global authorization guard and list its class in ' +
+        '`routePolicy.aclGuards`.',
     );
   }
 

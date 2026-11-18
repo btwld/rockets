@@ -166,6 +166,9 @@ export function buildAclPlan(args: {
 
   return {
     queryServices,
+    hasGrants:
+      resourceAcl !== undefined &&
+      operations.some((operation) => operationAcls[operation] !== false),
     ungrantedOperations,
     declared: resourceAcl !== undefined,
     label: resourceKey,

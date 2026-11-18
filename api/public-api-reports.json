@@ -559,7 +559,7 @@
         "name": "buildAppRegistrationPlan",
         "kind": "function",
         "runtime": true,
-        "signature": "export declare function buildAppRegistrationPlan(args: {\n    readonly resources: ReadonlyArray<ResourceInput>;\n    readonly repository?: RepositoryModuleInterface;\n    readonly userMetadata?: RocketsUserMetadataConfig;\n    readonly accessControl?: boolean;\n    readonly enforceGrants?: boolean;\n}): AppRegistrationPlan;"
+        "signature": "export declare function buildAppRegistrationPlan(args: {\n    readonly resources: ReadonlyArray<ResourceInput>;\n    readonly repository?: RepositoryModuleInterface;\n    readonly userMetadata?: RocketsUserMetadataConfig;\n    readonly accessControl?: boolean;\n    readonly accessControlGuard?: boolean;\n    readonly enforceGrants?: boolean;\n}): AppRegistrationPlan;"
       },
       {
         "name": "buildMeController",
@@ -2251,7 +2251,7 @@
         "name": "AuthBootstrapContributions",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface AuthBootstrapContributions {\n    readonly enableGlobalGuard?: boolean;\n    readonly providesAppGuard?: boolean;\n    readonly authGuards?: readonly Type<unknown>[];\n}"
+        "signature": "export interface AuthBootstrapContributions {\n    readonly enableGlobalGuard?: boolean;\n    readonly providesAppGuard?: boolean;\n    readonly authGuards?: readonly Type<unknown>[];\n    readonly aclGuards?: readonly Type<unknown>[];\n}"
       },
       {
         "name": "AuthBootstrapIdentity",
@@ -2905,7 +2905,7 @@
         "name": "ResourceAclPlan",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}"
+        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly hasGrants?: boolean;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}"
       },
       {
         "name": "ResourceDeleteOperationConfig",
@@ -3085,7 +3085,7 @@
         "name": "RouteAuditReport",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface RouteAuditReport {\n    readonly routes: readonly RouteAuditEntry[];\n    readonly globalGuards: readonly string[];\n    readonly authGuards: readonly string[];\n    readonly csrfGuards: readonly string[];\n}"
+        "signature": "export interface RouteAuditReport {\n    readonly routes: readonly RouteAuditEntry[];\n    readonly globalGuards: readonly string[];\n    readonly authGuards: readonly string[];\n    readonly aclGuards?: readonly string[];\n    readonly csrfGuards: readonly string[];\n}"
       },
       {
         "name": "RouteAuditService",
@@ -3109,7 +3109,7 @@
         "name": "RoutePolicy",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface RoutePolicy {\n    readonly requireAuthGuard?: boolean;\n    readonly requireAuth?: boolean;\n    readonly requireAcl?: boolean;\n    readonly requireAclQuery?: boolean;\n    readonly requireCsrf?: boolean;\n    readonly allow?: readonly string[];\n    readonly allowControllers?: readonly Type<unknown>[];\n    readonly allowUnvalidatedSchema?: readonly string[];\n    readonly authGuards?: readonly Type<unknown>[];\n    readonly csrfGuards?: readonly Type<unknown>[];\n}"
+        "signature": "export interface RoutePolicy {\n    readonly requireAuthGuard?: boolean;\n    readonly requireAuth?: boolean;\n    readonly requireAcl?: boolean;\n    readonly requireAclQuery?: boolean;\n    readonly requireCsrf?: boolean;\n    readonly allow?: readonly string[];\n    readonly allowControllers?: readonly Type<unknown>[];\n    readonly allowUnvalidatedSchema?: readonly string[];\n    readonly authGuards?: readonly Type<unknown>[];\n    readonly aclGuards?: readonly Type<unknown>[];\n    readonly csrfGuards?: readonly Type<unknown>[];\n}"
       },
       {
         "name": "RoutePolicyViolation",
@@ -3391,7 +3391,7 @@
         "name": "buildAppRegistrationPlan",
         "kind": "function",
         "runtime": true,
-        "signature": "export declare function buildAppRegistrationPlan(args: {\n    readonly resources: ReadonlyArray<ResourceInput>;\n    readonly repository?: RepositoryModuleInterface;\n    readonly userMetadata?: RocketsUserMetadataConfig;\n    readonly accessControl?: boolean;\n    readonly enforceGrants?: boolean;\n}): AppRegistrationPlan;"
+        "signature": "export declare function buildAppRegistrationPlan(args: {\n    readonly resources: ReadonlyArray<ResourceInput>;\n    readonly repository?: RepositoryModuleInterface;\n    readonly userMetadata?: RocketsUserMetadataConfig;\n    readonly accessControl?: boolean;\n    readonly accessControlGuard?: boolean;\n    readonly enforceGrants?: boolean;\n}): AppRegistrationPlan;"
       },
       {
         "name": "buildPaginatedSchema",
@@ -3409,7 +3409,7 @@
         "name": "collectRouteAudit",
         "kind": "function",
         "runtime": true,
-        "signature": "export declare function collectRouteAudit(args: {\n    readonly controllers: readonly ControllerScan[];\n    readonly globalGuards: readonly string[];\n    readonly authGuards: readonly string[];\n    readonly csrfGuards?: readonly string[];\n}): RouteAuditReport;"
+        "signature": "export declare function collectRouteAudit(args: {\n    readonly controllers: readonly ControllerScan[];\n    readonly globalGuards: readonly string[];\n    readonly authGuards: readonly string[];\n    readonly aclGuards?: readonly string[];\n    readonly csrfGuards?: readonly string[];\n}): RouteAuditReport;"
       },
       {
         "name": "createBatchSchema",
@@ -6523,7 +6523,7 @@
       {
         "name": "ResourceAclPlan",
         "kind": "interface",
-        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}",
+        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly hasGrants?: boolean;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}",
         "referencedBy": [
           "ZodOperationResource",
           "zodResource"

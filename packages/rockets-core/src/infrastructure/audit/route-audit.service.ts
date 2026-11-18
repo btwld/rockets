@@ -4,6 +4,7 @@ import {
   DiscoveryService,
   MetadataScanner,
 } from '@nestjs/core';
+import { AccessControlGuard } from '@concepta/nestjs-access-control';
 
 import { AuthServerGuard } from '../guards/auth-server.guard';
 import { CsrfGuard } from '../guards/csrf.guard';
@@ -77,6 +78,9 @@ export class RouteAuditService {
       authGuards: guards
         .filter((guard) => guard.isAuth)
         .map((guard) => guard.name),
+      aclGuards: guards
+        .filter((guard) => guard.isAcl)
+        .map((guard) => guard.name),
       csrfGuards: guards
         .filter((guard) => guard.isCsrf)
         .map((guard) => guard.name),
@@ -119,20 +123,27 @@ export class RouteAuditService {
    *   `DiscoveryService.getProviders()`. Missing them hard-failed a
    *   correctly guarded app.
    *
-   * "Is authentication" is decided by class identity — `AuthServerGuard`
-   * or anything in `policy.authGuards` — never by "some guard exists".
-   * A throttler or an ACL guard is a global guard that authenticates
-   * nothing.
+   * Guard capabilities are decided by class identity — the built-in guard
+   * for each boundary or anything in that policy's recognised class list —
+   * never by "some guard exists". A throttler or an ACL guard is a global
+   * guard that authenticates nothing; an authentication guard does not read
+   * grant metadata merely because it is global.
    */
   private resolveGlobalGuards(): Array<{
     readonly name: string;
     readonly isAuth: boolean;
+    readonly isAcl: boolean;
     readonly isCsrf: boolean;
   }> {
     const recognised = this.policy?.authGuards ?? [];
+    const recognisedAcl = this.policy?.aclGuards ?? [];
     const recognisedCsrf = this.policy?.csrfGuards ?? [];
-    const result: Array<{ name: string; isAuth: boolean; isCsrf: boolean }> =
-      [];
+    const result: Array<{
+      name: string;
+      isAuth: boolean;
+      isAcl: boolean;
+      isCsrf: boolean;
+    }> = [];
 
     for (const instance of this.applicationConfig.getGlobalGuards()) {
       if (instance === null || instance === undefined) continue;
@@ -142,6 +153,9 @@ export class RouteAuditService {
         isAuth:
           instance instanceof AuthServerGuard ||
           recognised.some((type) => instance instanceof type),
+        isAcl:
+          instance instanceof AccessControlGuard ||
+          recognisedAcl.some((type) => instance instanceof type),
         isCsrf:
           instance instanceof CsrfGuard ||
           recognisedCsrf.some((type) => instance instanceof type),
@@ -165,6 +179,12 @@ export class RouteAuditService {
           isOrExtends(metatype as Type<unknown>, [
             AuthServerGuard,
             ...recognised,
+          ]),
+        isAcl:
+          isClass &&
+          isOrExtends(metatype as Type<unknown>, [
+            AccessControlGuard,
+            ...recognisedAcl,
           ]),
         isCsrf:
           isClass &&

@@ -147,6 +147,7 @@ export function defineRocketsAuth(
   const rocketsOwnsGlobalGuard =
     input.rocketsDefaults?.enableGlobalGuard === true;
   const configuredUpstreamGuard = input.auth?.appGuard;
+  const configuredAclGuard = input.accessControl?.appGuard;
 
   if (
     rocketsOwnsGlobalGuard &&
@@ -205,6 +206,15 @@ export function defineRocketsAuth(
                 ? (configuredUpstreamGuard.constructor as Type<unknown>)
                 : JwtGuard,
             ],
+      // Core recognises the default AccessControlGuard itself. A custom
+      // instance is owned by this integration's module, so contribute its
+      // runtime class before the bootstrap is stripped for core.
+      aclGuards:
+        configuredAclGuard === undefined ||
+        configuredAclGuard === null ||
+        configuredAclGuard === false
+          ? []
+          : [configuredAclGuard.constructor as Type<unknown>],
     },
   };
 }

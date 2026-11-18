@@ -77,6 +77,38 @@ export function evaluateRoutePolicy(
     ];
   }
 
+  // Grant metadata is a claim that authorization is enforced, but metadata
+  // executes nothing by itself. Reject it whenever no recognised GLOBAL ACL
+  // guard reaches the routes — independent of the optional completeness
+  // rules below. This keeps `accessControl.appGuard: false` from turning a
+  // fully decorated app into an authenticated allow-all surface.
+  const grantedRoutes = report.routes.filter(
+    (route) => route.aclAction !== null,
+  );
+  if (grantedRoutes.length > 0 && (report.aclGuards?.length ?? 0) === 0) {
+    const named = grantedRoutes
+      .slice(0, 5)
+      .map((route) => route.id)
+      .join(', ');
+    const rest =
+      grantedRoutes.length > 5 ? ` (+${grantedRoutes.length - 5} more)` : '';
+    return [
+      {
+        routeId: '*',
+        rule: 'requireAcl',
+        detail:
+          `${grantedRoutes.length} route` +
+          `${grantedRoutes.length === 1 ? ' carries' : 's carry'} ` +
+          `AccessControlGrant metadata — ${named}${rest} — but the ` +
+          'application registers no recognised GLOBAL authorization guard, ' +
+          'so those grants enforce nothing. Restore the default ' +
+          '`accessControl.appGuard`, configure a custom `appGuard`, or ' +
+          'register a replacement APP_GUARD and list its class in ' +
+          '`routePolicy.aclGuards`.',
+      },
+    ];
+  }
+
   // Stale `allow` ids fail the boot: an entry matching no route is
   // either a typo or a leftover from a removed route, and a list that
   // rots silently stops meaning anything. Two deliberate limits:

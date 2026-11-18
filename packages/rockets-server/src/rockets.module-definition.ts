@@ -91,25 +91,30 @@ function resolveSingleContribution<
 // Composition is the only consumer of identity/contributes; core refuses
 // bootstraps that still carry them, so strip before handing down.
 /**
- * Merges guard classes contributed by `providesAppGuard` integrations
- * into the route policy's `authGuards`.
+ * Merges authentication and authorization guard classes contributed by
+ * integrations into the route policy's recognised guard lists.
  *
  * This is the only place it can happen: contributions are resolved by
  * THIS composition and stripped before bootstraps reach core (core
  * rejects contribution-carrying bootstraps outright). Without the
- * merge, a `defineRocketsAuth` composition — whose global guard is
+ * merge, a `defineRocketsAuth` composition — whose authentication guard is
  * upstream `JwtGuard`, not `AuthServerGuard` — reports every route as
- * `unguarded-app` and any declared rule aborts the boot, on the exact
- * routes the audit's documentation promises to cover.
+ * `unguarded-app`; a custom authorization guard would likewise leave grant
+ * metadata looking inert.
  */
-function mergeContributedAuthGuards(
+function mergeContributedGuards(
   routePolicy: RoutePolicy | undefined,
   auth: readonly AuthBootstrap[],
 ): RoutePolicy | undefined {
-  const contributed = auth.flatMap(
+  const contributedAuth = auth.flatMap(
     (bootstrap) => bootstrap.contributes?.authGuards ?? [],
   );
-  if (contributed.length === 0) return routePolicy;
+  const contributedAcl = auth.flatMap(
+    (bootstrap) => bootstrap.contributes?.aclGuards ?? [],
+  );
+  if (contributedAuth.length === 0 && contributedAcl.length === 0) {
+    return routePolicy;
+  }
   // `undefined` no longer means "no policy" downstream — core merges
   // DEFAULT_ROUTE_POLICY under whatever arrives here. So an app that
   // declared nothing still needs its integration's guard (upstream
@@ -119,7 +124,12 @@ function mergeContributedAuthGuards(
   const base = routePolicy ?? {};
   return {
     ...base,
-    authGuards: [...contributed, ...(base.authGuards ?? [])],
+    ...(contributedAuth.length > 0
+      ? { authGuards: [...contributedAuth, ...(base.authGuards ?? [])] }
+      : {}),
+    ...(contributedAcl.length > 0
+      ? { aclGuards: [...contributedAcl, ...(base.aclGuards ?? [])] }
+      : {}),
   };
 }
 
@@ -324,7 +334,7 @@ export function createRocketsImports(options: {
       handlers: options.extras?.handlers,
       accessControl: options.extras?.accessControl,
       actor: options.extras?.actor,
-      routePolicy: mergeContributedAuthGuards(
+      routePolicy: mergeContributedGuards(
         options.extras?.routePolicy,
         composition.auth,
       ),
