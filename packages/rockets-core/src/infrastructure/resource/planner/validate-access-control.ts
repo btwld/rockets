@@ -56,7 +56,7 @@ export function planAccessControl(
     );
   }
 
-  const granting = plans.filter((plan) => plan.hasGrants ?? plan.declared);
+  const granting = plans.filter((plan) => plan.hasGrants);
   if (granting.length > 0 && configured && !guardConfigured) {
     throw new Error(
       `buildAppRegistrationPlan: ${granting

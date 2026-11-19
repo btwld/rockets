@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Security
+
+- **Grant metadata without an authorization guard fails the boot.**
+  `AccessControlGrant` is inert unless a recognised global ACL guard
+  reads it. That check is `requireAclGuard` — the sibling of
+  `requireAuthGuard`, not a reuse of `requireAcl` (which still means
+  "every authenticated route carries a grant"). Opt out of the default
+  `AccessControlGuard` with `appGuard: false` only when a replacement
+  is actually registered and listed in `routePolicy.aclGuards`.
+
 ### Changed
 
 - **`requireAuthGuard` is on by default (issue #126).** A missing

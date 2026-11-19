@@ -177,7 +177,7 @@ describe('evaluateRoutePolicy — ACL guard reach', () => {
   it('rejects inert grant metadata even when requireAcl is not declared', () => {
     const violations = evaluateRoutePolicy(granted(), {});
     expect(violations).toEqual([
-      expect.objectContaining({ rule: 'requireAcl', routeId: '*' }),
+      expect.objectContaining({ rule: 'requireAclGuard', routeId: '*' }),
     ]);
     expect(violations[0].detail).toContain(
       'no recognised GLOBAL authorization guard',

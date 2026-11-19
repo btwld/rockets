@@ -130,15 +130,24 @@ class HealthController {
 
 async function boot(args: {
   readonly withGuard: boolean;
+  /**
+   * `InvoiceController` carries grant metadata, so an enforcing policy
+   * needs a recognised ACL guard. Defaults on when a policy is present
+   * and `withGuard` is on. Pass `false` to assert that an auth-only
+   * APP_GUARD does not satisfy `requireAclGuard`.
+   */
+  readonly withAclGuard?: boolean;
   readonly policy?: RoutePolicy;
 }) {
-  // `AllowAllGuard` stands in for an integration-owned security guard, so
-  // policies must recognise both capabilities explicitly — which exercises
-  // the custom guard escape hatches on every policy-carrying test.
+  const withAclGuard =
+    args.withAclGuard ?? (args.withGuard && args.policy !== undefined);
+  // `AllowAllGuard` is authentication only. `DeclaredAclGuard` is the
+  // authorization stand-in — listing the auth dummy as ACL would hide
+  // the exact regression this suite exists to catch.
   const policy: RoutePolicy | undefined = args.policy
     ? {
         authGuards: [AllowAllGuard],
-        aclGuards: [AllowAllGuard],
+        ...(withAclGuard ? { aclGuards: [DeclaredAclGuard] } : {}),
         ...args.policy,
       }
     : args.policy;
@@ -150,6 +159,9 @@ async function boot(args: {
       InvoiceCanAccess,
       ...(args.withGuard
         ? [{ provide: APP_GUARD, useClass: AllowAllGuard }]
+        : []),
+      ...(withAclGuard
+        ? [{ provide: APP_GUARD, useClass: DeclaredAclGuard }]
         : []),
       ...(policy
         ? [{ provide: ROCKETS_ROUTE_POLICY_TOKEN, useValue: policy }]
@@ -206,7 +218,7 @@ describe('route audit + policy (e2e)', () => {
     await app.close();
 
     expect(report.authGuards).toEqual(['AllowAllGuard']);
-    expect(report.aclGuards).toEqual(['AllowAllGuard']);
+    expect(report.aclGuards).toEqual(['DeclaredAclGuard']);
     const byId = Object.fromEntries(report.routes.map((r) => [r.id, r]));
     expect(byId['GET /invoices']).toMatchObject({ authentication: 'guarded' });
     expect(byId['GET /invoices/summary']).toMatchObject({
@@ -240,6 +252,14 @@ describe('route audit + policy (e2e)', () => {
     await expect(
       boot({ withGuard: true, policy: { requireAcl: true } }),
     ).rejects.toThrow(/GET \/invoices\/summary[\s\S]*no AccessControlGrant/);
+  });
+
+  it('an authentication guard does not satisfy ACL guard reach', async () => {
+    await expect(
+      boot({ withGuard: true, withAclGuard: false, policy: {} }),
+    ).rejects.toThrow(
+      /requireAclGuard[\s\S]*no recognised GLOBAL authorization guard/,
+    );
   });
 
   it('fails the boot when a grant cannot resolve own possession', async () => {
@@ -374,11 +394,14 @@ describe('guard classification (e2e)', () => {
   // this correctly guarded app.
   it('a request-scoped auth guard is seen and satisfies requireAuth', async () => {
     const app = await bootWith({
-      providers: [{ provide: APP_GUARD, useClass: RequestScopedAuthGuard }],
+      providers: [
+        { provide: APP_GUARD, useClass: RequestScopedAuthGuard },
+        { provide: APP_GUARD, useClass: DeclaredAclGuard },
+      ],
       policy: {
         requireAuth: true,
         authGuards: [RequestScopedAuthGuard],
-        aclGuards: [RequestScopedAuthGuard],
+        aclGuards: [DeclaredAclGuard],
         allow: ['GET /health'],
       },
     });
@@ -389,10 +412,13 @@ describe('guard classification (e2e)', () => {
 
   it('classifies class-level AuthPublic and reports it distinctly', async () => {
     const app = await bootWith({
-      providers: [{ provide: APP_GUARD, useClass: AllowAllGuard }],
+      providers: [
+        { provide: APP_GUARD, useClass: AllowAllGuard },
+        { provide: APP_GUARD, useClass: DeclaredAclGuard },
+      ],
       policy: {
         authGuards: [AllowAllGuard],
-        aclGuards: [AllowAllGuard],
+        aclGuards: [DeclaredAclGuard],
       },
       controllers: [InvoiceController, StatusController],
     });
@@ -509,11 +535,14 @@ describe('guard classification (e2e)', () => {
     }
 
     const app = await bootWith({
-      providers: [{ provide: APP_GUARD, useClass: AllowAllGuard }],
+      providers: [
+        { provide: APP_GUARD, useClass: AllowAllGuard },
+        { provide: APP_GUARD, useClass: DeclaredAclGuard },
+      ],
       policy: {
         requireAclQuery: true,
         authGuards: [AllowAllGuard],
-        aclGuards: [AllowAllGuard],
+        aclGuards: [DeclaredAclGuard],
       },
       controllers: [ClassQueryController],
     });
@@ -527,11 +556,14 @@ describe('guard classification (e2e)', () => {
   it('fails the boot on a stale allow entry', async () => {
     await expect(
       bootWith({
-        providers: [{ provide: APP_GUARD, useClass: AllowAllGuard }],
+        providers: [
+          { provide: APP_GUARD, useClass: AllowAllGuard },
+          { provide: APP_GUARD, useClass: DeclaredAclGuard },
+        ],
         policy: {
           requireAuth: true,
           authGuards: [AllowAllGuard],
-          aclGuards: [AllowAllGuard],
+          aclGuards: [DeclaredAclGuard],
           allow: ['GET /health', 'GET /no-such-route'],
         },
       }),
@@ -550,7 +582,7 @@ describe('routePolicy through RocketsCoreModule (e2e)', () => {
             ? {
                 routePolicy: {
                   authGuards: [AllowAllGuard],
-                  aclGuards: [AllowAllGuard],
+                  aclGuards: [DeclaredAclGuard],
                   ...policy,
                 },
               }
@@ -561,6 +593,7 @@ describe('routePolicy through RocketsCoreModule (e2e)', () => {
       providers: [
         InvoiceCanAccess,
         { provide: APP_GUARD, useClass: AllowAllGuard },
+        ...(policy ? [{ provide: APP_GUARD, useClass: DeclaredAclGuard }] : []),
       ],
     }).compile();
     const app = moduleRef.createNestApplication();

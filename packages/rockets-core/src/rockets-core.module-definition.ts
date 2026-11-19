@@ -332,9 +332,7 @@ function buildRoutePolicy(
   return {
     ...DEFAULT_ROUTE_POLICY,
     ...extras.routePolicy,
-    ...(aclGuards.length > 0
-      ? { aclGuards: [...new Set(aclGuards)] }
-      : {}),
+    ...(aclGuards.length > 0 ? { aclGuards: [...new Set(aclGuards)] } : {}),
   };
 }
 

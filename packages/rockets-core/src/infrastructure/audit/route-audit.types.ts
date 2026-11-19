@@ -127,7 +127,7 @@ export interface RouteAuditReport {
    * listed in `RoutePolicy.aclGuards`. Grant metadata without one of these
    * is inert and therefore rejected at bootstrap.
    */
-  readonly aclGuards?: readonly string[];
+  readonly aclGuards: readonly string[];
   /**
    * The subset recognised as CSRF guards — `CsrfGuard` plus anything
    * listed in `RoutePolicy.csrfGuards`. `requireCsrf` reads this: a
@@ -144,6 +144,7 @@ export interface RoutePolicyViolation {
   readonly rule:
     | 'requireAuthGuard'
     | 'requireAuth'
+    | 'requireAclGuard'
     | 'requireAcl'
     | 'requireAclQuery'
     | 'requireCsrf'
@@ -163,6 +164,9 @@ export interface RoutePolicyViolation {
  * The per-route rules stay opt-in because an app CAN be part-way through
  * them — half the routes carrying a grant is a real, working state, and
  * failing that boot would punish the migration instead of the defect.
+ * Grant metadata with no ACL guard is a different always-on check
+ * (`requireAclGuard` in `evaluateRoutePolicy`): that is a lie, not a
+ * migration midpoint.
  */
 export const DEFAULT_ROUTE_POLICY: RoutePolicy = { requireAuthGuard: true };
 

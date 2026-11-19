@@ -1230,7 +1230,7 @@ Rockets route policy rejected 2 routes:
 | Rule | Default | Fails when |
 | --- | --- | --- |
 | `requireAuthGuard` | **on** | the app registers no guard recognised as authentication. Opt out with `{ requireAuthGuard: false }` |
-| ACL guard reach | **on when grant metadata exists** | a route carries `AccessControlGrant`, but no recognised global authorization guard reads it |
+| `requireAclGuard` | **on when grant metadata exists** | a route carries `AccessControlGrant`, but no recognised global authorization guard reads it |
 | `requireAuth` | off | a route is `AuthPublic` |
 | `requireAcl` | off | an authenticated route carries no `AccessControlGrant` |
 | `requireAclQuery` | off | a granted route names no `CanAccess` service, so `own` possession widens to every row — declare it only once every resource's `acl` names a `query` service |

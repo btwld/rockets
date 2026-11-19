@@ -155,7 +155,6 @@ describe('routePolicy with an integration-contributed guard (e2e)', () => {
               enableGlobalGuard: false,
               providesAppGuard: true,
               authGuards: [JwtLikeGuard],
-              aclGuards: [JwtLikeGuard],
             },
           },
           routePolicy: { requireAuth: true },
@@ -170,7 +169,7 @@ describe('routePolicy with an integration-contributed guard (e2e)', () => {
     // The swap is recognised; AuthServerGuard was deliberately not
     // registered (enableGlobalGuard: false), so this is the ONLY guard.
     expect(report.authGuards).toEqual(['JwtLikeGuard']);
-    expect(report.aclGuards).toEqual(['JwtLikeGuard']);
     expect(report.globalGuards).toEqual(['JwtLikeGuard']);
+    expect(report.aclGuards ?? []).toEqual([]);
   });
 });

@@ -2905,7 +2905,7 @@
         "name": "ResourceAclPlan",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly hasGrants?: boolean;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}"
+        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly hasGrants: boolean;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}"
       },
       {
         "name": "ResourceDeleteOperationConfig",
@@ -3085,7 +3085,7 @@
         "name": "RouteAuditReport",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface RouteAuditReport {\n    readonly routes: readonly RouteAuditEntry[];\n    readonly globalGuards: readonly string[];\n    readonly authGuards: readonly string[];\n    readonly aclGuards?: readonly string[];\n    readonly csrfGuards: readonly string[];\n}"
+        "signature": "export interface RouteAuditReport {\n    readonly routes: readonly RouteAuditEntry[];\n    readonly globalGuards: readonly string[];\n    readonly authGuards: readonly string[];\n    readonly aclGuards: readonly string[];\n    readonly csrfGuards: readonly string[];\n}"
       },
       {
         "name": "RouteAuditService",
@@ -3115,7 +3115,7 @@
         "name": "RoutePolicyViolation",
         "kind": "interface",
         "runtime": false,
-        "signature": "export interface RoutePolicyViolation {\n    readonly routeId: string;\n    readonly rule: 'requireAuthGuard' | 'requireAuth' | 'requireAcl' | 'requireAclQuery' | 'requireCsrf' | 'requireSchemaPipe' | 'requireClosedResponse' | 'staleAllow';\n    readonly detail: string;\n}"
+        "signature": "export interface RoutePolicyViolation {\n    readonly routeId: string;\n    readonly rule: 'requireAuthGuard' | 'requireAuth' | 'requireAclGuard' | 'requireAcl' | 'requireAclQuery' | 'requireCsrf' | 'requireSchemaPipe' | 'requireClosedResponse' | 'staleAllow';\n    readonly detail: string;\n}"
       },
       {
         "name": "SchemaEntityCompiler",
@@ -6523,7 +6523,7 @@
       {
         "name": "ResourceAclPlan",
         "kind": "interface",
-        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly hasGrants?: boolean;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}",
+        "signature": "export interface ResourceAclPlan {\n    readonly queryServices: ReadonlyArray<Type<CanAccess>>;\n    readonly hasGrants: boolean;\n    readonly ungrantedOperations: readonly string[];\n    readonly declared: boolean;\n    readonly label: string;\n}",
         "referencedBy": [
           "ZodOperationResource",
           "zodResource"
