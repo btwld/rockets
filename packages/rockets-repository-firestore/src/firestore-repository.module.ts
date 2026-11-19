@@ -14,6 +14,12 @@ import {
 } from './utils/firestore-repository.util';
 
 @Global()
+// TypeORM injects HookResolverService as optional and fail-opens when
+// CoreModule is absent. Required inject here would break a module-factory
+// consumer that does not go through RocketsCoreModule, so this import is
+// what keeps that path fail-closed. Nest tokens each CoreModule.forRoot()
+// call separately; HookResolverService is ctx-driven, so a second instance
+// still resolves hook classes.
 @Module({ imports: [CoreModule.forRoot()] })
 export class FirestoreRepositoryModule {
   static forRoot(options: FirestoreRepositoryRootOptions): DynamicModule {

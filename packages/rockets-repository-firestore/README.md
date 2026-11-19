@@ -405,7 +405,7 @@ its `HookResolverService` into every repository it creates. Applications using
 the module factories need no extra wiring. Code that constructs
 `FirestoreRepository` directly must pass the resolver as the second constructor
 argument; construction fails closed when it is missing instead of disabling
-owner, tenant, and write-stamp hooks.
+`OwnerStampHook`, `TenantStampHook`, and `PathScopeHook`.
 
 ### Helpers
 
