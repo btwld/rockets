@@ -1,6 +1,6 @@
 {
   "name": "@concepta/rockets-storage",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Provider-neutral object storage and named NestJS stores for Rockets applications",
   "author": "Concepta",
   "license": "BSD-3-Clause",

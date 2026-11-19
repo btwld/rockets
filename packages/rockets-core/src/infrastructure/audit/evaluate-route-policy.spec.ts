@@ -35,6 +35,7 @@ function report(overrides: Partial<RouteAuditReport>): RouteAuditReport {
     ],
     globalGuards: ['SomeAuthGuard'],
     authGuards: ['SomeAuthGuard'],
+    aclGuards: [],
     csrfGuards: [],
     ...overrides,
   };
@@ -157,6 +158,43 @@ describe('evaluateRoutePolicy — requireCsrf', () => {
     expect(violations).toEqual([
       expect.objectContaining({ rule: 'requireCsrf', routeId: '*' }),
     ]);
+  });
+});
+
+describe('evaluateRoutePolicy — ACL guard reach', () => {
+  const granted = (): RouteAuditReport => {
+    const base = report({});
+    return {
+      ...base,
+      routes: base.routes.map((route) => ({
+        ...route,
+        aclAction: 'read',
+        aclResource: 'thing',
+      })),
+    };
+  };
+
+  it('rejects inert grant metadata even when requireAcl is not declared', () => {
+    const violations = evaluateRoutePolicy(granted(), {});
+    expect(violations).toEqual([
+      expect.objectContaining({ rule: 'requireAclGuard', routeId: '*' }),
+    ]);
+    expect(violations[0].detail).toContain(
+      'no recognised GLOBAL authorization guard',
+    );
+  });
+
+  it('accepts grant metadata when a recognised ACL guard is global', () => {
+    expect(
+      evaluateRoutePolicy(
+        {
+          ...granted(),
+          globalGuards: ['SomeAuthGuard', 'AccessControlGuard'],
+          aclGuards: ['AccessControlGuard'],
+        },
+        {},
+      ),
+    ).toEqual([]);
   });
 });
 

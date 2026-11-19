@@ -85,6 +85,7 @@ export function defineOperationResource(
   const aclDecorators: Record<string, MethodDecorator[]> = {};
   const operationQueries: Type<CanAccess>[] = [];
   const ungrantedOperations: string[] = [];
+  let hasGrants = false;
 
   for (const [key, operation] of Object.entries(operations)) {
     // A non-CRUD write has no inferable action — `POST /pets/:id/transfer`
@@ -121,7 +122,10 @@ export function defineOperationResource(
     });
 
     const decorators: MethodDecorator[] = [];
-    if (binding.grant) decorators.push(binding.grant);
+    if (binding.grant) {
+      hasGrants = true;
+      decorators.push(binding.grant);
+    }
     // Stamped per route, never at class level — see `OperationAclBinding`
     // for why a class-level default cannot be overridden by a method.
     if (binding.query) {
@@ -140,6 +144,7 @@ export function defineOperationResource(
   const acl: ResourceAclPlan = {
     // Only what a route actually carries — see `buildAclPlan`.
     queryServices: [...new Set(operationQueries)],
+    hasGrants,
     ungrantedOperations,
     declared: definition.acl !== undefined,
     label: `operationResource("${definition.path}")`,

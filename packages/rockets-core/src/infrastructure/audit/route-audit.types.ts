@@ -122,6 +122,13 @@ export interface RouteAuditReport {
    */
   readonly authGuards: readonly string[];
   /**
+   * The subset recognised as AUTHORIZATION guards — upstream's
+   * `AccessControlGuard`, a custom `accessControl.appGuard`, plus anything
+   * listed in `RoutePolicy.aclGuards`. Grant metadata without one of these
+   * is inert and therefore rejected at bootstrap.
+   */
+  readonly aclGuards: readonly string[];
+  /**
    * The subset recognised as CSRF guards — `CsrfGuard` plus anything
    * listed in `RoutePolicy.csrfGuards`. `requireCsrf` reads this: a
    * `sessionAuth` route in an app that registered no CSRF guard is a
@@ -137,6 +144,7 @@ export interface RoutePolicyViolation {
   readonly rule:
     | 'requireAuthGuard'
     | 'requireAuth'
+    | 'requireAclGuard'
     | 'requireAcl'
     | 'requireAclQuery'
     | 'requireCsrf'
@@ -156,6 +164,9 @@ export interface RoutePolicyViolation {
  * The per-route rules stay opt-in because an app CAN be part-way through
  * them — half the routes carrying a grant is a real, working state, and
  * failing that boot would punish the migration instead of the defect.
+ * Grant metadata with no ACL guard is a different always-on check
+ * (`requireAclGuard` in `evaluateRoutePolicy`): that is a lie, not a
+ * migration midpoint.
  */
 export const DEFAULT_ROUTE_POLICY: RoutePolicy = { requireAuthGuard: true };
 
@@ -256,6 +267,16 @@ export interface RoutePolicy {
    * resolved instances (`instanceof`) and request-scoped wrappers.
    */
   readonly authGuards?: readonly Type<unknown>[];
+  /**
+   * Global guard classes recognised as enforcing `AccessControlGrant`
+   * metadata, besides upstream's `AccessControlGuard` and a custom
+   * `accessControl.appGuard` (both are recognised automatically).
+   *
+   * Use this only for a separately registered replacement `APP_GUARD`.
+   * Listing the class lets planning accept `accessControl.appGuard: false`;
+   * bootstrap still verifies that a matching global guard actually exists.
+   */
+  readonly aclGuards?: readonly Type<unknown>[];
   /**
    * Guard classes recognised as CSRF guards, besides `CsrfGuard`. An app
    * enforcing the double-submit check with its own guard lists it here;

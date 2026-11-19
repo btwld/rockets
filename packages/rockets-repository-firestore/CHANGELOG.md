@@ -12,6 +12,13 @@
   Direct `new FirestoreRepository(options, hookResolver)` callers must pass the
   resolver as the second argument; construction now fails closed without it.
 
+## 0.1.0-alpha.3 - 2026-09-23
+
+### Release preparation
+
+- No changes in this package; released in lockstep with
+  `@concepta/rockets-core` `0.1.0-alpha.3`.
+
 ## 0.1.0-alpha.2 - 2026-09-17
 
 ### Documentation

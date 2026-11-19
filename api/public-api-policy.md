@@ -10,7 +10,7 @@ whether it exists at runtime, its declaration signature, and the same-package
 declarations reachable through that signature. CI byte-compares it, so the
 published surface cannot change unreviewed.
 
-Nothing beyond `0.0.1-dev.0` is published yet, so today this is a design gate
+Only `0.x` alphas are published, so today this is a design gate
 rather than a consumer-compatibility gate: it forces the 1.0 surface to be a
 decision instead of an accident, while changing it is still free. The
 consumer-migration obligations below apply from 1.0 onward.
@@ -46,6 +46,12 @@ consumer-migration obligations below apply from 1.0 onward.
   unauthenticated app must write `{ requireAuthGuard: false }`.
   `RoutePolicyViolation.rule` adds `'requireAuthGuard'` for that
   app-wide miss. `DEFAULT_ROUTE_POLICY` stays unexported.
+
+- `RoutePolicyViolation.rule` adds `'requireAclGuard'` for grant
+  metadata with no recognised global authorization guard. App-wide,
+  like `requireAuthGuard`; independent of opt-in `requireAcl`.
+  `RouteAuditReport.aclGuards` and `RoutePolicy.aclGuards` are the
+  recognition list. `ResourceAclPlan.hasGrants` is required.
 
 - `EntityHookBase` gains `beforeFind`, `beforeCount`, `beforeUpsert` and
   `beforeCreateMany` with their `after*` counterparts, for the same reason

@@ -4,6 +4,7 @@ import type { RepositoryModuleInterface } from '@concepta/nestjs-repository';
 import { createServer } from '@concepta/rockets';
 import { JwtGuard } from '@concepta/nestjs-authentication';
 import { withOpenApi } from '@concepta/rockets-core';
+import { AccessControl } from 'accesscontrol';
 import { z } from 'zod';
 
 import {
@@ -182,5 +183,24 @@ describe('defineRocketsAuth — contributed auth guards', () => {
       auth: { appGuard: false },
     });
     expect(bootstrap.contributes?.authGuards).toEqual([]);
+  });
+});
+
+describe('defineRocketsAuth — contributed ACL guards', () => {
+  it('contributes the constructor of a custom access-control appGuard', () => {
+    class CustomAclGuard implements CanActivate {
+      canActivate(): boolean {
+        return true;
+      }
+    }
+    const bootstrap = defineRocketsAuth({
+      ...input(),
+      accessControl: {
+        settings: { rules: new AccessControl() },
+        appGuard: new CustomAclGuard(),
+      },
+    });
+
+    expect(bootstrap.contributes?.aclGuards).toEqual([CustomAclGuard]);
   });
 });

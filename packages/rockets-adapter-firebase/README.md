@@ -9,7 +9,7 @@
 > `auth` chain.
 
 **Status:** pre-1.0 preview, published on the `alpha` dist-tag at
-`0.1.0-alpha.2`. Pin the exact version in an application you deploy:
+`0.1.0-alpha.3`. Pin the exact version in an application you deploy:
 breaking changes land between alphas,
 and the tag moves. Public shapes may still change before 1.0.
 

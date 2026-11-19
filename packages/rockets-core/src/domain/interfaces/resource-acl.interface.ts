@@ -48,13 +48,15 @@ export type OperationAclConfig =
  * wired once, app-wide.
  *
  * Every field is consumed by `buildAppRegistrationPlan`: `queryServices`
- * are merged into `AccessControlModule.forRoot`, `ungrantedOperations`
- * drives the deny-by-omission check, and `label` names the offender in
- * the resulting error.
+ * are merged into `AccessControlModule.forRoot`, `hasGrants` requires an
+ * active authorization guard, `ungrantedOperations` drives the
+ * deny-by-omission check, and `label` names the offender in errors.
  */
 export interface ResourceAclPlan {
   /** `CanAccess` classes this bundle needs registered. */
   readonly queryServices: ReadonlyArray<Type<CanAccess>>;
+  /** Whether at least one generated operation carries grant metadata. */
+  readonly hasGrants: boolean;
   /**
    * Authenticated operations that carry no grant — neither an inherited
    * action nor an explicit `acl: false`. Non-empty only when the bundle

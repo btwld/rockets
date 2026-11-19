@@ -26,7 +26,7 @@ yarn add @concepta/rockets-core@alpha \
 yarn add -D typescript @types/node
 ```
 
-Pin the exact version (`0.1.0-alpha.2`) in anything you deploy: breaking
+Pin the exact version (`0.1.0-alpha.3`) in anything you deploy: breaking
 changes land between alphas and the `alpha` tag moves.
 
 ## 3. `tsconfig.json`
