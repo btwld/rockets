@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
-import { withOpenApi } from '@concepta/nestjs-core';
 import {
   AuthServerGuard,
   defineAuthAdapter,
@@ -18,6 +17,7 @@ import {
   type AuthAdapterInterface,
   type AuthAttemptResult,
   type AuthRequest,
+  withOpenApi,
 } from '@concepta/rockets-core';
 import request from 'supertest';
 import { z } from 'zod';
