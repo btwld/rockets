@@ -11,6 +11,10 @@
   "every authenticated route carries a grant"). Opt out of the default
   `AccessControlGuard` with `appGuard: false` only when a replacement
   is actually registered and listed in `routePolicy.aclGuards`.
+  **Breaking:** the check is always on, so an app whose routes carry
+  grant decorators but which configures no access control at all — or
+  a built-in-auth app that sets `accessControl.appGuard: false` — now
+  fails the boot instead of serving those routes unenforced.
 
 ### Changed
 
