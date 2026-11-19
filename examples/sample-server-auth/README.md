@@ -8,7 +8,7 @@
 > with role-based access control and ownership-scoped resources.
 
 Monorepo dev: `@concepta/*` resolves via `workspace:^`. External apps:
-`yarn add @concepta/rockets-auth@alpha` (published: `0.1.0-alpha.2`).
+`yarn add @concepta/rockets-auth@alpha` (published: `0.1.0-alpha.3`).
 
 ---
 

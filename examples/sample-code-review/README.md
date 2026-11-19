@@ -31,7 +31,7 @@ The layout intentionally mirrors
 (`apps/api` + `apps/web`). In this monorepo every `@concepta/*` import
 resolves to local `packages/*` via `workspace:^` — live integration
 test for in-development SDK changes. The published line is
-`0.1.0-alpha.2` under `@alpha`; the older `0.0.1-dev.0` on `dev` is not
+`0.1.0-alpha.3` under `@alpha`; the older `0.0.1-dev.0` on `dev` is not
 supported.
 
 ```text
