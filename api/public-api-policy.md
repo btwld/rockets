@@ -10,7 +10,7 @@ whether it exists at runtime, its declaration signature, and the same-package
 declarations reachable through that signature. CI byte-compares it, so the
 published surface cannot change unreviewed.
 
-Nothing beyond `0.0.1-dev.0` is published yet, so today this is a design gate
+Only `0.x` alphas are published, so today this is a design gate
 rather than a consumer-compatibility gate: it forces the 1.0 surface to be a
 decision instead of an accident, while changing it is still free. The
 consumer-migration obligations below apply from 1.0 onward.

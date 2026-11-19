@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.3 - 2026-09-23
 
 ### Changed
 
@@ -12,6 +12,23 @@
   stays opt-in.
 
 ### Fixed
+
+- **A hook's return value is honoured in both authoring styles (issue
+  #135).** Upstream applies the original payload LAST when merging a
+  hook's result, so a hook that returned a new object lost its own
+  corrections on any field the payload already carried. `defineHook` had
+  a private work-around; a hand-written `@EntityHook` class had none.
+  `@EntityHook()` now owns the merge-back for the fourteen object-shaped
+  channels — seven `before*` and seven `after*`. Mutating in place still
+  works, returning a new object now works, and a partial return cannot
+  drop a column. `entity-hook-merge-back-parity.spec.ts` derives that
+  list from upstream's real membrane behaviour.
+
+  The list channels (`afterFind`, `beforeCreateMany`, `afterCreateMany`)
+  are merged by POSITION upstream and cannot shrink: returning 2 of 3
+  rows yields a duplicated row. Documented in the README; scope a list in
+  `beforeFind` / `beforeFindAndCount`. No generated route is affected —
+  the CRUD list route reads through `findAndCount`.
 
 - **Channel parity and decoration-time skip (issue #136).** The parity
   suite compares `LIFECYCLE_DECORATORS`, `EntityHookFns` and the
