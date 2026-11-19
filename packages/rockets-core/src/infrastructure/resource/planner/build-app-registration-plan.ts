@@ -36,6 +36,8 @@ export function buildAppRegistrationPlan(args: {
   readonly userMetadata?: RocketsUserMetadataConfig;
   /** Whether the app configured root `accessControl`. */
   readonly accessControl?: boolean;
+  /** Whether the default or a declared replacement ACL guard is configured. */
+  readonly accessControlGuard?: boolean;
   /**
    * Whether every route this planner GENERATES must carry an ACL grant.
    * Module-resource, manual and package-owned controllers are outside
@@ -93,6 +95,7 @@ export function buildAppRegistrationPlan(args: {
       ...operationBundles.map((bundle) => bundle.acl),
     ],
     configured: args.accessControl === true,
+    guardConfigured: args.accessControlGuard !== false,
     enforceGrants: args.enforceGrants === true,
   });
 

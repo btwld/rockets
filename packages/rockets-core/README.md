@@ -1188,6 +1188,15 @@ class PetController {
 }
 ```
 
+Declarative `acl` grants require a global authorization guard. Setting
+`accessControl.appGuard: false` therefore fails planning when a generated
+resource produces grant metadata. Explicitly ungranted `acl: false`
+operations remain valid. A separately registered replacement `APP_GUARD` is
+supported: list its class in `routePolicy.aclGuards`. Planning accepts that
+declaration, then the bootstrap audit verifies that a matching global guard
+actually reaches the routes. A custom guard instance passed directly as
+`accessControl.appGuard` is recognised automatically.
+
 ### Assert what every route enforces (`routePolicy`)
 
 Declare what must be true of every HTTP route the application ends up
@@ -1221,18 +1230,18 @@ Rockets route policy rejected 2 routes:
 | Rule | Default | Fails when |
 | --- | --- | --- |
 | `requireAuthGuard` | **on** | the app registers no guard recognised as authentication. Opt out with `{ requireAuthGuard: false }` |
+| `requireAclGuard` | **on when grant metadata exists** | a route carries `AccessControlGrant`, but no recognised global authorization guard reads it |
 | `requireAuth` | off | a route is `AuthPublic` |
 | `requireAcl` | off | an authenticated route carries no `AccessControlGrant` |
 | `requireAclQuery` | off | a granted route names no `CanAccess` service, so `own` possession widens to every row — declare it only once every resource's `acl` names a `query` service |
 
-"Recognised" is deliberate: `AuthServerGuard` counts automatically; any
-other guard that authenticates your app must be listed in
-`routePolicy.authGuards`. The audit refuses to assume that the mere
-presence of a global guard means authentication — a throttler, an ACL
-guard, or upstream access-control's disabled-guard factory (registered
-unconditionally, resolving to `null` under `appGuard: false`) are global
-guards that authenticate nothing, and counting them would report an
-unauthenticated app as protected.
+"Recognised" is deliberate: `AuthServerGuard` and upstream
+`AccessControlGuard` count automatically for their respective boundaries.
+Other authentication guards belong in `routePolicy.authGuards`; separately
+registered authorization guards belong in `routePolicy.aclGuards`. The audit
+refuses to infer capabilities from the mere presence of a global guard — a
+throttler authorizes and authenticates nothing, while an authentication guard
+does not enforce grant metadata merely because it is global.
 
 Exemptions are explicit — `allow` takes route ids, `allowControllers`
 takes classes (matched by identity, so a same-named class from another
@@ -1264,10 +1273,12 @@ way through `allowUnvalidatedSchema`, not `allow`), and a hand-written
 as `requireClosedResponse`.
 
 ```typescript
-const { routes, globalGuards, authGuards } = app.get(RouteAuditService).audit();
+const { routes, globalGuards, authGuards, aclGuards } =
+  app.get(RouteAuditService).audit();
 ```
 
-`authGuards` — not `globalGuards` — is what decides `guarded`.
+`authGuards` — not `globalGuards` — is what decides `guarded`; `aclGuards`
+records which global guards can enforce grant metadata.
 
 Route ids are `METHOD /controller/handler` paths. Global prefix and Nest
 versioning are applied by the HTTP adapter after this runs, so ids stay

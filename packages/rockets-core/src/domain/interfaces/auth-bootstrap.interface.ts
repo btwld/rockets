@@ -28,8 +28,8 @@ export interface AuthBootstrapIdentity {
  * composition. Explicit options on `RocketsModule` take precedence.
  *
  * Resolved by `@concepta/rockets` (`createServer` / `RocketsModule`);
- * `RocketsCoreModule` reads only `authGuards` (for the route audit);
- * the rest is consumed by the server composition.
+ * server composition merges both guard-class lists into the route policy,
+ * then strips the contribution object before core.
  */
 export interface AuthBootstrapContributions {
   /**
@@ -60,6 +60,14 @@ export interface AuthBootstrapContributions {
    * identity.
    */
   readonly authGuards?: readonly Type<unknown>[];
+  /**
+   * Authorization guard classes an integration installs globally.
+   *
+   * Used when an integration owns `AccessControlModule` and configures a
+   * custom `accessControl.appGuard`; server composition merges these into
+   * `routePolicy.aclGuards` before core audits the resolved global guards.
+   */
+  readonly aclGuards?: readonly Type<unknown>[];
 }
 
 /**

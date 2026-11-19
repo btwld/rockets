@@ -84,9 +84,10 @@ export interface RocketsOptionsExtrasInterface
    * those only exist in apps composed through THIS module, where the
    * consumer never touches `RocketsCoreModule.forRoot` directly.
    *
-   * `AuthServerGuard` (which this module registers as the global guard
-   * unless `enableGlobalGuard: false`) is recognised as authentication
-   * automatically; integration-owned guards go in `authGuards`.
+   * `AuthServerGuard` and upstream `AccessControlGuard` are recognised
+   * automatically. Integration-owned authentication and authorization
+   * guards are contributed by their bootstrap or can be listed explicitly
+   * in `authGuards` / `aclGuards`.
    *
    * Omitting it is not "no audit": core merges
    * `{ requireAuthGuard: true }` under whatever you pass. The pairing

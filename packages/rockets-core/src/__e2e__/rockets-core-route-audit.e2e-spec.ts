@@ -65,6 +65,13 @@ class AllowAllGuard {
   }
 }
 
+@Injectable()
+class DeclaredAclGuard {
+  canActivate(): boolean {
+    return true;
+  }
+}
+
 /** Request-scoped: Nest routes these to `injectables`, not `providers`. */
 @Injectable({ scope: Scope.REQUEST })
 class RequestScopedAuthGuard {
@@ -123,13 +130,26 @@ class HealthController {
 
 async function boot(args: {
   readonly withGuard: boolean;
+  /**
+   * `InvoiceController` carries grant metadata, so an enforcing policy
+   * needs a recognised ACL guard. Defaults on when a policy is present
+   * and `withGuard` is on. Pass `false` to assert that an auth-only
+   * APP_GUARD does not satisfy `requireAclGuard`.
+   */
+  readonly withAclGuard?: boolean;
   readonly policy?: RoutePolicy;
 }) {
-  // `AllowAllGuard` stands in for an integration-owned auth guard, so
-  // policies must recognise it explicitly — which also exercises the
-  // `authGuards` escape hatch on every policy-carrying test.
+  const withAclGuard =
+    args.withAclGuard ?? (args.withGuard && args.policy !== undefined);
+  // `AllowAllGuard` is authentication only. `DeclaredAclGuard` is the
+  // authorization stand-in — listing the auth dummy as ACL would hide
+  // the exact regression this suite exists to catch.
   const policy: RoutePolicy | undefined = args.policy
-    ? { authGuards: [AllowAllGuard], ...args.policy }
+    ? {
+        authGuards: [AllowAllGuard],
+        ...(withAclGuard ? { aclGuards: [DeclaredAclGuard] } : {}),
+        ...args.policy,
+      }
     : args.policy;
   @Module({
     imports: [DiscoveryModule],
@@ -139,6 +159,9 @@ async function boot(args: {
       InvoiceCanAccess,
       ...(args.withGuard
         ? [{ provide: APP_GUARD, useClass: AllowAllGuard }]
+        : []),
+      ...(withAclGuard
+        ? [{ provide: APP_GUARD, useClass: DeclaredAclGuard }]
         : []),
       ...(policy
         ? [{ provide: ROCKETS_ROUTE_POLICY_TOKEN, useValue: policy }]
@@ -195,6 +218,7 @@ describe('route audit + policy (e2e)', () => {
     await app.close();
 
     expect(report.authGuards).toEqual(['AllowAllGuard']);
+    expect(report.aclGuards).toEqual(['DeclaredAclGuard']);
     const byId = Object.fromEntries(report.routes.map((r) => [r.id, r]));
     expect(byId['GET /invoices']).toMatchObject({ authentication: 'guarded' });
     expect(byId['GET /invoices/summary']).toMatchObject({
@@ -228,6 +252,14 @@ describe('route audit + policy (e2e)', () => {
     await expect(
       boot({ withGuard: true, policy: { requireAcl: true } }),
     ).rejects.toThrow(/GET \/invoices\/summary[\s\S]*no AccessControlGrant/);
+  });
+
+  it('an authentication guard does not satisfy ACL guard reach', async () => {
+    await expect(
+      boot({ withGuard: true, withAclGuard: false, policy: {} }),
+    ).rejects.toThrow(
+      /requireAclGuard[\s\S]*no recognised GLOBAL authorization guard/,
+    );
   });
 
   it('fails the boot when a grant cannot resolve own possession', async () => {
@@ -362,10 +394,14 @@ describe('guard classification (e2e)', () => {
   // this correctly guarded app.
   it('a request-scoped auth guard is seen and satisfies requireAuth', async () => {
     const app = await bootWith({
-      providers: [{ provide: APP_GUARD, useClass: RequestScopedAuthGuard }],
+      providers: [
+        { provide: APP_GUARD, useClass: RequestScopedAuthGuard },
+        { provide: APP_GUARD, useClass: DeclaredAclGuard },
+      ],
       policy: {
         requireAuth: true,
         authGuards: [RequestScopedAuthGuard],
+        aclGuards: [DeclaredAclGuard],
         allow: ['GET /health'],
       },
     });
@@ -376,8 +412,14 @@ describe('guard classification (e2e)', () => {
 
   it('classifies class-level AuthPublic and reports it distinctly', async () => {
     const app = await bootWith({
-      providers: [{ provide: APP_GUARD, useClass: AllowAllGuard }],
-      policy: { authGuards: [AllowAllGuard] },
+      providers: [
+        { provide: APP_GUARD, useClass: AllowAllGuard },
+        { provide: APP_GUARD, useClass: DeclaredAclGuard },
+      ],
+      policy: {
+        authGuards: [AllowAllGuard],
+        aclGuards: [DeclaredAclGuard],
+      },
       controllers: [InvoiceController, StatusController],
     });
     const report = app.get(RouteAuditService).audit();
@@ -493,8 +535,15 @@ describe('guard classification (e2e)', () => {
     }
 
     const app = await bootWith({
-      providers: [{ provide: APP_GUARD, useClass: AllowAllGuard }],
-      policy: { requireAclQuery: true, authGuards: [AllowAllGuard] },
+      providers: [
+        { provide: APP_GUARD, useClass: AllowAllGuard },
+        { provide: APP_GUARD, useClass: DeclaredAclGuard },
+      ],
+      policy: {
+        requireAclQuery: true,
+        authGuards: [AllowAllGuard],
+        aclGuards: [DeclaredAclGuard],
+      },
       controllers: [ClassQueryController],
     });
     const report = app.get(RouteAuditService).audit();
@@ -507,10 +556,14 @@ describe('guard classification (e2e)', () => {
   it('fails the boot on a stale allow entry', async () => {
     await expect(
       bootWith({
-        providers: [{ provide: APP_GUARD, useClass: AllowAllGuard }],
+        providers: [
+          { provide: APP_GUARD, useClass: AllowAllGuard },
+          { provide: APP_GUARD, useClass: DeclaredAclGuard },
+        ],
         policy: {
           requireAuth: true,
           authGuards: [AllowAllGuard],
+          aclGuards: [DeclaredAclGuard],
           allow: ['GET /health', 'GET /no-such-route'],
         },
       }),
@@ -526,7 +579,13 @@ describe('routePolicy through RocketsCoreModule (e2e)', () => {
           auth: defineAuthAdapter(NoopAuthAdapter),
           providers: [NoopAuthAdapter],
           ...(policy
-            ? { routePolicy: { authGuards: [AllowAllGuard], ...policy } }
+            ? {
+                routePolicy: {
+                  authGuards: [AllowAllGuard],
+                  aclGuards: [DeclaredAclGuard],
+                  ...policy,
+                },
+              }
             : {}),
         }),
       ],
@@ -534,6 +593,7 @@ describe('routePolicy through RocketsCoreModule (e2e)', () => {
       providers: [
         InvoiceCanAccess,
         { provide: APP_GUARD, useClass: AllowAllGuard },
+        ...(policy ? [{ provide: APP_GUARD, useClass: DeclaredAclGuard }] : []),
       ],
     }).compile();
     const app = moduleRef.createNestApplication();
@@ -658,7 +718,24 @@ const gizmoOps = operationResource({
 });
 
 describe('routePolicy over a generated operation resource (e2e)', () => {
-  it('reads the grants Rockets stamped on its own generated controller', async () => {
+  it('rejects declarative ACL when appGuard is disabled without a replacement', () => {
+    expect(() =>
+      RocketsCoreModule.forRoot({
+        auth: defineAuthAdapter(NoopAuthAdapter),
+        providers: [NoopAuthAdapter],
+        resources: [gizmoOps],
+        accessControl: {
+          service: new AuditAcService(),
+          settings: { rules: auditAcRules },
+          appFilter: false,
+          appGuard: false,
+        },
+        routePolicy: { authGuards: [AllowAllGuard] },
+      }),
+    ).toThrow(/appGuard[\s\S]*disabled[\s\S]*aclGuards/);
+  });
+
+  it('rejects a declared replacement that is not actually global', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         RocketsCoreModule.forRoot({
@@ -670,6 +747,34 @@ describe('routePolicy over a generated operation resource (e2e)', () => {
             settings: { rules: auditAcRules },
             appFilter: false,
             appGuard: false,
+          },
+          routePolicy: {
+            authGuards: [AllowAllGuard],
+            aclGuards: [DeclaredAclGuard],
+          },
+          global: true,
+        }),
+      ],
+      providers: [{ provide: APP_GUARD, useClass: AllowAllGuard }],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+
+    await expect(app.init()).rejects.toThrow(
+      /no recognised GLOBAL authorization guard/,
+    );
+  });
+
+  it('reads the grants Rockets stamped on its own generated controller', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        RocketsCoreModule.forRoot({
+          auth: defineAuthAdapter(NoopAuthAdapter),
+          providers: [NoopAuthAdapter],
+          resources: [gizmoOps],
+          accessControl: {
+            service: new AuditAcService(),
+            settings: { rules: auditAcRules },
+            appFilter: false,
           },
           routePolicy: { authGuards: [AllowAllGuard] },
           global: true,
@@ -683,13 +788,11 @@ describe('routePolicy over a generated operation resource (e2e)', () => {
     const report = app.get(RouteAuditService).audit();
     await app.close();
 
-    // The ACL module registers an APP_GUARD factory unconditionally;
-    // with `appGuard: false` it resolves to null and must NOT appear.
-    // Asserted on globalGuards EQUALITY, not just authGuards: a counted
-    // null wrapper would never classify as auth, so the weaker
-    // assertion survives the exact wrapper-counting bug this pins.
-    expect(report.globalGuards).toEqual(['AllowAllGuard']);
+    expect(report.globalGuards).toEqual(
+      expect.arrayContaining(['AccessControlGuard', 'AllowAllGuard']),
+    );
     expect(report.authGuards).toEqual(['AllowAllGuard']);
+    expect(report.aclGuards).toEqual(['AccessControlGuard']);
 
     const byId = Object.fromEntries(report.routes.map((r) => [r.id, r]));
     expect(byId['POST /gizmos/relabel']).toMatchObject({

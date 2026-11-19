@@ -47,6 +47,12 @@ consumer-migration obligations below apply from 1.0 onward.
   `RoutePolicyViolation.rule` adds `'requireAuthGuard'` for that
   app-wide miss. `DEFAULT_ROUTE_POLICY` stays unexported.
 
+- `RoutePolicyViolation.rule` adds `'requireAclGuard'` for grant
+  metadata with no recognised global authorization guard. App-wide,
+  like `requireAuthGuard`; independent of opt-in `requireAcl`.
+  `RouteAuditReport.aclGuards` and `RoutePolicy.aclGuards` are the
+  recognition list. `ResourceAclPlan.hasGrants` is required.
+
 - `EntityHookBase` gains `beforeFind`, `beforeCount`, `beforeUpsert` and
   `beforeCreateMany` with their `after*` counterparts, for the same reason
   as the pair below: each is a live upstream channel on a method the
