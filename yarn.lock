@@ -1335,10 +1335,13 @@ __metadata:
     "@concepta/nestjs-repository": "npm:8.0.0-alpha.12"
     "@concepta/rockets-core": "workspace:^"
     "@nestjs/common": "npm:12.0.1"
+    "@nestjs/core": "npm:12.0.1"
     "@nestjs/testing": "npm:12.0.1"
     firebase-admin: "npm:^13.0.0"
+    supertest: "npm:^6.3.4"
     typescript: "npm:^5.4.0"
     vitest: "npm:^4.1.10"
+    zod: "npm:^4.4.3"
   peerDependencies:
     "@nestjs/common": ^12.0.1
     firebase-admin: ">=11.0.0"

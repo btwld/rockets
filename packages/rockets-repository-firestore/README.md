@@ -400,6 +400,13 @@ failure leaves earlier chunks applied.
 | `FirestoreRepositoryModule.forFeature(entities, options?)`  | Returns a `DynamicRepositoryModule` with `@InjectDynamicRepository` providers. Production omits `options`; tests may pass `{ backend: InMemoryFirestoreBackend }`.                   |
 | `defineFirestoreRepository(options?)`                       | Returns a `RepositoryBootstrap` — delegates to `FirestoreRepositoryModule.forRoot` / `forFeature`, same contract as `defineTypeOrmRepository`.                                       |
 
+`FirestoreRepositoryModule` imports the upstream core hook feature and injects
+its `HookResolverService` into every repository it creates. Applications using
+the module factories need no extra wiring. Code that constructs
+`FirestoreRepository` directly must pass the resolver as the second constructor
+argument; construction fails closed when it is missing instead of disabling
+`OwnerStampHook`, `TenantStampHook`, and `PathScopeHook`.
+
 ### Helpers
 
 | Symbol                                | Purpose                                               |

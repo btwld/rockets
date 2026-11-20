@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- Firestore dynamic repository providers now require and forward the upstream
+  `HookResolverService`, so `OwnerStampHook`, `TenantStampHook`, and
+  `PathScopeHook` run instead of silently passing attacker-controlled filters
+  and payloads through.
+  `FirestoreRepositoryModule` imports the core hook feature automatically.
+  Direct `new FirestoreRepository(options, hookResolver)` callers must pass the
+  resolver as the second argument; construction now fails closed without it.
+
 ## 0.1.0-alpha.3 - 2026-09-23
 
 ### Release preparation

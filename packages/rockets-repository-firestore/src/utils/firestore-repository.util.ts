@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Provider } from '@nestjs/common';
 import { getApp, getApps } from 'firebase-admin/app';
+import { HookResolverService } from '@concepta/nestjs-core';
 import {
   getDynamicRepositoryToken,
   type DynamicRepositoryModule,
@@ -70,20 +71,24 @@ export function createFirestoreProvider(
 
   return {
     provide: getDynamicRepositoryToken(options.key),
-    useFactory: () => {
+    inject: [HookResolverService],
+    useFactory: (hookResolver: HookResolverService) => {
       const metadata = buildFirestoreEntityMetadata(
         options.entity,
         collection,
         options.softDeleteField,
       );
-      return new FirestoreRepository({
-        entityKey: options.key,
-        collection,
-        metadata,
-        backend,
-        transactionKey,
-        uniqueDocumentIdField,
-      });
+      return new FirestoreRepository(
+        {
+          entityKey: options.key,
+          collection,
+          metadata,
+          backend,
+          transactionKey,
+          uniqueDocumentIdField,
+        },
+        hookResolver,
+      );
     },
   };
 }
